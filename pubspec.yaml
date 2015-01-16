@@ -1,0 +1,18 @@
+name: reflectable
+description: >
+  Reflectable is a library that allows programmers to reduce certain
+  usages of dynamic reflection to a transformer generated specialization
+  of the same thing that does not use dynamic reflection, thus improving
+  the performance of (esp. Dart2JS) generated code.
+version: 0.0.1
+author: The Dart Team <dart@google.com>
+homepage: https://www.dartlang.org/
+dependencies:
+  analyzer: '>=0.22.4 <0.24.0'
+  barback: '>=0.15.0 <0.16.0'
+  code_transformers: '>=0.2.0 <0.3.0'
+executables:
+  reflectable_transformer:
+dev_dependencies:
+  unittest: '>=0.11.0 <0.12.0'
+
