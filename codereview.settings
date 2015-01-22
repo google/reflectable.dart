@@ -1,0 +1,4 @@
+# This file is used by gcl to get repository specific information.
+CODE_REVIEW_SERVER: http://codereview.chromium.org
+VIEW_VC: https://github.com/dart-lang/reflectable/commit/
+CC_LIST: eernst+reviews@google.com
