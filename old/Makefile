@@ -1,5 +1,5 @@
-
-DARTLIBS=lib/mirror.dart lib/reflectable.dart lib/capability.dart \
+DARTLIBS=../lib/old/mirror.dart ../lib/old/reflectable.dart \
+	../lib/old/capability.dart \
 	test/common_dynamic.dart test/common_static.dart \
 	test/reflector_dynamic.dart test/reflector_static.dart \
 	test/my_reflectable.dart test/my_reflectable_s.dart \
@@ -33,8 +33,4 @@ run_reflector_dynamic:
 
 run_reflector_static:
 	dart --package-root=$(PACKAGEROOT) test/reflector_static.dart
-
-%.png: %.dot
-	dot -Tpng $< >$@
-	xdg-open $@
 

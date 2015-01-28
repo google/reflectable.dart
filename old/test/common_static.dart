@@ -4,12 +4,15 @@
 
 library reflectable.test.common;
 
-import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'package:reflectable/old/capability.dart';
+import 'package:reflectable/old/mirror.dart';
+import 'package:reflectable/old/smoker.dart';
 
 // Imports used in library mirror related test case.
-import 'a.dart';
-import 'b.dart';
-import 'c.dart';
+import 'a_s.dart';
+import 'b_s.dart';
+import 'c_s.dart';
 
+part 'reflectable_common.dart';
 part 'common.dart';

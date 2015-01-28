@@ -4,10 +4,13 @@
 
 // Used for library mirror test case in common.dart.
 
-library reflectable.test.c;
+library reflectable.test.a;
 
-import 'package:reflectable/reflectable.dart';
+import 'package:reflectable/old/reflectable.dart';
+import 'b.dart';
 
 @ReflectableX(const [])
-m3() {}
+m1() {}
+
+main() {}
 

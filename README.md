@@ -1,5 +1,7 @@
 # reflectable
 
+** Please note that this package is not yet in a usable state **
+
 Reflectable is a library that allows programmers to eliminate certain
 usages of dynamic reflection by specialization of reflective code to
 an equivalent implementation using only static techniques.  The use of

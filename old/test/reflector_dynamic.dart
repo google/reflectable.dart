@@ -5,6 +5,8 @@
 library reflectable.test.reflector;
 
 import 'package:unittest/unittest.dart';  // Get 'expect' etc.
+import 'package:reflectable/old/smoker.dart';
+
 import 'reflectee1.dart';  // Get target classes.
 import 'reflectee2.dart';  // Get target classes.
 import 'my_reflectable.dart';  // Get metadata.

@@ -65,6 +65,7 @@ LibraryMirror get mainLibrary {
 }
 
 ClassMirror wrapClassMirror(dm.ClassMirror m) {
+  if (m == null) return null;
   if (m is dm.FunctionTypeMirror) {
     // TODO(eernst): return new _FunctionTypeMirrorImpl(cm);
     return new _ClassMirrorImpl(m); // Temporary solution, will mostly work.
@@ -79,6 +80,7 @@ ClassMirror wrapClassMirror(dm.ClassMirror m) {
 }
 
 DeclarationMirror wrapDeclarationMirror(dm.DeclarationMirror m) {
+  if (m == null) return null;
   if (m is dm.MethodMirror) {
     return new _MethodMirrorImpl(m);
   }
@@ -109,6 +111,7 @@ DeclarationMirror wrapDeclarationMirror(dm.DeclarationMirror m) {
 }
 
 InstanceMirror wrapInstanceMirror(dm.InstanceMirror m) {
+  if (m == null) return null;
   if (m is dm.ClosureMirror) {
     // TODO(eernst): return new _ClosureMirrorImpl(m);
     throw "not yet implemented";
@@ -123,6 +126,7 @@ InstanceMirror wrapInstanceMirror(dm.InstanceMirror m) {
 }
 
 ObjectMirror wrapObjectMirror(dm.ObjectMirror m) {
+  if (m == null) return null;
   if (m is dm.LibraryMirror) {
     return new _LibraryMirrorImpl(m);
   }
@@ -139,6 +143,7 @@ ObjectMirror wrapObjectMirror(dm.ObjectMirror m) {
 }
 
 TypeMirror wrapTypeMirror(dm.TypeMirror m) {
+  if (m == null) return null;
   if (m is dm.TypeVariableMirror) {
     // TODO(eernst): return new _TypeVariableMirrorImpl(m);
     throw "not yet implemented";
@@ -191,8 +196,6 @@ bool _isThisClass(Resolver resolver, ClassElement type) {
   FieldElement idField = type.getField("thisClassId");
   if (idField == null || !idField.isStatic) return false;
   if (idField is ConstFieldElementImpl) {
-    // FIXME: It seems inappropriate to use this low-level
-    // approach, but I cannot easily see how to avoid it.
     LibraryElement coreLibrary = resolver.getLibraryByName("dart.core");
     TypeProvider typeProvider = new TypeProviderImpl(coreLibrary);
     DartObject dartObjectThisClassId =
@@ -605,221 +608,11 @@ class _ParameterMirrorImpl extends _VariableMirrorImpl
   String toString() => "_ParameterMirrorImpl('${_parameterMirror.toString()}')";
 }
 
-// ----------------------------------------------------------------------
-// Auxiliary convenience material, making smoke code more portable.
-
-/// Used by _safeSuperclass.
-final _objectType = dm.reflectClass(Object);
-
-/// Returns a mirror of the immediate superclass of [type], defaulting to
-/// Object if no other supertype can be found; never returns null.
-/// This method was copied from smoke/lib/mirrors.dart and adjusted.
-dm.ClassMirror _safeSuperclass(dm.ClassMirror type) {
-  try {
-    var t = type.superclass;
-    if (t != null && t.owner != null && t.owner.isPrivate) t = _objectType;
-    return t;
-  } on UnsupportedError catch (e) {
-    return _objectType;
-  }
-}
-
-class _SuperTypeIterator extends Iterator <dm.ClassMirror> {
-  bool firstInvocation = true;  // At first [moveNext] starts; at end: noop.
-  dm.ClassMirror _initialClassMirror;
-  dm.ClassMirror _currentClassMirror = null;  // [null] initially and at end.
-
-  _SuperTypeIterator(this._initialClassMirror);
-
-  bool moveNext() {
-    if (firstInvocation) {
-      // Start iterating.
-      firstInvocation = false;
-      _currentClassMirror = _initialClassMirror;
-      return true;
-    }
-    if (_currentClassMirror == _objectType) {
-      // Cannot go further.
-      _currentClassMirror = null;
-      return false;
-    } else {
-      // Find the next super class and make that [current].
-      _currentClassMirror = _safeSuperclass(_currentClassMirror);
-      return true;
-    }
-  }
-
-  dm.ClassMirror get current => _currentClassMirror;
-}
-
-class _SuperTypeIterable extends IterableMixin<dm.ClassMirror> {
-  dm.ClassMirror _initialClassMirror;
-
-  _SuperTypeIterable(this._initialClassMirror);
-
-  Iterator<dm.ClassMirror> get iterator {
-    return new _SuperTypeIterator(_initialClassMirror);
-  }
-}
-
-/// Returns a mirror of the declaration of [member], if the mirrored
-/// entity is an instance of a class and such a declaration exists in
-/// that class or one of its superclasses; otherwise returns null.
-dm.DeclarationMirror _getDeclaration(dm.ClassMirror m, Symbol member) {
-  // Search up through all superclasses for the requested declaration.
-  for (dm.ClassMirror cm in new _SuperTypeIterable(m)) {
-    dm.DeclarationMirror decl = cm.declarations[member];
-    if (decl != null) return decl;
-  }
-  // No such declaration in any superclass.
-  return null;
-}
-
-/// Returns a mirror of the declaration of [member], if the mirrored
-/// entity is an instance of a class and such a declaration exists;
-/// otherwise returns null.
-dm.DeclarationMirror _getInstanceDeclaration(InstanceMirror m, Symbol member) {
-  var typeMirror = (m as _InstanceMirrorImpl)._instanceMirror.type;
-  if (typeMirror is! dm.ClassMirror) return null;
-  // Search up through all superclasses for the requested declaration.
-  for (dm.ClassMirror cm in new _SuperTypeIterable(typeMirror)) {
-    dm.DeclarationMirror decl = cm.declarations[member];
-    if (decl != null) return decl;
-  }
-  // No such declaration in any superclass.
-  return null;
-}
-
-bool canGet(ClassMirror cm, Symbol name) {
-  Map<Symbol, DeclarationMirror> decls = cm.declarations;
-  DeclarationMirror m = decls[name];
-  if (m != null) {
-    dm.DeclarationMirror dmd = (m as _DeclarationMirrorImpl)._declarationMirror;
-    if (dmd is dm.VariableMirror
-        || (dmd is dm.MethodMirror && dmd.isRegularMethod)
-        || (dmd is dm.MethodMirror && dmd.isGetter)
-        || (dmd is dm.MethodMirror && dmd.isStatic)) {
-      return true;
-    }
-  }
-  if (cm.superclass == null) {
-    return false;
-  } else {
-    return canGet(cm.superclass, name);
-  }
-}
-
 Symbol setterName(Symbol getter) =>
     new Symbol('${dm.MirrorSystem.getName(getter)}=');
 
-bool _canSetUsingVariable(ClassMirror cm, Symbol name) {
-  Map<Symbol, DeclarationMirror> decls = cm.declarations;
-  DeclarationMirror m = decls[name];
-  if (m != null) {
-    dm.DeclarationMirror dmm = (m as _DeclarationMirrorImpl)._declarationMirror;
-    if (dmm is dm.VariableMirror && !dmm.isFinal) return true;
-  }
-  if (cm.superclass == null) {
-    return false;
-  } else {
-    return _canSetUsingVariable(cm.superclass, name);
-  }
-}
+final typeMirrorForObject = dm.reflectClass(Object);
 
-bool _canSetUsingSetter(ClassMirror cm, Symbol name) {
-  dm.DeclarationMirror dmm =
-      _getDeclaration((cm as _ClassMirrorImpl)._classMirror, setterName(name));
-  return dmm != null;
-}
+String symbolToName(Symbol symbol) => dm.MirrorSystem.getName(symbol);
 
-bool canSet(ClassMirror cm, Symbol name) {
-  if (_canSetUsingVariable(cm, name)) return true;
-  return _canSetUsingSetter(cm, name);
-}
-
-/// Returns a mirror of the declaration of [member], if the mirrored
-/// entity is an instance of a class and such a declaration exists in that
-/// class or one of its superclasses except Object; otherwise returns null.
-dm.DeclarationMirror _getDeclarationExceptObject(dm.ClassMirror initial_cm,
-                                                 Symbol member) {
-  // Search up through all superclasses for the requested declaration.
-  for (dm.ClassMirror cm in new _SuperTypeIterable(initial_cm)) {
-    if (cm == _objectType) return null;
-    dm.DeclarationMirror decl = cm.declarations[member];
-    if (decl != null) return decl;
-  }
-  // No such declaration in any superclass.
-  return null;
-}
-
-bool hasNoSuchMethod(ClassMirror cm) {
-  dm.DeclarationMirror decl =
-      _getDeclarationExceptObject((cm as _ClassMirrorImpl)._classMirror,
-                                  #noSuchMethod);
-  return decl is dm.MethodMirror && decl.isRegularMethod;
-}
-
-bool hasInstanceMethod(ClassMirror cm, Symbol member) {
-  // Semantics following pkg/smoke/lib/mirrors.dart, except that we _do_
-  // include declarations in Object (which makes a difference for noSuchMethod
-  // and toString).
-  dm.DeclarationMirror decl =
-      _getDeclaration((cm as _ClassMirrorImpl)._classMirror, member);
-  return decl is dm.MethodMirror && decl.isRegularMethod && !decl.isStatic;
-}
-
-/// Returns a mirror of the declaration of [member], if the mirrored
-/// entity is a class and such a declaration exists in that class
-/// (superclasses are not considered); otherwise returns null.
-dm.DeclarationMirror _getLocalDeclaration(dm.ClassMirror cm, Symbol member) {
-  return cm.declarations[member];
-}
-
-bool hasStaticMethod(ClassMirror cm, Symbol member) {
-  // Semantics following pkg/smoke/lib/mirrors.dart.
-  dm.DeclarationMirror decl =
-      _getLocalDeclaration((cm as _ClassMirrorImpl)._classMirror, member);
-  return decl is dm.MethodMirror && decl.isRegularMethod && decl.isStatic;
-}
-
-DeclarationMirror getDeclaration(ClassMirror cm, Symbol name) {
-  dm.DeclarationMirror decl =
-      _getLocalDeclaration((cm as _ClassMirrorImpl)._classMirror, name);
-  if (decl == null) return null;
-  return wrapDeclarationMirror(decl);
-}
-
-bool isField(DeclarationMirror m) {
-  return m is VariableMirror;
-}
-
-bool isFinal(DeclarationMirror m) {
-  return m is VariableMirror && m.isFinal;
-}
-
-bool isMethod(DeclarationMirror m) {
-  // Might need to follow the semantics of smoke/lib/smoke.dart
-  // Declaration.isMethod, which is just a test for [kind == METHOD]
-  // where [kind] is selected when the Declaration is created.
-  // TODO(eernst): find the precise semantics of this method,
-  // and implement it.  The current implementation does pass the
-  // tests in common.dart.
-  return m is MethodMirror && m.isRegularMethod;
-}
-
-List<LibraryMirror> _filterDeps(LibraryMirror lm,
-                                bool filter(LibraryDependency)) {
-  return lm.libraryDependencies
-      .where(filter)
-      .map((dep) => dep.targetLibrary)
-      .toList();
-}
-
-List<LibraryMirror> imports(LibraryMirror lm) =>
-    _filterDeps(lm, (dep) => dep.isImport);
-
-List<LibraryMirror> exports(LibraryMirror lm) =>
-    _filterDeps(lm, (dep) => dep.isExport);
-
-bool isProperty(DeclarationMirror m) =>
-    m is MethodMirror && !m.isRegularMethod;
+Symbol nameToSymbol(String name) => new Symbol(name);

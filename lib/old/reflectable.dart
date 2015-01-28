@@ -51,48 +51,16 @@ class ReflectableX {
       implementation.classes(resolver);
 }
 
-// ----------------------------------------------------------------------
-// Convenience methods, making smoke code more portable.
-
 /// Returns a Symbol representing the name of the setter corresponding
 /// to the name [getter], which is assumed to be the name of a getter.
 Symbol setterName(Symbol getter) => implementation.setterName(getter);
 
-/// TODO(eernst): describe
-bool canGet(ClassMirror cm, Symbol name) => implementation.canGet(cm, name);
+/// A mirror for the [Object] class.
+final typeMirrorForObject = implementation.typeMirrorForObject;
 
-/// TODO(eernst): describe
-bool canSet(ClassMirror cm, Symbol name) => implementation.canSet(cm, name);
+/// Returns the name associated with the given [symbol].
+String symbolToName(Symbol symbol) => implementation.symbolToName(symbol);
 
-/// TODO(eernst): describe
-bool hasNoSuchMethod(ClassMirror cm) => implementation.hasNoSuchMethod(cm);
+/// Returns the symbol associated with the given [name].
+Symbol nameToSymbol(String name) => implementation.nameToSymbol(name);
 
-/// TODO(eernst): describe
-bool hasInstanceMethod(ClassMirror cm, Symbol member) =>
-    implementation.hasInstanceMethod(cm, member);
-
-/// TODO(eernst): describe
-bool hasStaticMethod(ClassMirror cm, Symbol member) =>
-    implementation.hasStaticMethod(cm, member);
-
-/// TODO(eernst): describe
-DeclarationMirror getDeclaration(ClassMirror cm, Symbol name) =>
-    implementation.getDeclaration(cm, name);
-
-/// TODO(eernst): describe
-bool isField(DeclarationMirror m) => implementation.isField(m);
-
-/// TODO(eernst): describe
-bool isFinal(DeclarationMirror m) => implementation.isFinal(m);
-
-/// TODO(eernst): describe
-bool isMethod(DeclarationMirror m) => implementation.isMethod(m);
-
-/// TODO(eernst): describe
-List<LibraryMirror> imports(LibraryMirror lm) => implementation.imports(lm);
-
-/// TODO(eernst): describe
-List<LibraryMirror> exports(LibraryMirror lm) => implementation.exports(lm);
-
-/// TODO(eernst): describe
-bool isProperty(DeclarationMirror m) => implementation.isProperty(m);

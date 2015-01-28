@@ -4,8 +4,8 @@
 
 library reflectable.test.my_reflectable;
 
-import 'package:reflectable/reflectable.dart';
-export 'package:reflectable/reflectable.dart';
+import 'package:reflectable/old/reflectable.dart';
+export 'package:reflectable/old/reflectable.dart';
 
 class MyReflectable extends ReflectableX {
   const MyReflectable(): super(const []);

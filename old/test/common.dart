@@ -2,7 +2,29 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-part of reflectable.test.reflector;
+// This file contains the first test cases used with the package
+// 'reflectable', derived from smoke/test/common.dart by making
+// only the necessary changes needed to fit into the 'reflectable'
+// framework rather than 'smoke'.  It is included into two different
+// environments by being a 'part' of reflectable.test.common,
+// which exists in two different versions: common_dynamic.dart
+// where this code is embedded in a context that uses the dynamic
+// version of Reflectable based on dart:mirrors, and
+// common_static.dart where it is embedded in the corresponding
+// static version of Reflectable that was created to fit the
+// needs of this file.  The reflectable_transformer will
+// (TODO: update this wording when the transformer works)
+// transform the dynamic version into the static version, i.e.,
+// it will replace 'import ..reflectable.dart' (dyn.ver.) by
+// 'part ..common_reflectable.dart' (stat.ver.).
+
+part of reflectable.test.common;
+
+class MyReflectable extends ReflectableX {
+  const MyReflectable(): super(const []);
+}
+
+const myReflectable = const MyReflectable();
 
 main() {
   test('read value', () {
@@ -72,22 +94,22 @@ main() {
   test('invoke with adjust', () {
     var a = new A();
     var m = myReflectable.reflect(a);
-    // m.invokeAdjust(#inc0, []);
-    // expect(a.i, 43);
-    // m.invokeAdjust(#inc0, [2]);
-    // expect(a.i, 44);
-    // m.invokeAdjust(#inc0, [1, 2, 3]);
-    // expect(a.i, 45);
+    instanceInvokeAdjust(m, #inc0, []);
+    expect(a.i, 43);
+    instanceInvokeAdjust(m, #inc0, [2]);
+    expect(a.i, 44);
+    instanceInvokeAdjust(m, #inc0, [1, 2, 3]);
+    expect(a.i, 45);
 
-    // m.invokeAdjust(#inc1, []);  // treat as null (-10).
-    // expect(a.i, 35);
-    // m.invokeAdjust(#inc1, [4]);
-    // expect(a.i, 39);
+    instanceInvokeAdjust(m, #inc1, []);  // treat as null (-10).
+    expect(a.i, 35);
+    instanceInvokeAdjust(m, #inc1, [4]);
+    expect(a.i, 39);
 
-    // m.invokeAdjust(#inc2, []);  // default is null (-10).
-    // expect(a.i, 29);
-    // m.invokeAdjust(#inc2, [4, 5]);
-    // expect(a.i, 33);
+    instanceInvokeAdjust(m, #inc2, []);  // default is null (-10).
+    expect(a.i, 29);
+    instanceInvokeAdjust(m, #inc2, [4, 5]);
+    expect(a.i, 33);
   });
 
   test('has getter', () {
@@ -187,7 +209,7 @@ main() {
     expect(isFinal(d), isFalse);
     expect(d.isStatic, isFalse);
     expect(d.metadata, []);
-    expect(d.type.reflectedType, int);
+    expect(d.returnType.reflectedType, int);
 
     var mA = myReflectable.reflectClass(A);
     d = getDeclaration(mA, #inc1);
@@ -198,7 +220,10 @@ main() {
     expect(isFinal(d), isFalse);
     expect(d.isStatic, isFalse);
     expect(d.metadata, []);
-    expect(d.type.reflectedType, Function);
+    // NB: Used to have 'expect(d.type.reflectedType, Function);' but a method
+    // does not just have type Function; to get the same effect we test for
+    // having gotten a MethodMirror, still ignoring the actual signature
+    expect(d is MethodMirror, isTrue);
 
     var mF = myReflectable.reflectClass(F);
     d = getDeclaration(mF, #staticMethod);
@@ -209,7 +234,9 @@ main() {
     expect(isFinal(d), isFalse);
     expect(d.isStatic, isTrue);
     expect(d.metadata, []);
-    expect(d.type.reflectedType, Function);
+    // NB: Used to have 'expect(d.type.reflectedType, Function);'.
+    // See first 'd is MethodMirror' for more info.
+    expect(d is MethodMirror, isTrue);
 
     var mG = myReflectable.reflectClass(G);
     d = getDeclaration(mG, #b);
@@ -258,11 +285,10 @@ main() {
     expect(mObject.isSubclassOf(mA), isFalse);
   });
 
-  // TODO(eernst): support something like this for reflectable.
   group('query', () {
-  //   _checkQuery(result, names) {
-  //     expect(result.map((e) => e.name), unorderedEquals(names));
-  //   }
+    _checkQuery(result, names) {
+      expect(result.map((e) => e.name), unorderedEquals(names));
+    }
 
   //   test('default', () {
   //     var options = new QueryOptions();
@@ -332,13 +358,13 @@ main() {
   //     _checkQuery(res, [#b, #d, #f, #g, #h, #i]);
   //   });
 
-  //   test('symbol to name', () {
-  //     expect(mt.symbolToName(#i), 'i');
-  //   });
+    test('symbol to name', () {
+      expect(symbolToName(#i), 'i');
+    });
 
-  //   test('name to symbol', () {
-  //     expect(mt.nameToSymbol('i'), #i);
-  //   });
+    test('name to symbol', () {
+      expect(nameToSymbol('i'), #i);
+    });
   });
 
   test('invoke Type instance methods', () {
@@ -385,4 +411,110 @@ main() {
     chkDecls(bLibDeclSyms, bLib.declarations);
     chkDecls(cLibDeclSyms, cLib.declarations);
   });
+}
+
+@myReflectable
+class A {
+  int i = 42;
+  int j = 44;
+  int get j2 => j;
+  void set j2(int v) { j = v; }
+  void inc0() { i++; }
+  void inc1(int v) { i = i + (v == null ? -10 : v); }
+  void inc2([int v]) { i = i + (v == null ? -10 : v); }
+
+  static int staticValue = 42;
+  static void staticInc() { staticValue++; }
+}
+
+@myReflectable
+class B {
+  final int f = 3;
+  int _w;
+  int get w => _w;
+  set w(int v) { _w = v; }
+
+  String z;
+  A a;
+
+  B(this._w, this.z, this.a);
+}
+
+@myReflectable
+class C {
+  int x;
+  String y;
+  B b;
+
+  inc(int n) {
+    x = x + n;
+  }
+  dec(int n) {
+    x = x - n;
+  }
+
+  C(this.x, this.y, this.b);
+}
+
+@myReflectable
+class D extends C with A {
+  int get x2 => x;
+  int get i2 => i;
+
+  D(x, y, b) : super(x, y, b);
+}
+
+@myReflectable
+class E {
+  set x(int v) { }
+  int get y => 1;
+
+  noSuchMethod(i) => y;
+}
+
+@myReflectable
+class E2 extends E {}
+
+@myReflectable
+class F {
+  static int staticMethod(A a) => a.i;
+}
+
+@myReflectable
+class F2 extends F {}
+
+@myReflectable
+class Annot { const Annot(); }
+
+@myReflectable
+class AnnotB extends Annot { const AnnotB(); }
+
+@myReflectable
+class AnnotC { const AnnotC({bool named: false}); }
+
+const a1 = const Annot();
+const a2 = 32;
+const a3 = const AnnotB();
+
+@myReflectable
+class G {
+  int a;
+  @a1 int b;
+  int c;
+  @a2 int d;
+}
+
+@myReflectable
+class H extends G {
+  int e;
+  @a1 int f;
+  @a1 int g;
+  @a2 int h;
+  @a3 int i;
+}
+
+@myReflectable
+class K {
+  @AnnotC(named: true) int k;
+  @AnnotC() int k2;
 }
