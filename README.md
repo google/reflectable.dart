@@ -19,7 +19,7 @@ of reflection related operations is so well-known at compile time that
 it is possible to specialize the generic support for reflection (based
 on dart:mirrors) to a purely static form that satisfies the requirement
 of the given body of user code.  The transformation is performed by the
-pub transformer reflectable_transformer, available in this package.
+pub transformer available in this package.
 
 ## Usage
 
@@ -48,5 +48,6 @@ A simple usage example:
 
 ## Features and bugs
 
-Please file feature requests and bugs at dartbug.com, area=Dart2JS.
+Please file feature requests and bugs using the github issue tracker
+for this repository.
 

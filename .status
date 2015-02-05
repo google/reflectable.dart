@@ -1,0 +1,4 @@
+
+[ $runtime != vm ]
+test/checktransforms_test.dart: Skip # Checking output from other tests
+
