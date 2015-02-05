@@ -1,4 +1,6 @@
 
+build/*: Skip # Don't run tests from the build directory.
+
 [ $runtime != vm ]
 test/checktransforms_test: Skip # Checking output from other tests
 
