@@ -6,7 +6,7 @@ description: >
   the performance of (esp. Dart2JS) generated code.
 version: 0.0.1
 author: The Dart Team <dart@google.com>
-homepage: https://www.dartlang.org/
+homepage: https://www.github.com/dart-lang/reflectable
 dependencies:
   analyzer: '>=0.22.4 <0.24.0'
   barback: '>=0.15.0 <0.16.0'
@@ -15,5 +15,5 @@ dev_dependencies:
   unittest: '>=0.11.0 <0.12.0'
 transformers:
 - reflectable:
-    entry_points: test/transformed/minimal.dart
+    entry_points: test/transformed
 

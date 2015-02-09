@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Dart Team. All rights reserved. Use of this
+// Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
@@ -7,8 +7,6 @@ library reflectable.transformer;
 import 'dart:async';
 
 import 'package:barback/barback.dart';
-import 'package:code_transformers/resolver.dart';
-import 'package:analyzer/src/generated/element.dart';
 
 class ReflectableTransformer extends Transformer
                              implements DeclaringTransformer {
@@ -29,7 +27,7 @@ class ReflectableTransformer extends Transformer
   }
 
   /// Performs the transformation.
-  /// TODO(eernst): This is still a no-op transform
+  /// TODO(eernst): Will transform code; currently just creates a copy.
   Future apply(Transform transform) {
     Asset input = transform.primaryInput;
     return input.readAsString().then((source) {
@@ -37,4 +35,3 @@ class ReflectableTransformer extends Transformer
     });
   }
 }
-
