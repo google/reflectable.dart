@@ -20,8 +20,13 @@
 // all directory entries to be actual files, symlinks are ignored.
 
 import 'dart:io';
+import 'dart:async';
 import 'package:path/path.dart' as path;
 import 'dart:convert';
+
+// TODO(eernst): We should use async_helper, but it is not available in the
+// given context.  Reintroduce this when ready:
+// import 'package:async_helper/async_helper.dart';
 
 /// Returns the path of the file in [newBasePath] with the name from
 /// the given [originalPath]; will fail if [originalPath] is empty.
@@ -49,18 +54,20 @@ void checkContents(FileSystemEntity entity, String newBasePath) {
 /// Checks that for each file in the directory at [expectDir],
 /// not including subdirectories, there is a file with the same name
 /// and identical contents in the directary at [buildDirPath].
-void checkAllContents(Directory expectDir, String buildDirPath) {
-  expectDir
+StreamSubscription<FileSystemEntity> checkAllContents(Directory expectDir,
+                                                      String buildDirPath) {
+  return expectDir
       .list(recursive: false, followLinks: false)
-      .listen((entity) => checkContents(entity, buildDirPath));
+      .listen((FileSystemEntity entity) => checkContents(entity, buildDirPath));
 }
 
 /// Checks that for each file in [buildDir], not including
 /// subdirectories, there exists a file with the same name in
 /// [expectedDirPath].
-void checkCompleteness(Directory buildDir, String expectDirPath) {
+StreamSubscription<FileSystemEntity> checkCompleteness(Directory buildDir,
+                                                       String expectDirPath) {
   buildDir.list(recursive: false, followLinks: false).listen(
-      (entity) {
+      (FileSystemEntity entity) {
         if (entity is File) {
           String expectPath = correspondingPath(entity.path, expectDirPath);
           File expectFile = new File(expectPath);
@@ -76,14 +83,20 @@ void checkCompleteness(Directory buildDir, String expectDirPath) {
 }
 
 void main ([String args]) {
-  final String scriptDir = path.dirname(path.fromUri(Platform.script));
-  final String rootDir = path.dirname(scriptDir);
-  final String rootPath = rootDir.toString();
-  final String expectedDirPath = path.join(rootDir, "test", "expected");
-  final String buildDirPath =
+  String scriptDir = path.dirname(path.fromUri(Platform.script));
+  String rootDir = path.dirname(scriptDir);
+  String rootPath = rootDir.toString();
+  String expectedDirPath = path.join(rootDir, "expected");
+  String buildDirPath =
       path.join(rootDir, "build", "test", "to_be_transformed");
-  final Directory expectDir = new Directory(expectedDirPath);
-  final Directory buildDir = new Directory(buildDirPath);
+  Directory expectDir = new Directory(expectedDirPath);
+  Directory buildDir = new Directory(buildDirPath);
+
+  // TODO(eernst): When async_helper can be used, consider this
+  // solution, which may work but is not tested:
+  //   asyncTest(checkAllContents(expectDir, buildDirPath).asFuture);
+  //   asyncTest(checkCompleteness(buildDir, expectedDirPath).asFuture);
+  // Currently we use this, which may work because we import dart:io:
   checkAllContents(expectDir, buildDirPath);
   checkCompleteness(buildDir, expectedDirPath);
 }

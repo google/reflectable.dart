@@ -5,8 +5,10 @@
 library reflectable.transformer;
 
 import 'dart:async';
-
+import 'package:analyzer/src/generated/element.dart';
 import 'package:barback/barback.dart';
+import 'package:code_transformers/resolver.dart';
+import 'src/transformer_implementation.dart' as implementation;
 
 class ReflectableTransformer extends Transformer
                              implements DeclaringTransformer {
@@ -22,16 +24,9 @@ class ReflectableTransformer extends Transformer
   String get allowedExtensions => ".dart";
 
   /// Announces output files.
-  Future declareOutputs(DeclaringTransform transform) {
-    return new Future.value(transform.primaryId);
-  }
+  Future declareOutputs(DeclaringTransform transform) =>
+      new Future.value(transform.primaryId);
 
   /// Performs the transformation.
-  /// TODO(eernst): Will transform code; currently just creates a copy.
-  Future apply(Transform transform) {
-    Asset input = transform.primaryInput;
-    return input.readAsString().then((source) {
-      transform.addOutput(new Asset.fromString(input.id, source));
-    });
-  }
+  Future apply(Transform transform) => implementation.apply(transform);
 }
