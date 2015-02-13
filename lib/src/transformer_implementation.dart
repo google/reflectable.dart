@@ -10,26 +10,6 @@ import 'package:barback/barback.dart';
 import 'package:code_transformers/resolver.dart';
 import '../reflectable.dart';
 
-/// Performs the transformation which is the main purpose of this
-/// package.
-/// TODO(eernst): Will transform code; currently just scans
-/// all libraries and in there all classes, selecting the classes that
-/// have metadata which is a subtype of Reflectable, and writes the
-/// names of the selected classes in files named *.clslist, with one
-/// file <name>.clslist for each file <name>.dart in the input.
-Future apply(Transform transform) {
-  Asset input = transform.primaryInput;
-  List<ClassElement> classes;
-  Resolvers resolvers = new Resolvers(dartSdkDirectory);
-  return resolvers.get(transform).then((resolver) {
-    classes = reflectable_classes(resolver);
-    return input.readAsString();
-  }).then((source) {
-    AssetId classListId = input.id.changeExtension(".clslist");
-    transform.addOutput(new Asset.fromString(classListId, classes.join("\n")));
-  });
-}
-
 /// Checks whether the given [type] from the target program is "our"
 /// class [Reflectable] by looking up the static field
 /// [Reflectable.thisClassId] and checking its value (which is a 40
@@ -74,13 +54,10 @@ bool _equalsClassReflectable(ClassElement type, Resolver resolver) {
 /// [Reflectable].  The [resolver] is used to get the library for this code in
 /// the target program (if present), and the dart.core library for constant
 /// evaluation.
-ClassElement _findReflectableClassElement(Resolver resolver) {
-  LibraryElement lib = resolver.getLibraryByName("reflectable.reflectable");
-  if (lib == null) return null;
-  List<CompilationUnitElement> units = lib.units;
-  for (CompilationUnitElement unit in units) {
-    List<ClassElement> types = unit.types;
-    for (ClassElement type in types) {
+ClassElement _findReflectableClassElement(LibraryElement reflectableLibrary,
+                                          Resolver resolver) {
+  for (CompilationUnitElement unit in reflectableLibrary.units) {
+    for (ClassElement type in unit.types) {
       if (type.name == Reflectable.thisClassName &&
           _equalsClassReflectable(type, resolver)) {
         return type;
@@ -115,13 +92,13 @@ bool _isReflectableAnnotation(ElementAnnotation elementAnnotation,
       return _isSubclassOf(element.enclosingElement.type, focusClass.type);
     }
     if (element is PropertyAccessorElement) {
-      PropertyInducingElement pie = element.variable;
+      PropertyInducingElement variable = element.variable;
       // Surprisingly, we have to use the type VariableElementImpl
       // here.  This is because VariableElement does not declare
       // evaluationResult (presumably it is "secret").
-      if (pie is VariableElementImpl && pie.isConst) {
-        VariableElementImpl vei = pie as VariableElementImpl;
-        EvaluationResultImpl result = vei.evaluationResult;
+      if (variable is VariableElementImpl && variable.isConst) {
+        VariableElementImpl variableImpl = variable as VariableElementImpl;
+        EvaluationResultImpl result = variableImpl.evaluationResult;
         if (result is ValidResult) {
           return _isSubclassOf(result.value.type, focusClass.type);
         }
@@ -135,10 +112,19 @@ bool _isReflectableAnnotation(ElementAnnotation elementAnnotation,
   return false;
 }
 
+/// Returns true iff the given [library] imports [targetLibrary], which
+/// must be non-null.
+bool _doesImport(LibraryElement library, LibraryElement targetLibrary) {
+  List<LibraryElement> importedLibraries = library.importedLibraries;
+  return importedLibraries.contains(targetLibrary);
+}
+
 /// Returns a list of classes from the current isolate which are
 /// annotated with metadata whose type is a subtype of [Reflectable].
-List<ClassElement> reflectable_classes(Resolver resolver) {
-  ClassElement focusClass = _findReflectableClassElement(resolver);
+List<ClassElement> _findReflectableClasses(LibraryElement reflectableLibrary,
+                                           Resolver resolver) {
+  ClassElement focusClass =
+      _findReflectableClassElement(reflectableLibrary, resolver);
   if (focusClass == null) return [];
   List<ClassElement> result = new List<ClassElement>();
   for (LibraryElement library in resolver.libraries) {
@@ -153,4 +139,85 @@ List<ClassElement> reflectable_classes(Resolver resolver) {
     }
   }
   return result;
+}
+
+String _transformSource(LibraryElement reflectableLibrary,
+                        LibraryElement transformedLibrary,
+                        String source) {
+  // TODO(eernst): implement the transformation.
+  String result = source;
+  List<ImportElement> importElements = transformedLibrary.imports;
+
+  bool doesImportReflectable(ImportElement element) {
+    return element.importedLibrary == reflectableLibrary;
+  }
+
+  /// Compute the name of the file holding the generated library.
+  /// TODO(eernst): When implementing this based on the name of the
+  /// transformed library, remember that single quotes in the returned
+  /// string will invalidate the code generated at the call site for
+  /// this function.
+  String nameOfGeneratedFile() {
+    return 'reflectable_dummy.dart';
+  }
+
+  /// Replace import of reflectableLibrary by import of generated
+  /// library by means of side-effects on [result].
+  void editImport(ImportElement element) {
+    int uriStart = element.uriOffset;
+    if (uriStart == -1) {
+      // TODO(eernst): Encountered a synthetic element.  We do not
+      // expect imports of reflectable to be synthetic, so at this point
+      // we make it an error.
+      throw new UnimplementedError();
+    }
+    int uriEnd = element.uriEnd;
+    // `uriStart != -1 && uriEnd == -1` would be a bug in `ImportElement`.
+    assert(uriEnd != -1);
+    String prefix = result.substring(0, uriStart);
+    String postfix = result.substring(uriEnd);
+    result = "$prefix'${nameOfGeneratedFile()}'$postfix";
+  }
+
+  // [editImport] modifies [result].
+  importElements.where(doesImportReflectable).forEach(editImport);
+  return result;
+}
+
+/// Performs the transformation which is the main purpose of this
+/// package.
+Future apply(Transform transform) {
+  Asset input = transform.primaryInput;
+  Resolvers resolvers = new Resolvers(dartSdkDirectory);
+  return resolvers.get(transform).then((resolver) {
+    LibraryElement transformedLibrary = resolver.getLibrary(input.id);
+    LibraryElement reflectableLibrary =
+        resolver.getLibraryByName("reflectable.reflectable");
+    if (reflectableLibrary == null) {
+      // Stop and do not consumePrimary, i.e., let the original source
+      // pass through without changes.
+      return new Future.value();
+    }
+    // TODO(eernst): Temporarily we use 'reflectable_dummy.dart' as
+    // a stand-in for the generated library.  Do not translate it.
+    // When it is not used any more, remove this comment + if.
+    if (input.id.toString() ==
+        "reflectable|test/to_be_transformed/reflectable_dummy.dart") {
+      return new Future.value();
+    }
+    List<ClassElement> reflectableClasses =
+        _findReflectableClasses(reflectableLibrary, resolver);
+    return input.readAsString().then((source) {
+      if (_doesImport(transformedLibrary, reflectableLibrary)) {
+        String transformedSource = _transformSource(reflectableLibrary,
+                                                    transformedLibrary,
+                                                    source);
+        transform.consumePrimary();
+        transform.addOutput(new Asset.fromString(input.id, transformedSource));
+      } else {
+        // We do not consumePrimary, i.e., let the original source pass
+        // through without changes.
+      }
+    });
+  });
 }

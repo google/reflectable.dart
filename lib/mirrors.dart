@@ -50,9 +50,9 @@
 // A similar change could have been applied to many other methods, but
 // in those cases it seems more likely that the mirror will be used
 // in its own right rather than just to get 'theMirror.reflectee'.
-// These locations are marked with '// Possible'.  They are in general
-// concerned with types in a broad sense: [ClassMirror], [TypeMirror], 
-// and [LibraryMirror].
+// Some of these locations are marked with '// Possible'.  They are in 
+// general concerned with types in a broad sense: [ClassMirror], 
+// [TypeMirror], and [LibraryMirror].
 
 // TODO(eernst): The preceeding comment blocks should be made a dartdoc
 // on the library when/if such dartdoc comments are supported.
@@ -142,6 +142,22 @@ abstract class ObjectMirror implements Mirror {
                 [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
 
   /**
+   * Deprecated method which has the same semantics as [invokeGetter].
+   *
+   * Ahead, [invokeGetter] is expected to be the only name for this operation,
+   * and the name [getField] is expected to be reused for a different semantics
+   * that reads the value of a field, bypassing any getters.  Since this is a
+   * breaking change it is not likely to happen before a major step in the
+   * version number, but users of mirrors can already now start using the
+   * future-safe name [invokeGetter].
+   *
+   * Note that the return type of the corresponding method in
+   * dart:mirrors is InstanceMirror.
+   */
+  @deprecated
+  Object getField(Symbol fieldName); // RET: InstanceMirror
+
+  /**
    * Invokes a getter and returns a mirror on the result. The getter
    * can be the implicit getter for a field or a user-defined getter
    * method.
@@ -174,12 +190,24 @@ abstract class ObjectMirror implements Mirror {
    * If the invocation throws an exception *e* (that it does not catch)
    * this method throws *e*.
    *
-   * Note that the return type of the corresponding method in
-   * dart:mirrors is InstanceMirror.
-   *
    * TODO(eernst): make this comment more user friendly.
    */
-  Object getField(Symbol fieldName); // RET: InstanceMirror
+  Object invokeGetter(Symbol fieldName) => getField(fieldName);
+
+  /**
+   * Deprecated method which has the same semantics as [invokeSetter].
+   *
+   * Ahead, [invokeSetter] is expected to be the only name for this operation,
+   * and the name [setField] is expected to be reused for a different semantics
+   * that writes the value of a field, bypassing any setters.  Since this is a
+   * breaking change it is not likely to happen before a major step in the
+   * version number, but users of mirrors can already now start using the
+   * future-safe name [invokeSetter].
+   *
+   * Note that the return type of the corresponding method in
+   * dart:mirrors is InstanceMirror.
+   */
+  Object setField(Symbol fieldName, Object value); // RET: InstanceMirror
 
   /**
    * Invokes a setter and returns a mirror on the result. The setter
@@ -207,11 +235,12 @@ abstract class ObjectMirror implements Mirror {
    *
    * TODO(eernst): make this comment more user friendly.
    */
-  Object setField(Symbol fieldName, Object value); // RET: InstanceMirror
+  Object invokeSetter(Symbol fieldName, Object value) =>
+      setField(fieldName, value);
 }
 
 abstract class InstanceMirror implements ObjectMirror {
-  ClassMirror get type; // Possible RET: Type
+  ClassMirror get type;
   // Currently skip 'bool get hasReflectee;'
   get reflectee;
   bool operator ==(other);
@@ -230,8 +259,8 @@ abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
 abstract class LibraryDependencyMirror implements Mirror {
   bool get isImport;
   bool get isExport;
-  LibraryMirror get sourceLibrary; // Possible RET: Object?
-  LibraryMirror get targetLibrary; // Possible RET: Object?
+  LibraryMirror get sourceLibrary;
+  LibraryMirror get targetLibrary;
   Symbol get prefix;
   // Currently skip 'List<CombinatorMirror> get combinators;'.
   // Currently skip 'SourceLocation get location;'.
@@ -247,11 +276,22 @@ abstract class TypeMirror implements DeclarationMirror {
   bool get hasReflectedType;
   Type get reflectedType;
   List<TypeVariableMirror> get typeVariables;
-  List<TypeMirror> get typeArguments; // Possible TYARG: Type
+  List<TypeMirror> get typeArguments;
   bool get isOriginalDeclaration;
-  TypeMirror get originalDeclaration; // Possible RET: Type
-  bool isSubtypeOf(TypeMirror other); // Possible ARG: Type
-  bool isAssignableTo(TypeMirror other); // Possible ARG: Type
+  TypeMirror get originalDeclaration;
+
+  // Possible ARG: Type.
+  // Input from Gilad on this issue:
+  // I think we could consider using Type objects as arguments, because that is
+  // actually more uniform; in general, the mirror API takes in base level
+  // objects and produces meta-level objects. As a practical matter, I'd say we
+  // take both.  Union types make that more natural, though there will be some
+  // slight cost in checking what kind of argument we get.
+  bool isSubtypeOf(TypeMirror other);
+
+  // Possible ARG: Type.
+  // Input from Gilad on isSubtypeOf is also relevant for this case.
+  bool isAssignableTo(TypeMirror other);
 }
 
 abstract class ClassMirror implements TypeMirror, ObjectMirror {
@@ -302,7 +342,11 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
                      // RET: InstanceMirror
 
   bool operator ==(other);
-  bool isSubclassOf(ClassMirror other); // Possible ARG: Type
+
+  // Possible ARG: Type.
+  // Input from Gilad on [TypeMirror#isSubtypeOf] is also relevant for this
+  // case.
+  bool isSubclassOf(ClassMirror other);
 }
 
 // Currently skip 'abstract class FunctionTypeMirror implements ClassMirror'.
