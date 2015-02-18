@@ -24,6 +24,7 @@ build:
 
 test:
 	../test/checktransforms_test.dart
+	dart --package-root=../packages ../test/source_manager_test.dart
 
 .PHONY: all c b t check build test
 

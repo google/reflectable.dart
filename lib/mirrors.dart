@@ -81,7 +81,7 @@ abstract class DeclarationMirror implements Mirror {
   DeclarationMirror get owner;
   bool get isPrivate;
   bool get isTopLevel;
-  // Currently skip 'SourceLocation get location;'.
+  SourceLocation get location;
 
   /**
    * A list of the metadata associated with this declaration.
@@ -207,6 +207,7 @@ abstract class ObjectMirror implements Mirror {
    * Note that the return type of the corresponding method in
    * dart:mirrors is InstanceMirror.
    */
+  @deprecated
   Object setField(Symbol fieldName, Object value); // RET: InstanceMirror
 
   /**
@@ -241,13 +242,17 @@ abstract class ObjectMirror implements Mirror {
 
 abstract class InstanceMirror implements ObjectMirror {
   ClassMirror get type;
-  // Currently skip 'bool get hasReflectee;'
+  bool get hasReflectee;
   get reflectee;
   bool operator ==(other);
   delegate(Invocation invocation);
 }
 
-// Currently skip 'abstract class ClosureMirror implements InstanceMirror'.
+abstract class ClosureMirror implements InstanceMirror {
+  MethodMirror get function;
+  Object apply(List positionalArguments,
+               [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
+}
 
 abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
   Uri get uri;
@@ -262,15 +267,19 @@ abstract class LibraryDependencyMirror implements Mirror {
   LibraryMirror get sourceLibrary;
   LibraryMirror get targetLibrary;
   Symbol get prefix;
-  // Currently skip 'List<CombinatorMirror> get combinators;'.
-  // Currently skip 'SourceLocation get location;'.
+  List<CombinatorMirror> get combinators;
+  SourceLocation get location;
 
   /// Note that the return type of the corresponding method in
   /// dart:mirrors is List<InstanceMirror>.
   List<Object> get metadata; // TYARG: InstanceMirror
 }
 
-// Currently skip 'abstract class CombinatorMirror implements Mirror'.
+abstract class CombinatorMirror implements Mirror {
+  List<Symbol> get identifiers;
+  bool get isShow;
+  bool get isHide;
+}
 
 abstract class TypeMirror implements DeclarationMirror {
   bool get hasReflectedType;
@@ -296,12 +305,12 @@ abstract class TypeMirror implements DeclarationMirror {
 
 abstract class ClassMirror implements TypeMirror, ObjectMirror {
   ClassMirror get superclass;
-  // Currently skip 'List<ClassMirror> get superinterfaces;'
+  List<ClassMirror> get superinterfaces;
   bool get isAbstract;
   Map<Symbol, DeclarationMirror> get declarations;
   Map<Symbol, MethodMirror> get instanceMembers;
   Map<Symbol, MethodMirror> get staticMembers;
-  ClassMirror get mixin; // Possible RET: Type
+  ClassMirror get mixin;
 
    /**
    * Invokes the named constructor and returns a mirror on the result.
@@ -349,7 +358,11 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   bool isSubclassOf(ClassMirror other);
 }
 
-// Currently skip 'abstract class FunctionTypeMirror implements ClassMirror'.
+abstract class FunctionTypeMirror implements ClassMirror {
+  TypeMirror get returnType;
+  List<ParameterMirror> get parameters;
+  MethodMirror get callMethod;
+}
 
 abstract class TypeVariableMirror extends TypeMirror {
   TypeMirror get upperBound; // Possible RET: Type
@@ -357,7 +370,9 @@ abstract class TypeVariableMirror extends TypeMirror {
   bool operator ==(other);
 }
 
-// Currently skip 'abstract class TypedefMirror implements TypeMirror'.
+abstract class TypedefMirror implements TypeMirror {
+  FunctionTypeMirror get referent;
+}
 
 abstract class MethodMirror implements DeclarationMirror {
   TypeMirror get returnType; // Possible RET: Type
@@ -395,8 +410,16 @@ abstract class ParameterMirror implements VariableMirror {
   Object get defaultValue; // RET: InstanceMirror
 }
 
-// Currently skip 'abstract class SourceLocation'
+abstract class SourceLocation {
+  int get line;
+  int get column;
+  Uri get sourceUri;
+}
 
-// Currently skip 'class Comment'
+class Comment {
+  final String text;
+  final String trimmedText;
+  final bool isDocComment;
+  const Comment(this.text, this.trimmedText, this.isDocComment);
+}
 
-// Currently skip 'class MirrorsUsed'

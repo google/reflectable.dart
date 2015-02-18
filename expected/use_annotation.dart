@@ -7,7 +7,9 @@
 // class Reflectable as an annotation.
 
 library reflectable.test.transformed.use_annotation;
-import 'reflectable_dummy.dart';
+import 'reflectable_use_annotation.dart';
 
 @Reflectable(const [])
-class A {}
+class A {
+  const int reflectable__Class__Identifier = 1000;
+}
