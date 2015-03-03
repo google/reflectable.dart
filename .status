@@ -1,9 +1,6 @@
 
-# Skip all files whose `.._test.dart` naming is caused by the
-# file name generation approach used for generated files.
-*/test/to_be_transformed/reflectable_reflect_test: SkipByDesign
-
-expected/*: SkipByDesign # Never run anything in 'expected'
+build/*: Skip # Don't run tests from the build directory.
 
 [ $runtime != vm ]
-*/test/checktransforms_test: SkipByDesign # Uses dart:io.
+test/checktransforms_test: Skip # Checking output from other tests
+
