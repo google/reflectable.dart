@@ -6,5 +6,4 @@
 expected/*: SkipByDesign # Never run anything in 'expected'
 
 [ $runtime != vm ]
-test/checktransforms_test: SkipByDesign # Checks output from other tests
-
+*/test/checktransforms_test: SkipByDesign # Uses dart:io.
