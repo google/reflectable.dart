@@ -3,21 +3,31 @@
 // the LICENSE file.
 
 // File being transformed by the reflectable transformer.
-// Imports the core file of this package and uses the
-// class Reflectable as an annotation.
+// Uses 'reflect'.
 
-library reflectable.test.to_be_transformed.use_annotation;
-import 'reflectable_use_annotation.dart';
+library reflectable.test.to_be_transformed.reflect_test;
+
+import 'reflectable_reflect_test.dart';
+import 'package:unittest/unittest.dart';
 import 'package:reflectable/src/mirrors_unimpl.dart';
 
 
-@Reflectable(const [])
+const myReflectable = const Reflectable(const <ReflectCapability>[]);
+
+@myReflectable
 class A {
   // Generated: _reflectable__Class__Identifier
   static const int _reflectable__Class__Identifier = 1000;
   // Generated: reflectable__Class__Identifier
   int get reflectable__Class__Identifier => _reflectable__Class__Identifier;
 
+}
+
+main() {
+  test('reflect', () {
+    InstanceMirror instanceMirror = myReflectable.reflect(new A());
+    expect(instanceMirror == null, isFalse);
+  });
 }
 
 
