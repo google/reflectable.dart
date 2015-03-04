@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 // This file defines the same types as sdk/lib/mirrors/mirrors.dart, in
-// order to enable code using [dart:mirrors] to switch to using 
+// order to enable code using [dart:mirrors] to switch to using
 // [Reflectable] based mirrors with the smallest possible change.
 // The changes are discussed below, under headings on the form
 // 'API Change: ..'.
@@ -50,8 +50,8 @@
 // A similar change could have been applied to many other methods, but
 // in those cases it seems more likely that the mirror will be used
 // in its own right rather than just to get 'theMirror.reflectee'.
-// Some of these locations are marked with '// Possible'.  They are in 
-// general concerned with types in a broad sense: [ClassMirror], 
+// Some of these locations are marked with '// Possible'.  They are in
+// general concerned with types in a broad sense: [ClassMirror],
 // [TypeMirror], and [LibraryMirror].
 
 // TODO(eernst): The preceeding comment blocks should be made a dartdoc
@@ -422,4 +422,3 @@ class Comment {
   final bool isDocComment;
   const Comment(this.text, this.trimmedText, this.isDocComment);
 }
-

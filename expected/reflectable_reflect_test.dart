@@ -10,9 +10,9 @@
 // that the compilability of code that depends on reflectable will
 // remain unchanged.
 
-library reflectable.test.to_be_transformed.reflectable_import_reflectable;
+library reflectable.test.to_be_transformed.reflectable_reflect_test;
 
 import 'package:reflectable/reflectable.dart';
 export 'package:reflectable/reflectable.dart';
 
-// 
+// A
