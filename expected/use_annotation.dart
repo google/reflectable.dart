@@ -6,23 +6,10 @@
 // Imports the core file of this package and uses the
 // class Reflectable as an annotation.
 
-library reflectable.test.to_be_transformed.use_annotation;
+library reflectable.test.transformed.use_annotation;
 import 'reflectable_use_annotation.dart';
-import 'package:reflectable/src/mirrors_unimpl.dart';
-
 
 @Reflectable(const [])
 class A {
-  // Generated: _reflectable__Class__Identifier
-  static const int _reflectable__Class__Identifier = 1000;
-  // Generated: reflectable__Class__Identifier
-  int get reflectable__Class__Identifier => _reflectable__Class__Identifier;
-
+  const int reflectable__Class__Identifier = 1000;
 }
-
-
-// Generated: Rest of file
-
-class _A_ClassMirror extends ClassMirrorUnimpl {}
-class _A_InstanceMirror extends InstanceMirrorUnimpl {}
-
