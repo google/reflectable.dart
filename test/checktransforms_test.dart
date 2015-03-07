@@ -82,7 +82,7 @@ StreamSubscription<FileSystemEntity> checkCompleteness(Directory buildDir,
       });
 }
 
-void main ([String args]) {
+void main (List<String> args) {
   String scriptDir = path.dirname(path.fromUri(Platform.script));
 
   // In spite of .status, test.py runs this script from build; stop it.
