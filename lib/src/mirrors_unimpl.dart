@@ -3,11 +3,6 @@
 // the LICENSE file.
 
 import 'dart:async';
-import 'package:analyzer/src/generated/constant.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/resolver.dart';
-import 'package:barback/barback.dart';
-import 'package:code_transformers/resolver.dart';
 import '../reflectable.dart';
 
 // Mirror classes with default implementations of all methods, to be used as

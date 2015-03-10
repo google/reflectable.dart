@@ -11,6 +11,8 @@
 
 library reflectable.reflectable;
 
+import 'src/reflectable_implementation.dart' as implementation;
+
 import 'capability.dart';
 export 'capability.dart';
 
@@ -54,9 +56,9 @@ class Reflectable {
 
   // Currently skip 'MirrorSystem currentMirrorSystem'
 
-  /// Returns a mirror of the given object [obj]
+  /// Returns a mirror of the given object [reflectee]
   InstanceMirror reflect(Object reflectee) =>
-      throw new UnimplementedError();
+      implementation.reflect(reflectee);
 
   /// Returns a mirror of the given class [type].  If [type] is a
   /// parameterized type, i.e., an application of a generic class
@@ -66,7 +68,7 @@ class Reflectable {
   /// any type arguments.  Other types than classes are (not yet)
   /// supported.
   ClassMirror reflectClass(Type type) =>
-      throw new UnimplementedError();
+      _unsupported();
 
   /// Returns a mirror of the given type [type].  The returned value
   /// will also mirror the type if it is a parameterized type, i.e.,
@@ -75,7 +77,7 @@ class Reflectable {
   /// but it has a list of actual type arguments.  Other types than
   /// classes are (not yet) supported.
   ClassMirror reflectType(Type type) =>
-      throw new UnimplementedError();
+      _unsupported();
 
   // MirrorSystem
   // -------------------------------------------------------
@@ -84,23 +86,23 @@ class Reflectable {
   // 'Currently skip' comments indicate omitted declarations.
 
   /// Returns a mirror of the given library [library].
-  LibraryMirror findLibrary(Symbol library) => throw new UnimplementedError();
+  LibraryMirror findLibrary(Symbol library) => _unsupported();
 
   /// Returns the name associated with the given [symbol].
   /// TODO(eernst): This name is problematic ('get' gives no
   /// information about what it does; consider nameFor, translateSymbol
   /// symbolToString, ..).
-  String getName(Symbol symbol) => throw new UnimplementedError();
+  String getName(Symbol symbol) => _unsupported();
 
   /// Returns the symbol associated with the given [name].
   /// TODO(eernst): Currently [library] is ignored.
   Symbol getSymbol(String name, [LibraryMirror library]) =>
-      throw new UnimplementedError();
+      _unsupported();
 
   // Currently skip 'IsolateMirror get isolate'
 
   /// Returns a map of all libraries in the current isolate.
-  Map<Uri, LibraryMirror> get libraries => throw new UnimplementedError();
+  Map<Uri, LibraryMirror> get libraries => _unsupported();
 
   // Reflectable
   // -------------------------------------------------------
@@ -108,9 +110,11 @@ class Reflectable {
   // and may be changed without ill effects on portability.
 
   /// A mirror for the [Object] class.
-  static final typeMirrorForObject = throw new UnimplementedError();
+  static final typeMirrorForObject = _unsupported();
 
   /// Returns a Symbol representing the name of the setter corresponding
   /// to the name [getter], which is assumed to be the name of a getter.
-  Symbol setterSymbol(Symbol getter) => throw new UnimplementedError();
+  Symbol setterSymbol(Symbol getter) => _unsupported();
 }
+
+_unsupported() => throw new UnimplementedError();

@@ -184,14 +184,14 @@ Map<int, ClassElement>
 /// the given program.  Classes with no 'reflectable__Class__Identifier'
 /// are considered to be outside the scope of this package, and no
 /// static mirrors will be delivered for them.
-const String reflectableClassIdentifier = 'reflectable__Class__Identifier';
+const String classIdentifier = 'reflectable__Class__Identifier';
 
 /// Perform `sourceManager.replace` such that the import/export of
 /// reflectableLibrary specified by [element] is replaced by an
 /// import/export of the generated library.
 void _editUriReferencedElement(SourceManager sourceManager,
-                               String nameOfGeneratedFile,
-                               UriReferencedElement element) {
+                               UriReferencedElement element,
+                               String newUri) {
   int uriStart = element.uriOffset;
   if (uriStart == -1) {
     // Encountered a synthetic element.  We do not expect imports of
@@ -202,7 +202,51 @@ void _editUriReferencedElement(SourceManager sourceManager,
   // If we have `uriStart != -1 && uriEnd == -1` then there is a bug
   // in the implementation of [element].
   assert(uriEnd != -1);
-  sourceManager.replace(uriStart, uriEnd, "'$nameOfGeneratedFile'");
+  sourceManager.replace(uriStart, uriEnd, "'$newUri'");
+}
+
+// TODO(eernst): Make sure this name is unique.
+String _staticClassMirrorName(String targetClassName) =>
+    "_${targetClassName}_ClassMirror";
+
+// TODO(eernst): Make sure this name is unique.
+String _staticInstanceMirrorName(String targetClassName) =>
+    "_${targetClassName}_InstanceMirror";
+
+const String generatedComment = "// Generated";
+
+ImportElement _findLastImport(LibraryElement library) {
+  if (library.imports.isNotEmpty) {
+    ImportElement importElement = library.imports.lastWhere(
+        (importElement) => importElement.node != null,
+        orElse: () => null);
+    if (importElement != null) {
+      // Found an import element with a node (i.e., a non-synthetic one).
+      return importElement;
+    } else {
+      // No non-synthetic imports.
+      return null;
+    }
+  }
+  // library.imports.isEmpty
+  return null;
+}
+
+ExportElement _findFirstExport(LibraryElement library) {
+  if (library.exports.isNotEmpty) {
+    ExportElement exportElement = library.exports.firstWhere(
+        (exportElement) => exportElement.node != null,
+        orElse: () => null);
+    if (exportElement != null) {
+      // Found an export element with a node (i.e., a non-synthetic one)
+      return exportElement;
+    } else {
+      // No non-synthetic exports.
+      return null;
+    }
+  }
+  // library.exports.isEmpty
+  return null;
 }
 
 /// Returns the result of transforming the given [source] code, which is
@@ -216,58 +260,118 @@ void _editUriReferencedElement(SourceManager sourceManager,
 ///
 /// TODO(eernst): The transformation has only been implemented
 /// partially at this time.
+///
+/// TODO(eernst): Note that this function uses instances of [AstNode]
+/// and [Token] to get the correct offset into [source] of specific
+/// constructs in the code.  This is potentially costly, because this
+/// (intermediate) parsing related information may have been evicted
+/// since parsing, and the source code will then be parsed again.
+/// However, we do not have an alternative unless we want to parse
+/// everything ourselves.  But it would be useful to be able to give
+/// barback a hint that this information should preferably be preserved.
 String _transformSource(LibraryElement reflectableLibrary,
                         Map<int, ClassElement> reflectableClasses,
                         LibraryElement targetLibrary,
                         String nameOfGeneratedFile,
                         String source) {
-  SourceManager result = new SourceManager(source);
+  // Used to manage replacements of code snippets by other code snippets
+  // in [source].
+  SourceManager sourceManager = new SourceManager(source);
 
-  void editResult(UriReferencedElement element) {
-    _editUriReferencedElement(result, nameOfGeneratedFile, element);
+  // Used to accumulate generated classes, maps, etc.
+  String generatedSource = "";
+
+  void editUriOfReflectable(UriReferencedElement element) {
+    _editUriReferencedElement(sourceManager, element, nameOfGeneratedFile);
   }
 
   // Transform all imports and exports of reflectable.
   targetLibrary.imports
       .where((element) => element.importedLibrary == reflectableLibrary)
-      .forEach(editResult);
+      .forEach(editUriOfReflectable);
   targetLibrary.exports
       .where((element) => element.exportedLibrary == reflectableLibrary)
-      .forEach(editResult);
+      .forEach(editUriOfReflectable);
 
   // Insert an id into each class whose metadata includes an instance of
   // a subclass of Reflectable.
   for (int classId in reflectableClasses.keys) {
     ClassElement classElement = reflectableClasses[classId];
+    String className = classElement.node.name.name.toString();
+
     // We only transform classes in the [targetLibrary].
     if (classElement.library != targetLibrary) continue;
-    // We need to insert a declaration into the body of the class.
-    // TODO(eernst): The strategy used below will not work (comments
-    // can break it by containing a left-brace character).  Fix it
-    // using instances of AstNode and Token.
-    int searchStartingIndex = 
-        classElement.nameOffset + classElement.name.length;
-    if (classElement.typeParameters.length > 0) {
-      AstNode lastTypeParameterNode = classElement.typeParameters.last.node;
-      if (lastTypeParameterNode == null) {
-        // TODO(eernst): This is a synthetic class or a class which is
-        // "not in a library".  Clarify: does this ever happen?
-        throw new UnimplementedError();
-      }
-      searchStartingIndex = lastTypeParameterNode.end;
-    }
-    // Search in the original [source] for the next brace-left.
-    int classBodyIndex = source.indexOf('{', searchStartingIndex);
-    // We cannot have a classDefinition that has no class body.
-    assert(classBodyIndex != -1);
-    int insertionPoint = classBodyIndex + 1;
-    // Insert the declaration of [reflectableClassIdentifier].
-    result.replace(insertionPoint,
-                   insertionPoint,
-                   "\n  const int $reflectableClassIdentifier = $classId;\n");
+
+    // Insert the identifier declaration into the body of the class.
+    int classBodyOffset = classElement.node.leftBracket.end;
+    sourceManager.replace(
+        classBodyOffset,
+        classBodyOffset,"""
+
+  $generatedComment: _$classIdentifier
+  static const int _$classIdentifier = $classId;
+  $generatedComment: $classIdentifier
+  int get $classIdentifier => _$classIdentifier;
+
+""");
+
+    // Generate a static mirror for this class
+    generatedSource +=
+        "class ${_staticClassMirrorName(className)} "
+        "extends ClassMirrorUnimpl {}\n";
+
+    // Generate a static mirror for instances of this class
+    generatedSource +=
+        "class ${_staticInstanceMirrorName(className)} "
+        "extends InstanceMirrorUnimpl {}\n";
   }
 
-  return result.source;
+  if (generatedSource.length == 0) {
+    return sourceManager.source;
+  } else {
+    // Add an import such that generated classes can see their superclasses.
+    // Note that we make no attempt at following the style guide, e.g., by
+    // keeping the imports sorted.
+    String newImport =
+        "\nimport 'package:reflectable/src/mirrors_unimpl.dart';\n";
+    // Index in [source] where the new import directive is inserted, we
+    // use 0 as the default placement (at the front of the file), but
+    // make a heroic attempt to find a better placement first.
+    int newImportIndex = 0;
+    ImportElement importElement = _findLastImport(targetLibrary);
+    if (importElement != null) {
+      newImportIndex = importElement.node.end;
+    } else {
+      // No non-synthetic import directives present.
+      ExportElement exportElement = _findFirstExport(targetLibrary);
+      if (exportElement != null) {
+        // Put the new import before the exports
+        newImportIndex = exportElement.node.offset;
+      } else {
+        // No non-synthetic import nor export directives present.
+        LibraryDirective libraryDirective =
+            targetLibrary.definingCompilationUnit.node.directives
+            .firstWhere((directive) => directive is LibraryDirective,
+                        orElse: () => null);
+        if (libraryDirective != null) {
+          // Put the new import after the library name directive.
+          newImportIndex = libraryDirective.end;
+        } else {
+          // No library directive either, keep newImportIndex == 0.
+        }
+      }
+    }
+    // Finally insert the import directive at the chosen location.
+    sourceManager.replace(newImportIndex, newImportIndex, newImport);
+
+    return """
+${sourceManager.source}
+
+$generatedComment: Rest of file
+
+$generatedSource
+""";
+  }
 }
 
 /// Generate the source code defining the static mirror classes that
@@ -276,7 +380,8 @@ String _transformSource(LibraryElement reflectableLibrary,
 /// Will take more arguments in order to be able to do the job.
 String _generateSource(Resolver resolver,
                        LibraryElement reflectableLibrary,
-                       Map<int, ClassElement> reflectableClasses) {
+                       Map<int, ClassElement> reflectableClasses,
+                       String nameOfGeneratedLibrary) {
   String template = """
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
@@ -290,7 +395,7 @@ String _generateSource(Resolver resolver,
 // that the compilability of code that depends on reflectable will
 // remain unchanged.
 
-library reflectable.test.to_be_transformed.reflectable_;
+library reflectable.test.to_be_transformed.$nameOfGeneratedLibrary;
 
 import 'package:reflectable/reflectable.dart';
 export 'package:reflectable/reflectable.dart';
@@ -364,9 +469,12 @@ Future apply(Transform transform) {
         // Generate the file containing the static mirrors.
         AssetId generatedFileId =
             new AssetId(input.id.package, pathOfGeneratedFile);
+        String nameOfGeneratedLibrary = 
+            path.basenameWithoutExtension(nameOfGeneratedFile);
         String generatedSource = _generateSource(resolver,
                                                  reflectableLibrary,
-                                                 reflectableClasses);
+                                                 reflectableClasses,
+                                                 nameOfGeneratedLibrary);
         transform.addOutput(new Asset.fromString(generatedFileId,
                                                  generatedSource));
       } else {

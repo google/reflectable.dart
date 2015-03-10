@@ -1,6 +1,16 @@
+# Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+# source code is governed by a BSD-style license that can be found in
+# the LICENSE file.
 
-build/*: Skip # Don't run tests from the build directory.
+# Skip all files whose `.._test.dart` naming is caused by the
+# file name generation approach used for generated files.
+build/test/to_be_transformed/reflectable_reflect_test: SkipByDesign
+
+expected/*: SkipByDesign # Never run anything in 'expected'
 
 [ $runtime != vm ]
-test/checktransforms_test: Skip # Checking output from other tests
+test/checktransforms_test: SkipByDesign # Uses dart:io.
+build/test/checktransforms_test: SkipByDesign # Uses dart:io.
 
+[ $runtime == vm ]
+build/test/checktransforms_test: SkipByDesign # Not designed to run from here

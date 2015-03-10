@@ -45,9 +45,9 @@ void checkContents(FileSystemEntity entity, String newBasePath) {
       throw "File contents not identical for ${entity.path}.";
     }
   } else {
-    // [entity] may be a [Directory] which we will skip because we
-    // do not traverse subdirectories, or it may be a [Link] which
-    // we will skip because all tested entities must be files.
+    // [entity] may be a [Directory] which we will skip because we do
+    // not traverse subdirectories, or it may be a [Link] which we will
+    // skip because all tested entities must be files.
   }
 }
 
@@ -66,9 +66,9 @@ StreamSubscription<FileSystemEntity> checkAllContents(Directory expectDir,
 /// [expectedDirPath].
 StreamSubscription<FileSystemEntity> checkCompleteness(Directory buildDir,
                                                        String expectDirPath) {
-  buildDir.list(recursive: false, followLinks: false).listen(
+  return buildDir.list(recursive: false, followLinks: false).listen(
       (FileSystemEntity entity) {
-        if (entity is File) {
+        if (entity is File && path.extension(entity.path) == '.dart') {
           String expectPath = correspondingPath(entity.path, expectDirPath);
           File expectFile = new File(expectPath);
           if (! expectFile.existsSync()) {
@@ -77,17 +77,15 @@ StreamSubscription<FileSystemEntity> checkCompleteness(Directory buildDir,
         } else {
           // [entity] may be a [Directory] which we will skip because we
           // do not traverse subdirectories, or it may be a [Link] which
-          // we will skip because all tested entities must be files.
+          // we will skip because all tested entities must be files, or
+          // it may be a file that does not contain Dart source code (or
+          // at least: whose file extension claims so).
         }
       });
 }
 
-void main (List<String> args) {
+void main ([List<String> args]) {
   String scriptDir = path.dirname(path.fromUri(Platform.script));
-
-  // In spite of .status, test.py runs this script from build; stop it.
-  if (path.split(path.dirname(scriptDir)).last == "build") return;
-
   String rootDir = path.dirname(scriptDir);
   String rootPath = rootDir.toString();
   String expectedDirPath = path.join(rootDir, "expected");

@@ -5,4 +5,4 @@
 // Minimal example of file being transformed by the reflectable
 // transformer.
 
-library reflectable.test.transformed.minimal;
+library reflectable.test.to_be_transformed.minimal;
