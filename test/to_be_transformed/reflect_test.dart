@@ -10,7 +10,11 @@ library reflectable.test.to_be_transformed.reflect_test;
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 
-const myReflectable = const Reflectable(const <ReflectCapability>[]);
+class MyReflectable extends Reflectable {
+  const MyReflectable(): super(const <ReflectCapability>[]);
+}
+
+const myReflectable = const MyReflectable();
 
 @myReflectable
 class A {}

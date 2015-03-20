@@ -1,6 +1,0 @@
-{
-  "pre_test_hooks" : {
-      "Add missing symlinks":
-      "$dart --package-root=$project_root/packages $project_root/tools/add_symlinks.dart $project_root"
-  }
-}

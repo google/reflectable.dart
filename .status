@@ -2,10 +2,6 @@
 # source code is governed by a BSD-style license that can be found in
 # the LICENSE file.
 
-# Skip all files whose `.._test.dart` naming is caused by the
-# file name generation approach used for generated files.
-build/test/to_be_transformed/reflectable_reflect_test: SkipByDesign
-
 expected/*: SkipByDesign # Never run anything in 'expected'
 
 [ $runtime != vm ]

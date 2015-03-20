@@ -7,22 +7,34 @@
 // class Reflectable as an annotation.
 
 library reflectable.test.to_be_transformed.use_annotation;
-import 'reflectable_use_annotation.dart';
+import 'package:reflectable/static_reflectable.dart';
 import 'package:reflectable/src/mirrors_unimpl.dart';
 
 
-@Reflectable(const [])
-class A {
-  // Generated: _reflectable__Class__Identifier
-  static const int _reflectable__Class__Identifier = 1000;
-  // Generated: reflectable__Class__Identifier
-  int get reflectable__Class__Identifier => _reflectable__Class__Identifier;
+class MyReflectable extends Reflectable {
+  const MyReflectable(): super(const <ReflectCapability>[]);
 
+  // Generated: Rest of class
+  InstanceMirror reflect(Object reflectee) {
+    if (reflectee.runtimeType == A) {
+      return new _A_InstanceMirror(reflectee);
+    }
+    throw new UnimplementedError();
+  }
 }
+
+@MyReflectable()
+class A {}
 
 
 // Generated: Rest of file
 
-class _A_ClassMirror extends ClassMirrorUnimpl {}
-class _A_InstanceMirror extends InstanceMirrorUnimpl {}
+
+class _A_ClassMirror extends ClassMirrorUnimpl {
+}
+
+class _A_InstanceMirror extends InstanceMirrorUnimpl {
+  final A reflectee;
+  _A_InstanceMirror(this.reflectee);
+}
 

@@ -6,4 +6,4 @@
 // Imports the core file of this package.
 
 library reflectable.test.to_be_transformed.import_reflectable;
-import 'reflectable_import_reflectable.dart';
+import 'package:reflectable/static_reflectable.dart';

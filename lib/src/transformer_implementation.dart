@@ -2,16 +2,21 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
+library reflectable.src.transformer_implementation;
+
 import 'dart:async';
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer/src/generated/engine.dart';
+import 'package:analyzer/src/generated/error.dart';
 import 'package:analyzer/src/generated/resolver.dart';
 import 'package:barback/barback.dart';
 import 'package:code_transformers/resolver.dart';
 import 'package:path/path.dart' as path;
 import 'package:reflectable/reflectable.dart';
 import 'source_manager.dart';
+import 'transformer_errors.dart';
 
 // TODO(eernst): Keep in mind, with reference to
 // http://dartbug.com/21654 comment #5, that it would be very valuable
@@ -32,8 +37,7 @@ import 'source_manager.dart';
 /// class [Reflectable] by looking up the static field
 /// [Reflectable.thisClassId] and checking its value (which is a 40
 /// character string computed by sha1sum on an old version of
-/// reflectable.dart).  It uses [resolver] to retrieve the dart.core
-/// library such that constant evaluation can take place.
+/// reflectable.dart).
 ///
 /// Discussion of approach: Checking that we have found the correct
 /// [Reflectable] class is crucial for correctness, and the "obvious"
@@ -41,7 +45,7 @@ import 'source_manager.dart';
 /// right names using [resolver] is unsafe.  The problems are as
 /// follows: (1) Library names are not guaranteed to be unique in a
 /// given program, so we might look up a different library named
-/// reflectable.reflectable, and a class Reflectable in there.  (2)
+/// reflectable.reflectable, and a class named Reflectable in there.  (2)
 /// Library URIs (which must be unique in a given program) are not known
 /// across all usage locations for reflectable.dart, so we cannot easily
 /// predict all the possible URIs that could be used to import
@@ -49,41 +53,43 @@ import 'source_manager.dart';
 /// programs must use exactly one specific URI to import
 /// reflectable.dart.  So we use [Reflectable.thisClassId] which is very
 /// unlikely to occur with the same value elsewhere by accident.
-bool _equalsClassReflectable(ClassElement type, Resolver resolver) {
+bool _equalsClassReflectable(ClassElement type) {
   FieldElement idField = type.getField("thisClassId");
   if (idField == null || !idField.isStatic) return false;
   if (idField is ConstFieldElementImpl) {
-    LibraryElement coreLibrary = resolver.getLibraryByName("dart.core");
-    TypeProvider typeProvider = new TypeProviderImpl(coreLibrary);
-    DartObject dartObjectThisClassId =
-        new DartObjectImpl(typeProvider.stringType,
-                           new StringState(Reflectable.thisClassId));
     EvaluationResultImpl idResult = idField.evaluationResult;
-    if (idResult is ValidResult) {
-      DartObject idValue = idResult.value;
-      return idValue == dartObjectThisClassId;
+    if (idResult != null) {
+      return idResult.value.stringValue == Reflectable.thisClassId;
     }
+    // idResult == null: analyzer/.../element.dart does not specify
+    // whether this could happen, but it is surely not the right
+    // class, so we fall through.
   }
   // Not a const field, cannot be the right class.
   return false;
 }
 
 /// Returns the ClassElement in the target program which corresponds to class
-/// [Reflectable].  The [resolver] is used to get the library for this code in
-/// the target program (if present), and the dart.core library for constant
-/// evaluation.
-ClassElement _findReflectableClassElement(LibraryElement reflectableLibrary,
-                                          Resolver resolver) {
+/// [Reflectable].
+ClassElement _findReflectableClassElement(LibraryElement reflectableLibrary) {
   for (CompilationUnitElement unit in reflectableLibrary.units) {
     for (ClassElement type in unit.types) {
       if (type.name == Reflectable.thisClassName &&
-          _equalsClassReflectable(type, resolver)) {
+          _equalsClassReflectable(type)) {
         return type;
       }
     }
   }
   // Class [Reflectable] was not found in the target program.
   return null;
+}
+
+/// Returns true iff [possibleSubtype] is a direct subclass of [type].
+bool _isDirectSubclassOf(InterfaceType possibleSubtype, InterfaceType type) {
+  InterfaceType superclass = possibleSubtype.superclass;
+  // Even if `superclass == null` (superclass of Object), the equality
+  // test will produce the correct result.
+  return type == superclass;
 }
 
 /// Returns true iff [possibleSubtype] is a subclass of [type], including the
@@ -95,39 +101,85 @@ bool _isSubclassOf(InterfaceType possibleSubtype, InterfaceType type) {
   return _isSubclassOf(superclass, type);
 }
 
-/// Returns true iff the [elementAnnotation] is an
-/// instance of [focusClass] or a subclass thereof.
-bool _isReflectableAnnotation(ElementAnnotation elementAnnotation,
-                              ClassElement focusClass) {
-  // TODO(eernst): The documentation in analyzer/lib/src/generated/element.dart
-  // does not reveal whether elementAnnotation.element can ever be null.
-  // Clarify that.
-  if (elementAnnotation.element != null) {
-    Element element = elementAnnotation.element;
-    // TODO(eernst): Handle all possible shapes of const values; currently only
-    // constructor expressions and simple identifiers are handled.
-    if (element is ConstructorElement) {
-      return _isSubclassOf(element.enclosingElement.type, focusClass.type);
-    }
-    if (element is PropertyAccessorElement) {
-      PropertyInducingElement variable = element.variable;
-      // Surprisingly, we have to use the type VariableElementImpl
-      // here.  This is because VariableElement does not declare
-      // evaluationResult (presumably it is "secret").
-      if (variable is VariableElementImpl && variable.isConst) {
-        VariableElementImpl variableImpl = variable as VariableElementImpl;
-        EvaluationResultImpl result = variableImpl.evaluationResult;
-        if (result is ValidResult) {
-          return _isSubclassOf(result.value.type, focusClass.type);
-        }
-      }
-    }
-    // This annotation does not conform to the type Reflectable.
-    return false;
+/// Returns the metadata class in [elementAnnotation] if it is an
+/// instance of a direct subclass of [focusClass], otherwise returns
+/// `null`.  Uses [errorReporter] to report an error if it is a subclass
+/// of [focusClass] which is not a direct subclass of [focusClass],
+/// because such a class is not supported as a Reflectable metadata
+/// class.
+ClassElement _getReflectableAnnotation(ElementAnnotation elementAnnotation,
+                                       ClassElement focusClass,
+                                       ErrorReporter errorReporter) {
+  if (elementAnnotation.element == null) {
+    // TODO(eernst): The documentation in
+    // analyzer/lib/src/generated/element.dart does not reveal whether
+    // elementAnnotation.element can ever be null. The following action
+    // is based on the assumption that it means "there is no annotation
+    // here anyway".
+    return null;
   }
-  // This annotation does not have an associated element, so there is nothing to
-  // reflect upon.
-  return false;
+
+  /// Checks that the inheritance hierarchy placement of [type]
+  /// conforms to the constraints relative to [classReflectable],
+  /// which is intended to refer to the class Reflectable defined
+  /// in package:reflectable/reflectable.dart. In case of violations,
+  /// raises an error using the given [errorReporter].
+  bool checkInheritance(InterfaceType type,
+                        InterfaceType classReflectable,
+                        ErrorReporter errorReporter) {
+    if (!_isSubclassOf(type, classReflectable)) {
+      // Not a subclass of [classReflectable] at all.
+      return false;
+    }
+    if (!_isDirectSubclassOf(type, classReflectable)) {
+      // Instance of [classReflectable], or of indirect subclass
+      // of [classReflectable]: Not supported, report an error.
+      errorReporter.reportErrorForElement(
+          TransformationErrorCode.REFLECTABLE_METADATA_NOT_DIRECT_SUBCLASS,
+          elementAnnotation.element,
+          []);
+      return false;
+    }
+    // A direct subclass of [classReflectable], all OK.
+    return true;
+  }
+
+  Element element = elementAnnotation.element;
+  // TODO(eernst): Currently we only handle constructor expressions
+  // and simple identifiers.  May be generalized later.
+  if (element is ConstructorElement) {
+    bool isOk = checkInheritance(element.enclosingElement.type,
+                                 focusClass.type,
+                                 errorReporter);
+    return isOk ? element.enclosingElement.type.element : null;
+  } else if (element is PropertyAccessorElement) {
+    PropertyInducingElement variable = element.variable;
+    // Surprisingly, we have to use the type VariableElementImpl
+    // here.  This is because VariableElement does not declare
+    // evaluationResult (presumably it is "secret").
+    if (variable is VariableElementImpl && variable.isConst) {
+      VariableElementImpl variableImpl = variable as VariableElementImpl;
+      EvaluationResultImpl result = variableImpl.evaluationResult;
+      bool isOk = checkInheritance(result.value.type,
+                                   focusClass.type,
+                                   errorReporter);
+      return isOk ? result.value.type.element : null;
+    }
+  } else /* element is something else */ {
+    // This syntactic form of annotation is not supported.
+    //
+    // TODO(eernst): We need to consider whether there could be some other
+    // syntactic constructs that are incorrectly assumed by programmers to
+    // be usable with Reflectable.  Currently, such constructs will silently
+    // have no effect; it might be better to emit a diagnostic message (a
+    // hint?) in order to notify the programmer that "it does not work".
+    // The trade-off is that such constructs may have been written by
+    // programmers who are doing something else, intentionally.  To emit a
+    // diagnostic message, we must check whether there is a Reflectable
+    // somewhere inside this syntactic construct, and then emit the message
+    // in cases that we "consider likely to be misunderstood".
+    return null;
+  }
 }
 
 /// Returns true iff the given [library] imports [targetLibrary], which
@@ -135,6 +187,15 @@ bool _isReflectableAnnotation(ElementAnnotation elementAnnotation,
 bool _doesImport(LibraryElement library, LibraryElement targetLibrary) {
   List<LibraryElement> importedLibraries = library.importedLibraries;
   return importedLibraries.contains(targetLibrary);
+}
+
+/// Used to hold data that describes a Reflectable annotated class,
+/// including that class itself and its associated Reflectable
+/// metadata class.
+class ReflectableClassData {
+  final ClassElement annotatedClass;
+  final ClassElement metadataClass;
+  ReflectableClassData(this.annotatedClass, this.metadataClass);
 }
 
 /// Returns a list of classes from the scope of [resolver] which are
@@ -146,23 +207,34 @@ bool _doesImport(LibraryElement library, LibraryElement targetLibrary) {
 /// used by the target program which have already been transformed by
 /// this transformer (e.g., there would be a clash on the use of
 /// reflectableClassId with values near 1000 for more than one class).
-Map<int, ClassElement>
+List<ReflectableClassData>
     _findReflectableClasses(LibraryElement reflectableLibrary,
                             Resolver resolver) {
-  int reflectableClassId = 1000;  // First class id; grows sequentially.
-  ClassElement focusClass =
-      _findReflectableClassElement(reflectableLibrary, resolver);
-  if (focusClass == null) return <int, ClassElement>{};
-  Map<int, ClassElement> result = new Map<int, ClassElement>();
+  ClassElement focusClass = _findReflectableClassElement(reflectableLibrary);
+  List<ReflectableClassData> result = <ReflectableClassData>[];
+  if (focusClass == null) return result;
   for (LibraryElement library in resolver.libraries) {
     for (CompilationUnitElement unit in library.units) {
+      RecordingErrorListener errorListener = new RecordingErrorListener();
+      ErrorReporter errorReporter =
+          new ErrorReporter(errorListener, unit.source);
       for (ClassElement type in unit.types) {
-        for (ElementAnnotation metadataItem in type.metadata) {
-          if (_isReflectableAnnotation(metadataItem, focusClass)) {
-            result.putIfAbsent(reflectableClassId, () => type);
-            reflectableClassId++;
+        for (ElementAnnotation metadatum in type.metadata) {
+          ClassElement metadataClass =
+              _getReflectableAnnotation(metadatum, focusClass, errorReporter);
+          if (metadataClass != null) {
+            result.add(new ReflectableClassData(type, metadataClass));
           }
         }
+      }
+      List<AnalysisError> errors =
+          errorListener.getErrorsForSource(unit.source);
+      if (!errors.isEmpty) {
+        // TODO(eernst): Resolve how to show the errors. Later on,
+        // find an appropriate general approach to the handling of
+        // "compilation" errors.
+        print(errors);
+        throw new UnimplementedError();
       }
     }
   }
@@ -186,23 +258,66 @@ Map<int, ClassElement>
 /// static mirrors will be delivered for them.
 const String classIdentifier = 'reflectable__Class__Identifier';
 
-/// Perform `sourceManager.replace` such that the import/export of
-/// reflectableLibrary specified by [element] is replaced by an
-/// import/export of the generated library.
-void _editUriReferencedElement(SourceManager sourceManager,
-                               UriReferencedElement element,
-                               String newUri) {
-  int uriStart = element.uriOffset;
-  if (uriStart == -1) {
-    // Encountered a synthetic element.  We do not expect imports of
-    // reflectable to be synthetic, so we make it an error.
+/// Perform `replace` on the given [sourceManager] such that the
+/// import/export of `reflectableLibrary` specified by
+/// [uriReferencedElement] is replaced by the given [replacement]; it is
+/// required that `uriReferencedElement is! CompilationUnitElement`.
+void _replaceUriReferencedElement(SourceManager sourceManager,
+                                  UriReferencedElement uriReferencedElement,
+                                  String replacement) {
+  // This is intended to work for imports and exports only, i.e., not
+  // for compilation units. When this constraint is satisfied, `.node`
+  // will return a `NamespaceDirective`.
+  assert(uriReferencedElement is ImportElement ||
+         uriReferencedElement is ExportElement);
+  NamespaceDirective namespaceDirective = uriReferencedElement.node;
+  int directiveStart = namespaceDirective.offset;
+  if (directiveStart == -1) {
+    // Encountered a synthetic element.  We do not expect imports or
+    // exports of reflectable to be synthetic, so we make it an error.
     throw new UnimplementedError();
   }
-  int uriEnd = element.uriEnd;
-  // If we have `uriStart != -1 && uriEnd == -1` then there is a bug
-  // in the implementation of [element].
-  assert(uriEnd != -1);
-  sourceManager.replace(uriStart, uriEnd, "'$newUri'");
+  int directiveEnd = namespaceDirective.end;
+  // If we have `directiveStart != -1 && directiveEnd == -1` then there
+  // is a bug in the implementation of [uriReferencedElement].
+  assert(directiveEnd != -1);
+  sourceManager.replace(directiveStart, directiveEnd, replacement);
+}
+
+/// Eliminate the import of `reflectableLibrary` specified by
+/// [importElement] from the source of [sourceManager].
+void _replaceImportDirective(SourceManager sourceManager,
+                             ImportElement importElement,
+                             String replacement) {
+  _replaceUriReferencedElement(sourceManager, importElement, replacement);
+}
+
+/// Perform `sourceManager.replace` such that the export of
+/// `reflectableLibrary` specified by [exportElement] is eliminated and
+/// an error message is emitted. This transformer will not work if
+/// `reflectableLibrary` is exported: that library must be totally
+/// eliminated from the transformed program, such that the program does
+/// not indirectly import 'dart:mirrors'.
+void _emitDiagnosticForExportDirective(SourceManager sourceManager,
+                                       ExportElement exportElement,
+                                       ErrorReporter errorReporter) {
+  errorReporter.reportErrorForElement(
+      TransformationErrorCode.REFLECTABLE_LIBRARY_EXPORTED,
+      exportElement,
+      []);
+  // We cannot compile a program where an unknown library (namely
+  // `reflectableLibrary`, whose import has been deleted) must be
+  // exported, so continuing from here without changing anything will
+  // not work.  However, if `reflectableLibrary` was exported but never
+  // used then we would still be able to compile the program without the
+  // export.  So we eliminate the export.
+  //
+  // TODO(eernst): Add a test that reveals whether
+  // `reportErrorForElement` terminates the program; if so, we might
+  // want to raise a warning rather than an error; in any case, we need
+  // to extend the dartdoc of this method to describe its termination
+  // properties.
+  _replaceUriReferencedElement(sourceManager, exportElement, "");
 }
 
 // TODO(eernst): Make sure this name is unique.
@@ -249,6 +364,131 @@ ExportElement _findFirstExport(LibraryElement library) {
   return null;
 }
 
+/// Transform all imports of [reflectableLibrary] to import the thin
+/// outline version (`static_reflectable.dart`), such that we do not
+/// indirectly import `dart:mirrors`.  Remove all exports of
+/// [reflectableLibrary] and emit a diagnostic message about the fact
+/// that such an import was encountered (and it violates the constraints
+/// of this package, and hence we must remove it).  All the operations
+/// are using [targetLibrary] to find the source code offsets, and using
+/// [sourceManager] to actually modify the source code.
+void _transformSourceDirectives(LibraryElement reflectableLibrary,
+                                LibraryElement targetLibrary,
+                                SourceManager sourceManager) {
+  RecordingErrorListener errorListener = new RecordingErrorListener();
+  ErrorReporter errorReporter =
+      new ErrorReporter(errorListener, targetLibrary.source);
+
+  void replaceImportOfReflectable(UriReferencedElement element) {
+    _replaceUriReferencedElement(
+        sourceManager, element,
+        "import 'package:reflectable/static_reflectable.dart';");
+  }
+
+  void emitDiagnosticForExportDirective(UriReferencedElement element) =>
+      _emitDiagnosticForExportDirective(sourceManager, element, errorReporter);
+
+  // Transform all imports and exports of reflectable.
+  targetLibrary.imports
+      .where((element) => element.importedLibrary == reflectableLibrary)
+      .forEach(replaceImportOfReflectable);
+  targetLibrary.exports
+      .where((element) => element.exportedLibrary == reflectableLibrary)
+      .forEach(emitDiagnosticForExportDirective);
+}
+
+/// Transform the given [metadataClass] by adding features needed to
+/// implement the abstract methods in Reflectable from the library
+/// `static_reflectable.dart`.  Use [sourceManager] to perform the
+/// actual source code modification.  The [annotatedClasses] is the
+/// set of Reflectable annotated class whose metadata includes an
+/// instance of [metadataClass], i.e., the set of classes whose
+/// instances [metadataClass] must provide reflection for.
+void _transformMetadataClass(ClassElement metadataClass,
+                             List<ClassElement> annotatedClasses,
+                             SourceManager sourceManager,
+                             ErrorReporter errorReporter) {
+  // A ClassElement can be associated with an [EnumDeclaration], but
+  // this is not supported for a Reflectable metadata class.
+  if (metadataClass.node is EnumDeclaration) {
+    errorReporter.reportErrorForElement(
+        TransformationErrorCode.REFLECTABLE_IS_ENUM,
+        metadataClass,
+        []);
+  }
+  // Otherwise it is a ClassDeclaration.
+  ClassDeclaration classDeclaration = metadataClass.node;
+  int insertionIndex = classDeclaration.rightBracket.offset;
+
+  // Now insert generated material at insertionIndex; note that we insert
+  // the elements in reverse order, because we always push all the already
+  // inserted elements ahead for each new element inserted.
+
+  void insert(String code) {
+    sourceManager.replace(insertionIndex, insertionIndex, "$code\n");
+  }
+
+  String reflectCaseOfName(String className) =>
+      "    if (reflectee.runtimeType == $className) {\n"
+      "      return new ${_staticInstanceMirrorName(className)}(reflectee);\n"
+      "    }\n";
+
+  String reflectCases = "";  // Accumulates the body of the `reflect` method.
+
+  // Add each supported case to [reflectCases].
+  annotatedClasses.forEach((ClassElement annotatedClass) {
+      String className = annotatedClass.node.name.name.toString();
+      reflectCases += reflectCaseOfName(className);
+    });
+
+  // Add failure case to [reflectCases]: No matching classes, so the
+  // user is asking for a kind of reflection that was not requested,
+  // which is a runtime error.
+  // TODO(eernst): Consider more carefully *what* to throw here.
+  reflectCases += "    throw new UnimplementedError();";
+
+  // Add the `reflect` method to [metadataClass].
+  insert("  InstanceMirror reflect(Object reflectee) {\n$reflectCases\n  }");
+
+  // In front of all the generated material, indicate that it is generated.
+  insert("\n  $generatedComment: Rest of class");
+}
+
+/// Find classes in among `metadataClass` from [reflectableClasses]
+/// whose `library` is [targetLibrary], and transform them using
+/// _transformMetadataClass.
+void _transformMetadataClasses(List<ReflectableClassData> reflectableClasses,
+                               LibraryElement targetLibrary,
+                               SourceManager sourceManager) {
+  bool isInTargetLibrary(ReflectableClassData classData) {
+    return classData.metadataClass.library == targetLibrary;
+  }
+
+  Set<ClassElement> metadataClasses = new Set<ClassElement>();
+
+  void addMetadataClass(ReflectableClassData classData) {
+    metadataClasses.add(classData.metadataClass);
+  }
+
+  RecordingErrorListener errorListener = new RecordingErrorListener();
+  ErrorReporter errorReporter =
+      new ErrorReporter(errorListener, targetLibrary.source);
+
+  void transformMetadataClass(ClassElement metadataClass) {
+    List<ClassElement> annotatedClasses = reflectableClasses
+        .where((classData) => classData.metadataClass == metadataClass)
+        .map((classData) => classData.annotatedClass)
+        .toList();
+    _transformMetadataClass(metadataClass,
+                            annotatedClasses,
+                            sourceManager,
+                            errorReporter);
+  }
+
+  reflectableClasses.where(isInTargetLibrary).forEach(addMetadataClass);
+  metadataClasses.forEach(transformMetadataClass);
+}
+
 /// Returns the result of transforming the given [source] code, which is
 /// assumed to be the contents of the file associated with the
 /// [targetLibrary], which is the library currently being
@@ -270,9 +510,8 @@ ExportElement _findFirstExport(LibraryElement library) {
 /// everything ourselves.  But it would be useful to be able to give
 /// barback a hint that this information should preferably be preserved.
 String _transformSource(LibraryElement reflectableLibrary,
-                        Map<int, ClassElement> reflectableClasses,
+                        List<ReflectableClassData> reflectableClasses,
                         LibraryElement targetLibrary,
-                        String nameOfGeneratedFile,
                         String source) {
   // Used to manage replacements of code snippets by other code snippets
   // in [source].
@@ -281,49 +520,30 @@ String _transformSource(LibraryElement reflectableLibrary,
   // Used to accumulate generated classes, maps, etc.
   String generatedSource = "";
 
-  void editUriOfReflectable(UriReferencedElement element) {
-    _editUriReferencedElement(sourceManager, element, nameOfGeneratedFile);
-  }
+  // Transform selected existing elements in [targetLibrary].
+  _transformSourceDirectives(reflectableLibrary, targetLibrary, sourceManager);
+  _transformMetadataClasses(reflectableClasses, targetLibrary, sourceManager);
 
-  // Transform all imports and exports of reflectable.
-  targetLibrary.imports
-      .where((element) => element.importedLibrary == reflectableLibrary)
-      .forEach(editUriOfReflectable);
-  targetLibrary.exports
-      .where((element) => element.exportedLibrary == reflectableLibrary)
-      .forEach(editUriOfReflectable);
-
-  // Insert an id into each class whose metadata includes an instance of
-  // a subclass of Reflectable.
-  for (int classId in reflectableClasses.keys) {
-    ClassElement classElement = reflectableClasses[classId];
-    String className = classElement.node.name.name.toString();
+  for (ReflectableClassData classData in reflectableClasses) {
+    ClassElement annotatedClass = classData.annotatedClass;
+    String className = annotatedClass.node.name.name.toString();
 
     // We only transform classes in the [targetLibrary].
-    if (classElement.library != targetLibrary) continue;
+    if (annotatedClass.library != targetLibrary) continue;
 
-    // Insert the identifier declaration into the body of the class.
-    int classBodyOffset = classElement.node.leftBracket.end;
-    sourceManager.replace(
-        classBodyOffset,
-        classBodyOffset,"""
+    // Generate a static mirror for this class.
+    generatedSource += """\n
+class ${_staticClassMirrorName(className)} extends ClassMirrorUnimpl {
+}
+""";
 
-  $generatedComment: _$classIdentifier
-  static const int _$classIdentifier = $classId;
-  $generatedComment: $classIdentifier
-  int get $classIdentifier => _$classIdentifier;
-
-""");
-
-    // Generate a static mirror for this class
-    generatedSource +=
-        "class ${_staticClassMirrorName(className)} "
-        "extends ClassMirrorUnimpl {}\n";
-
-    // Generate a static mirror for instances of this class
-    generatedSource +=
-        "class ${_staticInstanceMirrorName(className)} "
-        "extends InstanceMirrorUnimpl {}\n";
+    // Generate a static mirror for instances of this class.
+    generatedSource += """\n
+class ${_staticInstanceMirrorName(className)} extends InstanceMirrorUnimpl {
+  final $className reflectee;
+  ${_staticInstanceMirrorName(className)}(this.reflectee);
+}
+""";
   }
 
   if (generatedSource.length == 0) {
@@ -374,36 +594,6 @@ $generatedSource
   }
 }
 
-/// Generate the source code defining the static mirror classes that
-/// are required for the given target program.
-/// TODO(eernst): Not yet implemented, will just return a near-const string.
-/// Will take more arguments in order to be able to do the job.
-String _generateSource(Resolver resolver,
-                       LibraryElement reflectableLibrary,
-                       Map<int, ClassElement> reflectableClasses,
-                       String nameOfGeneratedLibrary) {
-  String template = """
-// Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
-// source code is governed by a BSD-style license that can be found in
-// the LICENSE file.
-
-// This file is temporary: We will definitely need to change the import
-// of 'package:reflectable/reflectable.dart' because that import will
-// make the target program dependent on 'dart:mirrors', but the
-// generated code and its placement in files is currently being modified
-// extensively.  For now, this file will just include reflectable such
-// that the compilability of code that depends on reflectable will
-// remain unchanged.
-
-library reflectable.test.to_be_transformed.$nameOfGeneratedLibrary;
-
-import 'package:reflectable/reflectable.dart';
-export 'package:reflectable/reflectable.dart';
-
-""";
-  return '$template// ${reflectableClasses.values.join('\n// ')}\n';
-}
-
 /// Escape the given [charToEscape] in [toBeEscaped].
 String escapeChar(String toBeEscaped, String charToEscape) {
   String result = toBeEscaped;
@@ -451,32 +641,16 @@ Future apply(Transform transform) {
     }
     return input.readAsString().then((source) {
       if (_doesImport(targetLibrary, reflectableLibrary)) {
-        Map<int, ClassElement> reflectableClasses =
+        List<ReflectableClassData> reflectableClasses =
             _findReflectableClasses(reflectableLibrary, resolver);
         String pathOfTransformedFile = input.id.path;
-        String nameOfGeneratedFile =
-            'reflectable_${escape(path.split(pathOfTransformedFile).last)}';
-        String pathOfGeneratedFile =
-            path.join(path.dirname(pathOfTransformedFile), nameOfGeneratedFile);
         String transformedSource = _transformSource(reflectableLibrary,
                                                     reflectableClasses,
                                                     targetLibrary,
-                                                    nameOfGeneratedFile,
                                                     source);
         // Transform user provided code.
         transform.consumePrimary();
         transform.addOutput(new Asset.fromString(input.id, transformedSource));
-        // Generate the file containing the static mirrors.
-        AssetId generatedFileId =
-            new AssetId(input.id.package, pathOfGeneratedFile);
-        String nameOfGeneratedLibrary = 
-            path.basenameWithoutExtension(nameOfGeneratedFile);
-        String generatedSource = _generateSource(resolver,
-                                                 reflectableLibrary,
-                                                 reflectableClasses,
-                                                 nameOfGeneratedLibrary);
-        transform.addOutput(new Asset.fromString(generatedFileId,
-                                                 generatedSource));
       } else {
         // We do not consumePrimary, i.e., let the original source pass
         // through without changes.

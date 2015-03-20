@@ -7,21 +7,27 @@
 
 library reflectable.test.to_be_transformed.reflect_test;
 
-import 'reflectable_reflect_test.dart';
+import 'package:reflectable/static_reflectable.dart';
 import 'package:unittest/unittest.dart';
 import 'package:reflectable/src/mirrors_unimpl.dart';
 
 
-const myReflectable = const Reflectable(const <ReflectCapability>[]);
+class MyReflectable extends Reflectable {
+  const MyReflectable(): super(const <ReflectCapability>[]);
+
+  // Generated: Rest of class
+  InstanceMirror reflect(Object reflectee) {
+    if (reflectee.runtimeType == A) {
+      return new _A_InstanceMirror(reflectee);
+    }
+    throw new UnimplementedError();
+  }
+}
+
+const myReflectable = const MyReflectable();
 
 @myReflectable
-class A {
-  // Generated: _reflectable__Class__Identifier
-  static const int _reflectable__Class__Identifier = 1000;
-  // Generated: reflectable__Class__Identifier
-  int get reflectable__Class__Identifier => _reflectable__Class__Identifier;
-
-}
+class A {}
 
 main() {
   test('reflect', () {
@@ -33,6 +39,12 @@ main() {
 
 // Generated: Rest of file
 
-class _A_ClassMirror extends ClassMirrorUnimpl {}
-class _A_InstanceMirror extends InstanceMirrorUnimpl {}
+
+class _A_ClassMirror extends ClassMirrorUnimpl {
+}
+
+class _A_InstanceMirror extends InstanceMirrorUnimpl {
+  final A reflectee;
+  _A_InstanceMirror(this.reflectee);
+}
 

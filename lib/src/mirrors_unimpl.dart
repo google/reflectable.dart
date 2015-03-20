@@ -68,6 +68,7 @@ abstract class LibraryMirrorUnimpl extends DeclarationMirrorUnimpl
 class LibraryDependencyMirrorUnimpl implements LibraryDependencyMirror {
   bool get isImport => _unsupported();
   bool get isExport => _unsupported();
+  bool get isDeferred => _unsupported();
   LibraryMirror get sourceLibrary => _unsupported();
   LibraryMirror get targetLibrary => _unsupported();
   Symbol get prefix => _unsupported();

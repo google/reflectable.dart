@@ -9,5 +9,9 @@
 library reflectable.test.to_be_transformed.use_annotation;
 import 'package:reflectable/reflectable.dart';
 
-@Reflectable(const [])
+class MyReflectable extends Reflectable {
+  const MyReflectable(): super(const <ReflectCapability>[]);
+}
+
+@MyReflectable()
 class A {}

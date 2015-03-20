@@ -6,7 +6,7 @@
 
 // TODO(eernst): The implementation of class Reflectable below
 // will be introduced gradually; missing parts are replaced
-// by 'throw "Not yet implemented"'.
+// by _unsupported(), which will throw an `UnimplementedError`.
 // TODO(eernst): Write "library dartdoc" for this library.
 
 library reflectable.reflectable;
@@ -22,7 +22,7 @@ export 'mirrors.dart';
 /// [Reflectable] is used as metadata, marking classes for reflection.
 ///
 /// If a class has an instance of a subclass of this class in its
-/// [metadata] then it will be included in the root set of classes
+/// [metadata]<sup>1</sup> then it will be included in the root set of classes
 /// with support for reflection based on this package.  Other classes
 /// outside the root set may also be included, e.g., if it is specified
 /// that all subclasses of a given class in the root set are included.
@@ -34,8 +34,30 @@ export 'mirrors.dart';
 /// constructor argument, and the operations will throw an exception if
 /// they do not conform to said constraints.
 ///
+/// Terminology: We use the term *Reflectable metadata class* to
+/// denote a direct subclass of [Reflectable] with a zero-argument
+/// `const` constructor that is used as metadata on a class in the
+/// target program in one of the two supported manners: as a `const`
+/// constructor expression (`@MyReflectable()`), or as an identifier
+/// (`@myReflectable`) which is a top-level `const` whose value is
+/// an instance of the given Reflectable metadata class
+/// (`const myReflectable = const MyReflectable();`).  We use the
+/// term *Reflectable annotated class* to denote a class whose
+/// metadata includes an instance of a Reflectable metadata class.
+///
 /// Note that the role played by this class includes much of the role
 /// played by a [MirrorSystem] with dart:mirrors.
+///
+/// -----
+/// **Footnotes:**
+/// 1. Currently, the only setup which is supported is when
+/// the metadata object is an instance of a direct subclass of the
+/// class [Reflectable], say `MyReflectable`, and that subclass defines
+/// a `const` constructor taking zero arguments.  This ensures that
+/// every subclass of Reflectable used as metadata is a singleton class,
+/// which means that the behavior of the instance can be expressed by
+/// generating code in the class.  Generalizations of this setup may
+/// be supported in the future if compelling use cases come up.
 class Reflectable {
   // Intended to near-uniquely identify this class in target programs.
   static const thisClassName = "Reflectable";  // Update if renaming class!

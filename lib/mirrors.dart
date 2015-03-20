@@ -59,7 +59,7 @@
 // TODO(eernst): Change the preceeding comment to use a more
 // user-centric style.
 
-library reflectable.mirror;
+library reflectable.mirrors;
 
 // Currently skip 'abstract class MirrorSystem'
 
@@ -103,7 +103,23 @@ abstract class DeclarationMirror implements Mirror {
    * Note that the return type of the corresponding method in
    * dart:mirrors is List<InstanceMirror>.
    *
-   * TODO(eernst): make this comment more user friendly.
+   * TODO(eernst): Make this comment more user friendly.
+   * TODO(eernst): Include comments as `metadata`, remember to
+   * indicate which ones are doc comments (`isDocComment`),
+   * cf. https://github.com/dart-lang/reflectable/issues/3.
+   * Note that we may wish to represent a comment as an
+   * instance of [Comment] from reflectable/mirrors.dart,
+   * which is required in order to indicate explicitly that it is
+   * a doc comment; or we may decide that this violation of the
+   * "return a base object, not a mirror" rule is unacceptable, and
+   * return a [String], thus requiring the receiver to determine
+   * whether or not it is a doc comment, based on the contents
+   * of the [String].  
+   * Remark from sigurdm@ on this topic, 2015/03/19 09:50:06: We
+   * could also consider extending the interface with a
+   * `docComments` or similar.  To me it is highly confusing that
+   * metadata returns comments.  But if dart:mirrors does this we
+   * might just want to follow along.
    */
   List<Object> get metadata; // TYARG: InstanceMirror
 }
@@ -264,6 +280,7 @@ abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
 abstract class LibraryDependencyMirror implements Mirror {
   bool get isImport;
   bool get isExport;
+  bool get isDeferred;
   LibraryMirror get sourceLibrary;
   LibraryMirror get targetLibrary;
   Symbol get prefix;
