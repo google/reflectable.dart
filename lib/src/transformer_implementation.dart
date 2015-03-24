@@ -259,37 +259,29 @@ List<ReflectableClassData>
 const String classIdentifier = 'reflectable__Class__Identifier';
 
 /// Perform `replace` on the given [sourceManager] such that the
-/// import/export of `reflectableLibrary` specified by
-/// [uriReferencedElement] is replaced by the given [replacement]; it is
-/// required that `uriReferencedElement is! CompilationUnitElement`.
+/// URI of the import/export of `reflectableLibrary` specified by
+/// [uriReferencedElement] is replaced by the given [newUri]; it is
+/// required that `uriReferencedElement is` either an `ImportElement`
+/// or an `ExportElement`.
 void _replaceUriReferencedElement(SourceManager sourceManager,
                                   UriReferencedElement uriReferencedElement,
-                                  String replacement) {
+                                  String newUri) {
   // This is intended to work for imports and exports only, i.e., not
   // for compilation units. When this constraint is satisfied, `.node`
   // will return a `NamespaceDirective`.
   assert(uriReferencedElement is ImportElement ||
          uriReferencedElement is ExportElement);
-  NamespaceDirective namespaceDirective = uriReferencedElement.node;
-  int directiveStart = namespaceDirective.offset;
-  if (directiveStart == -1) {
+  int uriStart = uriReferencedElement.uriOffset;
+  if (uriStart == -1) {
     // Encountered a synthetic element.  We do not expect imports or
     // exports of reflectable to be synthetic, so we make it an error.
     throw new UnimplementedError();
   }
-  int directiveEnd = namespaceDirective.end;
-  // If we have `directiveStart != -1 && directiveEnd == -1` then there
-  // is a bug in the implementation of [uriReferencedElement].
-  assert(directiveEnd != -1);
-  sourceManager.replace(directiveStart, directiveEnd, replacement);
-}
-
-/// Eliminate the import of `reflectableLibrary` specified by
-/// [importElement] from the source of [sourceManager].
-void _replaceImportDirective(SourceManager sourceManager,
-                             ImportElement importElement,
-                             String replacement) {
-  _replaceUriReferencedElement(sourceManager, importElement, replacement);
+  int uriEnd = uriReferencedElement.uriEnd;
+  // If we have `uriStart != -1 && uriEnd == -1` then there is a bug
+  // in the implementation of [uriReferencedElement].
+  assert(uriEnd != -1);
+  sourceManager.replace(uriStart, uriEnd, "'$newUri'");
 }
 
 /// Perform `sourceManager.replace` such that the export of
@@ -317,7 +309,18 @@ void _emitDiagnosticForExportDirective(SourceManager sourceManager,
   // want to raise a warning rather than an error; in any case, we need
   // to extend the dartdoc of this method to describe its termination
   // properties.
-  _replaceUriReferencedElement(sourceManager, exportElement, "");
+  NamespaceDirective namespaceDirective = exportElement.node;
+  int directiveStart = namespaceDirective.offset;
+  if (directiveStart == -1) {
+    // Encountered a synthetic element.  We do not expect exports of
+    // reflectable to be synthetic, so we make it an error.
+    throw new UnimplementedError();
+  }
+  int directiveEnd = namespaceDirective.end;
+  // If we have `directiveStart != -1 && directiveEnd == -1` then there
+  // is a bug in the implementation of [exportElement].
+  assert(directiveEnd != -1);
+  sourceManager.replace(directiveStart, directiveEnd, "");
 }
 
 // TODO(eernst): Make sure this name is unique.
@@ -382,7 +385,7 @@ void _transformSourceDirectives(LibraryElement reflectableLibrary,
   void replaceImportOfReflectable(UriReferencedElement element) {
     _replaceUriReferencedElement(
         sourceManager, element,
-        "import 'package:reflectable/static_reflectable.dart';");
+        "package:reflectable/static_reflectable.dart");
   }
 
   void emitDiagnosticForExportDirective(UriReferencedElement element) =>
