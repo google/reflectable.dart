@@ -32,15 +32,16 @@
 // always preserved to a "practical" model where we return to the base
 // level in selected cases.
 //
-// These selected cases are [invoke], [getField], and [setField] in
-// [ObjectMirror], [newInstance] in [ClassMirror], and [defaultValue]
-// in [ParameterMirror], where the return type has been changed from
-// InstanceMirror to Object.  Similarly, the return type for [metadata]
-// in [DeclarationMirror] and in [LibraryDependencyMirror] was changed
-// from List<InstanceMirror> to List<Object>.  The relevant locations
-// in the code below have been marked with comments on the form
-// '// RET: <old-return-type>' resp. '// TYARG: <old-type-argument>'
-// and the discrepancies are mentioned in the relevant class dartdoc.
+// These selected cases are [invoke], [@deprecated getField], and
+// [@deprecated setField] in [ObjectMirror], [newInstance] in
+// [ClassMirror], and [defaultValue] in [ParameterMirror], where the
+// return type has been changed from InstanceMirror to Object.
+// Similarly, the return type for [metadata] in [DeclarationMirror] and
+// in [LibraryDependencyMirror] was changed from List<InstanceMirror> to
+// List<Object>.  The relevant locations in the code below have been
+// marked with comments on the form '// RET: <old-return-type>'
+// resp. '// TYARG: <old-type-argument>' and the discrepancies are
+// mentioned in the relevant class dartdoc.
 //
 // TODO(eernst): The information given in the previous paragraph
 // should be made part of the dartdoc comments on each of the relevant
@@ -161,11 +162,11 @@ abstract class ObjectMirror implements Mirror {
    * Deprecated method which has the same semantics as [invokeGetter].
    *
    * Ahead, [invokeGetter] is expected to be the only name for this operation,
-   * and the name [getField] is expected to be reused for a different semantics
-   * that reads the value of a field, bypassing any getters.  Since this is a
-   * breaking change it is not likely to happen before a major step in the
-   * version number, but users of mirrors can already now start using the
-   * future-safe name [invokeGetter].
+   * and the name [@deprecated getField] is expected to be reused for a
+   * different semantics that reads the value of a field, bypassing any getters.
+   * Since this is a breaking change it is not likely to happen before a major
+   * step in the version number, but users of mirrors can already now start
+   * using the future-safe name [invokeGetter].
    *
    * Note that the return type of the corresponding method in
    * dart:mirrors is InstanceMirror.
@@ -213,12 +214,13 @@ abstract class ObjectMirror implements Mirror {
   /**
    * Deprecated method which has the same semantics as [invokeSetter].
    *
-   * Ahead, [invokeSetter] is expected to be the only name for this operation,
-   * and the name [setField] is expected to be reused for a different semantics
-   * that writes the value of a field, bypassing any setters.  Since this is a
-   * breaking change it is not likely to happen before a major step in the
-   * version number, but users of mirrors can already now start using the
-   * future-safe name [invokeSetter].
+   * Ahead, [invokeSetter] is expected to be the only name for this
+   * operation, and the name [@deprecated setField] is expected to be
+   * reused for a different semantics that writes the value of a field,
+   * bypassing any setters.  Since this is a breaking change it is not
+   * likely to happen before a major step in the version number, but
+   * users of mirrors can already now start using the future-safe name
+   * [invokeSetter].
    *
    * Note that the return type of the corresponding method in
    * dart:mirrors is InstanceMirror.

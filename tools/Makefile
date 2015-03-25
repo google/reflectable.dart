@@ -6,7 +6,7 @@
 # on all platforms.
 
 PACKAGE_ROOT=../packages
-ANALYZER_OPTIONS=--no-hints --package-root=$(PACKAGE_ROOT)
+ANALYZER_OPTIONS="--package-root=$(PACKAGE_ROOT)"
 
 all: check build test
 

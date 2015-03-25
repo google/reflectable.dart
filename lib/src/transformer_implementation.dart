@@ -10,10 +10,8 @@ import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
 import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/error.dart';
-import 'package:analyzer/src/generated/resolver.dart';
 import 'package:barback/barback.dart';
 import 'package:code_transformers/resolver.dart';
-import 'package:path/path.dart' as path;
 import 'package:reflectable/reflectable.dart';
 import 'source_manager.dart';
 import 'transformer_errors.dart';
@@ -154,39 +152,37 @@ ClassElement _getReflectableAnnotation(ElementAnnotation elementAnnotation,
     return isOk ? element.enclosingElement.type.element : null;
   } else if (element is PropertyAccessorElement) {
     PropertyInducingElement variable = element.variable;
-    // Surprisingly, we have to use the type VariableElementImpl
-    // here.  This is because VariableElement does not declare
-    // evaluationResult (presumably it is "secret").
-    if (variable is VariableElementImpl && variable.isConst) {
+    // Surprisingly, we have to use [ConstTopLevelVariableElementImpl]
+    // here (or a similar type).  This is because none of the "public name"
+    // types (types whose name does not end in `..Impl`) declare the getter
+    // `evaluationResult`.  Another possible choice of type would be
+    // [VariableElementImpl], but with that one we would have to test
+    // `isConst` as well.
+    if (variable is ConstTopLevelVariableElementImpl) {
       VariableElementImpl variableImpl = variable as VariableElementImpl;
       EvaluationResultImpl result = variableImpl.evaluationResult;
       bool isOk = checkInheritance(result.value.type,
                                    focusClass.type,
                                    errorReporter);
       return isOk ? result.value.type.element : null;
+    } else {
+      // Not a const top level variable, not relevant.
+      return null;
     }
-  } else /* element is something else */ {
-    // This syntactic form of annotation is not supported.
-    //
-    // TODO(eernst): We need to consider whether there could be some other
-    // syntactic constructs that are incorrectly assumed by programmers to
-    // be usable with Reflectable.  Currently, such constructs will silently
-    // have no effect; it might be better to emit a diagnostic message (a
-    // hint?) in order to notify the programmer that "it does not work".
-    // The trade-off is that such constructs may have been written by
-    // programmers who are doing something else, intentionally.  To emit a
-    // diagnostic message, we must check whether there is a Reflectable
-    // somewhere inside this syntactic construct, and then emit the message
-    // in cases that we "consider likely to be misunderstood".
-    return null;
   }
-}
-
-/// Returns true iff the given [library] imports [targetLibrary], which
-/// must be non-null.
-bool _doesImport(LibraryElement library, LibraryElement targetLibrary) {
-  List<LibraryElement> importedLibraries = library.importedLibraries;
-  return importedLibraries.contains(targetLibrary);
+  // Otherwise [element] is some other construct which is not supported.
+  //
+  // TODO(eernst): We need to consider whether there could be some other
+  // syntactic constructs that are incorrectly assumed by programmers to
+  // be usable with Reflectable.  Currently, such constructs will silently
+  // have no effect; it might be better to emit a diagnostic message (a
+  // hint?) in order to notify the programmer that "it does not work".
+  // The trade-off is that such constructs may have been written by
+  // programmers who are doing something else, intentionally.  To emit a
+  // diagnostic message, we must check whether there is a Reflectable
+  // somewhere inside this syntactic construct, and then emit the message
+  // in cases that we "consider likely to be misunderstood".
+  return null;
 }
 
 /// Used to hold data that describes a Reflectable annotated class,
@@ -325,11 +321,11 @@ void _emitDiagnosticForExportDirective(SourceManager sourceManager,
 
 // TODO(eernst): Make sure this name is unique.
 String _staticClassMirrorName(String targetClassName) =>
-    "_${targetClassName}_ClassMirror";
+    "Static_${targetClassName}_ClassMirror";
 
 // TODO(eernst): Make sure this name is unique.
 String _staticInstanceMirrorName(String targetClassName) =>
-    "_${targetClassName}_InstanceMirror";
+    "Static_${targetClassName}_InstanceMirror";
 
 const String generatedComment = "// Generated";
 
@@ -492,6 +488,44 @@ void _transformMetadataClasses(List<ReflectableClassData> reflectableClasses,
   metadataClasses.forEach(transformMetadataClass);
 }
 
+/// Check for each pair (`metadataClass`,`annotatedClass`) in
+/// [reflectableClasses] that there is an `import` directive in the
+/// library of the `metadataClass` which imports the library of
+/// `annotatedClass`.  If that is not the case then we cannot compile
+/// the generated code (and we cannot generate those imports because
+/// of the single-library view on transformation that is provided by
+/// barback).
+void _checkMetadataImports(List<ReflectableClassData> reflectableClasses) {
+  for (ReflectableClassData classData in reflectableClasses) {
+    LibraryElement metaClassLibrary = classData.metadataClass.library;
+    List<LibraryElement> metaClassImports = metaClassLibrary.importedLibraries;
+    LibraryElement annotatedClassLibrary = classData.annotatedClass.library;
+    if (metaClassLibrary != annotatedClassLibrary &&
+        !metaClassImports.contains(annotatedClassLibrary)) {
+      // Generated code cannot see the target class nor its static mirror
+      // class, so compilation of generated code will fail.
+      //
+      // In other error situations we have used an RecordingErrorListener
+      // and an ErrorReporter, but they need a Source in order to point
+      // out the location in the source where the problem exists.  In this
+      // situation there is no specific location where there is a problem,
+      // because it is caused by _missing_ import directives in a certain
+      // file.  We do not have access to that file as an Asset, anyway,
+      // so we simply throw an error.  The user must then add the imports
+      // and try again.
+      //
+      // TODO(eernst): This is obviously a workaround; it is not the
+      // intention that all imports required by generated code must be
+      // added manually prior to the transformation, but it will allow
+      // us to proceed right now (Mar 2015).
+      print("Please add an import of $libraryDefiningAnnotated "
+            "to ${classData.metadataClass.library}");
+      // The transformation cannot proceed when such an import is missing.
+      throw new UnimplementedError();
+    }
+  }
+}
+
 /// Returns the result of transforming the given [source] code, which is
 /// assumed to be the contents of the file associated with the
 /// [targetLibrary], which is the library currently being
@@ -524,6 +558,7 @@ String _transformSource(LibraryElement reflectableLibrary,
   String generatedSource = "";
 
   // Transform selected existing elements in [targetLibrary].
+  _checkMetadataImports(reflectableClasses);
   _transformSourceDirectives(reflectableLibrary, targetLibrary, sourceManager);
   _transformMetadataClasses(reflectableClasses, targetLibrary, sourceManager);
 
@@ -587,13 +622,9 @@ class ${_staticInstanceMirrorName(className)} extends InstanceMirrorUnimpl {
     // Finally insert the import directive at the chosen location.
     sourceManager.replace(newImportIndex, newImportIndex, newImport);
 
-    return """
-${sourceManager.source}
-
-$generatedComment: Rest of file
-
-$generatedSource
-""";
+    return "${sourceManager.source}\n"
+        "$generatedComment: Rest of file\n"
+        "$generatedSource";
   }
 }
 
@@ -643,21 +674,15 @@ Future apply(Transform transform) {
       return new Future.value();
     }
     return input.readAsString().then((source) {
-      if (_doesImport(targetLibrary, reflectableLibrary)) {
-        List<ReflectableClassData> reflectableClasses =
-            _findReflectableClasses(reflectableLibrary, resolver);
-        String pathOfTransformedFile = input.id.path;
-        String transformedSource = _transformSource(reflectableLibrary,
-                                                    reflectableClasses,
-                                                    targetLibrary,
-                                                    source);
-        // Transform user provided code.
-        transform.consumePrimary();
-        transform.addOutput(new Asset.fromString(input.id, transformedSource));
-      } else {
-        // We do not consumePrimary, i.e., let the original source pass
-        // through without changes.
-      }
+      List<ReflectableClassData> reflectableClasses =
+          _findReflectableClasses(reflectableLibrary, resolver);
+      String transformedSource = _transformSource(reflectableLibrary,
+                                                  reflectableClasses,
+                                                  targetLibrary,
+                                                  source);
+      // Transform user provided code.
+      transform.consumePrimary();
+      transform.addOutput(new Asset.fromString(input.id, transformedSource));
     });
   });
 }

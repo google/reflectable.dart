@@ -17,7 +17,7 @@ class MyReflectable extends Reflectable {
   // Generated: Rest of class
   InstanceMirror reflect(Object reflectee) {
     if (reflectee.runtimeType == A) {
-      return new _A_InstanceMirror(reflectee);
+      return new Static_A_InstanceMirror(reflectee);
     }
     throw new UnimplementedError();
   }
@@ -26,15 +26,12 @@ class MyReflectable extends Reflectable {
 @MyReflectable()
 class A {}
 
-
 // Generated: Rest of file
 
-
-class _A_ClassMirror extends ClassMirrorUnimpl {
+class Static_A_ClassMirror extends ClassMirrorUnimpl {
 }
 
-class _A_InstanceMirror extends InstanceMirrorUnimpl {
+class Static_A_InstanceMirror extends InstanceMirrorUnimpl {
   final A reflectee;
-  _A_InstanceMirror(this.reflectee);
+  Static_A_InstanceMirror(this.reflectee);
 }
-

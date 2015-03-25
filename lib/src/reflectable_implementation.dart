@@ -7,7 +7,6 @@ library reflectable.src.reflectable_implementation;
 @dm.MirrorsUsed(targets: '*', override: '*')
 import 'dart:mirrors' as dm;
 
-import '../capability.dart';
 import '../mirrors.dart';
 
 /// Default behavior for mirror methods.  Used to ensure that all methods

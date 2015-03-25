@@ -3,35 +3,27 @@
 // the LICENSE file.
 
 // File being transformed by the reflectable transformer.
-// Uses 'reflect'.
+// Uses 'reflect' across file boundaries.  Main file of program.
 
-library reflectable.test.to_be_transformed.reflect_test;
+library reflectable.test.to_be_transformed.three_files_main;
 
-import 'package:reflectable/static_reflectable.dart';
+import 'package:reflectable/mirrors.dart';
 import 'package:unittest/unittest.dart';
+import 'three_files_aux.dart';
+import 'three_files_meta.dart';
 import 'package:reflectable/src/mirrors_unimpl.dart';
 
-
-class MyReflectable extends Reflectable {
-  const MyReflectable(): super(const <ReflectCapability>[]);
-
-  // Generated: Rest of class
-  InstanceMirror reflect(Object reflectee) {
-    if (reflectee.runtimeType == A) {
-      return new Static_A_InstanceMirror(reflectee);
-    }
-    throw new UnimplementedError();
-  }
-}
-
-const myReflectable = const MyReflectable();
 
 @myReflectable
 class A {}
 
 main() {
-  test('reflect', () {
+  test('reflect local', () {
     InstanceMirror instanceMirror = myReflectable.reflect(new A());
+    expect(instanceMirror == null, isFalse);
+  });
+  test('reflect imported', () {
+    InstanceMirror instanceMirror = myReflectable.reflect(new B());
     expect(instanceMirror == null, isFalse);
   });
 }
