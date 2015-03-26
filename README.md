@@ -1,6 +1,6 @@
 # reflectable
 
-** Please note that this package is not yet in a usable state **
+**Please note that this package is not yet in a usable state.**
 
 Reflectable is a library that allows programmers to eliminate certain
 usages of dynamic reflection by specialization of reflective code to
@@ -25,29 +25,30 @@ pub transformer available in this package.
 
 A simple usage example:
 
-    import 'package:reflectable/reflectable.dart';
+```dart
+import 'package:reflectable/reflectable.dart';
 
-    class MyReflectable extends Reflectable {
-      const MyReflectable():
-          super(/* ..constrain, but do not prevent invoke on #foo.. */);
-    }
+class MyReflectable extends Reflectable {
+  const MyReflectable():
+      super(/* ..constrain, but do not prevent invoke on #foo.. */);
+}
 
-    const myReflectable = const MyReflectable;
+const myReflectable = const MyReflectable;
 
-    @myReflectable
-    class MyClass { ... bool foo(int x) {..} ... }
+@myReflectable
+class MyClass { ... bool foo(int x) {..} ... }
 
-    main() {
-      var x = new MyClass();
-      // Normal invocation.
-      x.foo(3);
-      // Reflectable invocation.
-      var xr = myReflectable.reflect(x);
-      xr.invoke(#foo, [3]);
-    }
+main() {
+  var x = new MyClass();
+  // Normal invocation.
+  x.foo(3);
+  // Reflectable invocation.
+  var xr = myReflectable.reflect(x);
+  xr.invoke(#foo, [3]);
+}
+```
 
 ## Features and bugs
 
 Please file feature requests and bugs using the github issue tracker
 for this repository.
-
