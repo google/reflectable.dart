@@ -4,6 +4,11 @@
 
 expected/*: SkipByDesign # Never run anything in 'expected'
 
+# We have no mechanism for checking that transformation fails.
+# All tests happen to produce a RuntimeError, though.
+test/to_be_transformed/bad_*: RuntimeError # should be TransformerError
+build/test/to_be_transformed/bad_*: RuntimeError # should be TransformerError
+
 [ $runtime != vm ]
 test/checktransforms_test: SkipByDesign # Uses dart:io.
 build/test/checktransforms_test: SkipByDesign # Uses dart:io.
