@@ -83,7 +83,9 @@ cd third_party
 rm -rf package-bots
 cd pkg
 rm -rf $BOTTEST_PKG
-if [ "$preserveOutput" != "true" ]; then
+if [ "$preserveOutput" = "true" ]; then
+  echo less -S $tmpfile
+else
   rm -f $tmpfile
 fi
 popd

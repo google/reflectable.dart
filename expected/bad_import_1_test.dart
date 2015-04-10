@@ -3,12 +3,14 @@
 // the LICENSE file.
 
 // File being transformed by the reflectable transformer.
-// Uses 'reflect'.
+// Imports the core file of this package and declares that
+// it should `show` some names (and hide the rest).  The
+// use of `show` on this import is not supported, and it
+// must give rise to an error during transformation.
 
-library reflectable.test.to_be_transformed.reflect_test;
-
-import 'package:reflectable/static_reflectable.dart';
-import 'package:unittest/unittest.dart';
+library reflectable.test.to_be_transformed.bad_import_1_test;
+import 'package:reflectable/static_reflectable.dart' 
+    show Reflectable, ReflectCapability;
 import 'package:reflectable/src/mirrors_unimpl.dart';
 
 class MyReflectable extends Reflectable {
@@ -23,17 +25,8 @@ class MyReflectable extends Reflectable {
   }
 }
 
-const myReflectable = const MyReflectable();
-
-@myReflectable
+@MyReflectable()
 class A {}
-
-main() {
-  test('reflect', () {
-    InstanceMirror instanceMirror = myReflectable.reflect(new A());
-    expect(instanceMirror == null, isFalse);
-  });
-}
 
 // Generated: Rest of file
 

@@ -34,6 +34,13 @@ class TransformationErrorCode extends ErrorCode {
       const CompileTimeErrorCode('REFLECTABLE_LIBRARY_EXPORTED',
           "The library 'package:reflectable/reflectable.dart' is exported.");
 
+  /// It is a transformation time error to use `show` or `hide` with
+  /// the import of `../reflectable.dart`, or to make it `deferred`.
+  static const CompileTimeErrorCode REFLECTABLE_LIBRARY_UNSUPPORTED_IMPORT =
+      const CompileTimeErrorCode('REFLECTABLE_LIBRARY_UNSUPPORTED_IMPORT',
+          "The library 'package:reflectable/reflectable.dart' is imported "
+          " with a `show` or `hide` clause, or it is `deferred`.");
+
   /// It is a transformation time error to use an enum as a Reflectable
   /// metadata class.
   static const CompileTimeErrorCode REFLECTABLE_IS_ENUM =

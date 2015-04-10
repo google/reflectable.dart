@@ -11,7 +11,6 @@ library reflectable.test.to_be_transformed.three_files_aux;
 import 'three_files_meta.dart';
 import 'package:reflectable/src/mirrors_unimpl.dart';
 
-
 @myReflectable
 class B {}
 

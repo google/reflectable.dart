@@ -11,9 +11,19 @@ dependencies:
   analyzer: '>=0.24.0 <0.25.0'
   barback: '>=0.15.0 <0.16.0'
   code_transformers: '>=0.2.0 <0.3.0'
+  logging: '>=0.9.3 <0.10.0'
 dev_dependencies:
   unittest: '>=0.11.0 <0.12.0'
 transformers:
 - reflectable:
-    entry_points: test/transformed
-
+    entry_points:
+      - test/to_be_transformed/minimal.dart
+      - test/to_be_transformed/import_reflectable.dart
+      - test/to_be_transformed/use_annotation.dart
+      - test/to_be_transformed/reflect_test.dart
+      - test/to_be_transformed/bad_import_1_test.dart
+      - test/to_be_transformed/bad_import_2_test.dart
+      - test/to_be_transformed/bad_import_3_test.dart
+      - test/to_be_transformed/bad_export_test.dart
+      - test/to_be_transformed/use_prefix_test.dart
+      - test/to_be_transformed/three_files_test.dart

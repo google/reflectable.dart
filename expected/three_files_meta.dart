@@ -17,11 +17,11 @@ class MyReflectable extends Reflectable {
 
   // Generated: Rest of class
   InstanceMirror reflect(Object reflectee) {
-    if (reflectee.runtimeType == B) {
-      return new Static_B_InstanceMirror(reflectee);
-    }
     if (reflectee.runtimeType == A) {
       return new Static_A_InstanceMirror(reflectee);
+    }
+    if (reflectee.runtimeType == B) {
+      return new Static_B_InstanceMirror(reflectee);
     }
     throw new UnimplementedError();
   }

@@ -5,14 +5,13 @@
 // File being transformed by the reflectable transformer.
 // Uses 'reflect' across file boundaries.  Main file of program.
 
-library reflectable.test.to_be_transformed.three_files_main;
+library reflectable.test.to_be_transformed.three_files_test;
 
 import 'package:reflectable/mirrors.dart';
 import 'package:unittest/unittest.dart';
 import 'three_files_aux.dart';
 import 'three_files_meta.dart';
 import 'package:reflectable/src/mirrors_unimpl.dart';
-
 
 @myReflectable
 class A {}

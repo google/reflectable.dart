@@ -1,17 +1,22 @@
-// Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+// (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
 library reflectable.src.transformer_implementation;
 
 import 'dart:async';
+import 'dart:io';
+import 'dart:convert';
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
 import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/error.dart';
+import 'package:analyzer/src/generated/source.dart';
 import 'package:barback/barback.dart';
+import 'package:barback/src/transformer/transform.dart';
 import 'package:code_transformers/resolver.dart';
+import 'package:path/path.dart' as path;
 import 'package:reflectable/reflectable.dart';
 import 'source_manager.dart';
 import 'transformer_errors.dart';
@@ -99,6 +104,16 @@ bool _isSubclassOf(InterfaceType possibleSubtype, InterfaceType type) {
   return _isSubclassOf(superclass, type);
 }
 
+/// Report the errors given to [errorReporter]
+void reportErrors(RecordingErrorListener errorListener,
+                  ErrorReporter errorReporter,
+                  Source source) {
+  // TODO(eernst): Show the given errors to the user. The following
+  // approach ensures in a simple manner that the errors are not suppressed.
+  List<AnalysisError> errors = errorListener.getErrorsForSource(source);
+  if (!errors.isEmpty) print(errors);
+}
+
 /// Returns the metadata class in [elementAnnotation] if it is an
 /// instance of a direct subclass of [focusClass], otherwise returns
 /// `null`.  Uses [errorReporter] to report an error if it is a subclass
@@ -159,8 +174,7 @@ ClassElement _getReflectableAnnotation(ElementAnnotation elementAnnotation,
     // [VariableElementImpl], but with that one we would have to test
     // `isConst` as well.
     if (variable is ConstTopLevelVariableElementImpl) {
-      VariableElementImpl variableImpl = variable as VariableElementImpl;
-      EvaluationResultImpl result = variableImpl.evaluationResult;
+      EvaluationResultImpl result = variable.evaluationResult;
       bool isOk = checkInheritance(result.value.type,
                                    focusClass.type,
                                    errorReporter);
@@ -223,17 +237,57 @@ List<ReflectableClassData>
           }
         }
       }
-      List<AnalysisError> errors =
-          errorListener.getErrorsForSource(unit.source);
-      if (!errors.isEmpty) {
-        // TODO(eernst): Resolve how to show the errors. Later on,
-        // find an appropriate general approach to the handling of
-        // "compilation" errors.
-        print(errors);
-        throw new UnimplementedError();
-      }
+      reportErrors(errorListener, errorReporter, unit.source);
     }
   }
+  return result;
+}
+
+/// Auxiliary class, used in _findMissingImports.
+class _Import {
+  final LibraryElement importer;
+  final LibraryElement imported;
+  _Import(this.importer, this.imported);
+  bool operator ==(Object other) {
+    if (other is _Import) {
+      return importer == other.importer && imported == other.imported;
+    } else {
+      return false;
+    }
+  }
+}
+
+/// Return a map which maps the library for each class in [reflectableClasses]
+/// in the field `metadataClass` to the set of libraries of the corresponding
+/// field `annotatedClass`, thus specifying which `import` directives we
+/// need to add during code transformation.
+Map<LibraryElement, Set<LibraryElement>>
+    _findMissingImports(List<ReflectableClassData> reflectableClasses) {
+  Map<LibraryElement, Set<LibraryElement>> result =
+      <LibraryElement, Set<LibraryElement>>{};
+       
+  // Gather all the required imports.
+  Set<_Import> requiredImports = new Set<_Import>();
+  Set<LibraryElement> requiredImporters = new Set<LibraryElement>();
+  for (ReflectableClassData classData in reflectableClasses) {
+    LibraryElement metadataLibrary = classData.metadataClass.library;
+    LibraryElement annotatedLibrary = classData.annotatedClass.library;
+    if (metadataLibrary != annotatedLibrary) {
+      requiredImports.add(new _Import(metadataLibrary, annotatedLibrary));
+      requiredImporters.add(metadataLibrary);
+    }
+  }
+
+  // Transfer all required and non-existing imports into [result],
+  // represented as a mapping from each importer to the set of
+  // libraries that it must import.
+  for (LibraryElement importer in requiredImporters) {
+    Set<LibraryElement> importeds = requiredImports
+        .where((_Import _import) => _import.importer == importer)
+        .map((_Import _import) => _import.imported);
+    result[importer] = importeds;
+  }
+
   return result;
 }
 
@@ -289,9 +343,15 @@ void _replaceUriReferencedElement(SourceManager sourceManager,
 void _emitDiagnosticForExportDirective(SourceManager sourceManager,
                                        ExportElement exportElement,
                                        ErrorReporter errorReporter) {
-  errorReporter.reportErrorForElement(
+  // TODO(eernst): Create an issue for the analyzer, because
+  // `exportElement.node == null`, and also
+  // `exportElement.displayName == null`, which means that we cannot
+  // use the obvious methods: neither `reportErrorForElement` nor
+  // `reportErrorForOffset`.  Currently falling back on the Uri.
+  errorReporter.reportErrorForOffset(
       TransformationErrorCode.REFLECTABLE_LIBRARY_EXPORTED,
-      exportElement,
+      exportElement.uriOffset,
+      exportElement.uriEnd,
       []);
   // We cannot compile a program where an unknown library (namely
   // `reflectableLibrary`, whose import has been deleted) must be
@@ -299,24 +359,22 @@ void _emitDiagnosticForExportDirective(SourceManager sourceManager,
   // not work.  However, if `reflectableLibrary` was exported but never
   // used then we would still be able to compile the program without the
   // export.  So we eliminate the export.
+
+  // TODO(eernst): Commented out until issue above reported and resolved
+  // (currently crashes because `exportElement.node == null`):
   //
-  // TODO(eernst): Add a test that reveals whether
-  // `reportErrorForElement` terminates the program; if so, we might
-  // want to raise a warning rather than an error; in any case, we need
-  // to extend the dartdoc of this method to describe its termination
-  // properties.
-  NamespaceDirective namespaceDirective = exportElement.node;
-  int directiveStart = namespaceDirective.offset;
-  if (directiveStart == -1) {
-    // Encountered a synthetic element.  We do not expect exports of
-    // reflectable to be synthetic, so we make it an error.
-    throw new UnimplementedError();
-  }
-  int directiveEnd = namespaceDirective.end;
-  // If we have `directiveStart != -1 && directiveEnd == -1` then there
-  // is a bug in the implementation of [exportElement].
-  assert(directiveEnd != -1);
-  sourceManager.replace(directiveStart, directiveEnd, "");
+  // NamespaceDirective namespaceDirective = exportElement.node;
+  // int directiveStart = namespaceDirective.offset;
+  // if (directiveStart == -1) {
+  //   // Encountered a synthetic element.  We do not expect exports of
+  //   // reflectable to be synthetic, so we make it an error.
+  //   throw new UnimplementedError();
+  // }
+  // int directiveEnd = namespaceDirective.end;
+  // // If we have `directiveStart != -1 && directiveEnd == -1` then there
+  // // is a bug in the implementation of [exportElement].
+  // assert(directiveEnd != -1);
+  // sourceManager.replace(directiveStart, directiveEnd, "");
 }
 
 // TODO(eernst): Make sure this name is unique.
@@ -363,6 +421,39 @@ ExportElement _findFirstExport(LibraryElement library) {
   return null;
 }
 
+/// Find a suitable index for insertion of additional import directives
+/// into [targetLibrary].
+int _newImportIndex(LibraryElement targetLibrary) {
+  // Index in [source] where the new import directive is inserted, we
+  // use 0 as the default placement (at the front of the file), but
+  // make a heroic attempt to find a better placement first.
+  int index = 0;
+  ImportElement importElement = _findLastImport(targetLibrary);
+  if (importElement != null) {
+    index = importElement.node.end;
+  } else {
+    // No non-synthetic import directives present.
+    ExportElement exportElement = _findFirstExport(targetLibrary);
+    if (exportElement != null) {
+      // Put the new import before the exports
+      index = exportElement.node.offset;
+    } else {
+      // No non-synthetic import nor export directives present.
+      LibraryDirective libraryDirective =
+          targetLibrary.definingCompilationUnit.node.directives
+          .firstWhere((directive) => directive is LibraryDirective,
+                      orElse: () => null);
+      if (libraryDirective != null) {
+        // Put the new import after the library name directive.
+        index = libraryDirective.end;
+      } else {
+        // No library directive either, keep index == 0.
+      }
+    }
+  }
+  return index;
+}
+
 /// Transform all imports of [reflectableLibrary] to import the thin
 /// outline version (`static_reflectable.dart`), such that we do not
 /// indirectly import `dart:mirrors`.  Remove all exports of
@@ -370,22 +461,33 @@ ExportElement _findFirstExport(LibraryElement library) {
 /// that such an import was encountered (and it violates the constraints
 /// of this package, and hence we must remove it).  All the operations
 /// are using [targetLibrary] to find the source code offsets, and using
-/// [sourceManager] to actually modify the source code.
-void _transformSourceDirectives(LibraryElement reflectableLibrary,
-                                LibraryElement targetLibrary,
-                                SourceManager sourceManager) {
+/// [sourceManager] to actually modify the source code.  We require that
+/// there is an import which has no `show` and no `hide` clause (this is
+/// a potentially temporary restriction, we may implement support for
+/// more cases later on, but for now we just prohibit `show` and `hide`).
+/// The returned value is the [PrefixElement] that is used to give
+/// [reflectableLibrary] a prefix; `null` is returned if there is
+/// no such prefix.
+PrefixElement _transformSourceDirectives(LibraryElement reflectableLibrary,
+                                         LibraryElement targetLibrary,
+                                         SourceManager sourceManager) {
   RecordingErrorListener errorListener = new RecordingErrorListener();
   ErrorReporter errorReporter =
       new ErrorReporter(errorListener, targetLibrary.source);
+  List<ImportElement> editedImports = <ImportElement>[];
 
   void replaceImportOfReflectable(UriReferencedElement element) {
     _replaceUriReferencedElement(
         sourceManager, element,
         "package:reflectable/static_reflectable.dart");
+    editedImports.add(element);
   }
 
   void emitDiagnosticForExportDirective(UriReferencedElement element) =>
       _emitDiagnosticForExportDirective(sourceManager, element, errorReporter);
+
+  void handleErrors() =>
+      reportErrors(errorListener, errorReporter, targetLibrary.source);
 
   // Transform all imports and exports of reflectable.
   targetLibrary.imports
@@ -394,6 +496,43 @@ void _transformSourceDirectives(LibraryElement reflectableLibrary,
   targetLibrary.exports
       .where((element) => element.exportedLibrary == reflectableLibrary)
       .forEach(emitDiagnosticForExportDirective);
+
+  // If [reflectableLibrary] is never imported then it has no prefix.
+  if (editedImports.isEmpty) {
+    handleErrors();
+    return null;
+  }
+
+  bool isOK(ImportElement importElement) {
+    // We do not support a deferred load of Reflectable.
+    if (importElement.isDeferred) return false;
+    // We do not currently support `show` nor `hide` clauses,
+    // otherwise this one is OK.
+    return importElement.combinators.isEmpty;
+  }
+
+  // Try to select a good import
+  for (ImportElement importElement in editedImports) {
+    if (isOK(importElement)) {
+      handleErrors();
+      return importElement.prefix;
+    }
+  }
+
+  // No good imports found, but we do have some imports, so they are all bad.
+  // Let us complain about the first one.  In the unlikely case that we have
+  // multiple imports of Reflectable, and they are all bad, this means that
+  // the user will get one error message, then fix the issue, then get
+  // another error message about the next line of code, essentially.  This
+  // is not nice, but it is very unlikely at it will affect anybody who
+  // isn't specifically looking for it.
+  errorReporter.reportErrorForOffset(
+      TransformationErrorCode.REFLECTABLE_LIBRARY_UNSUPPORTED_IMPORT,
+      editedImports[0].node.offset,
+      editedImports[0].node.length,
+      []);
+  handleErrors();
+  return null;
 }
 
 /// Transform the given [metadataClass] by adding features needed to
@@ -406,6 +545,7 @@ void _transformSourceDirectives(LibraryElement reflectableLibrary,
 void _transformMetadataClass(ClassElement metadataClass,
                              List<ClassElement> annotatedClasses,
                              SourceManager sourceManager,
+                             PrefixElement prefixElement,
                              ErrorReporter errorReporter) {
   // A ClassElement can be associated with an [EnumDeclaration], but
   // this is not supported for a Reflectable metadata class.
@@ -447,7 +587,9 @@ void _transformMetadataClass(ClassElement metadataClass,
   reflectCases += "    throw new UnimplementedError();";
 
   // Add the `reflect` method to [metadataClass].
-  insert("  InstanceMirror reflect(Object reflectee) {\n$reflectCases\n  }");
+  String prefix = prefixElement == null ? "" : "${prefixElement.name}.";
+  insert("  ${prefix}InstanceMirror "
+         "reflect(Object reflectee) {\n$reflectCases\n  }");
 
   // In front of all the generated material, indicate that it is generated.
   insert("\n  $generatedComment: Rest of class");
@@ -458,7 +600,8 @@ void _transformMetadataClass(ClassElement metadataClass,
 /// _transformMetadataClass.
 void _transformMetadataClasses(List<ReflectableClassData> reflectableClasses,
                                LibraryElement targetLibrary,
-                               SourceManager sourceManager) {
+                               SourceManager sourceManager,
+                               PrefixElement prefixElement) {
   bool isInTargetLibrary(ReflectableClassData classData) {
     return classData.metadataClass.library == targetLibrary;
   }
@@ -481,6 +624,7 @@ void _transformMetadataClasses(List<ReflectableClassData> reflectableClasses,
     _transformMetadataClass(metadataClass,
                             annotatedClasses,
                             sourceManager,
+                            prefixElement,
                             errorReporter);
   }
 
@@ -488,42 +632,22 @@ void _transformMetadataClasses(List<ReflectableClassData> reflectableClasses,
   metadataClasses.forEach(transformMetadataClass);
 }
 
-/// Check for each pair (`metadataClass`,`annotatedClass`) in
-/// [reflectableClasses] that there is an `import` directive in the
-/// library of the `metadataClass` which imports the library of
-/// `annotatedClass`.  If that is not the case then we cannot compile
-/// the generated code (and we cannot generate those imports because
-/// of the single-library view on transformation that is provided by
-/// barback).
-void _checkMetadataImports(List<ReflectableClassData> reflectableClasses) {
-  for (ReflectableClassData classData in reflectableClasses) {
-    LibraryElement metaClassLibrary = classData.metadataClass.library;
-    List<LibraryElement> metaClassImports = metaClassLibrary.importedLibraries;
-    LibraryElement annotatedClassLibrary = classData.annotatedClass.library;
-    if (metaClassLibrary != annotatedClassLibrary &&
-        !metaClassImports.contains(annotatedClassLibrary)) {
-      // Generated code cannot see the target class nor its static mirror
-      // class, so compilation of generated code will fail.
-      //
-      // In other error situations we have used an RecordingErrorListener
-      // and an ErrorReporter, but they need a Source in order to point
-      // out the location in the source where the problem exists.  In this
-      // situation there is no specific location where there is a problem,
-      // because it is caused by _missing_ import directives in a certain
-      // file.  We do not have access to that file as an Asset, anyway,
-      // so we simply throw an error.  The user must then add the imports
-      // and try again.
-      //
-      // TODO(eernst): This is obviously a workaround; it is not the
-      // intention that all imports required by generated code must be
-      // added manually prior to the transformation, but it will allow
-      // us to proceed right now (Mar 2015).
-      print("Please add an import of $libraryDefiningAnnotated "
-            "to ${classData.metadataClass.library}");
-      // The transformation cannot proceed when such an import is missing.
-      throw new UnimplementedError();
-    }
+/// Compute a relative path such that it denotes the file at
+/// [destinationPath] when used from the location of the file
+/// [sourcePath].
+String _relativePath(String destinationPath, String sourcePath) {
+  List<String> destinationSplit = path.split(destinationPath);
+  List<String> sourceSplit = path.split(sourcePath);
+  while (destinationSplit.length > 1 && sourceSplit.length > 1 &&
+         destinationSplit[0] == sourceSplit[0]) {
+    destinationSplit = destinationSplit.sublist(1);
+    sourceSplit = sourceSplit.sublist(1);
   }
+  while (sourceSplit.length > 1) {
+    sourceSplit = sourceSplit.sublist(1);
+    destinationSplit.insert(0, "..");
+  }
+  return path.joinAll(destinationSplit);
 }
 
 /// Returns the result of transforming the given [source] code, which is
@@ -548,6 +672,8 @@ void _checkMetadataImports(List<ReflectableClassData> reflectableClasses) {
 /// barback a hint that this information should preferably be preserved.
 String _transformSource(LibraryElement reflectableLibrary,
                         List<ReflectableClassData> reflectableClasses,
+                        Map<LibraryElement, Asset> libraryToAssetMap,
+                        Map<LibraryElement, Set<LibraryElement>> missingImports,
                         LibraryElement targetLibrary,
                         String source) {
   // Used to manage replacements of code snippets by other code snippets
@@ -558,9 +684,13 @@ String _transformSource(LibraryElement reflectableLibrary,
   String generatedSource = "";
 
   // Transform selected existing elements in [targetLibrary].
-  _checkMetadataImports(reflectableClasses);
-  _transformSourceDirectives(reflectableLibrary, targetLibrary, sourceManager);
-  _transformMetadataClasses(reflectableClasses, targetLibrary, sourceManager);
+  PrefixElement prefixElement = _transformSourceDirectives(reflectableLibrary,
+                                                           targetLibrary,
+                                                           sourceManager);
+  _transformMetadataClasses(reflectableClasses,
+                            targetLibrary,
+                            sourceManager,
+                            prefixElement);
 
   for (ReflectableClassData classData in reflectableClasses) {
     ClassElement annotatedClass = classData.annotatedClass;
@@ -584,105 +714,240 @@ class ${_staticInstanceMirrorName(className)} extends InstanceMirrorUnimpl {
 """;
   }
 
-  if (generatedSource.length == 0) {
-    return sourceManager.source;
-  } else {
-    // Add an import such that generated classes can see their superclasses.
-    // Note that we make no attempt at following the style guide, e.g., by
-    // keeping the imports sorted.
-    String newImport =
-        "\nimport 'package:reflectable/src/mirrors_unimpl.dart';\n";
-    // Index in [source] where the new import directive is inserted, we
-    // use 0 as the default placement (at the front of the file), but
-    // make a heroic attempt to find a better placement first.
-    int newImportIndex = 0;
-    ImportElement importElement = _findLastImport(targetLibrary);
-    if (importElement != null) {
-      newImportIndex = importElement.node.end;
-    } else {
-      // No non-synthetic import directives present.
-      ExportElement exportElement = _findFirstExport(targetLibrary);
-      if (exportElement != null) {
-        // Put the new import before the exports
-        newImportIndex = exportElement.node.offset;
-      } else {
-        // No non-synthetic import nor export directives present.
-        LibraryDirective libraryDirective =
-            targetLibrary.definingCompilationUnit.node.directives
-            .firstWhere((directive) => directive is LibraryDirective,
-                        orElse: () => null);
-        if (libraryDirective != null) {
-          // Put the new import after the library name directive.
-          newImportIndex = libraryDirective.end;
-        } else {
-          // No library directive either, keep newImportIndex == 0.
-        }
-      }
+  // If needed, add an import such that generated classes can see their
+  // superclasses.  Note that we make no attempt at following the style guide,
+  // e.g., by keeping the imports sorted.  Also add imports such that each
+  // Reflectable metadata class can see all its Reflectable annotated classes
+  // (such that the implementation of `reflect` etc. will work).
+  String newImport = generatedSource.length == 0 ?
+      "" : "\nimport 'package:reflectable/src/mirrors_unimpl.dart';";
+  Set<LibraryElement> importsToAdd = missingImports[targetLibrary];
+  if (importsToAdd != null) {
+    String targetPath = libraryToAssetMap[targetLibrary].id.path;
+    for (LibraryElement importToAdd in importsToAdd) {
+      String pathToAdd = libraryToAssetMap[importToAdd].id.path;
+      newImport += "\nimport '${_relativePath(pathToAdd, targetPath)}';";
     }
-    // Finally insert the import directive at the chosen location.
+  }
+  if (!newImport.isEmpty) {
+    // Insert the import directive at the chosen location.
+    int newImportIndex = _newImportIndex(targetLibrary);
     sourceManager.replace(newImportIndex, newImportIndex, newImport);
-
-    return "${sourceManager.source}\n"
-        "$generatedComment: Rest of file\n"
-        "$generatedSource";
   }
+  return generatedSource.length == 0 ? sourceManager.source :
+      "${sourceManager.source}\n"
+      "$generatedComment: Rest of file\n"
+      "$generatedSource";
 }
 
-/// Escape the given [charToEscape] in [toBeEscaped].
-String escapeChar(String toBeEscaped, String charToEscape) {
-  String result = toBeEscaped;
-  int noOfEscapes = 0;
-  for (int index = toBeEscaped.indexOf(charToEscape);
-       index != -1;
-       index = toBeEscaped.indexOf(charToEscape, index + 1)) {
-    String prefix = result.substring(0, index + noOfEscapes);
-    String suffix = result.substring(index + noOfEscapes);
-    result = "$prefix\\$suffix";
-    noOfEscapes++;
-  }
-  return result;
+/// Wrapper of `AggregateTransform` of type `Transform`, allowing us to
+/// get a `Resolver` for a given `AggregateTransform` with a given
+/// selection of a primary entry point.
+/// TODO(eernst): We will just use this temporarily; code_transformers
+/// may be enhanced to support a variant of Resolvers.get that takes an
+/// [AggregateTransform] and an [Asset] rather than a [Transform], in
+/// which case we can drop this class and use that method.
+class AggregateTransformWrapper implements Transform {
+  final AggregateTransform _aggregateTransform;
+  final Asset primaryInput;
+  AggregateTransformWrapper(this._aggregateTransform, this.primaryInput);
+  TransformLogger get logger => _aggregateTransform.logger;
+  Future<Asset> getInput(AssetId id) => _aggregateTransform.getInput(id);
+  Future<String> readInputAsString(AssetId id, {Encoding encoding}) =>
+      _aggregateTransform.readInputAsString(id, encoding: encoding);
+  Stream<List<int>> readInput(AssetId id) => _aggregateTransform.readInput(id);
+  Future<bool> hasInput(AssetId id) => _aggregateTransform.hasInput(id);
+  void addOutput(Asset output) => _aggregateTransform.addOutput(output);
+  void consumePrimary() => _aggregateTransform.consumePrimary(primaryInput.id);
 }
 
-/// Escape characters from [path] that will disrupt its usage
-/// in generated code.
-String escape(String path) {
-  String result = path;
-  if (result.contains(new RegExp(r"['$\\]"))) {
-    // Disruptive characters in [path], escape them
-    result = escapeChar(result, "\\");
-    result = escapeChar(result, "\$");
-    result = escapeChar(result, "'");
-  }
-  return result;
+/// Determines whether or not the given [asset] is a `FileAsset`
+/// (defined in package:analyzer/src/asset/internal_asset.dart).
+///
+/// TODO(eernst): This test does not use a maintainable or
+/// well-documented approach, but there does not seem to be a
+/// "nice" way to decide whether an Asset is a FileAsset, e.g.,
+/// we do not want to import internal_asset.dart in order to
+/// be able to perform an `is` test.
+bool _isFileAsset(Asset asset) => "$asset".substring(0,5) == "File ";
+
+/// Computes the absolute (full) path of the given [asset].
+///
+/// TODO(eernst): There is no well-documented way, if any at all,
+/// to obtain the full path of a given asset (which would only make
+/// sense for a FileAsset anyway), but it happens to be possible to
+/// extract it from its `toString()`.
+String _assetPath(Asset asset) {
+  String assetString = asset.toString();
+  return assetString.substring(0, assetString.length - 1).substring(6);
+}
+
+/// Returns the relative path embedded in the given [fullName], which is
+/// expected to be obtained from `Element.fullName` or some other source
+/// using the same format. This means that the package prefix (for
+/// 'reflectable|lib/my_file.dart' it is 'reflectable|') is stripped off,
+/// and the rest is returned unchanged. When [fullName] does not contain
+/// such a prefix it is assumed to be a path and returned unchanged.
+String _fullNameToRelativePath(String fullName) {
+  if (fullName == null) return null;
+  RegExp packagePrefix = new RegExp(r'^[^/|]*\|');
+  Match match = packagePrefix.firstMatch(fullName);
+  if (match == null) return fullName;
+  return fullName.substring(match.end);
+}
+
+/// Returns the package name embedded in the given [fullName], which is
+/// expected to be obtained from `Element.fullName` or some other source
+/// using the same format. The package name is a prefix of [fullName] (for
+/// 'reflectable|lib/my_file.dart' it is 'reflectable'). When [fullName]
+/// does not contain such a prefix it is considered to be unknown and
+/// `null` is returned.
+String _fullNameToPackage(String fullName) {
+  if (fullName == null) return null;
+  RegExp packagePrefix = new RegExp(r'^[^/|]*\|');
+  Match match = packagePrefix.firstMatch(fullName);
+  if (match == null) return null;
+  return fullName.substring(0, match.end - 1);
 }
 
 /// Performs the transformation which eliminates all imports of
 /// `package:reflectable/reflectable.dart` and instead provides a set of
 /// statically generated mirror classes.
-Future apply(Transform transform) {
+Future apply(AggregateTransform aggregateTransform, List<String> entryPoints) {
   // The type argument in the return type is omitted because the
   // documentation on barback and on transformers do not specify it.
-  Asset input = transform.primaryInput;
   Resolvers resolvers = new Resolvers(dartSdkDirectory);
-  return resolvers.get(transform).then((resolver) {
-    LibraryElement targetLibrary = resolver.getLibrary(input.id);
-    LibraryElement reflectableLibrary =
-        resolver.getLibraryByName("reflectable.reflectable");
-    if (reflectableLibrary == null) {
-      // Stop and do not consumePrimary, i.e., let the original source
-      // pass through without changes.
-      return new Future.value();
+  List<Asset> inputs;
+  Map<Asset, String> inputToSourceMap = <Asset, String>{};
+
+  return aggregateTransform.primaryInputs.toList().then((List<Asset> assets) {
+    inputs = assets;
+    return Future.wait(assets.map((Asset asset) {
+      return asset.readAsString().then((String source) {
+        assert(!inputToSourceMap.containsKey(asset));
+        inputToSourceMap[asset] = source;
+      });
+    }));
+  }).then((_) {
+    // [inputs] has been filled in; check that it is not empty.
+    if (inputs.isEmpty) {
+      // It is a warning, not an error, to have nothing to transform.
+      aggregateTransform.logger.warning("Warning: Nothing to transform");
+      // Terminate with a non-failing status code to the OS.
+      exit(0);
     }
-    return input.readAsString().then((source) {
-      List<ReflectableClassData> reflectableClasses =
-          _findReflectableClasses(reflectableLibrary, resolver);
-      String transformedSource = _transformSource(reflectableLibrary,
-                                                  reflectableClasses,
-                                                  targetLibrary,
-                                                  source);
-      // Transform user provided code.
-      transform.consumePrimary();
-      transform.addOutput(new Asset.fromString(input.id, transformedSource));
-    });
+
+    // Connect the entry points to the corresponding assets.
+    Map<String, Asset> entryPointMap = <String, Asset>{};
+    for (String entryPoint in entryPoints) {
+      L: {
+        for (Asset input in inputs) {
+          if (input.id.path.endsWith(entryPoint)) {
+            entryPointMap[entryPoint] = input;
+            break L;
+          }
+        }
+        // Error: 'entry_points:' declared [entryPoint] to be one of our
+        // inputs, but no entry exists for it in [inputs].
+        aggregateTransform.logger.error(
+            "Error: Missing entry point: $entryPoint");
+      }
+    }
+
+    return Future.wait(entryPoints.map((String entryPoint) {
+      Asset entryPointAsset = entryPointMap[entryPoint];
+      String entryPointPackage = entryPointAsset.id.package;
+      Transform transform =
+          new AggregateTransformWrapper(aggregateTransform, entryPointAsset);
+
+      return resolvers.get(transform).then((Resolver resolver) {
+        LibraryElement reflectableLibrary =
+            resolver.getLibraryByName("reflectable.reflectable");
+        if (reflectableLibrary == null) {
+          // Stop and do not consumePrimary, i.e., let the original source
+          // pass through without changes.
+          return new Future.value();
+        }
+
+        List<ReflectableClassData> reflectableClasses =
+            _findReflectableClasses(reflectableLibrary, resolver);
+        Map<LibraryElement, Set<LibraryElement>> missingImports =
+            _findMissingImports(reflectableClasses);
+        Map<LibraryElement, Asset> libraryToAssetMap =
+            <LibraryElement, Asset>{};
+
+        for (LibraryElement libraryElement in resolver.libraries) {
+          Source source = libraryElement.definingCompilationUnit.source;
+          if (source == null) continue;  // No source: cannot be transformed.
+          String targetPath = _fullNameToRelativePath(source.fullName);
+          if (targetPath == null) continue;  // No path: cannot be transformed.
+          if (_fullNameToPackage(source.fullName) != entryPointPackage) {
+            // TODO(eernst): Needs generalization if we start supporting
+            // transformation of libraries in other packages.
+            continue;  // Library in different package: cannot be transformed.
+          }
+          for (Asset input in inputs) {
+            if (_isFileAsset(input)) {
+              if (_assetPath(input).endsWith(targetPath)) {
+                // NB: This test would yield an incorrect result in the
+                // case where multiple paths in the package have a shared
+                // suffix (e.g., we have both '/path/one/ending/like/this'
+                // and '/path/two/ending/like/this', and we check for
+                // 'ending/like/this'). However, this will not actually
+                // happen because the suffix that we are searching for is
+                // the full relative path from the package root directory,
+                // not just an arbitrary suffix.
+                libraryToAssetMap[libraryElement] = input;
+              }
+            }
+          }
+        }
+
+        Set<Asset> alreadyTransformed = new Set<Asset>();
+
+        for (LibraryElement targetLibrary in resolver.libraries) {
+          Asset targetAsset = libraryToAssetMap[targetLibrary];
+          if (targetAsset == null) continue;
+          if (alreadyTransformed.contains(targetAsset)) {
+            // It is not safe to transform a library that contains a Reflectable
+            // metadata class relative to multiple entry points, because each
+            // entry point defines a set of libraries which amounts to the
+            // complete program, and different sets of libraries correspond to
+            // potentially different sets of static mirror classes as well as
+            // potentially different sets of added import directives. Hence, we
+            // must reject the transformation in cases where there is such a
+            // clash.
+            //
+            // TODO(eernst): It would actually be safe to allow for multiple
+            // transformations of the same library done relative to different
+            // entry points _if_ the result of those transformations were the
+            // same (for instance, if both of them left that library unchanged)
+            // but we do not currently detect this case. This means that we
+            // might be able to allow for the transformation of more packages
+            // than the ones that we accept now, that is, it is a safe future
+            // enhancement to detect such a case and allow it.
+            bool metadataClassIsInTarget(ReflectableClassData classData) =>
+                classData.metadataClass.library == targetLibrary;
+            if (reflectableClasses.any(metadataClassIsInTarget)) {
+              aggregateTransform.logger.error(
+                  "Error: Multiple entry points transform $targetAsset.");
+            }
+          } else {
+            alreadyTransformed.add(targetAsset);
+          }
+          String source = inputToSourceMap[targetAsset];
+          String transformedSource = _transformSource(reflectableLibrary,
+                                                      reflectableClasses,
+                                                      libraryToAssetMap,
+                                                      missingImports,
+                                                      targetLibrary,
+                                                      source);
+          // Transform user provided code.
+          aggregateTransform.consumePrimary(targetAsset.id);
+          transform.addOutput(new Asset.fromString(targetAsset.id,
+                                                   transformedSource));
+        }
+      });
+    }));
   });
 }
