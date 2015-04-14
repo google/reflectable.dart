@@ -42,6 +42,7 @@ void checkContents(FileSystemEntity entity, String newBasePath) {
     File buildFile = new File(correspondingPath(entity.path, newBasePath));
     String buildContents = buildFile.readAsStringSync();
     if (expectContents != buildContents) {
+      print("Comparison failure for $buildFile: '''\n$buildContents'''");
       throw "File contents not identical for ${entity.path}.";
     }
   } else {
