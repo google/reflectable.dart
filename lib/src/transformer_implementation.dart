@@ -652,18 +652,23 @@ String _relativePath(String destinationPath, String sourcePath) {
 
 /// Returns the result of transforming the given [source] code, which is
 /// assumed to be the contents of the file associated with the
-/// [targetLibrary], which is the library currently being
-/// transformed.  [transformedPath] is the path of that library, used to
-/// find the file name of the library, which is again used to construct
-/// the name of the generated file
-/// [reflectableLibrary] is assumed to be the library that declareds the
+/// [targetLibrary], which is the library currently being transformed.
+/// [reflectableClasses] models the define/use relation where
+/// Reflectable metadata classes declare material for use as metadata
+/// and Reflectable annotated classes use that material.
+/// [libraryToAssetMap] is used in the generation of `import` directives
+/// that enable Reflectable metadata classes to see static mirror
+/// classes that it must be able to `reflect` which are declared in
+/// other libraries; [missingImports] lists the required imports which
+/// are not already present, i.e., the ones that must be added.
+/// [reflectableLibrary] is assumed to be the library that declares the
 /// class [Reflectable].
 ///
 /// TODO(eernst): The transformation has only been implemented
 /// partially at this time.
 ///
 /// TODO(eernst): Note that this function uses instances of [AstNode]
-/// and [Token] to get the correct offset into [source] of specific
+/// and [Token] to get the correct offset into the [source] of specific
 /// constructs in the code.  This is potentially costly, because this
 /// (intermediate) parsing related information may have been evicted
 /// since parsing, and the source code will then be parsed again.
@@ -843,6 +848,7 @@ Future apply(AggregateTransform aggregateTransform, List<String> entryPoints) {
       L: {
         for (Asset input in inputs) {
           if (input.id.path.endsWith(entryPoint)) {
+            aggregateTransform.logger.info("Registering entry point: $input");
             entryPointMap[entryPoint] = input;
             break L;
           }
