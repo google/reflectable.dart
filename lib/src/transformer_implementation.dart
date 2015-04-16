@@ -821,9 +821,9 @@ String _fullNameToPackage(String fullName) {
 /// removes superfluous constructs (e.g., '/some/./path/../otherpath'
 /// can be reduced to 'some/otherpath') and switches to '/' as the path
 /// separator.
-String _posixNormalizePath(String path) {
+String _posixNormalizePath(String pathToNormalize) {
   path.Context context = new path.Context(style: path.Style.posix);
-  return context.joinAll(path.split(path));
+  return context.joinAll(path.split(pathToNormalize));
 }
 
 /// Performs the transformation which eliminates all imports of
