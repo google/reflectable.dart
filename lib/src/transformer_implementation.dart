@@ -787,6 +787,10 @@ String _assetPath(Asset asset) {
   return assetString.substring(0, assetString.length - 1).substring(6);
 }
 
+String _packagePrefixString =
+    r'^[^' + (path.separator == '\\' ? r'\\' : '/') + r'|]*\|';
+RegExp _packagePrefix = new RegExp(_packagePrefixString);
+
 /// Returns the relative path embedded in the given [fullName], which is
 /// expected to be obtained from `Element.fullName` or some other source
 /// using the same format. This means that the package prefix (for
@@ -795,10 +799,9 @@ String _assetPath(Asset asset) {
 /// such a prefix it is assumed to be a path and returned unchanged.
 String _fullNameToRelativePath(String fullName) {
   if (fullName == null) return null;
-  RegExp packagePrefix = new RegExp(r'^[^/|]*\|');
-  Match match = packagePrefix.firstMatch(fullName);
+  Match match = _packagePrefix.firstMatch(fullName);
   if (match == null) return fullName;
-  return fullName.substring(match.end);
+  return path.normalize(fullName.substring(match.end));
 }
 
 /// Returns the package name embedded in the given [fullName], which is
@@ -809,10 +812,18 @@ String _fullNameToRelativePath(String fullName) {
 /// `null` is returned.
 String _fullNameToPackage(String fullName) {
   if (fullName == null) return null;
-  RegExp packagePrefix = new RegExp(r'^[^/|]*\|');
-  Match match = packagePrefix.firstMatch(fullName);
+  Match match = _packagePrefix.firstMatch(fullName);
   if (match == null) return null;
   return fullName.substring(0, match.end - 1);
+}
+
+/// Returns the normalized, posix style version of the given [path], i.e.,
+/// removes superfluous constructs (e.g., '/some/./path/../otherpath'
+/// can be reduced to 'some/otherpath') and switches to '/' as the path
+/// separator.
+String _posixNormalizePath(String path) {
+  path.Context context = new path.Context(style: path.Style.posix);
+  return context.joinAll(path.split(path));
 }
 
 /// Performs the transformation which eliminates all imports of
@@ -847,7 +858,7 @@ Future apply(AggregateTransform aggregateTransform, List<String> entryPoints) {
     for (String entryPoint in entryPoints) {
       L: {
         for (Asset input in inputs) {
-          if (input.id.path.endsWith(entryPoint)) {
+          if (input.id.path.endsWith(_posixNormalizePath(entryPoint))) {
             aggregateTransform.logger.info("Registering entry point: $input");
             entryPointMap[entryPoint] = input;
             break L;
@@ -892,9 +903,10 @@ Future apply(AggregateTransform aggregateTransform, List<String> entryPoints) {
             // transformation of libraries in other packages.
             continue;  // Library in different package: cannot be transformed.
           }
+          // Compute `libraryToAssetMap`.
           for (Asset input in inputs) {
             if (_isFileAsset(input)) {
-              if (_assetPath(input).endsWith(targetPath)) {
+              if (_assetPath(input).endsWith(_posixNormalizePath(targetPath))) {
                 // NB: This test would yield an incorrect result in the
                 // case where multiple paths in the package have a shared
                 // suffix (e.g., we have both '/path/one/ending/like/this'
