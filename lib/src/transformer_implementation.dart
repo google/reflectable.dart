@@ -781,9 +781,10 @@ bool _isFileAsset(Asset asset) => "$asset".substring(0,5) == "File ";
 /// TODO(eernst): There is no well-documented way, if any at all,
 /// to obtain the full path of a given asset (which would only make
 /// sense for a FileAsset anyway), but it happens to be possible to
-/// extract it from its `toString()`.
+/// extract it from its `toString()`, albeit with backslashes on
+/// Windows, so we normalize it before returning the result.
 String _assetPath(Asset asset) {
-  String assetString = asset.toString();
+  String assetString = _posixNormalizePath(asset.toString());
   return assetString.substring(0, assetString.length - 1).substring(6);
 }
 
