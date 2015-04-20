@@ -115,7 +115,7 @@ abstract class DeclarationMirror implements Mirror {
    * "return a base object, not a mirror" rule is unacceptable, and
    * return a [String], thus requiring the receiver to determine
    * whether or not it is a doc comment, based on the contents
-   * of the [String].  
+   * of the [String].
    * Remark from sigurdm@ on this topic, 2015/03/19 09:50:06: We
    * could also consider extending the interface with a
    * `docComments` or similar.  To me it is highly confusing that
@@ -159,22 +159,6 @@ abstract class ObjectMirror implements Mirror {
                 [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
 
   /**
-   * Deprecated method which has the same semantics as [invokeGetter].
-   *
-   * Ahead, [invokeGetter] is expected to be the only name for this operation,
-   * and the name [@deprecated getField] is expected to be reused for a
-   * different semantics that reads the value of a field, bypassing any getters.
-   * Since this is a breaking change it is not likely to happen before a major
-   * step in the version number, but users of mirrors can already now start
-   * using the future-safe name [invokeGetter].
-   *
-   * Note that the return type of the corresponding method in
-   * dart:mirrors is InstanceMirror.
-   */
-  @deprecated
-  Object getField(Symbol fieldName); // RET: InstanceMirror
-
-  /**
    * Invokes a getter and returns a mirror on the result. The getter
    * can be the implicit getter for a field or a user-defined getter
    * method.
@@ -209,29 +193,19 @@ abstract class ObjectMirror implements Mirror {
    *
    * TODO(eernst): make this comment more user friendly.
    */
-  Object invokeGetter(Symbol fieldName) => getField(fieldName);
+  Object invokeGetter(Symbol getterName);
 
   /**
-   * Deprecated method which has the same semantics as [invokeSetter].
-   *
-   * Ahead, [invokeSetter] is expected to be the only name for this
-   * operation, and the name [@deprecated setField] is expected to be
-   * reused for a different semantics that writes the value of a field,
-   * bypassing any setters.  Since this is a breaking change it is not
-   * likely to happen before a major step in the version number, but
-   * users of mirrors can already now start using the future-safe name
-   * [invokeSetter].
-   *
-   * Note that the return type of the corresponding method in
-   * dart:mirrors is InstanceMirror.
+   * Not supported, use [invokeGetter] instead.
    */
   @deprecated
-  Object setField(Symbol fieldName, Object value); // RET: InstanceMirror
+  Object getField(Symbol fieldName); // RET: InstanceMirror
 
   /**
    * Invokes a setter and returns a mirror on the result. The setter
    * may be either the implicit setter for a non-final field or a
-   * user-defined setter method.
+   * user-defined setter method. The name of the setter should include the
+   * final `=`.
    *
    * Let *o* be the object reflected by this mirror, let
    * *f* be the simple name of the getter denoted by [fieldName],
@@ -254,8 +228,13 @@ abstract class ObjectMirror implements Mirror {
    *
    * TODO(eernst): make this comment more user friendly.
    */
-  Object invokeSetter(Symbol fieldName, Object value) =>
-      setField(fieldName, value);
+  Object invokeSetter(Symbol setterName, Object value);
+
+  /**
+   * Not supported, use [invokeSetter] instead.
+   */
+  @deprecated
+  void setField(Symbol fieldName, Object value); // RET: InstanceMirror
 }
 
 abstract class InstanceMirror implements ObjectMirror {

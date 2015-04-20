@@ -29,7 +29,7 @@ library reflectable.capability;
 /// metadata associated with `C`.
 /// TODO(eernst): This is rather technical, provide an example, and
 /// insert a link to it.
-class ReflectCapability {
+abstract class ReflectCapability {
   const ReflectCapability();
 }
 
@@ -68,15 +68,14 @@ const invokeInstanceMembersCapability =
 const invokeStaticMembersCapability = const _InvokeStaticMembersCapability();
 
 /// Specifies for a class `C` that the instance member named
-/// [name] can be invoked; [name] must be declared in `C` or
-/// in a superclass of `C`.
+/// [name] can be invoked.
 class InvokeInstanceMemberCapability implements ReflectCapability {
   final Symbol name;
   const InvokeInstanceMemberCapability(this.name);
 }
 
 /// Specifies for a class `C` that the static member named [name]
-/// can be invoked; [name] must be declared in `C`.
+/// can be invoked.
 class InvokeStaticMemberCapability implements ReflectCapability {
   final Symbol name;
   const InvokeStaticMemberCapability(this.name);
@@ -90,4 +89,33 @@ class _InvokeMembersCapability implements ReflectCapability {
 
 class _InvokeStaticMembersCapability implements ReflectCapability {
   const _InvokeStaticMembersCapability();
+}
+
+/// Thrown when a method is invoked via a reflectable, but the reflectable
+/// doesn't have the capabilities to invoke it.
+class NoSuchCapabilityError extends Error {
+  Object receiver;
+  Symbol memberName;
+  List positionalArguments;
+  Map<Symbol, dynamic> namedArguments;
+  List existingArgumentNames;
+
+  NoSuchCapabilityError(this.receiver,
+      this.memberName,
+      this.positionalArguments,
+      this.namedArguments,
+      [this.existingArgumentNames = null]);
+
+  toString() {
+    String description =
+    "NoSuchCapabilityError: no capability to invoke '$memberName'\n"
+    "Receiver: $receiver\n"
+    "Arguments: $positionalArguments\n";
+    if (namedArguments != null) {
+      description += "Named arguments: $namedArguments\n";
+    }
+    if (existingArgumentNames != null) {
+      description += "Existing argument names: $existingArgumentNames\n";
+    }    return description;
+  }
 }

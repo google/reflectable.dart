@@ -80,7 +80,7 @@ class Reflectable {
 
   /// Returns a mirror of the given object [reflectee]
   InstanceMirror reflect(Object reflectee) =>
-      implementation.reflect(reflectee);
+      implementation.reflect(reflectee, this);
 
   /// Returns a mirror of the given class [type].  If [type] is a
   /// parameterized type, i.e., an application of a generic class
@@ -90,7 +90,7 @@ class Reflectable {
   /// any type arguments.  Other types than classes are (not yet)
   /// supported.
   ClassMirror reflectClass(Type type) =>
-      _unsupported();
+      implementation.reflectClass(type, this);
 
   /// Returns a mirror of the given type [type].  The returned value
   /// will also mirror the type if it is a parameterized type, i.e.,
@@ -108,7 +108,9 @@ class Reflectable {
   // 'Currently skip' comments indicate omitted declarations.
 
   /// Returns a mirror of the given library [library].
-  LibraryMirror findLibrary(Symbol library) => _unsupported();
+  LibraryMirror findLibrary(Symbol library) {
+    return implementation.findLibrary(library, this);
+  }
 
   /// Returns the name associated with the given [symbol].
   /// TODO(eernst): This name is problematic ('get' gives no
@@ -124,7 +126,7 @@ class Reflectable {
   // Currently skip 'IsolateMirror get isolate'
 
   /// Returns a map of all libraries in the current isolate.
-  Map<Uri, LibraryMirror> get libraries => _unsupported();
+  Map<Uri, LibraryMirror> get libraries => implementation.libraries(this);
 
   // Reflectable
   // -------------------------------------------------------

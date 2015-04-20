@@ -22,7 +22,13 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:path/path.dart' as path;
-import 'dart:convert';
+
+// Only checking the literal content of these tests
+List<String> testsWithCheckedLiteralTransform =
+    ['minimal.dart',
+     'use_annotation.dart',
+     'import_reflectable.dart',
+     'reflect_test.dart'];
 
 // TODO(eernst): We should use async_helper, but it is not available in the
 // given context.  Reintroduce this when ready:
@@ -57,32 +63,16 @@ void checkContents(FileSystemEntity entity, String newBasePath) {
 /// and identical contents in the directary at [buildDirPath].
 StreamSubscription<FileSystemEntity> checkAllContents(Directory expectDir,
                                                       String buildDirPath) {
+
+  bool isOnList(FileSystemEntity entity) {
+    return
+        testsWithCheckedLiteralTransform.contains(path.basename(entity.path));
+  }
+
   return expectDir
       .list(recursive: false, followLinks: false)
+      .where(isOnList)
       .listen((FileSystemEntity entity) => checkContents(entity, buildDirPath));
-}
-
-/// Checks that for each file in [buildDir], not including
-/// subdirectories, there exists a file with the same name in
-/// [expectedDirPath].
-StreamSubscription<FileSystemEntity> checkCompleteness(Directory buildDir,
-                                                       String expectDirPath) {
-  return buildDir.list(recursive: false, followLinks: false).listen(
-      (FileSystemEntity entity) {
-        if (entity is File && path.extension(entity.path) == '.dart') {
-          String expectPath = correspondingPath(entity.path, expectDirPath);
-          File expectFile = new File(expectPath);
-          if (! expectFile.existsSync()) {
-            throw "Unpexpected file found: ${entity.path}";
-          }
-        } else {
-          // [entity] may be a [Directory] which we will skip because we
-          // do not traverse subdirectories, or it may be a [Link] which
-          // we will skip because all tested entities must be files, or
-          // it may be a file that does not contain Dart source code (or
-          // at least: whose file extension claims so).
-        }
-      });
 }
 
 void main ([List<String> args]) {
@@ -98,8 +88,6 @@ void main ([List<String> args]) {
   // TODO(eernst): When async_helper can be used, consider this
   // solution, which may work but is not tested:
   //   asyncTest(checkAllContents(expectDir, buildDirPath).asFuture);
-  //   asyncTest(checkCompleteness(buildDir, expectedDirPath).asFuture);
   // Currently we use this, which may work because we import dart:io:
   checkAllContents(expectDir, buildDirPath);
-  checkCompleteness(buildDir, expectedDirPath);
 }

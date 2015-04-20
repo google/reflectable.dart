@@ -1,0 +1,104 @@
+// Copyright (c) 2015, the Dart project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
+import 'package:unittest/unittest.dart';
+import 'package:reflectable/reflectable.dart' as r;
+import 'package:reflectable/capability.dart' as c;
+
+// Tests that reflection is constrained according to capabilities.
+// TODO(sigurdm): Write tests that covers all the different capabilities.
+// TODO(sigurdm): Write tests that covers top-level invocations.
+
+const setFoo = const Symbol("setFoo=");
+const setBar = const Symbol("setBar=");
+
+class MyReflectableStatic extends r.Reflectable {
+  const MyReflectableStatic()
+      : super(const [const c.InvokeStaticMemberCapability(#foo),
+                     const c.InvokeStaticMemberCapability(#getFoo),
+                     const c.InvokeStaticMemberCapability(setFoo),
+                     const c.InvokeStaticMemberCapability(#nonExisting)]);
+}
+
+@MyReflectableStatic()
+class A {
+  static int foo() => 42;
+  static int bar() => 43;
+  static int get getFoo => 44;
+  static int get getBar => 45;
+  static set setFoo(int x) => field = x;
+  static set setBar(int x) => field = x;
+  static int field = 46;
+}
+
+class MyReflectableInstance extends r.Reflectable {
+  const MyReflectableInstance()
+  : super(const [const c.InvokeInstanceMemberCapability(#foo),
+                 const c.InvokeInstanceMemberCapability(#getFoo),
+                 const c.InvokeInstanceMemberCapability(setFoo),
+                 const c.InvokeInstanceMemberCapability(#nonExisting)]);
+}
+
+@MyReflectableInstance()
+class B {
+  int foo() => 42;
+  int bar() => 43;
+  int get getFoo => 44;
+  int get getBar => 45;
+  set setFoo(int x) => field = x;
+  set setBar(int x) => field = x;
+  int field = 46;
+}
+
+Matcher throwsNoSuchCapabilityError =
+    throwsA(isNoSuchCapabilityError);
+Matcher isNoSuchCapabilityError = new isInstanceOf<c.NoSuchCapabilityError>();
+
+void main() {
+  test("Static invocation", () {
+    r.ClassMirror classMirror = const MyReflectableStatic().reflectClass(A);
+    expect(classMirror.invoke(#foo, []), 42);
+    expect(() {
+      classMirror.invoke(#bar, []);
+    }, throwsNoSuchCapabilityError);
+    expect(classMirror.invokeGetter(#getFoo), 44);
+    expect(() {
+      classMirror.invokeGetter(#getBar);
+    }, throwsNoSuchCapabilityError);
+    expect(A.field, 46);
+    expect(classMirror.invokeSetter(setFoo, 100), 100);
+    expect(A.field, 100);
+    expect(() {
+      classMirror.invokeSetter(setBar, 100);
+    }, throwsNoSuchCapabilityError);
+    expect(classMirror.declarations.keys,
+           [#foo, setFoo, #getFoo].toSet());
+    // When we have the capability we get the NoSuchMethodError, not
+    // NoSuchCapabilityError.
+    expect(() => classMirror.invoke(#nonExisting, []), throwsNoSuchMethodError);
+  });
+  test("Dynamic invocation", () {
+    B b = new B();
+    r.InstanceMirror instanceMirror = const MyReflectableInstance().reflect(b);
+    expect(instanceMirror.invoke(#foo, []), 42);
+    expect(() {
+      instanceMirror.invoke(#bar, []);
+    }, throwsNoSuchCapabilityError);
+    expect(instanceMirror.invokeGetter(#getFoo), 44);
+    expect(() {
+      instanceMirror.invokeGetter(#getBar);
+    }, throwsNoSuchCapabilityError);
+    expect(b.field, 46);
+    expect(instanceMirror.invokeSetter(setFoo, 100), 100);
+    expect(b.field, 100);
+    expect(() {
+      instanceMirror.invokeSetter(setBar, 100);
+    }, throwsNoSuchCapabilityError);
+    expect(instanceMirror.type.declarations.keys,
+           [#foo, setFoo, #getFoo].toSet());
+    // When we have the capability we get the NoSuchMethodError, not
+    // NoSuchCapabilityError.
+    expect(() => instanceMirror.invoke(#nonExisting, []), throwsNoSuchMethodError);
+  });
+}

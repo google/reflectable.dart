@@ -33,10 +33,16 @@ abstract class ObjectMirrorUnimpl implements ObjectMirror {
   Object invoke(Symbol memberName,
                 List positionalArguments,
                 [Map<Symbol,dynamic> namedArguments]) => _unsupported();
-  Object getField(Symbol fieldName) => _unsupported();
-  Object invokeGetter(Symbol fieldName) => _unsupported();
-  Object setField(Symbol fieldName, Object value) => _unsupported();
-  Object invokeSetter(Symbol fieldName, Object value) => _unsupported();
+  Object invokeGetter(Symbol getterName) => _unsupported();
+  Object invokeSetter(Symbol setterName, Object value) => _unsupported();
+
+  Object getField(Symbol name) {
+    throw new UnsupportedError("Use invokeGetter instead of getField");
+  }
+
+  void setField(Symbol name, Object value) {
+    throw new UnsupportedError("Use invokeSetter instead of setField");
+  }
 }
 
 abstract class InstanceMirrorUnimpl extends ObjectMirrorUnimpl

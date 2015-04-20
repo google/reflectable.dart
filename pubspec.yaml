@@ -27,3 +27,8 @@ transformers:
       - test/to_be_transformed/bad_export_test.dart
       - test/to_be_transformed/use_prefix_test.dart
       - test/to_be_transformed/three_files_test.dart
+      - test/to_be_transformed/basic_test.dart
+      - test/to_be_transformed/capabilities_test.dart
+
+- $dart2js:
+    commandLineOptions: [--show-package-warnings]
