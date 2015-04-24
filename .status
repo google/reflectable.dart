@@ -4,11 +4,6 @@
 
 expected/*: SkipByDesign # Never run anything in 'expected'
 
-[ $runtime != none ]
-# The transformed version is Waiting for implementation.
-build/test/to_be_transformed/basic_test: RuntimeError
-build/test/to_be_transformed/capabilities_test: RuntimeError
-
 [ $compiler != dart2analyzer ]
 # We have no mechanism for checking that transformation fails.
 # All tests happen to produce a RuntimeError, though.
@@ -27,4 +22,3 @@ build/test/run_negative_test: SkipByDesign # Uses dart:io.
 
 [ $runtime == vm ]
 build/test/checktransforms_test: SkipByDesign # Not designed to run from here.
-build/test/run_negative_test: SkipByDesign # Not designed to run from here.

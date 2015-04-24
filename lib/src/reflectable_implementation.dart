@@ -5,7 +5,6 @@
 library reflectable.src.reflectable_implementation;
 
 import 'dart:mirrors' as dm;
-
 import '../capability.dart';
 import '../reflectable.dart' as r;
 
@@ -120,7 +119,10 @@ dm.TypeMirror unwrapTypeMirror(r.TypeMirror TypeMirror) {
 bool reflectableSupportsInstanceInvoke(
     r.Reflectable reflectable, Symbol name, dm.ClassMirror classMirror) {
   return reflectable.capabilities.any((ReflectCapability capability) {
-    if (capability is InvokeInstanceMemberCapability) {
+    if (capability == invokeMembersCapability ||
+        capability == invokeInstanceMembersCapability) {
+      return true;
+    } else if (capability is InvokeInstanceMemberCapability) {
       return capability.name == name;
     } else if (capability is InvokeMembersWithMetadataCapability) {
       dm.DeclarationMirror declarationMirror =
@@ -240,6 +242,9 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
         ? _libraryMirror == other._libraryMirror
         : false;
   }
+
+  @override
+  int get hashCode => _libraryMirror.hashCode;
 
   @override
   List<r.LibraryDependencyMirror> get libraryDependencies {
@@ -362,6 +367,9 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
   bool operator ==(other) => other is _InstanceMirrorImpl
       ? _instanceMirror == other._instanceMirror
       : false;
+
+  @override
+  int get hashCode => _instanceMirror.hashCode;
 
   @override
   delegate(Invocation invocation) => _instanceMirror.delegate(invocation);
@@ -509,6 +517,9 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
   }
 
   @override
+  int get hashCode => _classMirror.hashCode;
+
+  @override
   bool isSubclassOf(r.ClassMirror other) {
     return _classMirror.isSubclassOf(unwrapClassMirror(other));
   }
@@ -652,6 +663,9 @@ class _MethodMirrorImpl extends _DeclarationMirrorImpl
   }
 
   @override
+  int get hashCode => _methodMirror.hashCode;
+
+  @override
   String toString() => "_MethodMirrorImpl('${_methodMirror}')";
 }
 
@@ -702,6 +716,9 @@ class _VariableMirrorImpl extends _DeclarationMirrorImpl
       : false;
 
   @override
+  int get hashCode => _variableMirror.hashCode;
+
+  @override
   String toString() => "_VariableMirrorImpl('${_variableMirror}')";
 }
 
@@ -728,6 +745,9 @@ class _ParameterMirrorImpl extends _VariableMirrorImpl
   bool operator ==(other) => other is _ParameterMirrorImpl
       ? _parameterMirror == other._parameterMirror
       : false;
+
+  @override
+  int get hashCode => _parameterMirror.hashCode;
 
   @override
   String toString() => "_ParameterMirrorImpl('${_parameterMirror}')";
@@ -798,6 +818,9 @@ class _TypeVariableMirrorImpl extends _TypeMirrorImpl
   }
 
   @override
+  int get hashCode => _typeVariableMirror.hashCode;
+
+  @override
   r.TypeMirror get upperBound {
     return wrapTypeMirror(_typeVariableMirror.upperBound, _reflectable);
   }
@@ -823,6 +846,9 @@ class _TypedefMirrorImpl extends _TypeMirrorImpl implements r.TypedefMirror {
     return other is _TypedefMirrorImpl &&
         other._typedefMirror == _typedefMirror;
   }
+
+  @override
+  int get hashCode => _typedefMirror.hashCode;
 
   @override
   String toString() {
@@ -851,6 +877,9 @@ class _CombinatorMirrorImpl implements r.CombinatorMirror {
   }
 
   @override
+  int get hashCode => _combinatorMirror.hashCode;
+
+  @override
   String toString() {
     return "_CombinatorMirrorImpl('${_combinatorMirror}')";
   }
@@ -874,6 +903,9 @@ class _SourceLocationImpl implements r.SourceLocation {
     return other is _SourceLocationImpl &&
         other._sourceLocation == _sourceLocation;
   }
+
+  @override
+  int get hashCode => _sourceLocation.hashCode;
 
   @override
   String toString() {

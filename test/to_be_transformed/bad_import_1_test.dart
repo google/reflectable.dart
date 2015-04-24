@@ -9,7 +9,7 @@
 // must give rise to an error during transformation.
 
 library reflectable.test.to_be_transformed.bad_import_1_test;
-import 'package:reflectable/reflectable.dart' 
+import 'package:reflectable/reflectable.dart'
     show Reflectable, ReflectCapability;
 
 class MyReflectable extends Reflectable {

@@ -60,7 +60,7 @@ class InvokeInstanceMembersUpToSuperCapability implements ReflectCapability {
 
 /// Specifies for a class `C` that all instance members declared in `C`
 /// or a superclass of `C` can be invoked.
-const invokeInstanceMembersCapability = 
+const invokeInstanceMembersCapability =
     const InvokeInstanceMembersUpToSuperCapability(Object);
 
 /// Specifies for a class `C` that all static members

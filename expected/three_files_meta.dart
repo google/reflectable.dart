@@ -23,7 +23,7 @@ class MyReflectable extends Reflectable {
     if (reflectee.runtimeType == B) {
       return new Static_B_InstanceMirror(reflectee);
     }
-    throw new UnimplementedError();
+    throw new UnimplementedError("`reflect` on unexpected object '$reflectee'");
   }
 }
 

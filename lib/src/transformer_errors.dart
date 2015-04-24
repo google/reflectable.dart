@@ -28,18 +28,49 @@ class TransformationErrorCode extends ErrorCode {
           "Metadata has type Reflectable, but is not an instance of "
           "a direct subclass of Reflectable");
 
-  /// It is a transformation time error to export the library
-  /// `../reflectable.dart`.
-  static const CompileTimeErrorCode REFLECTABLE_LIBRARY_EXPORTED =
-      const CompileTimeErrorCode('REFLECTABLE_LIBRARY_EXPORTED',
-          "The library 'package:reflectable/reflectable.dart' is exported.");
+  /// It is a transformation time error to use `show` with
+  /// the import of `../reflectable.dart`.
+  static const CompileTimeErrorCode REFLECTABLE_LIBRARY_UNSUPPORTED_SHOW =
+      const CompileTimeErrorCode('REFLECTABLE_LIBRARY_UNSUPPORTED_SHOW',
+          "The library 'package:reflectable/reflectable.dart' is imported "
+          " with a `show` clause.");
+
+  /// It is a transformation time error to use `hide` with
+  /// the import of `../reflectable.dart`.
+  static const CompileTimeErrorCode REFLECTABLE_LIBRARY_UNSUPPORTED_HIDE =
+      const CompileTimeErrorCode('REFLECTABLE_LIBRARY_UNSUPPORTED_HIDE',
+          "The library 'package:reflectable/reflectable.dart' is imported "
+          " with a `hide` clause.");
 
   /// It is a transformation time error to use `show` or `hide` with
   /// the import of `../reflectable.dart`, or to make it `deferred`.
-  static const CompileTimeErrorCode REFLECTABLE_LIBRARY_UNSUPPORTED_IMPORT =
-      const CompileTimeErrorCode('REFLECTABLE_LIBRARY_UNSUPPORTED_IMPORT',
+  static const CompileTimeErrorCode REFLECTABLE_LIBRARY_UNSUPPORTED_DEFERRED =
+      const CompileTimeErrorCode('REFLECTABLE_LIBRARY_UNSUPPORTED_DEFERRED',
           "The library 'package:reflectable/reflectable.dart' is imported "
-          " with a `show` or `hide` clause, or it is `deferred`.");
+          " as a `deferred` library.");
+
+  /// It is a transformation time error to give an argument to the super
+  /// constructor invocation in a subclass of Reflectable that is of
+  /// a non-class type.
+  static const CompileTimeErrorCode REFLECTABLE_SUPER_ARGUMENT_NON_CLASS =
+      const CompileTimeErrorCode('REFLECTABLE_SUPER_ARGUMENT_NON_CLASS',
+          "The super constructor invocation receives an argument whose"
+          " type '{0}' is not a class.");
+
+  /// It is a transformation time error to give an argument to the super
+  /// constructor invocation in a subclass of Reflectable that is defined
+  /// outside the library 'package:reflectable/capability.dart'.
+  static const CompileTimeErrorCode REFLECTABLE_SUPER_ARGUMENT_WRONG_LIBRARY =
+      const CompileTimeErrorCode('REFLECTABLE_SUPER_ARGUMENT_WRONG_LIBRARY',
+          "The super constructor invocation receives an argument whose"
+          " type '{0}' is defined outside the library '{1}'.");
+
+  /// It is a transformation time error to give an argument to the super
+  /// constructor invocation in a subclass of Reflectable that is non-const.
+  static const CompileTimeErrorCode REFLECTABLE_SUPER_ARGUMENT_NON_CONST =
+      const CompileTimeErrorCode('REFLECTABLE_SUPER_ARGUMENT_NON_CONST',
+          "The super constructor invocation receives an argument"
+          " which is not a constant.");
 
   /// It is a transformation time error to use an enum as a Reflectable
   /// metadata class.

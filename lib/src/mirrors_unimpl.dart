@@ -51,6 +51,7 @@ abstract class InstanceMirrorUnimpl extends ObjectMirrorUnimpl
   bool get hasReflectee => _unsupported();
   get reflectee => _unsupported();
   bool operator ==(other) => _unsupported();
+  int get hashCode => _unsupported();
   delegate(Invocation invocation) => _unsupported();
 }
 
@@ -67,6 +68,7 @@ abstract class LibraryMirrorUnimpl extends DeclarationMirrorUnimpl
   Uri get uri => _unsupported();
   Map<Symbol, DeclarationMirror> get declarations => _unsupported();
   bool operator ==(other) => _unsupported();
+  int get hashCode => _unsupported();
   List<LibraryDependencyMirror> get libraryDependencies => _unsupported();
 }
 
@@ -114,6 +116,7 @@ abstract class ClassMirrorUnimpl extends TypeMirrorUnimpl
                      List positionalArguments,
                      [Map<Symbol,dynamic> namedArguments]) => _unsupported();
   bool operator ==(other) => _unsupported();
+  int get hashCode => _unsupported();
   bool isSubclassOf(ClassMirror other) => _unsupported();
 }
 
@@ -129,6 +132,7 @@ abstract class TypeVariableMirrorUnimpl extends TypeMirrorUnimpl
   TypeMirror get upperBound => _unsupported();
   bool get isStatic => _unsupported();
   bool operator ==(other) => _unsupported();
+  int get hashCode => _unsupported();
 }
 
 abstract class TypedefMirrorUnimpl extends TypeMirrorUnimpl
@@ -155,6 +159,7 @@ abstract class MethodMirrorUnimpl extends DeclarationMirrorUnimpl
   bool get isRedirectingConstructor => _unsupported();
   bool get isFactoryConstructor => _unsupported();
   bool operator ==(other) => _unsupported();
+  int get hashCode => _unsupported();
 }
 
 abstract class VariableMirrorUnimpl extends DeclarationMirrorUnimpl
@@ -164,6 +169,7 @@ abstract class VariableMirrorUnimpl extends DeclarationMirrorUnimpl
   bool get isFinal => _unsupported();
   bool get isConst => _unsupported();
   bool operator ==(other) => _unsupported();
+  int get hashCode => _unsupported();
 }
 
 abstract class ParameterMirrorUnimpl extends VariableMirrorUnimpl

@@ -6,9 +6,11 @@
 # on all platforms.
 
 PACKAGE_ROOT=../packages
-ANALYZER_OPTIONS="--package-root=$(PACKAGE_ROOT)"
+OPTIONS=--package-root=$(PACKAGE_ROOT)
+TEST_DIR=../test
+XFORM_DIR=../test/to_be_transformed
 
-all: check build test
+all: check build full_test
 
 c: check
 
@@ -16,17 +18,26 @@ b: build
 
 t: test
 
+ft: full_test
+
 check:
-	dartanalyzer $(ANALYZER_OPTIONS) ../{lib,test}/**/*.dart
+	dartanalyzer $(OPTIONS) ../{lib,test}/**/*.dart
 
 build:
 	( cd ..; pub build --mode=debug test )
 
 test:
-	../test/checktransforms_test.dart
-	dart --package-root=../packages ../test/source_manager_test.dart
-	@echo '------------------------------------------------------------'
+	@echo "-------------------- checktransforms_test"
+	@$(TEST_DIR)/checktransforms_test.dart
+	@echo "-------------------- source_manager_test"
+	@dart $(OPTIONS) $(TEST_DIR)/source_manager_test.dart
+	@echo "-------------------- path_helper_test"
+	@dart $(OPTIONS) $(TEST_DIR)/path_helper_test.dart
+	@./run_transformation_tests
+
+full_test: test
+	@echo '------------------- bottest'
 	./bottest --preserve-output
 
-.PHONY: all c b t check build test
+.PHONY: all c b t ft check build test full_test
 

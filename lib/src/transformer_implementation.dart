@@ -5,8 +5,9 @@
 library reflectable.src.transformer_implementation;
 
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:mirrors' as dm;
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
@@ -18,8 +19,11 @@ import 'package:barback/src/transformer/transform.dart';
 import 'package:code_transformers/resolver.dart';
 import 'package:path/path.dart' as path;
 import 'package:reflectable/reflectable.dart';
+import 'path_helper.dart';
 import 'source_manager.dart';
 import 'transformer_errors.dart';
+
+String getName(Symbol symbol) => dm.MirrorSystem.getName(symbol);
 
 // TODO(eernst): Keep in mind, with reference to
 // http://dartbug.com/21654 comment #5, that it would be very valuable
@@ -108,8 +112,22 @@ bool _isSubclassOf(InterfaceType possibleSubtype, InterfaceType type) {
 void reportErrors(RecordingErrorListener errorListener,
                   ErrorReporter errorReporter,
                   Source source) {
-  // TODO(eernst): Show the given errors to the user. The following
-  // approach ensures in a simple manner that the errors are not suppressed.
+  // Show the given errors to the user.  Note that we cannot stop the
+  // transformation with an error-valued `exitCode`, because the
+  // package-bots are unable to consider a failing transformation as an
+  // expected outcome, they just turn red for the whole series of
+  // tests because "we crashed before any of them were executed".
+  //
+  // TODO(eernst): We should test transformer error handling separately,
+  // writing a test that runs `pub build` in a separate directory for
+  // every single negative transformer test (such that the failing `pub
+  // build` indicates the failure of transformation for exactly one test
+  // case, and the `pub build` is one executed from our test program, not
+  // the "global" pub build that the package-bots use for the set of
+  // tests as a whole). When that is in place we will move all negative
+  // transformer test cases from `to_be_transformed` into those new
+  // directories, and we will then add code below to stop with an error
+  // value in `exitCode` when `!errors.isEmpty`.
   List<AnalysisError> errors = errorListener.getErrorsForSource(source);
   if (!errors.isEmpty) print(errors);
 }
@@ -265,7 +283,7 @@ Map<LibraryElement, Set<LibraryElement>>
     _findMissingImports(List<ReflectableClassData> reflectableClasses) {
   Map<LibraryElement, Set<LibraryElement>> result =
       <LibraryElement, Set<LibraryElement>>{};
-       
+
   // Gather all the required imports.
   Set<_Import> requiredImports = new Set<_Import>();
   Set<LibraryElement> requiredImporters = new Set<LibraryElement>();
@@ -325,7 +343,7 @@ void _replaceUriReferencedElement(SourceManager sourceManager,
   if (uriStart == -1) {
     // Encountered a synthetic element.  We do not expect imports or
     // exports of reflectable to be synthetic, so we make it an error.
-    throw new UnimplementedError();
+    throw new UnimplementedError("Encountered synthetic import of reflectable");
   }
   int uriEnd = uriReferencedElement.uriEnd;
   // If we have `uriStart != -1 && uriEnd == -1` then there is a bug
@@ -334,56 +352,67 @@ void _replaceUriReferencedElement(SourceManager sourceManager,
   sourceManager.replace(uriStart, uriEnd, "'$newUri'");
 }
 
-/// Perform `sourceManager.replace` such that the export of
-/// `reflectableLibrary` specified by [exportElement] is eliminated and
-/// an error message is emitted. This transformer will not work if
-/// `reflectableLibrary` is exported: that library must be totally
-/// eliminated from the transformed program, such that the program does
-/// not indirectly import 'dart:mirrors'.
-void _emitDiagnosticForExportDirective(SourceManager sourceManager,
-                                       ExportElement exportElement,
-                                       ErrorReporter errorReporter) {
-  // TODO(eernst): Create an issue for the analyzer, because
-  // `exportElement.node == null`, and also
-  // `exportElement.displayName == null`, which means that we cannot
-  // use the obvious methods: neither `reportErrorForElement` nor
-  // `reportErrorForOffset`.  Currently falling back on the Uri.
-  errorReporter.reportErrorForOffset(
-      TransformationErrorCode.REFLECTABLE_LIBRARY_EXPORTED,
-      exportElement.uriOffset,
-      exportElement.uriEnd,
-      []);
-  // We cannot compile a program where an unknown library (namely
-  // `reflectableLibrary`, whose import has been deleted) must be
-  // exported, so continuing from here without changing anything will
-  // not work.  However, if `reflectableLibrary` was exported but never
-  // used then we would still be able to compile the program without the
-  // export.  So we eliminate the export.
+/// Returns the name of the given [classElement].  Note that we may have
+/// multiple classes in a program with the same name in this sense,
+/// because they can be in different libraries, and clashes may have
+/// been avoided because the classes are private, because no single
+/// library imports both, or because all importers of both use prefixes
+/// on one or both of them to resolve the name clash.  Hence, name
+/// clashes must be taken into account when using the return value.
+String _classElementName(ClassElement classElement) =>
+    classElement.node.name.name.toString();
 
-  // TODO(eernst): Commented out until issue above reported and resolved
-  // (currently crashes because `exportElement.node == null`):
-  //
-  // NamespaceDirective namespaceDirective = exportElement.node;
-  // int directiveStart = namespaceDirective.offset;
-  // if (directiveStart == -1) {
-  //   // Encountered a synthetic element.  We do not expect exports of
-  //   // reflectable to be synthetic, so we make it an error.
-  //   throw new UnimplementedError();
-  // }
-  // int directiveEnd = namespaceDirective.end;
-  // // If we have `directiveStart != -1 && directiveEnd == -1` then there
-  // // is a bug in the implementation of [exportElement].
-  // assert(directiveEnd != -1);
-  // sourceManager.replace(directiveStart, directiveEnd, "");
+// _staticClassNamePrefixMap, _antiNameClashSaltInitValue, _antiNameClashSalt:
+// Auxiliary state used to generate names which are unlikely to clash with
+// existing names and which cannot possibly clash with each other, because they
+// contain the number [_antiNameClashSalt], which is updated each time it is
+// used.
+Map<ClassElement, String> _staticClassNamePrefixMap = <ClassElement, String>{};
+int _antiNameClashSaltInitValue = 9238478278;
+int _antiNameClashSalt = _antiNameClashSaltInitValue;
+
+/// Reset [_antiNameClashSalt] to its initial value, such that
+/// transformation of a given program can be deterministic even though
+/// the order of transformation of a set of programs may differ from
+/// between multiple runs of `pub build`.  Also reset caching data
+/// structures depending on [_antiNameClashSalt]:
+/// [_staticClassNamePrefixMap].
+void resetAntiNameClashSalt() {
+  _antiNameClashSalt = _antiNameClashSaltInitValue;
+  _staticClassNamePrefixMap.clear();
 }
 
-// TODO(eernst): Make sure this name is unique.
-String _staticClassMirrorName(String targetClassName) =>
-    "Static_${targetClassName}_ClassMirror";
+/// Returns the shared prefix of names of generated entities
+/// associated with [targetClass]. Uses [_antiNameClashSalt]
+/// to prevent name clashes among generated names, and to make
+/// name clashes with user-defined names unlikely.
+String _staticNamePrefix(ClassElement targetClass) {
+  String namePrefix = _staticClassNamePrefixMap[targetClass];
+  if (namePrefix == null) {
+    String nameOfTargetClass = _classElementName(targetClass);
+    // TODO(eernst): Use the following version "with Salt" when we have
+    // switched to the version of `checktransforms_test` that only checks
+    // a handful of the very simplest transformations:
+    //   namePrefix = "Static_${nameOfTargetClass}_${_antiNameClashSalt++}";
+    // Currently we use the following version of this statement in order to
+    // avoid the salt, because it breaks `checktransforms_test`:
+    namePrefix = "Static_${nameOfTargetClass}";
+    _staticClassNamePrefixMap[targetClass] = namePrefix;
+  }
+  return namePrefix;
+}
 
-// TODO(eernst): Make sure this name is unique.
-String _staticInstanceMirrorName(String targetClassName) =>
-    "Static_${targetClassName}_InstanceMirror";
+/// Returns the name of the statically generated subclass of ClassMirror
+/// corresponding to the given [targetClass]. Uses [_antiNameClashSalt]
+/// to make name clashes unlikely.
+String _staticClassMirrorName(ClassElement targetClass) =>
+    "${_staticNamePrefix(targetClass)}_ClassMirror";
+
+// Returns the name of the statically generated subclass of InstanceMirror
+// corresponding to the given [targetClass]. Uses [_antiNameClashSalt]
+/// to make name clashes unlikely.
+String _staticInstanceMirrorName(ClassElement targetClass) =>
+    "${_staticNamePrefix(targetClass)}_InstanceMirror";
 
 const String generatedComment = "// Generated";
 
@@ -469,70 +498,73 @@ int _newImportIndex(LibraryElement targetLibrary) {
 /// [reflectableLibrary] a prefix; `null` is returned if there is
 /// no such prefix.
 PrefixElement _transformSourceDirectives(LibraryElement reflectableLibrary,
+                                         ErrorReporter errorReporter,
                                          LibraryElement targetLibrary,
                                          SourceManager sourceManager) {
-  RecordingErrorListener errorListener = new RecordingErrorListener();
-  ErrorReporter errorReporter =
-      new ErrorReporter(errorListener, targetLibrary.source);
   List<ImportElement> editedImports = <ImportElement>[];
 
-  void replaceImportOfReflectable(UriReferencedElement element) {
+  void replaceUriOfReflectable(UriReferencedElement element) {
     _replaceUriReferencedElement(
         sourceManager, element,
         "package:reflectable/static_reflectable.dart");
-    editedImports.add(element);
+    if (element is ImportElement) editedImports.add(element);
   }
 
-  void emitDiagnosticForExportDirective(UriReferencedElement element) =>
-      _emitDiagnosticForExportDirective(sourceManager, element, errorReporter);
-
-  void handleErrors() =>
-      reportErrors(errorListener, errorReporter, targetLibrary.source);
+  // Exemption: We do not transform 'reflectable_implementation.dart'.
+  if ("$targetLibrary" == "reflectable.src.reflectable_implementation") {
+    return null;
+  }
 
   // Transform all imports and exports of reflectable.
   targetLibrary.imports
       .where((element) => element.importedLibrary == reflectableLibrary)
-      .forEach(replaceImportOfReflectable);
+      .forEach(replaceUriOfReflectable);
   targetLibrary.exports
       .where((element) => element.exportedLibrary == reflectableLibrary)
-      .forEach(emitDiagnosticForExportDirective);
+      .forEach(replaceUriOfReflectable);
 
   // If [reflectableLibrary] is never imported then it has no prefix.
-  if (editedImports.isEmpty) {
-    handleErrors();
-    return null;
-  }
+  if (editedImports.isEmpty) return null;
 
   bool isOK(ImportElement importElement) {
     // We do not support a deferred load of Reflectable.
-    if (importElement.isDeferred) return false;
+    if (importElement.isDeferred) {
+      errorReporter.reportErrorForOffset(
+          TransformationErrorCode.REFLECTABLE_LIBRARY_UNSUPPORTED_DEFERRED,
+          importElement.node.offset,
+          importElement.node.length,
+          []);
+      return false;
+    }
     // We do not currently support `show` nor `hide` clauses,
     // otherwise this one is OK.
-    return importElement.combinators.isEmpty;
-  }
-
-  // Try to select a good import
-  for (ImportElement importElement in editedImports) {
-    if (isOK(importElement)) {
-      handleErrors();
-      return importElement.prefix;
+    if (importElement.combinators.isEmpty) return true;
+    for (NamespaceCombinator combinator in importElement.combinators) {
+      if (combinator is HideElementCombinator) {
+        errorReporter.reportErrorForOffset(
+          TransformationErrorCode.REFLECTABLE_LIBRARY_UNSUPPORTED_HIDE,
+          importElement.node.offset,
+          importElement.node.length,
+          []);
+      }
+      assert(combinator is ShowElementCombinator);
+      errorReporter.reportErrorForOffset(
+          TransformationErrorCode.REFLECTABLE_LIBRARY_UNSUPPORTED_SHOW,
+          importElement.node.offset,
+          importElement.node.length,
+          []);
     }
+    return false;
   }
 
-  // No good imports found, but we do have some imports, so they are all bad.
-  // Let us complain about the first one.  In the unlikely case that we have
-  // multiple imports of Reflectable, and they are all bad, this means that
-  // the user will get one error message, then fix the issue, then get
-  // another error message about the next line of code, essentially.  This
-  // is not nice, but it is very unlikely at it will affect anybody who
-  // isn't specifically looking for it.
-  errorReporter.reportErrorForOffset(
-      TransformationErrorCode.REFLECTABLE_LIBRARY_UNSUPPORTED_IMPORT,
-      editedImports[0].node.offset,
-      editedImports[0].node.length,
-      []);
-  handleErrors();
-  return null;
+  // Check the imports, report problems with them if any, and try
+  // to select the prefix of a good import to return.  If no good
+  // imports are found we return `null`.
+  PrefixElement goodPrefix = null;
+  for (ImportElement importElement in editedImports) {
+    if (isOK(importElement)) goodPrefix = importElement.prefix;
+  }
+  return goodPrefix;
 }
 
 /// Transform the given [metadataClass] by adding features needed to
@@ -544,9 +576,9 @@ PrefixElement _transformSourceDirectives(LibraryElement reflectableLibrary,
 /// instances [metadataClass] must provide reflection for.
 void _transformMetadataClass(ClassElement metadataClass,
                              List<ClassElement> annotatedClasses,
+                             ErrorReporter errorReporter,
                              SourceManager sourceManager,
-                             PrefixElement prefixElement,
-                             ErrorReporter errorReporter) {
+                             PrefixElement prefixElement) {
   // A ClassElement can be associated with an [EnumDeclaration], but
   // this is not supported for a Reflectable metadata class.
   if (metadataClass.node is EnumDeclaration) {
@@ -567,24 +599,25 @@ void _transformMetadataClass(ClassElement metadataClass,
     sourceManager.replace(insertionIndex, insertionIndex, "$code\n");
   }
 
-  String reflectCaseOfName(String className) =>
-      "    if (reflectee.runtimeType == $className) {\n"
-      "      return new ${_staticInstanceMirrorName(className)}(reflectee);\n"
+  String reflectCaseOfClass(ClassElement classElement) =>
+      "    if (reflectee.runtimeType == ${_classElementName(classElement)}) {\n"
+      "      return new ${_staticInstanceMirrorName(classElement)}(reflectee);\n"
       "    }\n";
 
   String reflectCases = "";  // Accumulates the body of the `reflect` method.
 
   // Add each supported case to [reflectCases].
   annotatedClasses.forEach((ClassElement annotatedClass) {
-      String className = annotatedClass.node.name.name.toString();
-      reflectCases += reflectCaseOfName(className);
-    });
+    reflectCases += reflectCaseOfClass(annotatedClass);
+  });
 
   // Add failure case to [reflectCases]: No matching classes, so the
   // user is asking for a kind of reflection that was not requested,
   // which is a runtime error.
-  // TODO(eernst): Consider more carefully *what* to throw here.
-  reflectCases += "    throw new UnimplementedError();";
+  // TODO(eernst): Should use the Reflectable specific exception that Sigurd
+  // introduced in a not-yet-landed CL.
+  reflectCases += "    throw new "
+      "UnimplementedError(\"`reflect` on unexpected object '\$reflectee'\");";
 
   // Add the `reflect` method to [metadataClass].
   String prefix = prefixElement == null ? "" : "${prefixElement.name}.";
@@ -599,6 +632,7 @@ void _transformMetadataClass(ClassElement metadataClass,
 /// whose `library` is [targetLibrary], and transform them using
 /// _transformMetadataClass.
 void _transformMetadataClasses(List<ReflectableClassData> reflectableClasses,
+                               ErrorReporter errorReporter,
                                LibraryElement targetLibrary,
                                SourceManager sourceManager,
                                PrefixElement prefixElement) {
@@ -612,42 +646,331 @@ void _transformMetadataClasses(List<ReflectableClassData> reflectableClasses,
     metadataClasses.add(classData.metadataClass);
   }
 
-  RecordingErrorListener errorListener = new RecordingErrorListener();
-  ErrorReporter errorReporter =
-      new ErrorReporter(errorListener, targetLibrary.source);
-
   void transformMetadataClass(ClassElement metadataClass) {
     List<ClassElement> annotatedClasses = reflectableClasses
         .where((classData) => classData.metadataClass == metadataClass)
         .map((classData) => classData.annotatedClass)
         .toList();
-    _transformMetadataClass(metadataClass,
-                            annotatedClasses,
-                            sourceManager,
-                            prefixElement,
-                            errorReporter);
+    _transformMetadataClass(
+        metadataClass, annotatedClasses, errorReporter, sourceManager,
+        prefixElement);
   }
 
   reflectableClasses.where(isInTargetLibrary).forEach(addMetadataClass);
   metadataClasses.forEach(transformMetadataClass);
 }
 
-/// Compute a relative path such that it denotes the file at
-/// [destinationPath] when used from the location of the file
-/// [sourcePath].
-String _relativePath(String destinationPath, String sourcePath) {
-  List<String> destinationSplit = path.split(destinationPath);
-  List<String> sourceSplit = path.split(sourcePath);
-  while (destinationSplit.length > 1 && sourceSplit.length > 1 &&
-         destinationSplit[0] == sourceSplit[0]) {
-    destinationSplit = destinationSplit.sublist(1);
-    sourceSplit = sourceSplit.sublist(1);
+/// Returns the source code for the reflection free subclass of
+/// [ClassMirror] which is specialized for a `reflectedType` which
+/// is the class modeled by [classElement].
+String _staticClassMirrorCode(ClassElement classElement, capabilities) {
+  return """
+class ${_staticClassMirrorName(classElement)} extends ClassMirrorUnimpl {
+}
+""";
+}
+
+/// Perform some very simple steps that are consistent with Dart
+/// semantics for the evaluation of constant expressions, such that
+/// information about the value of a given `const` variable can be
+/// obtained.  It is intended to help recognizing values of type
+/// [ReflectCapability], so we only cover cases needed for that.
+/// In particular, we cover lookup (e.g., with `const x = e` we can
+/// see that the value of `x` is `e`, and that step may be repeated
+/// if `e` is an [Identifier], or in general if it has a shape that
+/// is covered); similarly, `C.y` is evaluated to `42` if `C` is a
+/// class containing a declaration like `static const y = 42`. We do
+/// not perform any kind of arithmetic simplification.
+Expression _constEvaluate(Expression expression, ErrorReporter errorReporter) {
+  // [Identifier] can be [PrefixedIdentifier] and [SimpleIdentifier]
+  // (and [LibraryIdentifier], but that is only used in [PartOfDirective],
+  // so even when we use a library prefix like in `myLibrary.MyClass` it
+  // will be a [PrefixedIdentifier] containing two [SimpleIdentifier]s).
+  if (expression is SimpleIdentifier) {
+    if (expression.staticElement is PropertyAccessorElement) {
+      PropertyAccessorElement propertyAccessor = expression.staticElement;
+      PropertyInducingElement variable = propertyAccessor.variable;
+      // We expect to be called only on `const` expressions.
+      if (!variable.isConst) {
+        errorReporter.reportErrorForNode(
+            TransformationErrorCode.REFLECTABLE_SUPER_ARGUMENT_NON_CONST,
+            expression,
+            []);
+      }
+      VariableDeclaration variableDeclaration = variable.node;
+      return _constEvaluate(variableDeclaration.initializer, errorReporter);
+    }
   }
-  while (sourceSplit.length > 1) {
-    sourceSplit = sourceSplit.sublist(1);
-    destinationSplit.insert(0, "..");
+  if (expression is PrefixedIdentifier) {
+    SimpleIdentifier simpleIdentifier = expression.identifier;
+    if (simpleIdentifier.staticElement is PropertyAccessorElement) {
+      PropertyAccessorElement propertyAccessor = simpleIdentifier.staticElement;
+      PropertyInducingElement variable = propertyAccessor.variable;
+      // We expect to be called only on `const` expressions.
+      if (!variable.isConst) {
+        errorReporter.reportErrorForNode(
+            TransformationErrorCode.REFLECTABLE_SUPER_ARGUMENT_NON_CONST,
+            expression,
+            []);
+      }
+      VariableDeclaration variableDeclaration = variable.node;
+      return _constEvaluate(variableDeclaration.initializer, errorReporter);
+    }
   }
-  return path.joinAll(destinationSplit);
+  // No evaluation steps succeeded, return [expression] unchanged.
+  return expression;
+}
+
+/// Returns the [ReflectCapability] denoted by the given [initializer].
+ReflectCapability _capabilityOfExpression(LibraryElement capabilityLibrary,
+                                          ErrorReporter errorReporter,
+                                          Expression expression) {
+  Expression evaluatedExpression = _constEvaluate(expression, errorReporter);
+
+  DartType dartType = evaluatedExpression.bestType;
+  // The AST must have been resolved at this point.
+  assert(dartType != null);
+
+  // We insist that the type must be a class, and we insist that it must
+  // be in the given `capabilityLibrary` (because we could never know
+  // how to interpret the meaning of a user-written capability class, so
+  // users cannot write their own capability classes).
+  if (dartType is! ClassElement) {
+    errorReporter.reportErrorForNode(
+        TransformationErrorCode.REFLECTABLE_SUPER_ARGUMENT_NON_CLASS,
+        expression, [dartType]);
+  }
+  ClassElement classElement = dartType.element;
+  if (classElement.library != capabilityLibrary) {
+    errorReporter.reportErrorForNode(
+        TransformationErrorCode.REFLECTABLE_SUPER_ARGUMENT_WRONG_LIBRARY,
+        expression, [classElement, capabilityLibrary]);
+  }
+  switch (classElement.name) {
+    case "_InvokeMembersCapability":
+      return invokeMembersCapability;
+    case "InvokeMembersWithMetadataCapability":
+      throw new UnimplementedError("$classElement not yet supported");
+    case "InvokeInstanceMembersUpToSuperCapability":
+      throw new UnimplementedError("$classElement not yet supported");
+    case "_InvokeStaticMembersCapability":
+      return invokeStaticMembersCapability;
+    case "InvokeInstanceMemberCapability":
+      throw new UnimplementedError("$classElement not yet supported");
+    case "InvokeStaticMemberCapability":
+      throw new UnimplementedError("$classElement not yet supported");
+    default:
+      throw new UnimplementedError("Unexpected capability $classElement");
+  }
+}
+
+/// Returns the list of Capabilities given to the `super` constructor
+/// invocation in the subclass of class [Reflectable] that is modeled
+/// by [classElement].
+List<ReflectCapability> _capabilitiesOf(LibraryElement capabilityLibrary,
+                                        ErrorReporter errorReporter,
+                                        ClassElement classElement) {
+  List<ConstructorElement> constructors = classElement.constructors;
+  // The `super()` arguments must be unique, so there must be 1 constructor.
+  assert(constructors.length == 1);
+  ConstructorElement constructorElement = constructors[0];
+  // It can only be a const constructor, because this class has been
+  // used for metadata; it is a bug in the transformer if not.
+  // It must also be a default constructor.
+  assert(constructorElement.isConst);
+  // TODO(eernst): Ensure that some other location in this transformer
+  // checks that the metadataClass constructor is indeed a default
+  // constructor, such that this can be a mere assertion rather than
+  // a user-oriented error report.
+  assert(constructorElement.isDefaultConstructor);
+  NodeList<ConstructorInitializer> initializers =
+      constructorElement.node.initializers;
+  // We insist that the initializer is exactly one element, a `super(<_>[])`.
+  // TODO(eernst): Ensure that this has already been checked and met with a
+  // user-oriented error report.
+  assert(initializers.length == 1);
+  SuperConstructorInvocation superInvocation = initializers[0];
+  assert(superInvocation.constructorName == null);
+  NodeList<Expression> arguments = superInvocation.argumentList.arguments;
+  assert(arguments.length == 1);
+  ListLiteral listLiteral = arguments[0];
+  NodeList<Expression> expressions = listLiteral.elements;
+
+  ReflectCapability capabilityOfExpression(Expression expression) =>
+      _capabilityOfExpression(capabilityLibrary, errorReporter, expression);
+
+  return expressions.map(capabilityOfExpression);
+}
+
+/// Returns `true` iff the given [capabilities] specify that `invoke`
+/// must be supported on the given symbols.
+bool _capableOfInstanceInvoke(List<ReflectCapability> capabilities,
+                              [List<Symbol> symbols]) {
+  if (capabilities.contains(invokeInstanceMembersCapability)) return true;
+  if (capabilities.contains(invokeMembersCapability)) return true;
+
+  bool handleMetadataCapability(ReflectCapability capability) {
+    if (capability is! InvokeMembersWithMetadataCapability) return false;
+    // TODO(eernst): Handle InvokeMembersWithMetadataCapability
+    throw new UnimplementedError();
+  }
+  if (capabilities.any(handleMetadataCapability)) return true;
+
+  bool handleMembersUpToSuperCapability(ReflectCapability capability) {
+    if (capability is InvokeInstanceMembersUpToSuperCapability) {
+      if (capability.superType == Object) return true;
+      // TODO(eernst): Handle InvokeInstanceMembersUpToSuperCapability up
+      // to something non-trivival.
+      throw new UnimplementedError();
+    } else {
+      return false;
+    }
+  }
+  if (capabilities.any(handleMembersUpToSuperCapability)) return true;
+
+  if (symbols != null) {
+    bool handleInstanceMemberCapabilities(Symbol symbol) {
+      bool handleInstanceMemberCapability(ReflectCapability capability) {
+        if (capability is InvokeInstanceMemberCapability) {
+          return capability.name == symbol;
+        } else {
+          return false;
+        }
+      }
+      return capabilities.any(handleInstanceMemberCapability);
+    }
+    if (symbols.every(handleInstanceMemberCapabilities)) return true;
+  }
+
+  return false;
+}
+
+/// Returns a list of those methods for which Reflectable support is
+/// explicitly requested (using `InvokeInstanceMemberCapability`),
+/// but which are not defined by the given class or any of its
+/// superclasses.
+List<Symbol> _unusedMethodsForCapabilities(ClassElement classElement,
+    List<ReflectCapability> capabilities) {
+  List<Symbol> result = <Symbol>[];
+  capabilities.forEach((capability) {
+    if (capability is InvokeInstanceMemberCapability) {
+      String name = getName(capability.name);
+      if (classElement.lookUpMethod(name, classElement.library) == null) {
+        result.add(capability.name);
+      }
+    }
+  });
+  return result;
+}
+
+/// Returns a [String] containing generated code for the `invoke`
+/// method of the static `InstanceMirror` class corresponding to
+/// the given [classElement], bounded by the permissions given
+/// in [capabilities].
+///
+/// TODO(eernst): Named parameters not yet supported.
+String _staticInstanceMirrorInvokeCode(ClassElement classElement,
+    List<ReflectCapability> capabilities) {
+  String invokeCode = """
+  Object invoke(Symbol memberName,
+                List positionalArguments,
+                [Map<Symbol, dynamic> namedArguments]) {
+""";
+
+  ClassElement currentClass = classElement;
+  while (currentClass != null) {
+    for (MethodElement methodElement in currentClass.methods) {
+      MethodDeclaration methodDeclaration = methodElement.node;
+      if (methodDeclaration.isOperator) {
+        // TODO(eernst): We currently ignore method declarations when
+        // they are operators. One issue is generation of code (which
+        // does not work if we go ahead naively).
+      } else {
+        String methodName = methodDeclaration.name.name;
+        Symbol methodSymbol = new Symbol(methodName);
+        if (_capableOfInstanceInvoke(capabilities, <Symbol>[methodSymbol])) {
+        invokeCode += """
+    if (memberName == #$methodName) {
+      return Function.apply(
+          reflectee.$methodName, positionalArguments, namedArguments);
+    }
+""";
+        }
+      }
+    }
+    InterfaceType supertype = currentClass.supertype;
+    currentClass = supertype == null ? null : supertype.element;
+  }
+
+  // Handle the cases where permission is given even though there is
+  // no corresponding method. One case is where _all_ methods can be
+  // invoked. Another case is when the user has specified a symbol
+  // #foo and a Reflectable metadata value @myReflectable allowing
+  // for invocation of `foo`, and then attached @myReflectable to a
+  // class that does not define nor inherit any method `foo`.  In these
+  // cases we invoke `noSuchMethod`.
+  if (_capableOfInstanceInvoke(capabilities)) {
+    // We have the capability to invoke _all_ methods, and since the
+    // requested one does not fit, it should give rise to an invocation
+    // of `noSuchMethod`.
+    // TODO(eernst): Cf. the problem mentioned below in relation to the
+    // invocation of `noSuchMethod`: It might be a good intermediate
+    // solution to create our own implementation of Invocation holding
+    // the information mentioned below; it would not be able to support
+    // `delegate`, but for a broad range of purposes it might still be
+    // useful.
+    invokeCode += """
+    // Want `reflectee.noSuchMethod(invocation);` where `invocation` holds
+    // memberName, positionalArguments, and namedArguments.  But we cannot
+    // create an instance of [Invocation] in user code.
+    throw new UnimplementedError('Cannot call `noSuchMethod`');
+""";
+  } else {
+    List<Symbol> unusedSymbols =
+        _unusedMethodsForCapabilities(classElement, capabilities);
+    if (!unusedSymbols.isEmpty) {
+      // These symbols must give rise to an invocation of `noSuchMethod`.
+      String unusedSymbolsListed = "<String>[${getName(unusedSymbols[0])}";
+      for (Symbol unusedSymbol in unusedSymbols.skip(1)) {
+        unusedSymbolsListed += ", ${getName(unusedSymbol)}";
+      }
+      unusedSymbolsListed += "]";
+      invokeCode += """
+    List<Symbol> noSuchMethodSymbols = $unusedSymbolsListed;
+    if (noSuchMemberSymbols.contains(memberName)) {
+      // Want `reflectee.noSuchMethod(invocation);` where `invocation` holds
+      // memberName, positionalArguments, and namedArguments.  But we cannot
+      // create an instance of [Invocation] in user code.
+      throw new UnimplementedError('Cannot call `noSuchMethod`');
+    }
+""";
+    }
+  }
+
+  invokeCode += """
+  }
+""";
+  return invokeCode;
+}
+
+/// Returns the source code for the reflection free subclass of
+/// [InstanceMirror] which is specialized for a `reflectee` which
+/// is an instance of the class modeled by [classElement].  The
+/// generated code will provide support as specified by
+/// [capabilities].
+String _staticInstanceMirrorCode(ClassElement classElement,
+    List<ReflectCapability> capabilities) {
+  // The `rest` of the code is the entire body of the static mirror class,
+  // except for the declaration of `reflectee`, and a constructor.
+  String rest = "";
+  rest += _staticInstanceMirrorInvokeCode(classElement, capabilities);
+  // TODO(eernst): add code for other mirror methods than `invoke`.
+  return """
+class ${_staticInstanceMirrorName(classElement)} extends InstanceMirrorUnimpl {
+  final ${_classElementName(classElement)} reflectee;
+  ${_staticInstanceMirrorName(classElement)}(this.reflectee);
+$rest}
+""";
 }
 
 /// Returns the result of transforming the given [source] code, which is
@@ -676,9 +999,12 @@ String _relativePath(String destinationPath, String sourcePath) {
 /// everything ourselves.  But it would be useful to be able to give
 /// barback a hint that this information should preferably be preserved.
 String _transformSource(LibraryElement reflectableLibrary,
+                        LibraryElement capabilityLibrary,
                         List<ReflectableClassData> reflectableClasses,
                         Map<LibraryElement, Asset> libraryToAssetMap,
                         Map<LibraryElement, Set<LibraryElement>> missingImports,
+                        TransformLogger logger,
+                        ErrorReporter errorReporter,
                         LibraryElement targetLibrary,
                         String source) {
   // Used to manage replacements of code snippets by other code snippets
@@ -689,34 +1015,22 @@ String _transformSource(LibraryElement reflectableLibrary,
   String generatedSource = "";
 
   // Transform selected existing elements in [targetLibrary].
-  PrefixElement prefixElement = _transformSourceDirectives(reflectableLibrary,
-                                                           targetLibrary,
-                                                           sourceManager);
-  _transformMetadataClasses(reflectableClasses,
-                            targetLibrary,
-                            sourceManager,
-                            prefixElement);
+  PrefixElement prefixElement = _transformSourceDirectives(
+      reflectableLibrary, errorReporter, targetLibrary, sourceManager);
+  _transformMetadataClasses(
+      reflectableClasses, errorReporter, targetLibrary, sourceManager,
+      prefixElement);
 
   for (ReflectableClassData classData in reflectableClasses) {
     ClassElement annotatedClass = classData.annotatedClass;
-    String className = annotatedClass.node.name.name.toString();
-
-    // We only transform classes in the [targetLibrary].
     if (annotatedClass.library != targetLibrary) continue;
+    List<ReflectCapability> capabilities = _capabilitiesOf(
+        capabilityLibrary, errorReporter, classData.metadataClass);
 
-    // Generate a static mirror for this class.
-    generatedSource += """\n
-class ${_staticClassMirrorName(className)} extends ClassMirrorUnimpl {
-}
-""";
-
-    // Generate a static mirror for instances of this class.
-    generatedSource += """\n
-class ${_staticInstanceMirrorName(className)} extends InstanceMirrorUnimpl {
-  final $className reflectee;
-  ${_staticInstanceMirrorName(className)}(this.reflectee);
-}
-""";
+    // Generate static mirrors.
+    generatedSource +=
+        "\n" + _staticClassMirrorCode(annotatedClass, capabilities) +
+        "\n" + _staticInstanceMirrorCode(annotatedClass, capabilities);
   }
 
   // If needed, add an import such that generated classes can see their
@@ -731,7 +1045,7 @@ class ${_staticInstanceMirrorName(className)} extends InstanceMirrorUnimpl {
     String targetPath = libraryToAssetMap[targetLibrary].id.path;
     for (LibraryElement importToAdd in importsToAdd) {
       String pathToAdd = libraryToAssetMap[importToAdd].id.path;
-      newImport += "\nimport '${_relativePath(pathToAdd, targetPath)}';";
+      newImport += "\nimport '${relativePath(pathToAdd, targetPath)}';";
     }
   }
   if (!newImport.isEmpty) {
@@ -818,8 +1132,8 @@ String _fullNameToPackage(String fullName) {
   return fullName.substring(0, match.end - 1);
 }
 
-/// Returns the normalized, posix style version of the given [path], i.e.,
-/// removes superfluous constructs (e.g., '/some/./path/../otherpath'
+/// Returns the normalized, posix style version of the given [pathToNormalize],
+/// i.e., removes superfluous constructs (e.g., '/some/./path/../otherpath'
 /// can be reduced to 'some/otherpath') and switches to '/' as the path
 /// separator.
 String _posixNormalizePath(String pathToNormalize) {
@@ -877,6 +1191,7 @@ Future apply(AggregateTransform aggregateTransform, List<String> entryPoints) {
       String entryPointPackage = entryPointAsset.id.package;
       Transform transform =
           new AggregateTransformWrapper(aggregateTransform, entryPointAsset);
+      resetAntiNameClashSalt();  // Each entry point has a closed world.
 
       return resolvers.get(transform).then((Resolver resolver) {
         LibraryElement reflectableLibrary =
@@ -886,7 +1201,11 @@ Future apply(AggregateTransform aggregateTransform, List<String> entryPoints) {
           // pass through without changes.
           return new Future.value();
         }
-
+        // If [reflectableLibrary] is present then [capabilityLibrary]
+        // must also be present, because the former imports and exports
+        // the latter.
+        LibraryElement capabilityLibrary =
+            resolver.getLibraryByName("reflectable.capability");
         List<ReflectableClassData> reflectableClasses =
             _findReflectableClasses(reflectableLibrary, resolver);
         Map<LibraryElement, Set<LibraryElement>> missingImports =
@@ -955,17 +1274,19 @@ Future apply(AggregateTransform aggregateTransform, List<String> entryPoints) {
             alreadyTransformed.add(targetAsset);
           }
           String source = inputToSourceMap[targetAsset];
-          String transformedSource = _transformSource(reflectableLibrary,
-                                                      reflectableClasses,
-                                                      libraryToAssetMap,
-                                                      missingImports,
-                                                      targetLibrary,
-                                                      source);
+          RecordingErrorListener errorListener = new RecordingErrorListener();
+          ErrorReporter errorReporter =
+              new ErrorReporter(errorListener, targetLibrary.source);
+          String transformedSource = _transformSource(
+              reflectableLibrary, capabilityLibrary, reflectableClasses,
+              libraryToAssetMap, missingImports, aggregateTransform.logger,
+              errorReporter, targetLibrary, source);
           // Transform user provided code.
           aggregateTransform.consumePrimary(targetAsset.id);
-          transform.addOutput(new Asset.fromString(targetAsset.id,
-                                                   transformedSource));
+          transform.addOutput(
+              new Asset.fromString(targetAsset.id, transformedSource));
         }
+        resolver.release();
       });
     }));
   });

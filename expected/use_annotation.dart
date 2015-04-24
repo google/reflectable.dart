@@ -18,7 +18,7 @@ class MyReflectable extends Reflectable {
     if (reflectee.runtimeType == A) {
       return new Static_A_InstanceMirror(reflectee);
     }
-    throw new UnimplementedError();
+    throw new UnimplementedError("`reflect` on unexpected object '$reflectee'");
   }
 }
 
@@ -33,4 +33,8 @@ class Static_A_ClassMirror extends ClassMirrorUnimpl {
 class Static_A_InstanceMirror extends InstanceMirrorUnimpl {
   final A reflectee;
   Static_A_InstanceMirror(this.reflectee);
+  Object invoke(Symbol memberName,
+                List positionalArguments,
+                [Map<Symbol, dynamic> namedArguments]) {
+  }
 }

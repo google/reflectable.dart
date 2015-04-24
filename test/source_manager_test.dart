@@ -52,7 +52,7 @@ main() {
     sourceManager.replace(7,7,'tes');        // '**-__****testing'
     chk('**-__****testing', 'using the very last available index');
 
-    expect(() { sourceManager.replace(3,5,'nope'); }, 
+    expect(() { sourceManager.replace(3,5,'nope'); },
            throwsArgumentError,
            reason: 'detect overlap');
 

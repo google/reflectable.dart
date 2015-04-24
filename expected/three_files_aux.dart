@@ -22,4 +22,8 @@ class Static_B_ClassMirror extends ClassMirrorUnimpl {
 class Static_B_InstanceMirror extends InstanceMirrorUnimpl {
   final B reflectee;
   Static_B_InstanceMirror(this.reflectee);
+  Object invoke(Symbol memberName,
+                List positionalArguments,
+                [Map<Symbol, dynamic> namedArguments]) {
+  }
 }

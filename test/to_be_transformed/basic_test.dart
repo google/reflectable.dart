@@ -85,10 +85,10 @@ List<r.MethodMirror> methodsOf(r.ClassMirror cm) {
       (v) => v is r.MethodMirror && v.isRegularMethod);
 }
 
-
-Matcher throwsNoSuchCapabilityError =
-    throwsA(isNoSuchCapabilityError);
+Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
+Matcher throwsNoSuchMethodError = throwsA(isNoSuchMethodError);
 Matcher isNoSuchCapabilityError = new isInstanceOf<NoSuchCapabilityError>();
+Matcher isNoSuchMethodError = new isInstanceOf<NoSuchMethodError>();
 
 main() {
   var unnamed = const Symbol('');
@@ -162,14 +162,14 @@ main() {
   });
 
   test('bMethod', () {
-    expect(() => aM.invoke(bMethod, []), throwsNoSuchCapabilityError);
+    expect(() => aM.invoke(bMethod, []), throwsNoSuchMethodError);
     expect(bM.invoke(bMethod, []), "bMethod");
     expect(cM.invoke(bMethod, []), "bMethod");
   });
 
   test('cMethod', () {
-    expect(() => aM.invoke(cMethod, []), throwsNoSuchCapabilityError);
-    expect(() => bM.invoke(cMethod, []), throwsNoSuchCapabilityError);
+    expect(() => aM.invoke(cMethod, []), throwsNoSuchMethodError);
+    expect(() => bM.invoke(cMethod, []), throwsNoSuchMethodError);
     expect(cM.invoke(cMethod, []), "cMethod");
   });
 
