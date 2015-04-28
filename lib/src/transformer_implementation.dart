@@ -19,7 +19,6 @@ import 'package:barback/src/transformer/transform.dart';
 import 'package:code_transformers/resolver.dart';
 import 'package:path/path.dart' as path;
 import 'package:reflectable/reflectable.dart';
-import 'path_helper.dart';
 import 'source_manager.dart';
 import 'transformer_errors.dart';
 
@@ -1006,7 +1005,8 @@ String _transformSource(LibraryElement reflectableLibrary,
                         TransformLogger logger,
                         ErrorReporter errorReporter,
                         LibraryElement targetLibrary,
-                        String source) {
+                        String source,
+                        Resolver resolver) {
   // Used to manage replacements of code snippets by other code snippets
   // in [source].
   SourceManager sourceManager = new SourceManager(source);
@@ -1042,10 +1042,11 @@ String _transformSource(LibraryElement reflectableLibrary,
       "" : "\nimport 'package:reflectable/src/mirrors_unimpl.dart';";
   Set<LibraryElement> importsToAdd = missingImports[targetLibrary];
   if (importsToAdd != null) {
-    String targetPath = libraryToAssetMap[targetLibrary].id.path;
+    AssetId targetId = libraryToAssetMap[targetLibrary].id;
     for (LibraryElement importToAdd in importsToAdd) {
-      String pathToAdd = libraryToAssetMap[importToAdd].id.path;
-      newImport += "\nimport '${relativePath(pathToAdd, targetPath)}';";
+      Uri importUri = resolver.getImportUri(importToAdd, from: targetId);
+      print(importUri);
+      newImport += "\nimport '$importUri';";
     }
   }
   if (!newImport.isEmpty) {
@@ -1280,7 +1281,7 @@ Future apply(AggregateTransform aggregateTransform, List<String> entryPoints) {
           String transformedSource = _transformSource(
               reflectableLibrary, capabilityLibrary, reflectableClasses,
               libraryToAssetMap, missingImports, aggregateTransform.logger,
-              errorReporter, targetLibrary, source);
+              errorReporter, targetLibrary, source, resolver);
           // Transform user provided code.
           aggregateTransform.consumePrimary(targetAsset.id);
           transform.addOutput(
