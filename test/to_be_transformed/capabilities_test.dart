@@ -51,9 +51,45 @@ class B {
   int field = 46;
 }
 
+class BSubclass extends B {}
+
+class BImplementer implements B {
+  int foo() => 42;
+  int bar() => 43;
+  int get getFoo => 44;
+  int get getBar => 45;
+  set setFoo(int x) => field = x;
+  set setBar(int x) => field = x;
+  int field = 46;
+}
+
 Matcher throwsNoSuchCapabilityError =
     throwsA(isNoSuchCapabilityError);
 Matcher isNoSuchCapabilityError = new isInstanceOf<c.NoSuchCapabilityError>();
+
+void testDynamic(B o, String description) {
+  test("Dynamic invocation $description", () {
+    r.InstanceMirror instanceMirror = const MyReflectableInstance().reflect(o);
+    expect(instanceMirror.invoke(#foo, []), 42);
+    expect(() {
+      instanceMirror.invoke(#bar, []);
+    }, throwsNoSuchCapabilityError);
+    expect(instanceMirror.invokeGetter(#getFoo), 44);
+    expect(() {
+      instanceMirror.invokeGetter(#getBar);
+    }, throwsNoSuchCapabilityError);
+    expect(o.field, 46);
+    expect(instanceMirror.invokeSetter(setFoo, 100), 100);
+    expect(o.field, 100);
+    expect(() {
+      instanceMirror.invokeSetter(setBar, 100);
+    }, throwsNoSuchCapabilityError);
+    // When we have the capability we get the NoSuchMethodError, not
+    // NoSuchCapabilityError.
+    expect(() => instanceMirror.invoke(#nonExisting, []),
+           throwsNoSuchMethodError);
+  });
+}
 
 void main() {
   test("Static invocation", () {
@@ -78,27 +114,17 @@ void main() {
     // NoSuchCapabilityError.
     expect(() => classMirror.invoke(#nonExisting, []), throwsNoSuchMethodError);
   });
-  test("Dynamic invocation", () {
-    B b = new B();
-    r.InstanceMirror instanceMirror = const MyReflectableInstance().reflect(b);
-    expect(instanceMirror.invoke(#foo, []), 42);
-    expect(() {
-      instanceMirror.invoke(#bar, []);
-    }, throwsNoSuchCapabilityError);
-    expect(instanceMirror.invokeGetter(#getFoo), 44);
-    expect(() {
-      instanceMirror.invokeGetter(#getBar);
-    }, throwsNoSuchCapabilityError);
-    expect(b.field, 46);
-    expect(instanceMirror.invokeSetter(setFoo, 100), 100);
-    expect(b.field, 100);
-    expect(() {
-      instanceMirror.invokeSetter(setBar, 100);
-    }, throwsNoSuchCapabilityError);
-    expect(instanceMirror.type.declarations.keys,
+  testDynamic(new B(), "Annotated");
+  test("Declarations", () {
+    expect(const MyReflectableInstance()
+           .reflect(new B()).type.declarations.keys,
            [#foo, setFoo, #getFoo].toSet());
-    // When we have the capability we get the NoSuchMethodError, not
-    // NoSuchCapabilityError.
-    expect(() => instanceMirror.invoke(#nonExisting, []), throwsNoSuchMethodError);
+  });
+  testDynamic(new BSubclass(), "Subclass of Annotated");
+  testDynamic(new BImplementer(), "Implementer of Annotated");
+  test("Can't reflect unnanotated", () {
+    expect(() {
+      const MyReflectableInstance().reflect(new Object());
+    }, throwsNoSuchCapabilityError);
   });
 }

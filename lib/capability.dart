@@ -91,31 +91,45 @@ class _InvokeStaticMembersCapability implements ReflectCapability {
   const _InvokeStaticMembersCapability();
 }
 
+/// Thrown when reflection is invoked outside given capabilities.
+abstract class NoSuchCapabilityError extends Error {
+  factory NoSuchCapabilityError(message) = _NoSuchCapabilityErrorImpl;
+}
+
+class _NoSuchCapabilityErrorImpl extends Error
+    implements NoSuchCapabilityError {
+  final String _message;
+
+  _NoSuchCapabilityErrorImpl(String message) : _message = message;
+
+  toString() => _message;
+}
+
 /// Thrown when a method is invoked via a reflectable, but the reflectable
 /// doesn't have the capabilities to invoke it.
-class NoSuchCapabilityError extends Error {
+class NoSuchInvokeCapabilityError extends Error
+    implements NoSuchCapabilityError {
   Object receiver;
   Symbol memberName;
   List positionalArguments;
   Map<Symbol, dynamic> namedArguments;
   List existingArgumentNames;
 
-  NoSuchCapabilityError(this.receiver,
-      this.memberName,
-      this.positionalArguments,
-      this.namedArguments,
+  NoSuchInvokeCapabilityError(this.receiver, this.memberName,
+      this.positionalArguments, this.namedArguments,
       [this.existingArgumentNames = null]);
 
   toString() {
     String description =
-    "NoSuchCapabilityError: no capability to invoke '$memberName'\n"
-    "Receiver: $receiver\n"
-    "Arguments: $positionalArguments\n";
+        "NoSuchCapabilityError: no capability to invoke '$memberName'\n"
+        "Receiver: $receiver\n"
+        "Arguments: $positionalArguments\n";
     if (namedArguments != null) {
       description += "Named arguments: $namedArguments\n";
     }
     if (existingArgumentNames != null) {
       description += "Existing argument names: $existingArgumentNames\n";
-    }    return description;
+    }
+    return description;
   }
 }

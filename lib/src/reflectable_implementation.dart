@@ -9,6 +9,23 @@ import '../capability.dart';
 import '../reflectable.dart' as r;
 
 r.InstanceMirror reflect(o, r.Reflectable reflectable) {
+  bool hasReflectable(dm.ClassMirror type) {
+    if (type == null) return false;
+    print("$type ${type.metadata} $reflectable");
+    if (type.metadata
+        .map((dm.InstanceMirror reflectable) => reflectable.reflectee)
+        .contains(reflectable)) {
+      return true;
+    }
+    return hasReflectable(type.superclass) ||
+        type.superinterfaces.any(hasReflectable);
+  }
+
+  dm.InstanceMirror mirror = dm.reflect(o);
+  if (!hasReflectable(mirror.type)) {
+    throw new NoSuchCapabilityError(
+        "Reflecting on object of unannotated class.");
+  }
   return wrapInstanceMirror(dm.reflect(o), reflectable);
 }
 
@@ -213,7 +230,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   Object invoke(Symbol memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
     if (!reflectableSupportsStaticInvoke(_reflectable, memberName)) {
-      throw new NoSuchCapabilityError(
+      throw new NoSuchInvokeCapabilityError(
           _receiver, memberName, positionalArguments, namedArguments);
     }
     return _libraryMirror.invoke(
@@ -223,7 +240,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   @override
   Object invokeGetter(Symbol getterName) {
     if (!reflectableSupportsStaticInvoke(_reflectable, getterName)) {
-      throw new NoSuchCapabilityError(_receiver, getterName, [], null);
+      throw new NoSuchInvokeCapabilityError(_receiver, getterName, [], null);
     }
     return _libraryMirror.getField(getterName).reflectee;
   }
@@ -231,7 +248,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   @override
   Object invokeSetter(Symbol setterName, Object value) {
     if (!reflectableSupportsStaticInvoke(_reflectable, setterName)) {
-      throw new NoSuchCapabilityError(_receiver, setterName, [value], null);
+      throw new NoSuchInvokeCapabilityError(_receiver, setterName, [value], null);
     }
     return _libraryMirror.setField(setterToGetter(setterName), value);
   }
@@ -340,7 +357,7 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
       return _instanceMirror.invoke(
           memberName, positionalArguments, namedArguments).reflectee;
     }
-    throw new NoSuchCapabilityError(
+    throw new NoSuchInvokeCapabilityError(
         _receiver, memberName, positionalArguments, namedArguments);
   }
 
@@ -350,7 +367,7 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
         _reflectable, fieldName, _instanceMirror.type)) {
       return _instanceMirror.getField(fieldName).reflectee;
     }
-    throw new NoSuchCapabilityError(_receiver, fieldName, [], null);
+    throw new NoSuchInvokeCapabilityError(_receiver, fieldName, [], null);
   }
 
   @override
@@ -360,7 +377,7 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
       return _instanceMirror.setField(
           setterToGetter(setterName), value).reflectee;
     }
-    throw new NoSuchCapabilityError(_receiver, setterName, [value], null);
+    throw new NoSuchInvokeCapabilityError(_receiver, setterName, [value], null);
   }
 
   @override
@@ -489,7 +506,7 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
       return _classMirror.invoke(
           memberName, positionalArguments, namedArguments).reflectee;
     }
-    throw new NoSuchCapabilityError(
+    throw new NoSuchInvokeCapabilityError(
         _receiver, memberName, positionalArguments, namedArguments);
   }
 
@@ -498,7 +515,7 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
     if (reflectableSupportsStaticInvoke(_reflectable, getterName)) {
       return _classMirror.getField(getterName).reflectee;
     }
-    throw new NoSuchCapabilityError(_receiver, getterName, [], null);
+    throw new NoSuchInvokeCapabilityError(_receiver, getterName, [], null);
   }
 
   @override
@@ -506,7 +523,7 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
     if (reflectableSupportsStaticInvoke(_reflectable, setterName)) {
       return _classMirror.setField(setterToGetter(setterName), value).reflectee;
     }
-    throw new NoSuchCapabilityError(_receiver, setterName, [value], null);
+    throw new NoSuchInvokeCapabilityError(_receiver, setterName, [value], null);
   }
 
   @override
