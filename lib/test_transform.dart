@@ -23,7 +23,7 @@ class MessageRecord {
 
 /// A transform that gets its main inputs from a [Map] from path to [String].
 /// If an input is not found there it will be looked up in [packageRoot].
-/// [packageRoot] should use the system path-seperator.
+/// [packageRoot] should use the system path-separator.
 class TestAggregateTransform implements AggregateTransform {
   final Map<String, String> files;
   final List<Asset> outputs = new List<Asset>();
