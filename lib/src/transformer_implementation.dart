@@ -301,7 +301,7 @@ Map<LibraryElement, Set<LibraryElement>>
   for (LibraryElement importer in requiredImporters) {
     Set<LibraryElement> importeds = requiredImports
         .where((_Import _import) => _import.importer == importer)
-        .map((_Import _import) => _import.imported);
+        .map((_Import _import) => _import.imported).toSet();
     result[importer] = importeds;
   }
 
@@ -1000,7 +1000,6 @@ $rest}
 String _transformSource(LibraryElement reflectableLibrary,
                         LibraryElement capabilityLibrary,
                         List<ReflectableClassData> reflectableClasses,
-                        Map<LibraryElement, Asset> libraryToAssetMap,
                         Map<LibraryElement, Set<LibraryElement>> missingImports,
                         TransformLogger logger,
                         ErrorReporter errorReporter,
@@ -1042,7 +1041,7 @@ String _transformSource(LibraryElement reflectableLibrary,
       "" : "\nimport 'package:reflectable/src/mirrors_unimpl.dart';";
   Set<LibraryElement> importsToAdd = missingImports[targetLibrary];
   if (importsToAdd != null) {
-    AssetId targetId = libraryToAssetMap[targetLibrary].id;
+    AssetId targetId = resolver.getSourceAssetId(targetLibrary);
     for (LibraryElement importToAdd in importsToAdd) {
       Uri importUri = resolver.getImportUri(importToAdd, from: targetId);
       print(importUri);
@@ -1073,222 +1072,126 @@ class AggregateTransformWrapper implements Transform {
   AggregateTransformWrapper(this._aggregateTransform, this.primaryInput);
   TransformLogger get logger => _aggregateTransform.logger;
   Future<Asset> getInput(AssetId id) => _aggregateTransform.getInput(id);
-  Future<String> readInputAsString(AssetId id, {Encoding encoding}) =>
-      _aggregateTransform.readInputAsString(id, encoding: encoding);
+  Future<String> readInputAsString(AssetId id, {Encoding encoding}) {
+    return _aggregateTransform.readInputAsString(id, encoding: encoding);
+  }
   Stream<List<int>> readInput(AssetId id) => _aggregateTransform.readInput(id);
   Future<bool> hasInput(AssetId id) => _aggregateTransform.hasInput(id);
   void addOutput(Asset output) => _aggregateTransform.addOutput(output);
   void consumePrimary() => _aggregateTransform.consumePrimary(primaryInput.id);
 }
 
-/// Determines whether or not the given [asset] is a `FileAsset`
-/// (defined in package:analyzer/src/asset/internal_asset.dart).
-///
-/// TODO(eernst): This test does not use a maintainable or
-/// well-documented approach, but there does not seem to be a
-/// "nice" way to decide whether an Asset is a FileAsset, e.g.,
-/// we do not want to import internal_asset.dart in order to
-/// be able to perform an `is` test.
-bool _isFileAsset(Asset asset) => "$asset".substring(0,5) == "File ";
-
-/// Computes the absolute (full) path of the given [asset].
-///
-/// TODO(eernst): There is no well-documented way, if any at all,
-/// to obtain the full path of a given asset (which would only make
-/// sense for a FileAsset anyway), but it happens to be possible to
-/// extract it from its `toString()`, albeit with backslashes on
-/// Windows, so we normalize it before returning the result.
-String _assetPath(Asset asset) {
-  String assetString = _posixNormalizePath(asset.toString());
-  return assetString.substring(0, assetString.length - 1).substring(6);
-}
-
-String _packagePrefixString =
-    r'^[^' + (path.separator == '\\' ? r'\\' : '/') + r'|]*\|';
-RegExp _packagePrefix = new RegExp(_packagePrefixString);
-
-/// Returns the relative path embedded in the given [fullName], which is
-/// expected to be obtained from `Element.fullName` or some other source
-/// using the same format. This means that the package prefix (for
-/// 'reflectable|lib/my_file.dart' it is 'reflectable|') is stripped off,
-/// and the rest is returned unchanged. When [fullName] does not contain
-/// such a prefix it is assumed to be a path and returned unchanged.
-String _fullNameToRelativePath(String fullName) {
-  if (fullName == null) return null;
-  Match match = _packagePrefix.firstMatch(fullName);
-  if (match == null) return fullName;
-  return path.normalize(fullName.substring(match.end));
-}
-
-/// Returns the package name embedded in the given [fullName], which is
-/// expected to be obtained from `Element.fullName` or some other source
-/// using the same format. The package name is a prefix of [fullName] (for
-/// 'reflectable|lib/my_file.dart' it is 'reflectable'). When [fullName]
-/// does not contain such a prefix it is considered to be unknown and
-/// `null` is returned.
-String _fullNameToPackage(String fullName) {
-  if (fullName == null) return null;
-  Match match = _packagePrefix.firstMatch(fullName);
-  if (match == null) return null;
-  return fullName.substring(0, match.end - 1);
-}
-
-/// Returns the normalized, posix style version of the given [pathToNormalize],
-/// i.e., removes superfluous constructs (e.g., '/some/./path/../otherpath'
-/// can be reduced to 'some/otherpath') and switches to '/' as the path
-/// separator.
-String _posixNormalizePath(String pathToNormalize) {
-  path.Context context = new path.Context(style: path.Style.posix);
-  return context.joinAll(path.split(pathToNormalize));
-}
-
 /// Performs the transformation which eliminates all imports of
 /// `package:reflectable/reflectable.dart` and instead provides a set of
 /// statically generated mirror classes.
-Future apply(AggregateTransform aggregateTransform, List<String> entryPoints) {
+Future apply(AggregateTransform aggregateTransform,
+    List<String> entryPoints) async {
   // The type argument in the return type is omitted because the
   // documentation on barback and on transformers do not specify it.
   Resolvers resolvers = new Resolvers(dartSdkDirectory);
-  List<Asset> inputs;
-  Map<Asset, String> inputToSourceMap = <Asset, String>{};
 
-  return aggregateTransform.primaryInputs.toList().then((List<Asset> assets) {
-    inputs = assets;
-    return Future.wait(assets.map((Asset asset) {
-      return asset.readAsString().then((String source) {
-        assert(!inputToSourceMap.containsKey(asset));
-        inputToSourceMap[asset] = source;
-      });
-    }));
-  }).then((_) {
-    // [inputs] has been filled in; check that it is not empty.
-    if (inputs.isEmpty) {
-      // It is a warning, not an error, to have nothing to transform.
-      aggregateTransform.logger.warning("Warning: Nothing to transform");
-      // Terminate with a non-failing status code to the OS.
-      exit(0);
+  List<Asset> assets = await aggregateTransform.primaryInputs.toList();
+
+  if (assets.isEmpty) {
+    // It is a warning, not an error, to have nothing to transform.
+    aggregateTransform.logger.warning("Warning: Nothing to transform");
+    // Terminate with a non-failing status code to the OS.
+    exit(0);
+  }
+
+  for (String entryPoint in entryPoints) {
+    // Find the asset corresponding to [entryPoint]
+    Asset entryPointAsset =
+        assets.firstWhere((Asset asset) => asset.id.path.endsWith(entryPoint),
+            orElse: () => null);
+    if (entryPointAsset == null) {
+      aggregateTransform.logger.warning(
+          "Error: Missing entry point: $entryPoint");
+      continue;
+    }
+    Transform wrappedTransform =
+        new AggregateTransformWrapper(aggregateTransform, entryPointAsset);
+    resetAntiNameClashSalt();  // Each entry point has a closed world.
+
+    Resolver resolver = await resolvers.get(wrappedTransform);
+    LibraryElement reflectableLibrary =
+        resolver.getLibraryByName("reflectable.reflectable");
+    if (reflectableLibrary == null) {
+      // Stop and do not consumePrimary, i.e., let the original source
+      // pass through without changes.
+      continue;
+    }
+    // If [reflectableLibrary] is present then [capabilityLibrary]
+    // must also be present, because the former imports and exports
+    // the latter.
+    LibraryElement capabilityLibrary =
+    resolver.getLibraryByName("reflectable.capability");
+    List<ReflectableClassData> reflectableClasses =
+        _findReflectableClasses(reflectableLibrary, resolver);
+    Map<LibraryElement, Set<LibraryElement>> missingImports =
+        _findMissingImports(reflectableClasses);
+
+    // An entry `assetId -> entryPoint` in this map means that `entryPoint`
+    // has been transforming `assetId`.
+    Map<AssetId, String> transformedViaEntryPoint = new Map<AssetId, String>();
+
+    Map<LibraryElement, String> libraryPaths =
+        new Map<LibraryElement, String>();
+
+    for (Asset asset in assets) {
+      LibraryElement targetLibrary = resolver.getLibrary(asset.id);
+      libraryPaths[targetLibrary] = asset.id.path;
     }
 
-    // Connect the entry points to the corresponding assets.
-    Map<String, Asset> entryPointMap = <String, Asset>{};
-    for (String entryPoint in entryPoints) {
-      L: {
-        for (Asset input in inputs) {
-          if (input.id.path.endsWith(_posixNormalizePath(entryPoint))) {
-            aggregateTransform.logger.info("Registering entry point: $input");
-            entryPointMap[entryPoint] = input;
-            break L;
-          }
-        }
-        // Error: 'entry_points:' declared [entryPoint] to be one of our
-        // inputs, but no entry exists for it in [inputs].
-        aggregateTransform.logger.error(
-            "Error: Missing entry point: $entryPoint");
+    for (Asset asset in assets) {
+      LibraryElement targetLibrary = resolver.getLibrary(asset.id);
+      if (targetLibrary == null) continue;
+
+      bool metadataClassIsInTarget(ReflectableClassData classData) {
+        return classData.metadataClass.library == targetLibrary;
       }
+
+      if (reflectableClasses.any(metadataClassIsInTarget)) {
+        if (transformedViaEntryPoint.containsKey(asset.id)) {
+          // It is not safe to transform a library that contains a Reflectable
+          // metadata class relative to multiple entry points, because each
+          // entry point defines a set of libraries which amounts to the
+          // complete program, and different sets of libraries correspond to
+          // potentially different sets of static mirror classes as well as
+          // potentially different sets of added import directives. Hence, we
+          // must reject the transformation in cases where there is such a
+          // clash.
+          //
+          // TODO(eernst): It would actually be safe to allow for multiple
+          // transformations of the same library done relative to different
+          // entry points _if_ the result of those transformations were the
+          // same (for instance, if both of them left that library unchanged)
+          // but we do not currently detect this case. This means that we
+          // might be able to allow for the transformation of more packages
+          // than the ones that we accept now, that is, it is a safe future
+          // enhancement to detect such a case and allow it.
+          String previousEntryPoint = transformedViaEntryPoint[asset.id];
+
+          aggregateTransform.logger.error(
+              "Error: $asset is transformed twice, "
+              " both via $entryPoint and $previousEntryPoint.");
+          continue;
+        }
+        transformedViaEntryPoint[asset.id] = entryPoint;
+      }
+      String source = await asset.readAsString();
+      RecordingErrorListener errorListener = new RecordingErrorListener();
+      ErrorReporter errorReporter =
+          new ErrorReporter(errorListener, targetLibrary.source);
+      String transformedSource = _transformSource(
+          reflectableLibrary, capabilityLibrary, reflectableClasses,
+          missingImports, aggregateTransform.logger,
+          errorReporter, targetLibrary, source, resolver);
+      // Transform user provided code.
+      aggregateTransform.consumePrimary(asset.id);
+      wrappedTransform.addOutput(
+          new Asset.fromString(asset.id, transformedSource));
     }
-
-    return Future.wait(entryPoints.map((String entryPoint) {
-      Asset entryPointAsset = entryPointMap[entryPoint];
-      String entryPointPackage = entryPointAsset.id.package;
-      Transform transform =
-          new AggregateTransformWrapper(aggregateTransform, entryPointAsset);
-      resetAntiNameClashSalt();  // Each entry point has a closed world.
-
-      return resolvers.get(transform).then((Resolver resolver) {
-        LibraryElement reflectableLibrary =
-            resolver.getLibraryByName("reflectable.reflectable");
-        if (reflectableLibrary == null) {
-          // Stop and do not consumePrimary, i.e., let the original source
-          // pass through without changes.
-          return new Future.value();
-        }
-        // If [reflectableLibrary] is present then [capabilityLibrary]
-        // must also be present, because the former imports and exports
-        // the latter.
-        LibraryElement capabilityLibrary =
-            resolver.getLibraryByName("reflectable.capability");
-        List<ReflectableClassData> reflectableClasses =
-            _findReflectableClasses(reflectableLibrary, resolver);
-        Map<LibraryElement, Set<LibraryElement>> missingImports =
-            _findMissingImports(reflectableClasses);
-        Map<LibraryElement, Asset> libraryToAssetMap =
-            <LibraryElement, Asset>{};
-
-        for (LibraryElement libraryElement in resolver.libraries) {
-          Source source = libraryElement.definingCompilationUnit.source;
-          if (source == null) continue;  // No source: cannot be transformed.
-          String targetPath = _fullNameToRelativePath(source.fullName);
-          if (targetPath == null) continue;  // No path: cannot be transformed.
-          if (_fullNameToPackage(source.fullName) != entryPointPackage) {
-            // TODO(eernst): Needs generalization if we start supporting
-            // transformation of libraries in other packages.
-            continue;  // Library in different package: cannot be transformed.
-          }
-          // Compute `libraryToAssetMap`.
-          for (Asset input in inputs) {
-            if (_isFileAsset(input)) {
-              if (_assetPath(input).endsWith(_posixNormalizePath(targetPath))) {
-                // NB: This test would yield an incorrect result in the
-                // case where multiple paths in the package have a shared
-                // suffix (e.g., we have both '/path/one/ending/like/this'
-                // and '/path/two/ending/like/this', and we check for
-                // 'ending/like/this'). However, this will not actually
-                // happen because the suffix that we are searching for is
-                // the full relative path from the package root directory,
-                // not just an arbitrary suffix.
-                libraryToAssetMap[libraryElement] = input;
-              }
-            }
-          }
-        }
-
-        Set<Asset> alreadyTransformed = new Set<Asset>();
-
-        for (LibraryElement targetLibrary in resolver.libraries) {
-          Asset targetAsset = libraryToAssetMap[targetLibrary];
-          if (targetAsset == null) continue;
-          if (alreadyTransformed.contains(targetAsset)) {
-            // It is not safe to transform a library that contains a Reflectable
-            // metadata class relative to multiple entry points, because each
-            // entry point defines a set of libraries which amounts to the
-            // complete program, and different sets of libraries correspond to
-            // potentially different sets of static mirror classes as well as
-            // potentially different sets of added import directives. Hence, we
-            // must reject the transformation in cases where there is such a
-            // clash.
-            //
-            // TODO(eernst): It would actually be safe to allow for multiple
-            // transformations of the same library done relative to different
-            // entry points _if_ the result of those transformations were the
-            // same (for instance, if both of them left that library unchanged)
-            // but we do not currently detect this case. This means that we
-            // might be able to allow for the transformation of more packages
-            // than the ones that we accept now, that is, it is a safe future
-            // enhancement to detect such a case and allow it.
-            bool metadataClassIsInTarget(ReflectableClassData classData) =>
-                classData.metadataClass.library == targetLibrary;
-            if (reflectableClasses.any(metadataClassIsInTarget)) {
-              aggregateTransform.logger.error(
-                  "Error: Multiple entry points transform $targetAsset.");
-            }
-          } else {
-            alreadyTransformed.add(targetAsset);
-          }
-          String source = inputToSourceMap[targetAsset];
-          RecordingErrorListener errorListener = new RecordingErrorListener();
-          ErrorReporter errorReporter =
-              new ErrorReporter(errorListener, targetLibrary.source);
-          String transformedSource = _transformSource(
-              reflectableLibrary, capabilityLibrary, reflectableClasses,
-              libraryToAssetMap, missingImports, aggregateTransform.logger,
-              errorReporter, targetLibrary, source, resolver);
-          // Transform user provided code.
-          aggregateTransform.consumePrimary(targetAsset.id);
-          transform.addOutput(
-              new Asset.fromString(targetAsset.id, transformedSource));
-        }
-        resolver.release();
-      });
-    }));
-  });
+    resolver.release();
+  }
 }
