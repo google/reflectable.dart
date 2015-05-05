@@ -17,10 +17,10 @@ import 'package:analyzer/src/generated/source.dart';
 import 'package:barback/barback.dart';
 import 'package:barback/src/transformer/transform.dart';
 import 'package:code_transformers/resolver.dart';
-import 'package:path/path.dart' as path;
-import 'package:reflectable/reflectable.dart';
+import "reflectable_class_constants.dart" as reflectable_class_constants;
 import 'source_manager.dart';
 import 'transformer_errors.dart';
+import '../capability.dart';
 
 String getName(Symbol symbol) => dm.MirrorSystem.getName(symbol);
 
@@ -65,7 +65,7 @@ bool _equalsClassReflectable(ClassElement type) {
   if (idField is ConstFieldElementImpl) {
     EvaluationResultImpl idResult = idField.evaluationResult;
     if (idResult != null) {
-      return idResult.value.stringValue == Reflectable.thisClassId;
+      return idResult.value.stringValue == reflectable_class_constants.id;
     }
     // idResult == null: analyzer/.../element.dart does not specify
     // whether this could happen, but it is surely not the right
@@ -80,7 +80,7 @@ bool _equalsClassReflectable(ClassElement type) {
 ClassElement _findReflectableClassElement(LibraryElement reflectableLibrary) {
   for (CompilationUnitElement unit in reflectableLibrary.units) {
     for (ClassElement type in unit.types) {
-      if (type.name == Reflectable.thisClassName &&
+      if (type.name == reflectable_class_constants.name &&
           _equalsClassReflectable(type)) {
         return type;
       }

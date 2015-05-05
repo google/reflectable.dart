@@ -12,6 +12,7 @@
 library reflectable.reflectable;
 
 import 'src/reflectable_implementation.dart' as implementation;
+import 'src/reflectable_class_constants.dart' as reflectable_class_constants;
 
 import 'capability.dart';
 export 'capability.dart';
@@ -60,8 +61,8 @@ export 'mirrors.dart';
 /// be supported in the future if compelling use cases come up.
 class Reflectable {
   // Intended to near-uniquely identify this class in target programs.
-  static const thisClassName = "Reflectable";  // Update if renaming class!
-  static const thisClassId = "4c5bb5484ffbe3f266cafa28ebc80a0efa78957e";
+  static const thisClassName = reflectable_class_constants.name;
+  static const thisClassId = reflectable_class_constants.id;
 
   /// Specifies limits on the support for reflective operations on instances
   /// of classes having an instance of this Reflectable as metadata.
