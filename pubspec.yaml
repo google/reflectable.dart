@@ -16,6 +16,7 @@ dev_dependencies:
   unittest: '>=0.11.0 <0.12.0'
 transformers:
 - reflectable:
+    $exclude: test/trivial_mock_test.dart
     entry_points:
       - test/to_be_transformed/minimal.dart
       - test/to_be_transformed/import_reflectable.dart
@@ -36,3 +37,4 @@ transformers:
 
 - $dart2js:
     commandLineOptions: [--show-package-warnings]
+    $exclude: ["test/trivial_mock_test.dart", "checktransforms.dart"]

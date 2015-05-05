@@ -17,6 +17,8 @@ build/test/to_be_transformed/bad_export_test: StaticWarning
 [ $runtime != vm ]
 test/checktransforms_test: SkipByDesign # Uses dart:io.
 build/test/checktransforms_test: SkipByDesign # Uses dart:io.
+test/trivial_mock_test: SkipByDesign # Uses dart:io.
+build/test/trivial_mock_test: SkipByDesign # Uses dart:io.
 test/run_negative_test: SkipByDesign # Uses dart:io.
 build/test/run_negative_test: SkipByDesign # Uses dart:io.
 

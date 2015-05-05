@@ -1,3 +1,4 @@
+// This file has been transformed by reflectable.
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
@@ -9,7 +10,8 @@
 // must give rise to an error during transformation.
 
 library reflectable.test.to_be_transformed.bad_import_1_test;
-import 'package:reflectable/static_reflectable.dart'
+// Import modified by reflectable:
+import 'package:reflectable/static_reflectable.dart' 
     show Reflectable, ReflectCapability;
 import 'package:reflectable/src/mirrors_unimpl.dart';
 

@@ -348,6 +348,18 @@ void _replaceUriReferencedElement(SourceManager sourceManager,
   // If we have `uriStart != -1 && uriEnd == -1` then there is a bug
   // in the implementation of [uriReferencedElement].
   assert(uriEnd != -1);
+
+  int elementOffset = uriReferencedElement.node.offset;
+  String elementType;
+  if (uriReferencedElement is ExportElement) {
+    elementType = "Export";
+  } else if (uriReferencedElement is ImportElement) {
+    elementType = "Import";
+  } else {
+    throw new ArgumentError("Unexpected element $uriReferencedElement");
+  }
+  sourceManager.replace(elementOffset, elementOffset,
+                        "// $elementType modified by reflectable:\n");
   sourceManager.replace(uriStart, uriEnd, "'$newUri'");
 }
 
@@ -1009,6 +1021,8 @@ String _transformSource(LibraryElement reflectableLibrary,
   // Used to manage replacements of code snippets by other code snippets
   // in [source].
   SourceManager sourceManager = new SourceManager(source);
+  sourceManager.replace(0, 0,
+                        "// This file has been transformed by reflectable.\n");
 
   // Used to accumulate generated classes, maps, etc.
   String generatedSource = "";
@@ -1125,7 +1139,7 @@ Future apply(AggregateTransform aggregateTransform,
     // must also be present, because the former imports and exports
     // the latter.
     LibraryElement capabilityLibrary =
-    resolver.getLibraryByName("reflectable.capability");
+        resolver.getLibraryByName("reflectable.capability");
     List<ReflectableClassData> reflectableClasses =
         _findReflectableClasses(reflectableLibrary, resolver);
     Map<LibraryElement, Set<LibraryElement>> missingImports =
