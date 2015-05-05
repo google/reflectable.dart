@@ -12,16 +12,18 @@ import 'dart:io' as io;
 import 'package:barback/barback.dart';
 import 'package:source_span/source_span.dart';
 
+/// Collects logger-messages for inspection in tests.
 class MessageRecord {
   AssetId id;
-  String message;
   LogLevel level;
+  String message;
   SourceSpan span;
   MessageRecord(this.id, this.level, this.message, this.span);
 }
 
-/// A transform that gets its main inputs from a [Map] from path to String.
+/// A transform that gets its main inputs from a [Map] from path to [String].
 /// If an input is not found there it will be looked up in [packageRoot].
+/// [packageRoot] should use the system path-seperator.
 class TestAggregateTransform implements AggregateTransform {
   final Map<String, String> files;
   final List<Asset> outputs = new List<Asset>();
@@ -58,9 +60,7 @@ class TestAggregateTransform implements AggregateTransform {
   /// If an input with [id] cannot be found, throws an [AssetNotFoundException].
   Future<Asset> getInput(AssetId id) async {
     Asset content = assets[id];
-    if (content != null) {
-      return content;
-    }
+    if (content != null) return content;
     String pathWithoutLib =
         id.path.split('/').skip(1).join(io.Platform.pathSeparator);
     String path = [packageRoot, id.package, pathWithoutLib]
