@@ -31,8 +31,6 @@ test:
 	@$(TEST_DIR)/checktransforms_test.dart
 	@echo "-------------------- source_manager_test"
 	@dart $(OPTIONS) $(TEST_DIR)/source_manager_test.dart
-	@echo "-------------------- path_helper_test"
-	@dart $(OPTIONS) $(TEST_DIR)/path_helper_test.dart
 	@./run_transformation_tests
 
 full_test: test

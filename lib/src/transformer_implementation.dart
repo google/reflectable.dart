@@ -356,7 +356,9 @@ void _replaceUriReferencedElement(SourceManager sourceManager,
   } else if (uriReferencedElement is ImportElement) {
     elementType = "Import";
   } else {
-    throw new ArgumentError("Unexpected element $uriReferencedElement");
+    // Yes, we used `assert`, but that's ignored in production mode. So we
+    // must still do something if we have neither an export nor an import.
+    elementType = "UriReferencedElement";
   }
   sourceManager.replace(elementOffset, elementOffset,
                         "// $elementType modified by reflectable:\n");
