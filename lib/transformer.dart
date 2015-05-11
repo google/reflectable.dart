@@ -75,6 +75,7 @@ class ReflectableTransformer extends AggregateTransformer {
 
   /// Performs the transformation.
   Future apply(AggregateTransform transform) {
-    return implementation.apply(transform, _entryPoints);
+    return new implementation.TransformerImplementation()
+        .apply(transform, _entryPoints);
   }
 }
