@@ -538,9 +538,9 @@ class TransformerImplementation {
     }
 
     String reflectCaseOfClass(ClassElement classElement) => """
-  if (reflectee.runtimeType == ${_classElementName(classElement)}) {
-    return new ${_staticInstanceMirrorName(classElement)}(reflectee);
-  }
+    if (reflectee.runtimeType == ${_classElementName(classElement)}) {
+      return new ${_staticInstanceMirrorName(classElement)}(reflectee);
+    }
 """;
 
     String reflectCases = "";  // Accumulates the body of the `reflect` method.
