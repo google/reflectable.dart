@@ -206,7 +206,6 @@ Symbol getterToSetter(Symbol getter) {
 }
 
 abstract class _ObjectMirrorImplMixin implements r.ObjectMirror {
-  dm.ObjectMirror get _objectMirror;
   r.Reflectable get _reflectable;
 
   Object getField(Symbol name) {
@@ -221,7 +220,6 @@ abstract class _ObjectMirrorImplMixin implements r.ObjectMirror {
 class _LibraryMirrorImpl extends _DeclarationMirrorImpl
     with _ObjectMirrorImplMixin implements r.LibraryMirror {
   dm.LibraryMirror get _libraryMirror => _declarationMirror;
-  dm.ObjectMirror get _objectMirror => _libraryMirror;
 
   _LibraryMirrorImpl(dm.LibraryMirror m, r.Reflectable reflectable)
       : super(m, reflectable) {}
@@ -354,8 +352,6 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
   final dm.InstanceMirror _instanceMirror;
   final r.Reflectable _reflectable;
 
-  dm.ObjectMirror get _objectMirror => _instanceMirror;
-
   _InstanceMirrorImpl(this._instanceMirror, this._reflectable);
 
   @override
@@ -418,7 +414,6 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
 class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
     implements r.ClassMirror {
   dm.ClassMirror get _classMirror => _declarationMirror;
-  dm.ObjectMirror get _objectMirror => _classMirror;
 
   _ClassMirrorImpl(dm.ClassMirror cm, r.Reflectable reflectable)
       : super(cm, reflectable) {}

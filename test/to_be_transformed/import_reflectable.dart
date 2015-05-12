@@ -7,3 +7,5 @@
 
 library reflectable.test.to_be_transformed.import_reflectable;
 import 'package:reflectable/reflectable.dart';
+
+const Reflectable ignored = null;  // To avoid 'unused import'.

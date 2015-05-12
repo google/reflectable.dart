@@ -11,18 +11,12 @@ import 'dart:mirrors' as dm;
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/error.dart';
-import 'package:analyzer/src/generated/source.dart';
 import 'package:barback/barback.dart';
-import 'package:barback/src/transformer/transform.dart';
 import 'package:code_transformers/resolver.dart';
-import 'package:code_transformers/assets.dart';
 import "reflectable_class_constants.dart" as reflectable_class_constants;
 import 'source_manager.dart';
 import 'transformer_errors.dart' as errors;
 import '../capability.dart';
-import 'package:source_span/source_span.dart';
 
 String getName(Symbol symbol) => dm.MirrorSystem.getName(symbol);
 
@@ -1098,9 +1092,6 @@ $rest}
           transformedViaEntryPoint[asset.id] = entryPoint;
         }
         String source = await asset.readAsString();
-        RecordingErrorListener errorListener = new RecordingErrorListener();
-        ErrorReporter errorReporter =
-            new ErrorReporter(errorListener, targetLibrary.source);
         String transformedSource = _transformSource(
             reflectableLibrary, capabilityLibrary, reflectableClasses,
             missingImports, targetLibrary, source);

@@ -27,10 +27,14 @@ build:
 	( cd ..; pub build --mode=debug test )
 
 test:
-	@echo "-------------------- checktransforms_test"
-	@$(TEST_DIR)/checktransforms_test.dart
 	@echo "-------------------- source_manager_test"
 	@dart $(OPTIONS) $(TEST_DIR)/source_manager_test.dart
+	@echo "-------------------- bad_import_test"
+	@dart $(OPTIONS) $(TEST_DIR)/unittests/bad_import_test.dart
+	@echo "-------------------- check_literal_transform_test"
+	@dart $(OPTIONS) $(TEST_DIR)/unittests/check_literal_transform_test.dart
+	@echo "-------------------- trivial_mock_test"
+	@dart $(OPTIONS) $(TEST_DIR)/unittests/trivial_mock_test.dart
 	@./run_transformation_tests
 
 full_test: test

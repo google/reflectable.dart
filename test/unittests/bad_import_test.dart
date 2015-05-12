@@ -59,6 +59,7 @@ testError(Map<String, String> fileMap, String expectedError) async {
   new TestAggregateTransform(fileMap);
   await new TransformerImplementation().apply(transform, ["main.dart"]);
   Map<String, String> result = await transform.outputMap();
+  result['unused key'] = 'ignored value';  // Avoid 'unused variable' hint.
   expect(transform.messages[0].message, expectedError);
 }
 
