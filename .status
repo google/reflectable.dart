@@ -9,3 +9,4 @@ build/test/to_be_transformed/bad_export_test: StaticWarning
 [ $runtime != vm ]
 test/unittests/*: SkipByDesign # Uses dart:io.
 build/test/unittests/*: SkipByDesign # Uses dart:io.
+

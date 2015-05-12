@@ -38,6 +38,26 @@ r.LibraryMirror findLibrary(Symbol libraryName, r.Reflectable reflectable) {
       dm.currentMirrorSystem().findLibrary(libraryName), reflectable);
 }
 
+Iterable<r.ClassMirror> annotatedClasses(r.Reflectable reflectable) {
+  List<r.ClassMirror> result = new List<r.ClassMirror>();
+  for (dm.LibraryMirror library in dm.currentMirrorSystem().libraries.values) {
+    for (dm.DeclarationMirror declarationMirror
+         in library.declarations.values) {
+      // TODO(sigurdm, eernst): Update when we can annotate top-level functions.
+      if (declarationMirror is! dm.ClassMirror) continue;
+      if (!_isAnnotatedBy(declarationMirror, reflectable)) continue;
+      result.add(wrapClassMirror(declarationMirror, reflectable));
+    }
+  }
+  return result;
+}
+
+bool _isAnnotatedBy(dm.DeclarationMirror declarationMirror, Object annotation) {
+  return declarationMirror.metadata.any((dm.InstanceMirror metadataMirror) {
+    return metadataMirror.reflectee == annotation;
+  });
+}
+
 Map<Uri, r.LibraryMirror> libraries(r.Reflectable reflectable) {
   Map<Uri, dm.LibraryMirror> libs = dm.currentMirrorSystem().libraries;
   return new Map<Uri, r.LibraryMirror>.fromIterable(libs.keys,

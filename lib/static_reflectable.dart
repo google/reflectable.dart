@@ -35,6 +35,7 @@ abstract class Reflectable {
   Map<Uri, LibraryMirror> get libraries => _unsupported();
   static final typeMirrorForObject = _unsupported();
   Symbol setterSymbol(Symbol getter) => _unsupported();
+  Iterable<ClassMirror> get annotatedClasses => _unsupported();
 }
 
 _unsupported() => throw new UnimplementedError();

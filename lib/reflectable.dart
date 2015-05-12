@@ -140,6 +140,12 @@ class Reflectable {
   /// Returns a Symbol representing the name of the setter corresponding
   /// to the name [getter], which is assumed to be the name of a getter.
   Symbol setterSymbol(Symbol getter) => _unsupported();
+
+  /// Returns an [Iterable] of all the classes that can be reflected over in
+  /// this [Reflectable].
+  Iterable<ClassMirror> get annotatedClasses {
+    return implementation.annotatedClasses(this);
+  }
 }
 
 _unsupported() => throw new UnimplementedError();
