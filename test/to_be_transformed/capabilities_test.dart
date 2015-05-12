@@ -120,8 +120,19 @@ void main() {
            .reflect(new B()).type.declarations.keys,
            [#foo, setFoo, #getFoo].toSet());
   });
-  testDynamic(new BSubclass(), "Subclass of Annotated");
-  testDynamic(new BImplementer(), "Implementer of Annotated");
+
+  test("Can't reflect subclass of annotated", () {
+    expect(() {
+      const MyReflectableInstance().reflect(new BSubclass());
+    }, throwsNoSuchCapabilityError);
+  });
+
+  test("Can't reflect subtype of annotated", () {
+    expect(() {
+      const MyReflectableInstance().reflect(new BImplementer());
+    }, throwsNoSuchCapabilityError);
+  });
+
   test("Can't reflect unnanotated", () {
     expect(() {
       const MyReflectableInstance().reflect(new Object());

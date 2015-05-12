@@ -11,14 +11,12 @@ import '../reflectable.dart' as r;
 r.InstanceMirror reflect(o, r.Reflectable reflectable) {
   bool hasReflectable(dm.ClassMirror type) {
     if (type == null) return false;
-    print("$type ${type.metadata} $reflectable");
     if (type.metadata
         .map((dm.InstanceMirror reflectable) => reflectable.reflectee)
         .contains(reflectable)) {
       return true;
     }
-    return hasReflectable(type.superclass) ||
-        type.superinterfaces.any(hasReflectable);
+    return false;
   }
 
   dm.InstanceMirror mirror = dm.reflect(o);
