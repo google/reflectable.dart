@@ -17,8 +17,8 @@ main() {}
 var importReflectable = [{"a|main.dart": """
 import 'package:reflectable/reflectable.dart';
 """}, {"a|main.dart": """
-// Import modified by reflectable:
 // This file has been transformed by reflectable.
+// Import modified by reflectable:
 import 'package:reflectable/static_reflectable.dart';
 """}];
 
@@ -32,14 +32,13 @@ class MyReflectable extends Reflectable {
 @MyReflectable()
 class A {}
 """}, {"a|main.dart": """
-// Import modified by reflectable:
 // This file has been transformed by reflectable.
+// Import modified by reflectable:
 import 'package:reflectable/static_reflectable.dart';
 import 'package:reflectable/src/mirrors_unimpl.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable(): super(const <ReflectCapability>[]);
-
   // Generated: Rest of class
   InstanceMirror reflect(Object reflectee) {
     if (reflectee.runtimeType == A) {
@@ -83,14 +82,13 @@ main() {
   InstanceMirror instanceMirror = myReflectable.reflect(new A());
 }
 """}, {"a|main.dart": """
-// Import modified by reflectable:
 // This file has been transformed by reflectable.
+// Import modified by reflectable:
 import 'package:reflectable/static_reflectable.dart';
 import 'package:reflectable/src/mirrors_unimpl.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable(): super(const <ReflectCapability>[]);
-
   // Generated: Rest of class
   InstanceMirror reflect(Object reflectee) {
     if (reflectee.runtimeType == A) {

@@ -523,9 +523,7 @@ class TransformerImplementation {
     ClassDeclaration classDeclaration = metadataClass.node;
     int insertionIndex = classDeclaration.rightBracket.offset;
 
-    // Now insert generated material at insertionIndex; note that we insert
-    // the elements in reverse order, because we always push all the already
-    // inserted elements ahead for each new element inserted.
+    // Now insert generated material at insertionIndex.
 
     void insert(String code) {
       sourceManager.replace(insertionIndex, insertionIndex, "$code\n");
@@ -539,26 +537,25 @@ class TransformerImplementation {
 
     String reflectCases = "";  // Accumulates the body of the `reflect` method.
 
+    // In front of all the generated material, indicate that it is generated.
+    insert("  $generatedComment: Rest of class");
+
     // Add each supported case to [reflectCases].
     annotatedClasses.forEach((ClassElement annotatedClass) {
       reflectCases += reflectCaseOfClass(annotatedClass);
     });
+    reflectCases += "    throw new "
+    "UnimplementedError(\"`reflect` on unexpected object '\$reflectee'\");\n";
 
+    // Add the `reflect` method to [metadataClass].
+    String prefix = prefixElement == null ? "" : "${prefixElement.name}.";
+    insert("  ${prefix}InstanceMirror "
+           "reflect(Object reflectee) {\n$reflectCases  }");
     // Add failure case to [reflectCases]: No matching classes, so the
     // user is asking for a kind of reflection that was not requested,
     // which is a runtime error.
     // TODO(eernst): Should use the Reflectable specific exception that Sigurd
     // introduced in a not-yet-landed CL.
-    reflectCases += "    throw new "
-        "UnimplementedError(\"`reflect` on unexpected object '\$reflectee'\");";
-
-    // Add the `reflect` method to [metadataClass].
-    String prefix = prefixElement == null ? "" : "${prefixElement.name}.";
-    insert("  ${prefix}InstanceMirror "
-           "reflect(Object reflectee) {\n$reflectCases\n  }");
-
-    // In front of all the generated material, indicate that it is generated.
-    insert("\n  $generatedComment: Rest of class");
   }
 
   /// Find classes in among `metadataClass` from [reflectableClasses]
@@ -962,8 +959,8 @@ $rest}
 
       // Generate static mirrors.
       generatedSource +=
-          "\n" + _staticClassMirrorCode(annotatedClass, capabilities) +
-          "\n" + _staticInstanceMirrorCode(annotatedClass, capabilities);
+          _staticClassMirrorCode(annotatedClass, capabilities) + "\n" +
+          _staticInstanceMirrorCode(annotatedClass, capabilities);
     }
 
     // If needed, add an import such that generated classes can see their
@@ -988,7 +985,7 @@ $rest}
     }
     return generatedSource.length == 0 ? sourceManager.source :
         "${sourceManager.source}\n"
-        "$generatedComment: Rest of file\n"
+        "$generatedComment: Rest of file\n\n"
         "$generatedSource";
   }
 

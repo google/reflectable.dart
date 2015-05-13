@@ -56,7 +56,11 @@ class SourceManager {
     // Check for overlaps and compute the total offset.
     int offset = 0;
     for (_SourceEdit edit in _edits) {
-      if (oldHighIndex <= edit.oldLowIndex) {
+      if (edit.oldLowIndex == edit.oldHighIndex &&
+          edit.oldHighIndex == oldLowIndex) {
+        // Insertions at the same index will end up in insertion order.
+        offset += edit.newLength;
+      } else if (oldHighIndex <= edit.oldLowIndex) {
         // The entire target area is to the left of [edit],
         // which is OK and causes no offset adjustment.
       } else if (oldLowIndex < edit.oldHighIndex) {
