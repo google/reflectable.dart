@@ -1,0 +1,91 @@
+#!/bin/bash --norc
+
+# Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+# source code is governed by a BSD-style license that can be found in
+# the LICENSE file.
+
+# This runs a sequence of commands that corresponds to the test procedure
+# executed by a package bot, such that it can be detected with greater
+# certainty whether or not a given package will have a successful test
+# run when it is 'git cl land'-ed.  The commands used for each test and
+# the set of tests is faithful to the corresponding things on the
+# package bots.  A source of discrepancies is the availability of
+# installed software: It is possible to have a successful local run and
+# then a failing package bot run if the local run relied on installed
+# software (existence or location) which is not available on the package
+# bot.
+
+unset preserveOutput
+
+if [ "$#" == "1" ]; then
+  case $1 in
+    (--preserve-output) preserveOutput="true";;
+    (--help) echo "Usage: $0 [--help] [--preserve-output]"; exit 0;;
+    (*) echo "$0: Argument '$1' not understood. Exiting."; exit -1;;
+  esac
+fi
+
+if [ "$#" -gt "1" ]; then
+  echo "$0: Received $# options/arguments, expected at most one."
+  exit -1
+fi
+
+if [ -z "$BOTTEST_DART_REPO" -o -z "$BOTTEST_LOCAL_PKG" -o -z "$BOTTEST_PKG" ]
+then
+  echo "$0: Please provide a value for the following environment variables:"
+  echo "  BOTTEST_DART_REPO: path to location where tests are performed."
+  echo "  BOTTEST_LOCAL_PKG: path to root of local copy of package."
+  echo "  BOTTEST_PKG: name of package for which the tests are performed."
+  exit -1
+fi
+
+# Functions.
+
+show_section () {
+  echo "---------------------------------------- $1"
+}
+
+# Setup.
+
+show_section setup
+
+rm -rf $BOTTEST_DART_REPO
+mkdir $BOTTEST_DART_REPO
+pushd $BOTTEST_DART_REPO
+gclient config https://github.com/dart-lang/package-bots/trunk
+gclient sync
+
+cd $BOTTEST_DART_REPO/dart/third_party
+rm -rf package-bots
+git clone https://github.com/dart-lang/package-bots.git
+
+mkdir pkg
+cd pkg
+ln -s $BOTTEST_LOCAL_PKG $BOTTEST_PKG
+
+# Run annotated steps.
+
+show_section run
+
+tmpfile=/tmp/$BOTTEST_PKG-$$.txt
+cd $BOTTEST_DART_REPO/dart
+BUILDBOT_BUILDERNAME=packages-linux-$BOTTEST_PKG \
+	third_party/package-bots/annotated_steps.py |\
+	tee $tmpfile
+grep '^=== [a-zA-Z0-9]' $tmpfile
+
+# Clean up.
+
+show_section cleanup
+
+cd $BOTTEST_DART_REPO/dart
+cd third_party
+rm -rf package-bots
+cd pkg
+rm -rf $BOTTEST_PKG
+if [ "$preserveOutput" = "true" ]; then
+  echo less -S $tmpfile
+else
+  rm -f $tmpfile
+fi
+popd

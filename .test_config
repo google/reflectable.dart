@@ -1,0 +1,3 @@
+{
+  "use_custom_script": "$dart $project_root/tools/annotated_steps.dart $python"
+}
