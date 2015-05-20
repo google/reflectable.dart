@@ -33,7 +33,7 @@ class MyReflectable extends Reflectable {
       super(/* ..constrain, but do not prevent invoke on #foo.. */);
 }
 
-const myReflectable = const MyReflectable;
+const myReflectable = const MyReflectable();
 
 @myReflectable
 class MyClass { ... bool foo(int x) {..} ... }

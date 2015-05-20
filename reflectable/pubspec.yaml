@@ -15,22 +15,7 @@ dependencies:
 dev_dependencies:
   unittest: '>=0.11.0 <0.12.0'
 transformers:
-- reflectable:
-    $include: test/to_be_transformed/*.dart
-    entry_points:
-      - test/to_be_transformed/import_reflectable.dart
-      - test/to_be_transformed/use_annotation.dart
-      - test/to_be_transformed/reflect_test.dart
-      - test/to_be_transformed/export_test.dart
-      - test/to_be_transformed/use_prefix_test.dart
-      - test/to_be_transformed/three_files_test.dart
-      - test/to_be_transformed/invoke_test.dart
-      - test/to_be_transformed/members_capability_test.dart
-      # Disabled next three entries to avoid failing transformation
-      # - test/to_be_transformed/member_capability_test.dart
-      # - test/to_be_transformed/basic_test.dart
-      # - test/to_be_transformed/capabilities_test.dart
-
 - $dart2js:
     commandLineOptions: [--show-package-warnings]
-    $include: test/to_be_transformed/*.dart
+    # We do not want to compile anything in this package.
+    $include: []
