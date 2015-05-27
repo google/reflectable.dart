@@ -12,7 +12,8 @@ import 'package:reflectable/capability.dart';
 
 class MyReflectable extends r.Reflectable {
   const MyReflectable()
-    : super(const [invokeInstanceMembersCapability]);
+    : super(const [invokeInstanceMembersCapability,
+                   invokeConstructorsCapability]);
 }
 
 @MyReflectable()

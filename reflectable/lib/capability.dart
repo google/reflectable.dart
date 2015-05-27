@@ -81,6 +81,22 @@ class InvokeStaticMemberCapability implements ReflectCapability {
   const InvokeStaticMemberCapability(this.name);
 }
 
+/// Specifies for a class `C` that the constructor named [name]
+/// can be invoked with `newInstance` on the `ClassMirror`.
+class InvokeConstructorCapability implements ReflectCapability {
+  final Symbol name;
+  const InvokeConstructorCapability(this.name);
+}
+
+const invokeConstructorsCapability = const _InvokeConstructorsCapability();
+
+/// Specifies for a class `C` that all constructors with the given metadata
+///  can be invoked with `newInstance` on the `ClassMirror`.
+class InvokeConstructorsWithMetaDataCapability implements ReflectCapability {
+  final Object metadata;
+  const InvokeConstructorsWithMetaDataCapability(this.metadata);
+}
+
 // Private classes
 
 class _InvokeMembersCapability implements ReflectCapability {
@@ -89,6 +105,12 @@ class _InvokeMembersCapability implements ReflectCapability {
 
 class _InvokeStaticMembersCapability implements ReflectCapability {
   const _InvokeStaticMembersCapability();
+}
+
+/// Specifies for a class `C` that all constructors can be invoked with
+/// `newInstance` on the `ClassMirror`.
+class _InvokeConstructorsCapability implements ReflectCapability {
+  const _InvokeConstructorsCapability();
 }
 
 /// Thrown when reflection is invoked outside given capabilities.

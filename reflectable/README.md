@@ -48,6 +48,10 @@ main() {
 }
 ```
 
+For a more advanced example look into the
+[serialize_test.dart](../test_reflectable/test/serialize_test.dart) test
+and its [library](../test_reflectable/lib/serialize.dart).
+
 ## Features and bugs
 
 Please file feature requests and bugs using the github issue tracker

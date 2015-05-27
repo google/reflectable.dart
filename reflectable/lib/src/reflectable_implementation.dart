@@ -180,24 +180,53 @@ bool reflectableSupportsInstanceInvoke(
   });
 }
 
-/// Returns true if [reflectable] supports static invoke of [name].
+/// Returns true iff [reflectable] supports static invoke of [name].
 bool reflectableSupportsStaticInvoke(r.Reflectable reflectable, Symbol name) {
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability is InvokeStaticMemberCapability) {
       return capability.name == name;
     }
+    return false;
   });
 }
 
-Symbol setterToGetter(Symbol setter) {
+/// Returns true iff [reflectable] supports invoke of [name].
+bool reflectableSupportsConstructorInvoke(
+    r.Reflectable reflectable,
+    dm.ClassMirror classMirror,
+    Symbol name) {
+  return reflectable.capabilities.any((ReflectCapability capability) {
+    if (capability == r.invokeConstructorsCapability) {
+      return true;
+    } else if (capability is r.InvokeConstructorCapability) {
+      return capability.name == name;
+    } else if (capability is r.InvokeConstructorsWithMetaDataCapability) {
+      dm.MethodMirror constructorMirror = classMirror.declarations.values
+          .firstWhere((dm.DeclarationMirror declarationMirror) {
+        return declarationMirror is dm.MethodMirror &&
+               declarationMirror.constructorName == name;
+      });
+      if (constructorMirror == null ||
+          !constructorMirror.isConstructor) return false;
+      return constructorMirror.metadata.contains(capability.metadata);
+    }
+    return false;
+  });
+}
+
+/// Returns the symbol with final "=" removed.
+/// If the symbol does not have a final "=" it is returned as is.
+Symbol _setterToGetter(Symbol setter) {
   String setterName = dm.MirrorSystem.getName(setter);
   if (!setterName.endsWith("=")) {
-    throw new ArgumentError("$setter is not a setter symbol");
+    return setter;
   }
   return new Symbol(setterName.substring(0, setterName.length - 1));
 }
 
-Symbol getterToSetter(Symbol getter) {
+/// Returns [getter] with a final "=" added.
+/// If [getter] already ends with "=" an error is thrown.
+Symbol _getterToSetter(Symbol getter) {
   String getterName = dm.MirrorSystem.getName(getter);
   if (getterName.endsWith("=")) {
     throw new ArgumentError("$getter is a setter symbol already");
@@ -266,7 +295,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
     if (!reflectableSupportsStaticInvoke(_reflectable, setterName)) {
       throw new NoSuchInvokeCapabilityError(_receiver, setterName, [value], null);
     }
-    return _libraryMirror.setField(setterToGetter(setterName), value);
+    return _libraryMirror.setField(_setterToGetter(setterName), value);
   }
 
   @override
@@ -389,7 +418,7 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
     if (reflectableSupportsInstanceInvoke(
         _reflectable, setterName, _instanceMirror.type)) {
       return _instanceMirror.setField(
-          setterToGetter(setterName), value).reflectee;
+          _setterToGetter(setterName), value).reflectee;
     }
     throw new NoSuchInvokeCapabilityError(_receiver, setterName, [value], null);
   }
@@ -467,11 +496,11 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
         if ((declarationMirror.isStatic &&
                 (reflectableSupportsStaticInvoke(_reflectable, name) ||
                     reflectableSupportsStaticInvoke(
-                        _reflectable, getterToSetter(name)))) ||
+                        _reflectable, _getterToSetter(name)))) ||
             (reflectableSupportsInstanceInvoke(
                     _reflectable, name, _classMirror) ||
                 reflectableSupportsInstanceInvoke(
-                    _reflectable, getterToSetter(name), _classMirror))) {
+                    _reflectable, _getterToSetter(name), _classMirror))) {
           result[name] = wrapDeclarationMirror(declarationMirror, _reflectable);
         }
       } else {
@@ -508,6 +537,11 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
   @override
   Object newInstance(Symbol constructorName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
+    if (!reflectableSupportsConstructorInvoke(
+        _reflectable, _classMirror, constructorName)) {
+      throw new NoSuchInvokeCapabilityError(
+          _classMirror , constructorName, positionalArguments, namedArguments);
+    }
     return _classMirror.newInstance(
         constructorName, positionalArguments, namedArguments).reflectee;
   }
@@ -534,7 +568,7 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
   @override
   Object invokeSetter(Symbol setterName, Object value) {
     if (reflectableSupportsStaticInvoke(_reflectable, setterName)) {
-      return _classMirror.setField(setterToGetter(setterName), value).reflectee;
+      return _classMirror.setField(_setterToGetter(setterName), value).reflectee;
     }
     throw new NoSuchInvokeCapabilityError(_receiver, setterName, [value], null);
   }
