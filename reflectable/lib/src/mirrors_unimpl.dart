@@ -4,6 +4,8 @@
 
 import '../mirrors.dart';
 
+export '../capability.dart';
+
 // Mirror classes with default implementations of all methods, to be used as
 // superclasses of transformer generated static mirror classes.  They serve to
 // ensure that the static mirror classes always implement all methods, such that

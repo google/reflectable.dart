@@ -331,7 +331,7 @@ class TransformerImplementation {
                   reflector, new List<ClassDomain>(), capabilities);
             });
             List<MethodElement> instanceMethods =
-                invocableInstanceMethods(type, domain.capabilities);
+                invocableInstanceMethods(type, domain.capabilities).toList();
             domain.annotatedClasses
                 .add(new ClassDomain(type, instanceMethods, domain));
           }
@@ -838,8 +838,6 @@ class ${_staticClassMirrorName(classDomain)} extends ClassMirrorUnimpl {
     if (instanceMethodFilter.hasMatch(memberName)) {
       throw new UnimplementedError('Should call noSuchMethod');
     }
-    """;
-    invokeCode += """
     throw new NoSuchInvokeCapabilityError(
         reflectee, memberName, positionalArguments, namedArguments);
   }
@@ -912,7 +910,7 @@ $rest}
     String generatedSource = "";
 
     List<ClassDomain> reflectableClasses =
-        world.annotatedClassesOfLibrary(targetLibrary);
+        world.annotatedClassesOfLibrary(targetLibrary).toList();
 
     // Transform selected existing elements in [targetLibrary].
     PrefixElement prefixElement = _transformSourceDirectives(

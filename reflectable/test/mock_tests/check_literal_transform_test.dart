@@ -18,7 +18,7 @@ var importReflectable = [{"a|main.dart": """
 import 'package:reflectable/reflectable.dart';
 """}, {"a|main.dart": """
 // This file has been transformed by reflectable.
-// Import modified by reflectable:
+// Import modified by the reflectable transformer:
 import 'package:reflectable/static_reflectable.dart';
 """}];
 
@@ -33,7 +33,7 @@ class MyReflectable extends Reflectable {
 class A {}
 """}, {"a|main.dart": """
 // This file has been transformed by reflectable.
-// Import modified by reflectable:
+// Import modified by the reflectable transformer:
 import 'package:reflectable/static_reflectable.dart';
 import 'package:reflectable/src/mirrors_unimpl.dart';
 
@@ -59,9 +59,16 @@ class Static_A_ClassMirror extends ClassMirrorUnimpl {
 class Static_A_InstanceMirror extends InstanceMirrorUnimpl {
   final A reflectee;
   Static_A_InstanceMirror(this.reflectee);
-  Object invoke(Symbol memberName,
+  RegExp instanceMethodFilter = new RegExp(r"");
+  Object invoke(String memberName,
                 List positionalArguments,
                 [Map<Symbol, dynamic> namedArguments]) {
+    // TODO(eernst, sigurdm): Create an instance of [Invocation] in user code.
+    if (instanceMethodFilter.hasMatch(memberName)) {
+      throw new UnimplementedError(\'Should call noSuchMethod\');
+    }
+    throw new NoSuchInvokeCapabilityError(
+        reflectee, memberName, positionalArguments, namedArguments);
   }
 }
 """}];
@@ -83,7 +90,7 @@ main() {
 }
 """}, {"a|main.dart": """
 // This file has been transformed by reflectable.
-// Import modified by reflectable:
+// Import modified by the reflectable transformer:
 import 'package:reflectable/static_reflectable.dart';
 import 'package:reflectable/src/mirrors_unimpl.dart';
 
@@ -115,9 +122,16 @@ class Static_A_ClassMirror extends ClassMirrorUnimpl {
 class Static_A_InstanceMirror extends InstanceMirrorUnimpl {
   final A reflectee;
   Static_A_InstanceMirror(this.reflectee);
-  Object invoke(Symbol memberName,
+  RegExp instanceMethodFilter = new RegExp(r"");
+  Object invoke(String memberName,
                 List positionalArguments,
                 [Map<Symbol, dynamic> namedArguments]) {
+    // TODO(eernst, sigurdm): Create an instance of [Invocation] in user code.
+    if (instanceMethodFilter.hasMatch(memberName)) {
+      throw new UnimplementedError('Should call noSuchMethod');
+    }
+    throw new NoSuchInvokeCapabilityError(
+        reflectee, memberName, positionalArguments, namedArguments);
   }
 }
 """}];
@@ -139,8 +153,10 @@ checkTransform(List maps) async {
 }
 
 main() async {
-  checkTransform(noReflectable);
-  checkTransform(importReflectable);
-  checkTransform(useAnnotation);
-  checkTransform(useReflect);
+  test("Check transforms", () {
+    checkTransform(noReflectable);
+    checkTransform(importReflectable);
+    checkTransform(useAnnotation);
+    checkTransform(useReflect);
+  });
 }
