@@ -42,23 +42,25 @@ main() {
     var input = new A.fromValues(
         "one", new A.fromValues(2, [3, new A.fromValues(4, 5)]));
     var out = serializer.serialize(input);
+    // Assert that the output of the serialization is equals to
+    // the expected map:
     expect(out, {
-      "type": const Symbol("test_reflectable.serialize_test.A"),
+      "type": "test_reflectable.serialize_test.A",
       "fields": {
-        #a: {"type": "String", "val": "one"},
-        #b: {
-          "type": const Symbol("test_reflectable.serialize_test.A"),
+        "a": {"type": "String", "val": "one"},
+        "b": {
+          "type": "test_reflectable.serialize_test.A",
           "fields": {
-            #a: {"type": "num", "val": 2},
-            #b: {
+            "a": {"type": "num", "val": 2},
+            "b": {
               "type": "List",
               "val": [
                 {"type": "num", "val": 3},
                 {
-                  "type": const Symbol("test_reflectable.serialize_test.A"),
+                  "type": "test_reflectable.serialize_test.A",
                   "fields": {
-                    #a: {"type": "num", "val": 4},
-                    #b: {"type": "num", "val": 5}
+                    "a": {"type": "num", "val": 4},
+                    "b": {"type": "num", "val": 5}
                   }
                 }
               ]
@@ -67,6 +69,8 @@ main() {
         }
       }
     });
+    // Assert that deserializing the output gives a result that is equal to the
+    // original input.
     expect(serializer.deserialize(out), input);
   });
 }

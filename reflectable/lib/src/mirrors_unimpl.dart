@@ -20,8 +20,8 @@ import '../mirrors.dart';
 _unsupported() => throw new UnimplementedError();
 
 abstract class DeclarationMirrorUnimpl implements DeclarationMirror {
-  Symbol get simpleName => _unsupported();
-  Symbol get qualifiedName => _unsupported();
+  String get simpleName => _unsupported();
+  String get qualifiedName => _unsupported();
   DeclarationMirror get owner => _unsupported();
   bool get isPrivate => _unsupported();
   bool get isTopLevel => _unsupported();
@@ -30,23 +30,22 @@ abstract class DeclarationMirrorUnimpl implements DeclarationMirror {
 }
 
 abstract class ObjectMirrorUnimpl implements ObjectMirror {
-  Object invoke(Symbol memberName,
-                List positionalArguments,
-                [Map<Symbol,dynamic> namedArguments]) => _unsupported();
-  Object invokeGetter(Symbol getterName) => _unsupported();
-  Object invokeSetter(Symbol setterName, Object value) => _unsupported();
+  Object invoke(String memberName, List positionalArguments,
+      [Map<Symbol, dynamic> namedArguments]) => _unsupported();
+  Object invokeGetter(String getterName) => _unsupported();
+  Object invokeSetter(String setterName, Object value) => _unsupported();
 
-  Object getField(Symbol name) {
+  Object getField(String name) {
     throw new UnsupportedError("Use invokeGetter instead of getField");
   }
 
-  void setField(Symbol name, Object value) {
+  void setField(String name, Object value) {
     throw new UnsupportedError("Use invokeSetter instead of setField");
   }
 }
 
 abstract class InstanceMirrorUnimpl extends ObjectMirrorUnimpl
-                                    implements InstanceMirror {
+    implements InstanceMirror {
   ClassMirror get type => _unsupported();
   bool get hasReflectee => _unsupported();
   get reflectee => _unsupported();
@@ -56,17 +55,16 @@ abstract class InstanceMirrorUnimpl extends ObjectMirrorUnimpl
 }
 
 abstract class ClosureMirrorUnimpl extends InstanceMirrorUnimpl
-                                   implements ClosureMirror {
+    implements ClosureMirror {
   MethodMirror get function => _unsupported();
   InstanceMirror apply(List positionalArguments,
-                       [Map<Symbol, dynamic> namedArguments]) => _unsupported();
+      [Map<Symbol, dynamic> namedArguments]) => _unsupported();
 }
 
 abstract class LibraryMirrorUnimpl extends DeclarationMirrorUnimpl
-                                   with ObjectMirrorUnimpl
-                                   implements LibraryMirror {
+    with ObjectMirrorUnimpl implements LibraryMirror {
   Uri get uri => _unsupported();
-  Map<Symbol, DeclarationMirror> get declarations => _unsupported();
+  Map<String, DeclarationMirror> get declarations => _unsupported();
   bool operator ==(other) => _unsupported();
   int get hashCode => _unsupported();
   List<LibraryDependencyMirror> get libraryDependencies => _unsupported();
@@ -78,20 +76,20 @@ class LibraryDependencyMirrorUnimpl implements LibraryDependencyMirror {
   bool get isDeferred => _unsupported();
   LibraryMirror get sourceLibrary => _unsupported();
   LibraryMirror get targetLibrary => _unsupported();
-  Symbol get prefix => _unsupported();
+  String get prefix => _unsupported();
   List<CombinatorMirror> get combinators => _unsupported();
   SourceLocation get location => _unsupported();
   List<Object> get metadata => _unsupported();
 }
 
 abstract class CombinatorMirrorUnimpl implements CombinatorMirror {
-  List<Symbol> get identifiers => _unsupported();
+  List<String> get identifiers => _unsupported();
   bool get isShow => _unsupported();
   bool get isHide => _unsupported();
 }
 
 abstract class TypeMirrorUnimpl extends DeclarationMirrorUnimpl
-                                implements TypeMirror {
+    implements TypeMirror {
   bool get hasReflectedType => _unsupported();
   Type get reflectedType => _unsupported();
   List<TypeVariableMirror> get typeVariables => _unsupported();
@@ -103,32 +101,30 @@ abstract class TypeMirrorUnimpl extends DeclarationMirrorUnimpl
 }
 
 abstract class ClassMirrorUnimpl extends TypeMirrorUnimpl
-                                 with ObjectMirrorUnimpl
-                                 implements ClassMirror {
+    with ObjectMirrorUnimpl implements ClassMirror {
   ClassMirror get superclass => _unsupported();
   List<ClassMirror> get superinterfaces => _unsupported();
   bool get isAbstract => _unsupported();
-  Map<Symbol, DeclarationMirror> get declarations => _unsupported();
-  Map<Symbol, MethodMirror> get instanceMembers => _unsupported();
-  Map<Symbol, MethodMirror> get staticMembers => _unsupported();
+  Map<String, DeclarationMirror> get declarations => _unsupported();
+  Map<String, MethodMirror> get instanceMembers => _unsupported();
+  Map<String, MethodMirror> get staticMembers => _unsupported();
   ClassMirror get mixin => _unsupported();
-  Object newInstance(Symbol constructorName,
-                     List positionalArguments,
-                     [Map<Symbol,dynamic> namedArguments]) => _unsupported();
+  Object newInstance(String constructorName, List positionalArguments,
+      [Map<Symbol, dynamic> namedArguments]) => _unsupported();
   bool operator ==(other) => _unsupported();
   int get hashCode => _unsupported();
   bool isSubclassOf(ClassMirror other) => _unsupported();
 }
 
 abstract class FunctionTypeMirrorUnimpl extends ClassMirrorUnimpl
-                                        implements FunctionTypeMirror {
+    implements FunctionTypeMirror {
   TypeMirror get returnType => _unsupported();
   List<ParameterMirror> get parameters => _unsupported();
   MethodMirror get callMethod => _unsupported();
 }
 
 abstract class TypeVariableMirrorUnimpl extends TypeMirrorUnimpl
-                                        implements TypeVariableMirror {
+    implements TypeVariableMirror {
   TypeMirror get upperBound => _unsupported();
   bool get isStatic => _unsupported();
   bool operator ==(other) => _unsupported();
@@ -136,12 +132,12 @@ abstract class TypeVariableMirrorUnimpl extends TypeMirrorUnimpl
 }
 
 abstract class TypedefMirrorUnimpl extends TypeMirrorUnimpl
-                                   implements TypedefMirror {
+    implements TypedefMirror {
   FunctionTypeMirror get referent => _unsupported();
 }
 
 abstract class MethodMirrorUnimpl extends DeclarationMirrorUnimpl
-                                  implements MethodMirror {
+    implements MethodMirror {
   TypeMirror get returnType => _unsupported();
   String get source => _unsupported();
   List<ParameterMirror> get parameters => _unsupported();
@@ -153,7 +149,7 @@ abstract class MethodMirrorUnimpl extends DeclarationMirrorUnimpl
   bool get isGetter => _unsupported();
   bool get isSetter => _unsupported();
   bool get isConstructor => _unsupported();
-  Symbol get constructorName => _unsupported();
+  String get constructorName => _unsupported();
   bool get isConstConstructor => _unsupported();
   bool get isGenerativeConstructor => _unsupported();
   bool get isRedirectingConstructor => _unsupported();
@@ -163,7 +159,7 @@ abstract class MethodMirrorUnimpl extends DeclarationMirrorUnimpl
 }
 
 abstract class VariableMirrorUnimpl extends DeclarationMirrorUnimpl
-                                    implements VariableMirror {
+    implements VariableMirror {
   TypeMirror get type => _unsupported();
   bool get isStatic => _unsupported();
   bool get isFinal => _unsupported();
@@ -173,7 +169,7 @@ abstract class VariableMirrorUnimpl extends DeclarationMirrorUnimpl
 }
 
 abstract class ParameterMirrorUnimpl extends VariableMirrorUnimpl
-                                     implements ParameterMirror {
+    implements ParameterMirror {
   TypeMirror get type => _unsupported();
   bool get isOptional => _unsupported();
   bool get isNamed => _unsupported();

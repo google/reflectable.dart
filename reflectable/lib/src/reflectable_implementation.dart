@@ -2,6 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
+/// Implementation of the reflectable interface using dart mirrors.
 library reflectable.src.reflectable_implementation;
 
 import 'dart:mirrors' as dm;
@@ -31,16 +32,17 @@ r.ClassMirror reflectClass(Type t, r.Reflectable reflectable) {
   return wrapClassMirror(dm.reflectClass(t), reflectable);
 }
 
-r.LibraryMirror findLibrary(Symbol libraryName, r.Reflectable reflectable) {
+r.LibraryMirror findLibrary(String libraryName, r.Reflectable reflectable) {
+  Symbol librarySymbol = new Symbol(libraryName);
   return new _LibraryMirrorImpl(
-      dm.currentMirrorSystem().findLibrary(libraryName), reflectable);
+      dm.currentMirrorSystem().findLibrary(librarySymbol), reflectable);
 }
 
 Iterable<r.ClassMirror> annotatedClasses(r.Reflectable reflectable) {
   List<r.ClassMirror> result = new List<r.ClassMirror>();
   for (dm.LibraryMirror library in dm.currentMirrorSystem().libraries.values) {
     for (dm.DeclarationMirror declarationMirror
-         in library.declarations.values) {
+        in library.declarations.values) {
       // TODO(sigurdm, eernst): Update when we can annotate top-level functions.
       if (declarationMirror is! dm.ClassMirror) continue;
       if (!_isAnnotatedBy(declarationMirror, reflectable)) continue;
@@ -152,7 +154,8 @@ dm.TypeMirror unwrapTypeMirror(r.TypeMirror TypeMirror) {
 /// instance-member named [name] according to the
 /// capabilities of [reflectable].
 bool reflectableSupportsInstanceInvoke(
-    r.Reflectable reflectable, Symbol name, dm.ClassMirror classMirror) {
+    r.Reflectable reflectable, String name, dm.ClassMirror classMirror) {
+  Symbol nameSymbol = new Symbol(name);
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability == invokeMembersCapability ||
         capability == invokeInstanceMembersCapability) {
@@ -161,14 +164,14 @@ bool reflectableSupportsInstanceInvoke(
       return capability.name == name;
     } else if (capability is InvokeMembersWithMetadataCapability) {
       dm.DeclarationMirror declarationMirror =
-          classMirror.instanceMembers[name];
+          classMirror.instanceMembers[nameSymbol];
       return declarationMirror != null &&
           declarationMirror.metadata.contains(capability.metadata);
     } else if (capability is InvokeInstanceMembersUpToSuperCapability) {
       dm.ClassMirror currentClass = classMirror;
       while (currentClass != null &&
           currentClass.reflectedType != capability.superType) {
-        if (currentClass.instanceMembers.containsKey(name)) {
+        if (currentClass.instanceMembers.containsKey(nameSymbol)) {
           return true;
         }
         currentClass = currentClass.superclass;
@@ -181,7 +184,7 @@ bool reflectableSupportsInstanceInvoke(
 }
 
 /// Returns true iff [reflectable] supports static invoke of [name].
-bool reflectableSupportsStaticInvoke(r.Reflectable reflectable, Symbol name) {
+bool reflectableSupportsStaticInvoke(r.Reflectable reflectable, String name) {
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability is InvokeStaticMemberCapability) {
       return capability.name == name;
@@ -192,9 +195,7 @@ bool reflectableSupportsStaticInvoke(r.Reflectable reflectable, Symbol name) {
 
 /// Returns true iff [reflectable] supports invoke of [name].
 bool reflectableSupportsConstructorInvoke(
-    r.Reflectable reflectable,
-    dm.ClassMirror classMirror,
-    Symbol name) {
+    r.Reflectable reflectable, dm.ClassMirror classMirror, String name) {
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability == r.invokeConstructorsCapability) {
       return true;
@@ -203,8 +204,9 @@ bool reflectableSupportsConstructorInvoke(
     } else if (capability is r.InvokeConstructorsWithMetaDataCapability) {
       dm.MethodMirror constructorMirror = classMirror.declarations.values
           .firstWhere((dm.DeclarationMirror declarationMirror) {
+        Symbol nameSymbol = new Symbol(name);
         return declarationMirror is dm.MethodMirror &&
-               declarationMirror.constructorName == name;
+            declarationMirror.constructorName == nameSymbol;
       });
       if (constructorMirror == null ||
           !constructorMirror.isConstructor) return false;
@@ -214,36 +216,27 @@ bool reflectableSupportsConstructorInvoke(
   });
 }
 
-/// Returns the symbol with final "=" removed.
-/// If the symbol does not have a final "=" it is returned as is.
-Symbol _setterToGetter(Symbol setter) {
-  String setterName = dm.MirrorSystem.getName(setter);
+/// Returns [setterName] with final "=" removed.
+/// If the it does not have a final "=" it is returned as is.
+String _setterToGetter(String setterName) {
   if (!setterName.endsWith("=")) {
-    return setter;
+    return setterName;
   }
-  return new Symbol(setterName.substring(0, setterName.length - 1));
+  return setterName.substring(0, setterName.length - 1);
 }
 
-/// Returns [getter] with a final "=" added.
+/// Returns [getterName] with a final "=" added.
 /// If [getter] already ends with "=" an error is thrown.
-Symbol _getterToSetter(Symbol getter) {
-  String getterName = dm.MirrorSystem.getName(getter);
+String _getterToSetter(String getterName) {
   if (getterName.endsWith("=")) {
-    throw new ArgumentError("$getter is a setter symbol already");
+    throw new ArgumentError(
+        "$getterName is a setter name (ends with `=`) already.");
   }
-  return new Symbol('$getterName=');
+  return '$getterName=';
 }
 
 abstract class _ObjectMirrorImplMixin implements r.ObjectMirror {
   r.Reflectable get _reflectable;
-
-  Object getField(Symbol name) {
-    throw new UnsupportedError("Use invokeGetter instead of getField");
-  }
-
-  void setField(Symbol name, Object value) {
-    throw new UnsupportedError("Use invokeSetter instead of setField");
-  }
 }
 
 class _LibraryMirrorImpl extends _DeclarationMirrorImpl
@@ -257,7 +250,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   Uri get uri => _libraryMirror.uri;
 
   @override
-  Map<Symbol, r.DeclarationMirror> get declarations {
+  Map<String, r.DeclarationMirror> get declarations {
     Map<Symbol, dm.DeclarationMirror> decls = _libraryMirror.declarations;
     Iterable<Symbol> relevantKeys = decls.keys.where((k) {
       List<dm.InstanceMirror> metadata = decls[k].metadata;
@@ -266,36 +259,41 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
       }
       return false;
     });
-    return new Map<Symbol, r.DeclarationMirror>.fromIterable(relevantKeys,
-        key: (k) => k,
+    return new Map<String, r.DeclarationMirror>.fromIterable(relevantKeys,
+        key: (k) => dm.MirrorSystem.getName(k),
         value: (v) => wrapDeclarationMirror(decls[v], _reflectable));
   }
 
   @override
-  Object invoke(Symbol memberName, List positionalArguments,
+  Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
     if (!reflectableSupportsStaticInvoke(_reflectable, memberName)) {
       throw new NoSuchInvokeCapabilityError(
           _receiver, memberName, positionalArguments, namedArguments);
     }
+
     return _libraryMirror.invoke(
-        memberName, positionalArguments, namedArguments).reflectee;
+        new Symbol(memberName), positionalArguments, namedArguments).reflectee;
   }
 
   @override
-  Object invokeGetter(Symbol getterName) {
+  Object invokeGetter(String getterName) {
     if (!reflectableSupportsStaticInvoke(_reflectable, getterName)) {
       throw new NoSuchInvokeCapabilityError(_receiver, getterName, [], null);
     }
-    return _libraryMirror.getField(getterName).reflectee;
+    Symbol getterNameSymbol = new Symbol(getterName);
+    return _libraryMirror.getField(getterNameSymbol).reflectee;
   }
 
   @override
-  Object invokeSetter(Symbol setterName, Object value) {
+  Object invokeSetter(String setterName, Object value) {
     if (!reflectableSupportsStaticInvoke(_reflectable, setterName)) {
-      throw new NoSuchInvokeCapabilityError(_receiver, setterName, [value], null);
+      throw new NoSuchInvokeCapabilityError(
+          _receiver, setterName, [value], null);
     }
-    return _libraryMirror.setField(_setterToGetter(setterName), value);
+    String getterName = _setterToGetter(setterName);
+    Symbol getterNameSymbol = new Symbol(getterName);
+    return _libraryMirror.setField(getterNameSymbol, value);
   }
 
   @override
@@ -349,7 +347,7 @@ class _LibraryDependencyMirrorImpl implements r.LibraryDependencyMirror {
   }
 
   @override
-  Symbol get prefix => _libraryDependencyMirror.prefix;
+  String get prefix => dm.MirrorSystem.getName(_libraryDependencyMirror.prefix);
 
   @override
   List<Object> get metadata =>
@@ -393,32 +391,35 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
   get reflectee => _instanceMirror.reflectee;
 
   @override
-  Object invoke(Symbol memberName, List positionalArguments,
+  Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
     if (reflectableSupportsInstanceInvoke(
         _reflectable, memberName, _instanceMirror.type)) {
+      Symbol memberNameSymbol = new Symbol(memberName);
       return _instanceMirror.invoke(
-          memberName, positionalArguments, namedArguments).reflectee;
+          memberNameSymbol, positionalArguments, namedArguments).reflectee;
     }
     throw new NoSuchInvokeCapabilityError(
         _receiver, memberName, positionalArguments, namedArguments);
   }
 
   @override
-  Object invokeGetter(Symbol fieldName) {
+  Object invokeGetter(String fieldName) {
     if (reflectableSupportsInstanceInvoke(
         _reflectable, fieldName, _instanceMirror.type)) {
-      return _instanceMirror.getField(fieldName).reflectee;
+      Symbol fieldNameSymbol = new Symbol(fieldName);
+      return _instanceMirror.getField(fieldNameSymbol).reflectee;
     }
     throw new NoSuchInvokeCapabilityError(_receiver, fieldName, [], null);
   }
 
   @override
-  Object invokeSetter(Symbol setterName, Object value) {
+  Object invokeSetter(String setterName, Object value) {
     if (reflectableSupportsInstanceInvoke(
         _reflectable, setterName, _instanceMirror.type)) {
-      return _instanceMirror.setField(
-          _setterToGetter(setterName), value).reflectee;
+      String getterName = _setterToGetter(setterName);
+      Symbol getterNameSymbol = new Symbol(getterName);
+      return _instanceMirror.setField(getterNameSymbol, value).reflectee;
     }
     throw new NoSuchInvokeCapabilityError(_receiver, setterName, [value], null);
   }
@@ -477,12 +478,13 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
   bool get isAbstract => _classMirror.isAbstract;
 
   @override
-  Map<Symbol, r.DeclarationMirror> get declarations {
+  Map<String, r.DeclarationMirror> get declarations {
     // TODO(sigurdm): Possibly cache this.
-    Map<Symbol, r.DeclarationMirror> result =
-        new Map<Symbol, r.DeclarationMirror>();
-    _classMirror.declarations
-        .forEach((Symbol name, dm.DeclarationMirror declarationMirror) {
+    Map<String, r.DeclarationMirror> result =
+        new Map<String, r.DeclarationMirror>();
+    _classMirror.declarations.forEach(
+        (Symbol nameSymbol, dm.DeclarationMirror declarationMirror) {
+      String name = dm.MirrorSystem.getName(nameSymbol);
       if (declarationMirror is dm.MethodMirror) {
         if ((declarationMirror.isStatic &&
                 reflectableSupportsStaticInvoke(_reflectable, name)) ||
@@ -512,22 +514,22 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
   }
 
   @override
-  Map<Symbol, r.MethodMirror> get instanceMembers {
+  Map<String, r.MethodMirror> get instanceMembers {
     // TODO(sigurdm): Only expose members that are allowed by the capabilities
     // of the reflectable.
     Map<Symbol, dm.MethodMirror> members = _classMirror.instanceMembers;
-    return new Map<Symbol, r.MethodMirror>.fromIterable(members.keys,
-        key: (k) => k,
+    return new Map<String, r.MethodMirror>.fromIterable(members.keys,
+        key: (k) => dm.MirrorSystem.getName(k),
         value: (v) => new _MethodMirrorImpl(members[v], _reflectable));
   }
 
   @override
-  Map<Symbol, r.MethodMirror> get staticMembers {
+  Map<String, r.MethodMirror> get staticMembers {
     // TODO(sigurdm): Only expose members that are allowed by the capabilities
     // of the reflectable.
     Map<Symbol, dm.MethodMirror> members = _classMirror.staticMembers;
-    return new Map<Symbol, r.MethodMirror>.fromIterable(members.keys,
-        key: (k) => k,
+    return new Map<String, r.MethodMirror>.fromIterable(members.keys,
+        key: (k) => dm.MirrorSystem.getName(k),
         value: (v) => new _MethodMirrorImpl(members[v], _reflectable));
   }
 
@@ -535,40 +537,45 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
   r.TypeMirror get mixin => wrapTypeMirror(_classMirror.mixin, _reflectable);
 
   @override
-  Object newInstance(Symbol constructorName, List positionalArguments,
+  Object newInstance(String constructorName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
     if (!reflectableSupportsConstructorInvoke(
         _reflectable, _classMirror, constructorName)) {
       throw new NoSuchInvokeCapabilityError(
-          _classMirror , constructorName, positionalArguments, namedArguments);
+          _classMirror, constructorName, positionalArguments, namedArguments);
     }
+    Symbol constructorNameSymbol = new Symbol(constructorName);
     return _classMirror.newInstance(
-        constructorName, positionalArguments, namedArguments).reflectee;
+        constructorNameSymbol, positionalArguments, namedArguments).reflectee;
   }
 
   @override
-  Object invoke(Symbol memberName, List positionalArguments,
+  Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
     if (reflectableSupportsStaticInvoke(_reflectable, memberName)) {
+      Symbol memberNameSymbol = new Symbol(memberName);
       return _classMirror.invoke(
-          memberName, positionalArguments, namedArguments).reflectee;
+          memberNameSymbol, positionalArguments, namedArguments).reflectee;
     }
     throw new NoSuchInvokeCapabilityError(
         _receiver, memberName, positionalArguments, namedArguments);
   }
 
   @override
-  Object invokeGetter(Symbol getterName) {
+  Object invokeGetter(String getterName) {
     if (reflectableSupportsStaticInvoke(_reflectable, getterName)) {
-      return _classMirror.getField(getterName).reflectee;
+      Symbol getterNameSymbol = new Symbol(getterName);
+      return _classMirror.getField(getterNameSymbol).reflectee;
     }
     throw new NoSuchInvokeCapabilityError(_receiver, getterName, [], null);
   }
 
   @override
-  Object invokeSetter(Symbol setterName, Object value) {
+  Object invokeSetter(String setterName, Object value) {
     if (reflectableSupportsStaticInvoke(_reflectable, setterName)) {
-      return _classMirror.setField(_setterToGetter(setterName), value).reflectee;
+      String getterName = _setterToGetter(setterName);
+      Symbol getterNameSymbol = new Symbol(getterName);
+      return _classMirror.setField(getterNameSymbol, value).reflectee;
     }
     throw new NoSuchInvokeCapabilityError(_receiver, setterName, [value], null);
   }
@@ -609,8 +616,8 @@ class _FunctionTypeMirrorImpl extends _ClassMirrorImpl
 
   @override
   List<r.ParameterMirror> get parameters {
-    return _functionTypeMirror.parameters
-        .map((dm.ParameterMirror parameterMirror) {
+    return _functionTypeMirror.parameters.map(
+        (dm.ParameterMirror parameterMirror) {
       return new _ParameterMirrorImpl(parameterMirror, _reflectable);
     });
   }
@@ -628,10 +635,12 @@ abstract class _DeclarationMirrorImpl implements r.DeclarationMirror {
   _DeclarationMirrorImpl(this._declarationMirror, this._reflectable);
 
   @override
-  Symbol get simpleName => _declarationMirror.simpleName;
+  String get simpleName =>
+      dm.MirrorSystem.getName(_declarationMirror.simpleName);
 
   @override
-  Symbol get qualifiedName => _declarationMirror.qualifiedName;
+  String get qualifiedName =>
+      dm.MirrorSystem.getName(_declarationMirror.qualifiedName);
 
   @override
   r.DeclarationMirror get owner {
@@ -705,7 +714,8 @@ class _MethodMirrorImpl extends _DeclarationMirrorImpl
   bool get isConstructor => _methodMirror.isConstructor;
 
   @override
-  Symbol get constructorName => _methodMirror.constructorName;
+  String get constructorName =>
+      dm.MirrorSystem.getName(_methodMirror.constructorName);
 
   @override
   bool get isConstConstructor => _methodMirror.isConstConstructor;
@@ -926,7 +936,8 @@ class _CombinatorMirrorImpl implements r.CombinatorMirror {
   _CombinatorMirrorImpl(this._combinatorMirror);
 
   @override
-  List<Symbol> get identifiers => _combinatorMirror.identifiers;
+  List<String> get identifiers =>
+      _combinatorMirror.identifiers.map(dm.MirrorSystem.getName);
 
   @override
   bool get isHide => _combinatorMirror.isHide;

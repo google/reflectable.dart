@@ -29,12 +29,9 @@ abstract class Reflectable {
   InstanceMirror reflect(Object reflectee) => _unsupported();
   ClassMirror reflectClass(Type type) => _unsupported();
   ClassMirror reflectType(Type type) => _unsupported();
-  LibraryMirror findLibrary(Symbol library) => _unsupported();
-  String getName(Symbol symbol) => _unsupported();
-  Symbol getSymbol(String name, [LibraryMirror library]) => _unsupported();
+  LibraryMirror findLibrary(String library) => _unsupported();
   Map<Uri, LibraryMirror> get libraries => _unsupported();
   static final typeMirrorForObject = _unsupported();
-  Symbol setterSymbol(Symbol getter) => _unsupported();
   Iterable<ClassMirror> get annotatedClasses => _unsupported();
 }
 

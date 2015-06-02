@@ -109,20 +109,9 @@ class Reflectable {
   // 'Currently skip' comments indicate omitted declarations.
 
   /// Returns a mirror of the given library [library].
-  LibraryMirror findLibrary(Symbol library) {
+  LibraryMirror findLibrary(String library) {
     return implementation.findLibrary(library, this);
   }
-
-  /// Returns the name associated with the given [symbol].
-  /// TODO(eernst): This name is problematic ('get' gives no
-  /// information about what it does; consider nameFor, translateSymbol
-  /// symbolToString, ..).
-  String getName(Symbol symbol) => _unsupported();
-
-  /// Returns the symbol associated with the given [name].
-  /// TODO(eernst): Currently [library] is ignored.
-  Symbol getSymbol(String name, [LibraryMirror library]) =>
-      _unsupported();
 
   // Currently skip 'IsolateMirror get isolate'
 
@@ -136,10 +125,6 @@ class Reflectable {
 
   /// A mirror for the [Object] class.
   static final typeMirrorForObject = _unsupported();
-
-  /// Returns a Symbol representing the name of the setter corresponding
-  /// to the name [getter], which is assumed to be the name of a getter.
-  Symbol setterSymbol(Symbol getter) => _unsupported();
 
   /// Returns an [Iterable] of all the classes that can be reflected over in
   /// this [Reflectable].

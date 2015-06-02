@@ -9,6 +9,7 @@
 library reflectable.test.to_be_transformed.members_capability_test;
 
 import 'package:reflectable/reflectable.dart';
+import 'package:unittest/unittest.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable() : super(const [invokeMembersCapability]);
@@ -22,5 +23,7 @@ class Foo {
 }
 
 main() {
-  myReflectable.reflect(new Foo()).invoke(#x, []);
+  test("Invoking x", () {
+    expect(myReflectable.reflect(new Foo()).invoke("x", []), 42);
+  });
 }

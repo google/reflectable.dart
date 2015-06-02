@@ -28,24 +28,24 @@ class A {
 main() {
   InstanceMirror instanceMirror = myReflectable.reflect(new A());
   test('invoke with no arguments', () {
-    expect(instanceMirror.invoke(#arg0, []), 42);
+    expect(instanceMirror.invoke("arg0", []), 42);
   });
   test('invoke with simple argument list, one argument', () {
-    expect(instanceMirror.invoke(#arg1, [84]), 42);
+    expect(instanceMirror.invoke("arg1", [84]), 42);
   });
   test('invoke with mandatory arguments, omitting optional ones', () {
-    expect(instanceMirror.invoke(#arg1to3, [40, 2]), 42);
+    expect(instanceMirror.invoke("arg1to3", [40, 2]), 42);
   });
   test('invoke with mandatory arguments, plus some optional ones', () {
-    expect(instanceMirror.invoke(#arg1to3, [1, -1, 1]), 42);
+    expect(instanceMirror.invoke("arg1to3", [1, -1, 1]), 42);
   });
   test('invoke with mandatory arguments, plus all optional ones', () {
-    expect(instanceMirror.invoke(#arg1to3, [21, 21, 0, "Ignored"]), 42);
+    expect(instanceMirror.invoke("arg1to3", [21, 21, 0, "Ignored"]), 42);
   });
   test('invoke with mandatory arguments, omitting named ones', () {
-    expect(instanceMirror.invoke(#argNamed, [55, 29]), 42);
+    expect(instanceMirror.invoke("argNamed", [55, 29]), 42);
   });
   test('invoke with mandatory arguments, plus named ones', () {
-    expect(instanceMirror.invoke(#argNamed, [21, 21], {#z: 0}), 42);
+    expect(instanceMirror.invoke("argNamed", [21, 21], {#z: 0}), 42);
   });
 }

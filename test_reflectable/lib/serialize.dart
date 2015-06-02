@@ -9,7 +9,7 @@ import "package:reflectable/reflectable.dart";
 class Serializable extends Reflectable {
   const Serializable() : super(const [
         invokeInstanceMembersCapability,
-        const InvokeConstructorCapability(const Symbol(""))
+        const InvokeConstructorCapability("")
       ]);
 }
 
@@ -22,7 +22,7 @@ class Serializable extends Reflectable {
 /// construct a new empty instance, and all the fields are set.
 class Serializer {
   var serializable = const Serializable();
-  final Map<Symbol, ClassMirror> classes = new Map<Symbol, ClassMirror>();
+  final Map<String, ClassMirror> classes = new Map<String, ClassMirror>();
 
   Serializer() {
     // `Serializable` inherits support for finding all classes carrying itself
@@ -75,7 +75,7 @@ class Serializer {
     }
 
     ClassMirror classMirror = classes[m["type"]];
-    Object instance = classMirror.newInstance(const Symbol(""), []);
+    Object instance = classMirror.newInstance("", []);
     InstanceMirror im = serializable.reflect(instance);
     m["fields"].forEach((name, value) {
       im.invokeSetter(name, deserialize(value));

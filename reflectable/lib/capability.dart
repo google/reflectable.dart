@@ -70,21 +70,21 @@ const invokeStaticMembersCapability = const _InvokeStaticMembersCapability();
 /// Specifies for a class `C` that the instance member named
 /// [name] can be invoked.
 class InvokeInstanceMemberCapability implements ReflectCapability {
-  final Symbol name;
+  final String name;
   const InvokeInstanceMemberCapability(this.name);
 }
 
 /// Specifies for a class `C` that the static member named [name]
 /// can be invoked.
 class InvokeStaticMemberCapability implements ReflectCapability {
-  final Symbol name;
+  final String name;
   const InvokeStaticMemberCapability(this.name);
 }
 
 /// Specifies for a class `C` that the constructor named [name]
 /// can be invoked with `newInstance` on the `ClassMirror`.
 class InvokeConstructorCapability implements ReflectCapability {
-  final Symbol name;
+  final String name;
   const InvokeConstructorCapability(this.name);
 }
 
@@ -132,7 +132,7 @@ class _NoSuchCapabilityErrorImpl extends Error
 class NoSuchInvokeCapabilityError extends Error
     implements NoSuchCapabilityError {
   Object receiver;
-  Symbol memberName;
+  String memberName;
   List positionalArguments;
   Map<Symbol, dynamic> namedArguments;
   List existingArgumentNames;

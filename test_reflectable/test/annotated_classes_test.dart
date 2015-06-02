@@ -36,8 +36,8 @@ class G {}
 main() {
   expect(const MyReflectable().annotatedClasses
           .map((ClassMirror classMirror) => classMirror.simpleName),
-      [#A, #B, #G].toSet());
+      ["A", "B", "G"].toSet());
   expect(const MyReflectable2().annotatedClasses
           .map((ClassMirror classMirror) => classMirror.simpleName),
-      [#E, #F, #G].toSet());
+      ["E", "F", "G"].toSet());
 }

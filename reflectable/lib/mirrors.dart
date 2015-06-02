@@ -32,8 +32,8 @@
 // always preserved to a "practical" model where we return to the base
 // level in selected cases.
 //
-// These selected cases are [invoke], [@deprecated getField], and
-// [@deprecated setField] in [ObjectMirror], [newInstance] in
+// These selected cases are [invoke], [getField], and
+// [setField] in [ObjectMirror], [newInstance] in
 // [ClassMirror], and [defaultValue] in [ParameterMirror], where the
 // return type has been changed from InstanceMirror to Object.
 // Similarly, the return type for [metadata] in [DeclarationMirror] and
@@ -77,8 +77,8 @@ abstract class Mirror {}
 // Currently skip 'abstract class IsolateMirror implements Mirror'.
 
 abstract class DeclarationMirror implements Mirror {
-  Symbol get simpleName;
-  Symbol get qualifiedName;
+  String get simpleName;
+  String get qualifiedName;
   DeclarationMirror get owner;
   bool get isPrivate;
   bool get isTopLevel;
@@ -154,7 +154,7 @@ abstract class ObjectMirror implements Mirror {
    *
    * TODO(eernst): make this comment more user friendly.
    */
-  Object invoke(Symbol memberName,
+  Object invoke(String memberName,
                 List positionalArguments,
                 [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
 
@@ -193,19 +193,13 @@ abstract class ObjectMirror implements Mirror {
    *
    * TODO(eernst): make this comment more user friendly.
    */
-  Object invokeGetter(Symbol getterName);
-
-  /**
-   * Not supported, use [invokeGetter] instead.
-   */
-  @deprecated
-  Object getField(Symbol fieldName); // RET: InstanceMirror
+  Object invokeGetter(String getterName);
 
   /**
    * Invokes a setter and returns a mirror on the result. The setter
    * may be either the implicit setter for a non-final field or a
-   * user-defined setter method. The name of the setter should include the
-   * final `=`.
+   * user-defined setter method. The name of the setter can include the
+   * final `=`, if it is not, it will be added.
    *
    * Let *o* be the object reflected by this mirror, let
    * *f* be the simple name of the getter denoted by [fieldName],
@@ -228,13 +222,7 @@ abstract class ObjectMirror implements Mirror {
    *
    * TODO(eernst): make this comment more user friendly.
    */
-  Object invokeSetter(Symbol setterName, Object value);
-
-  /**
-   * Not supported, use [invokeSetter] instead.
-   */
-  @deprecated
-  void setField(Symbol fieldName, Object value); // RET: InstanceMirror
+  Object invokeSetter(String setterName, Object value);
 }
 
 abstract class InstanceMirror implements ObjectMirror {
@@ -253,7 +241,7 @@ abstract class ClosureMirror implements InstanceMirror {
 
 abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
   Uri get uri;
-  Map<Symbol, DeclarationMirror> get declarations;
+  Map<String, DeclarationMirror> get declarations;
   bool operator ==(other);
   List<LibraryDependencyMirror> get libraryDependencies;
 }
@@ -264,7 +252,7 @@ abstract class LibraryDependencyMirror implements Mirror {
   bool get isDeferred;
   LibraryMirror get sourceLibrary;
   LibraryMirror get targetLibrary;
-  Symbol get prefix;
+  String get prefix;
   List<CombinatorMirror> get combinators;
   SourceLocation get location;
 
@@ -274,7 +262,7 @@ abstract class LibraryDependencyMirror implements Mirror {
 }
 
 abstract class CombinatorMirror implements Mirror {
-  List<Symbol> get identifiers;
+  List<String> get identifiers;
   bool get isShow;
   bool get isHide;
 }
@@ -305,9 +293,9 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   ClassMirror get superclass;
   List<ClassMirror> get superinterfaces;
   bool get isAbstract;
-  Map<Symbol, DeclarationMirror> get declarations;
-  Map<Symbol, MethodMirror> get instanceMembers;
-  Map<Symbol, MethodMirror> get staticMembers;
+  Map<String, DeclarationMirror> get declarations;
+  Map<String, MethodMirror> get instanceMembers;
+  Map<String, MethodMirror> get staticMembers;
   ClassMirror get mixin;
 
    /**
@@ -343,9 +331,9 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
    *
    * TODO(eernst): make this comment more user friendly.
    */
-  Object newInstance(Symbol constructorName,
+  Object newInstance(String constructorName,
                      List positionalArguments,
-                     [Map<Symbol,dynamic> namedArguments]);
+                     [Map<Symbol, dynamic> namedArguments]);
                      // RET: InstanceMirror
 
   bool operator ==(other);
@@ -384,7 +372,7 @@ abstract class MethodMirror implements DeclarationMirror {
   bool get isGetter;
   bool get isSetter;
   bool get isConstructor;
-  Symbol get constructorName;
+  String get constructorName;
   bool get isConstConstructor;
   bool get isGenerativeConstructor;
   bool get isRedirectingConstructor;

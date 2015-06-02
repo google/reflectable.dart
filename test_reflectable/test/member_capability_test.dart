@@ -1,10 +1,17 @@
-// Use reflectable.
+// Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+// source code is governed by a BSD-style license that can be found in
+// the LICENSE file.
+
+// File being transformed by the reflectable transformer.
+// Uses 'reflect', with a constraint to invocation based on
+// 'InvokeInstanceMemberCapability'.
 
 import 'package:reflectable/reflectable.dart';
+import 'package:unittest/unittest.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable() : super(const <ReflectCapability>[
-      const InvokeInstanceMemberCapability(#x)
+      const InvokeInstanceMemberCapability("x")
   ]);
 }
 const myReflectable = const MyReflectable();
@@ -16,5 +23,7 @@ class Foo {
 }
 
 main() {
-  myReflectable.reflect(new Foo()).invoke(#x, []);
+  test("Invoking x", () {
+    expect(myReflectable.reflect(new Foo()).invoke("x", []), 42);
+  });
 }

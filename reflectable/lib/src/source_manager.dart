@@ -88,6 +88,10 @@ class SourceManager {
                                oldHighIndex,
                                newSubstring.length));
   }
+
+  insert(int index, String newSubstring) {
+    replace(index, index, newSubstring);
+  }
 }
 
 /// Auxiliary class, used to keep track of the [replace] operations
