@@ -64,27 +64,35 @@ function set_variables {
   echo Testing BOTTEST_PKG at $BOTTEST_LOCAL_PKG
 }
 
-original_dir=$(pwd)
-# No matter how this script exits, go back do the original working directory.
-trap 'cd $original_dir' EXIT
+function parse_args {
+  while [ -n "$1" ]; do
+    case $1 in
+      (--use-existing-bottest) useExisting="true" ; shift ;;
+      (--help) echo "Usage: $0 [--help] [--use-existing-bottest]"; exit 0;;
+      (*) echo "$0: Argument '$1' not understood. Exiting."; exit -1;;
+    esac
+  done
+}
 
-set_variables
-while [ -n "$1" ]; do
-  case $1 in
-    (--use-existing-bottest) useExisting="true" ; shift ;;
-    (--help) echo "Usage: $0 [--help] [--use-existing-bottest]"; exit 0;;
-    (*) echo "$0: Argument '$1' not understood. Exiting."; exit -1;;
-  esac
-done
+function main {
+  original_dir=$(pwd)
+  # No matter how this script exits, go back do the original working directory.
+  trap 'cd $original_dir' EXIT
 
-if [ -n "$useExisting" ]; then
-  if [ ! -d $BOTTEST_DART_REPO ]; then
-    echo "No existing bottest directory found at $BOTTEST_DART_REPO"
-    exit -1
+  set_variables
+  parse_args $@
+
+  if [ -n "$useExisting" ]; then
+    if [ ! -d $BOTTEST_DART_REPO ]; then
+      echo "No existing bottest directory found at $BOTTEST_DART_REPO"
+      exit -1
+    fi
+    echo reusing the bottest directory at $BOTTEST_DART_REPO.
+  else
+    setup
   fi
-  echo reusing the bottest directory at $BOTTEST_DART_REPO.
-else
-  setup
-fi
 
-run_annotated_steps
+  run_annotated_steps
+}
+
+main $@
