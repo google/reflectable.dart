@@ -17,13 +17,12 @@ library reflectable.src.transformer_errors;
 /// to create a new class which is unrelated to [Reflectable] but
 /// structurally identical that they could just stop using
 /// [Reflectable] and use that.  So we simply outlaw all these usages
-/// of Reflectable metadata, no matter whether they were used for a
-/// different purpose or they were the result of a lack of knowledge
-/// that such metadata will not have any effect.
+/// of reflectors, no matter whether they were used for a different
+/// purpose or they were the result of a lack of knowledge that
+/// such metadata will not have any effect.
 const String METADATA_NOT_DIRECT_SUBCLASS =
     "Metadata has type Reflectable, but is not an instance of "
     "a direct subclass of Reflectable";
-
 
 /// It is a transformation time error to use `show` with
 /// the import of `../reflectable.dart`.
@@ -63,10 +62,9 @@ const String SUPER_ARGUMENT_NON_CONST =
     "The super constructor invocation receives an argument"
     " which is not a constant.";
 
-/// It is a transformation time error to use an enum as a Reflectable
-/// metadata class.
+/// It is a transformation time error to use an enum as a reflector class.
 const String IS_ENUM =
-    "Encountered a Reflectable metadata class which is an enum.";
+    "Encountered a reflector class which is an enum.";
 
 /// Finds any template holes of the form {name} in [template] and replaces them
 /// with the corresponding value in [replacements].

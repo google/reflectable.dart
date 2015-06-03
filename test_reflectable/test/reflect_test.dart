@@ -11,7 +11,7 @@ import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 
 class MyReflectable extends Reflectable {
-  const MyReflectable(): super(const <ReflectCapability>[]);
+  const MyReflectable() : super();
 }
 
 const myReflectable = const MyReflectable();

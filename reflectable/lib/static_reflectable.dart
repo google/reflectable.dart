@@ -9,22 +9,30 @@
 library reflectable.static_reflectable;
 
 import 'capability.dart';
-export 'capability.dart';
-
 import 'mirrors.dart';
+import 'src/reflectable_base.dart';
+import 'src/reflectable_class_constants.dart' as reflectable_class_constants;
+
+export 'capability.dart';
 export 'mirrors.dart';
 
-abstract class Reflectable {
+abstract class Reflectable extends ReflectableBase {
   // Intended to near-uniquely identify this class in target programs.
-  static const thisClassName = "Reflectable";  // Update if renaming class!
-  static const thisClassId = "4c5bb5484ffbe3f266cafa28ebc80a0efa78957e";
+  static const thisClassName = reflectable_class_constants.name;
+  static const thisClassId = reflectable_class_constants.id;
 
-  /// Specifies limits on the support for reflective operations on instances
-  /// of classes having an instance of this Reflectable as metadata.
-  final List<ReflectCapability> capabilities;
+  /// Const constructor, to enable usage as metadata, allowing for varargs
+  /// style invocation with up to ten arguments.
+  const Reflectable([ReflectCapability cap0 = null,
+      ReflectCapability cap1 = null, ReflectCapability cap2 = null,
+      ReflectCapability cap3 = null, ReflectCapability cap4 = null,
+      ReflectCapability cap5 = null, ReflectCapability cap6 = null,
+      ReflectCapability cap7 = null, ReflectCapability cap8 = null,
+      ReflectCapability cap9 = null])
+      : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
 
-  /// Const constructor, to enable usage as metadata.
-  const Reflectable(this.capabilities);
+  const Reflectable.fromList(List<ReflectCapability> capabilities)
+      : super.fromList(capabilities);
 
   InstanceMirror reflect(Object reflectee) => _unsupported();
   ClassMirror reflectClass(Type type) => _unsupported();

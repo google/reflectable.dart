@@ -28,8 +28,14 @@ r.InstanceMirror reflect(o, r.Reflectable reflectable) {
   return wrapInstanceMirror(dm.reflect(o), reflectable);
 }
 
-r.ClassMirror reflectClass(Type t, r.Reflectable reflectable) {
-  return wrapClassMirror(dm.reflectClass(t), reflectable);
+r.ClassMirror reflectType(Type t, r.Reflectable reflectable) {
+  dm.TypeMirror typeMirror = dm.reflectType(t);
+  if (typeMirror is dm.ClassMirror) {
+    return wrapClassMirror(typeMirror, reflectable);
+  } else {
+    throw new NoSuchCapabilityError(
+        "Reflecting on currently unsupported kind of entity: $typeMirror");
+  }
 }
 
 r.LibraryMirror findLibrary(String libraryName, r.Reflectable reflectable) {

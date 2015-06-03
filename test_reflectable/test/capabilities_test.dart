@@ -12,10 +12,10 @@ import 'package:reflectable/capability.dart' as c;
 
 class MyReflectableStatic extends r.Reflectable {
   const MyReflectableStatic()
-      : super(const [const c.InvokeStaticMemberCapability("foo"),
-                     const c.InvokeStaticMemberCapability("getFoo"),
-                     const c.InvokeStaticMemberCapability("setFoo="),
-                     const c.InvokeStaticMemberCapability("nonExisting")]);
+      : super(const c.InvokeStaticMemberCapability("foo"),
+              const c.InvokeStaticMemberCapability("getFoo"),
+              const c.InvokeStaticMemberCapability("setFoo="),
+              const c.InvokeStaticMemberCapability("nonExisting"));
 }
 
 @MyReflectableStatic()
@@ -31,10 +31,10 @@ class A {
 
 class MyReflectableInstance extends r.Reflectable {
   const MyReflectableInstance()
-  : super(const [const c.InvokeInstanceMemberCapability("foo"),
-                 const c.InvokeInstanceMemberCapability("getFoo"),
-                 const c.InvokeInstanceMemberCapability("setFoo="),
-                 const c.InvokeInstanceMemberCapability("nonExisting")]);
+      : super(const c.InvokeInstanceMemberCapability("foo"),
+              const c.InvokeInstanceMemberCapability("getFoo"),
+              const c.InvokeInstanceMemberCapability("setFoo="),
+              const c.InvokeInstanceMemberCapability("nonExisting"));
 }
 
 @MyReflectableInstance()
@@ -90,7 +90,7 @@ void testDynamic(B o, String description) {
 
 void main() {
   test("Static invocation", () {
-    r.ClassMirror classMirror = const MyReflectableStatic().reflectClass(A);
+    r.ClassMirror classMirror = const MyReflectableStatic().reflectType(A);
     expect(classMirror.invoke("foo", []), 42);
     expect(() {
       classMirror.invoke("bar", []);

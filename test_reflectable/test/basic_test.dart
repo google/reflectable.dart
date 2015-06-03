@@ -12,8 +12,7 @@ import 'package:reflectable/capability.dart';
 
 class MyReflectable extends r.Reflectable {
   const MyReflectable()
-    : super(const [invokeInstanceMembersCapability,
-                   invokeConstructorsCapability]);
+    : super(invokeInstanceMembersCapability, invokeConstructorsCapability);
 }
 
 @MyReflectable()
@@ -104,9 +103,9 @@ main() {
 
   r.Reflectable reflectable = const MyReflectable();
 
-  r.ClassMirror aClass = reflectable.reflectClass(A);
-  r.ClassMirror bClass = reflectable.reflectClass(B);
-  r.ClassMirror cClass = reflectable.reflectClass(C);
+  r.ClassMirror aClass = reflectable.reflectType(A);
+  r.ClassMirror bClass = reflectable.reflectType(B);
+  r.ClassMirror cClass = reflectable.reflectType(C);
 
   r.InstanceMirror aM = reflectable.reflect(aClass.newInstance(unnamed, []));
   r.InstanceMirror bM = reflectable.reflect(bClass.newInstance(unnamed, []));

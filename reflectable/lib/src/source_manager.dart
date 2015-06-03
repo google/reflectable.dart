@@ -24,10 +24,10 @@ class SourceManager {
   final int _initialLength;
   List<_SourceEdit> _edits;
 
-  SourceManager(String source):
-      _source = source,
-      _initialLength = source.length,
-      _edits = new List<_SourceEdit>();
+  SourceManager(String source)
+      : _source = source,
+        _initialLength = source.length,
+        _edits = new List<_SourceEdit>();
 
   /// Provides public read-only access to [_source].
   String get source => _source;
@@ -84,9 +84,8 @@ class SourceManager {
     String suffix = _source.substring(oldHighIndex + offset);
     _source = "$prefix$newSubstring$suffix";
     // Register this [replace] operation.
-    _edits.add(new _SourceEdit(oldLowIndex,
-                               oldHighIndex,
-                               newSubstring.length));
+    _edits.add(
+        new _SourceEdit(oldLowIndex, oldHighIndex, newSubstring.length));
   }
 
   insert(int index, String newSubstring) {
@@ -102,4 +101,3 @@ class _SourceEdit {
   int newLength;
   _SourceEdit(this.oldLowIndex, this.oldHighIndex, this.newLength);
 }
-

@@ -1,5 +1,7 @@
-pubspec.lock
-packages
-build
+.idea
 .pub
+pubspec.lock
+reflectable.iml
+build
+packages
 test/packages

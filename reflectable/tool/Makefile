@@ -12,6 +12,8 @@ XFORM_DIR=../test/to_be_transformed
 
 all: check build full_test
 
+g: get
+
 c: check
 
 b: build
@@ -20,8 +22,11 @@ t: test
 
 ft: full_test
 
+get:
+	( cd ..; pub get )
+
 check:
-	dartanalyzer $(OPTIONS) ../{lib,test}/**/*.dart
+	dartanalyzer $(OPTIONS) ../{lib,test}/{,*/}*.dart
 
 build:
 	( cd ..; pub build --mode=debug test )
@@ -29,17 +34,8 @@ build:
 test:
 	@echo "-------------------- source_manager_test"
 	@dart $(OPTIONS) $(TEST_DIR)/source_manager_test.dart
-	@echo "-------------------- bad_import_test"
-	@dart $(OPTIONS) $(TEST_DIR)/unittests/bad_import_test.dart
-	@echo "-------------------- check_literal_transform_test"
-	@dart $(OPTIONS) $(TEST_DIR)/unittests/check_literal_transform_test.dart
-	@echo "-------------------- trivial_mock_test"
-	@dart $(OPTIONS) $(TEST_DIR)/unittests/trivial_mock_test.dart
-	@./run_transformation_tests
+	@echo "-------------------- mock_tests"
+	@./run_mock_tests
 
-full_test: test
-	@echo '------------------- bottest'
-	./bottest --preserve-output
-
-.PHONY: all c b t ft check build test full_test
+.PHONY: all c b t ft check build test
 

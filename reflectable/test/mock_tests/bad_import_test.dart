@@ -21,7 +21,7 @@ import 'package:reflectable/reflectable.dart'
     show Reflectable, ReflectCapability;
 
 class MyReflectable extends Reflectable {
-  const MyReflectable(): super(const <ReflectCapability>[]);
+  const MyReflectable();
 }
 
 @MyReflectable()
@@ -38,7 +38,7 @@ import 'package:reflectable/reflectable.dart'
     hide InvokeStaticMemberCapability;
 
 class MyReflectable extends Reflectable {
-  const MyReflectable(): super(const <ReflectCapability>[]);
+  const MyReflectable();
 }
 
 @MyReflectable()

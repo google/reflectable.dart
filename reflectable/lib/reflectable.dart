@@ -4,20 +4,17 @@
 
 // This is the main library in package reflectable.
 
-// TODO(eernst): The implementation of class Reflectable below
-// will be introduced gradually; missing parts are replaced
-// by _unsupported(), which will throw an `UnimplementedError`.
 // TODO(eernst): Write "library dartdoc" for this library.
 
 library reflectable.reflectable;
 
-import 'src/reflectable_implementation.dart' as implementation;
-import 'src/reflectable_class_constants.dart' as reflectable_class_constants;
-
 import 'capability.dart';
-export 'capability.dart';
-
 import 'mirrors.dart';
+import 'src/reflectable_base.dart';
+import 'src/reflectable_class_constants.dart' as reflectable_class_constants;
+import 'src/reflectable_implementation.dart' as implementation;
+
+export 'capability.dart';
 export 'mirrors.dart';
 
 /// [Reflectable] is used as metadata, marking classes for reflection.
@@ -26,25 +23,24 @@ export 'mirrors.dart';
 /// [metadata]<sup>1</sup> then it will be included in the root set of classes
 /// with support for reflection based on this package.  Other classes
 /// outside the root set may also be included, e.g., if it is specified
-/// that all subclasses of a given class in the root set are included.
+/// that all subtypes of a given class in the root set are included.
 /// For classes and instances not included, all reflective operations
 /// will throw an exception.  For included classes and instances,
 /// invocations of the operations in mirrors.dart are supported if
-/// those operations and their arguments conform to the constraints
-/// expressed using the [ReflectCapability] which is given as a
-/// constructor argument, and the operations will throw an exception if
-/// they do not conform to said constraints.
+/// the [ReflectCapability] values given as constructor arguments
+/// include the capability to run those operations; the operations
+/// will throw an exception if the relevant capability is not included.
 ///
-/// Terminology: We use the term *Reflectable metadata class* to
-/// denote a direct subclass of [Reflectable] with a zero-argument
-/// `const` constructor that is used as metadata on a class in the
-/// target program in one of the two supported manners: as a `const`
+/// Terminology: We use the term *reflector class* to denote a
+/// direct subclass of [Reflectable] with a zero-argument `const`
+/// constructor that is used as metadata on a class in the target
+/// program in one of the two supported manners: as a `const`
 /// constructor expression (`@MyReflectable()`), or as an identifier
 /// (`@myReflectable`) which is a top-level `const` whose value is
-/// an instance of the given Reflectable metadata class
+/// an instance of the given reflector class
 /// (`const myReflectable = const MyReflectable();`).  We use the
-/// term *Reflectable annotated class* to denote a class whose
-/// metadata includes an instance of a Reflectable metadata class.
+/// term *reflector-annotated class* to denote a class whose
+/// metadata includes an instance of a reflector class.
 ///
 /// Note that the role played by this class includes much of the role
 /// played by a [MirrorSystem] with dart:mirrors.
@@ -59,17 +55,31 @@ export 'mirrors.dart';
 /// which means that the behavior of the instance can be expressed by
 /// generating code in the class.  Generalizations of this setup may
 /// be supported in the future if compelling use cases come up.
-class Reflectable {
+class Reflectable extends ReflectableBase {
   // Intended to near-uniquely identify this class in target programs.
   static const thisClassName = reflectable_class_constants.name;
   static const thisClassId = reflectable_class_constants.id;
 
-  /// Specifies limits on the support for reflective operations on instances
-  /// of classes having an instance of this Reflectable as metadata.
-  final List<ReflectCapability> capabilities;
+  // Fields holding capabilities; we use discrete fields rather than a list
+  // of fields because this allows us to use a syntax similar to a varargs
+  // invocation as the superinitializer (omitting `<ReflectCapability>[]` and
+  // directly giving the elements of that list as constructor arguments).
+  // This will only work up to a fixed number of arguments (we have chosen
+  // to support at most 10 arguments), and with a larger number of arguments
+  // the fromList constructor must be used.
 
-  /// Const constructor, to enable usage as metadata.
-  const Reflectable(this.capabilities);
+  /// Const constructor, to enable usage as metadata, allowing for varargs
+  /// style invocation with up to ten arguments.
+  const Reflectable([ReflectCapability cap0 = null,
+      ReflectCapability cap1 = null, ReflectCapability cap2 = null,
+      ReflectCapability cap3 = null, ReflectCapability cap4 = null,
+      ReflectCapability cap5 = null, ReflectCapability cap6 = null,
+      ReflectCapability cap7 = null, ReflectCapability cap8 = null,
+      ReflectCapability cap9 = null])
+      : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
+
+  const Reflectable.fromList(List<ReflectCapability> capabilities)
+      : super.fromList(capabilities);
 
   // dart:mirrors
   // -------------------------------------------------------
@@ -83,24 +93,15 @@ class Reflectable {
   InstanceMirror reflect(Object reflectee) =>
       implementation.reflect(reflectee, this);
 
-  /// Returns a mirror of the given class [type].  If [type] is a
-  /// parameterized type, i.e., an application of a generic class
-  /// to a list of actual type arguments, then the returned value
-  /// mirrors the original class declaration, i.e., the generic
-  /// class which has declared type variables, but has not received
-  /// any type arguments.  Other types than classes are (not yet)
-  /// supported.
-  ClassMirror reflectClass(Type type) =>
-      implementation.reflectClass(type, this);
-
-  /// Returns a mirror of the given type [type].  The returned value
-  /// will also mirror the type if it is a parameterized type, i.e.,
-  /// a generic class which has been applied to a list of actual
-  /// type arguments.  In that case it has no declared type variables,
-  /// but it has a list of actual type arguments.  Other types than
-  /// classes are (not yet) supported.
-  ClassMirror reflectType(Type type) =>
-      _unsupported();
+  /// Returns a mirror of the given type [type].  In the case where
+  /// [type] is a parameterized type, i.e., a generic class which has
+  /// been applied to a list of actual type arguments, the returned mirror
+  /// will have no declared type variables, but it has a list of actual
+  /// type arguments. If a mirror of the generic class as such is needed,
+  /// it can be obtained from `originalDeclaration`. That mirror will
+  /// have no actual type arguments, but it will have declared type
+  /// variables. Other types than classes are not (yet) supported.
+  ClassMirror reflectType(Type type) => implementation.reflectType(type, this);
 
   // MirrorSystem
   // -------------------------------------------------------

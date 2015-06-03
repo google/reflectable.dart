@@ -13,7 +13,7 @@ import "package:unittest/unittest.dart";
 Map<String, String> fileMap = {"a|main.dart": """
 library main;
 import "lib.dart" as lib;
-@lib.MyReflectable
+@lib.MyReflectable()
 class C {}
 main() {
   new C();
@@ -22,13 +22,12 @@ main() {
 library lib;
 import "package:reflectable/reflectable.dart";
 class MyReflectable extends Reflectable {
-  MyReflectable() : super([]);
+  const MyReflectable();
 }
 """};
 
 main() async {
-  TestAggregateTransform transform =
-  new TestAggregateTransform(fileMap);
+  TestAggregateTransform transform = new TestAggregateTransform(fileMap);
   await new TransformerImplementation().apply(transform, ["main.dart"]);
   Map<String, String> result = await transform.outputMap();
   expect(result.length, 2);

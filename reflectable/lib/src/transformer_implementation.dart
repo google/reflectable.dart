@@ -10,7 +10,6 @@ import 'dart:io';
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/utilities_dart.dart';
 import 'package:barback/barback.dart';
 import 'package:code_transformers/resolver.dart';
 import "reflectable_class_constants.dart" as reflectable_class_constants;
@@ -408,11 +407,11 @@ class TransformerImplementation {
   String _classElementName(ClassDomain classDomain) =>
       classDomain.classElement.node.name.name.toString();
 
-  // _staticClassNamePrefixMap, _antiNameClashSaltInitValue, _antiNameClashSalt:
-  // Auxiliary state used to generate names which are unlikely to clash with
-  // existing names and which cannot possibly clash with each other, because they
-  // contain the number [_antiNameClashSalt], which is updated each time it is
-  // used.
+  // _staticClassNamePrefixMap, _antiNameClashSaltInitValue,
+  // _antiNameClashSalt: Auxiliary state used to generate names which are
+  // unlikely to clash with existing names and which cannot possibly clash
+  // with each other, because they contain the number [_antiNameClashSalt],
+  // which is updated each time it is used.
   final Map<ClassElement, String> _staticClassNamePrefixMap =
       <ClassElement, String>{};
 
@@ -602,7 +601,7 @@ class TransformerImplementation {
   /// implement the abstract methods in Reflectable from the library
   /// `static_reflectable.dart`.  Use [sourceManager] to perform the
   /// actual source code modification.  The [annotatedClasses] is the
-  /// set of Reflectable annotated class whose metadata includes an
+  /// set of reflector-annotated class whose metadata includes an
   /// instance of the reflector, i.e., the set of classes whose
   /// instances [reflector] must provide reflection for.
   void _transformReflectorClass(ReflectorDomain reflector,
@@ -639,7 +638,8 @@ class TransformerImplementation {
       reflectCases += reflectCaseOfClass(annotatedClass);
     });
     reflectCases += "    throw new "
-        "UnimplementedError(\"`reflect` on unexpected object '\$reflectee'\");\n";
+        "UnimplementedError"
+        "(\"`reflect` on unexpected object '\$reflectee'\");\n";
 
     // Add the `reflect` method to [metadataClass].
     String prefix = prefixElement == null ? "" : "${prefixElement.name}.";
@@ -726,9 +726,14 @@ class ${_staticClassMirrorName(classDomain)} extends ClassMirrorUnimpl {
     // how to interpret the meaning of a user-written capability class, so
     // users cannot write their own capability classes).
     if (dartType.element is! ClassElement) {
-      logger.error(errors.applyTemplate(errors.SUPER_ARGUMENT_NON_CLASS, {
-        "type": dartType.displayName
-      }), span: resolver.getSourceSpan(dartType.element));
+      if (dartType.element.source != null) {
+        logger.error(errors.applyTemplate(
+            errors.SUPER_ARGUMENT_NON_CLASS, {"type": dartType.displayName}),
+                     span: resolver.getSourceSpan(dartType.element));
+      } else {
+        logger.error(errors.applyTemplate(
+            errors.SUPER_ARGUMENT_NON_CLASS, {"type": dartType.displayName}));
+      }
     }
     ClassElement classElement = dartType.element;
     if (classElement.library != capabilityLibrary) {
@@ -760,7 +765,7 @@ class ${_staticClassMirrorName(classDomain)} extends ClassMirrorUnimpl {
   Capabilities _capabilitiesOf(
       LibraryElement capabilityLibrary, ClassElement reflector) {
     List<ConstructorElement> constructors = reflector.constructors;
-    // The `super()` arguments must be unique, so there must be 1 constructor.
+    // The superinitializer must be unique, so there must be 1 constructor.
     assert(constructors.length == 1);
     ConstructorElement constructorElement = constructors[0];
     // It can only be a const constructor, because this class has been
@@ -768,26 +773,45 @@ class ${_staticClassMirrorName(classDomain)} extends ClassMirrorUnimpl {
     // It must also be a default constructor.
     assert(constructorElement.isConst);
     // TODO(eernst): Ensure that some other location in this transformer
-    // checks that the metadataClass constructor is indeed a default
+    // checks that the reflector class constructor is indeed a default
     // constructor, such that this can be a mere assertion rather than
     // a user-oriented error report.
     assert(constructorElement.isDefaultConstructor);
     NodeList<ConstructorInitializer> initializers =
         constructorElement.node.initializers;
-    // We insist that the initializer is exactly one element, a `super(<_>[])`.
-    // TODO(eernst): Ensure that this has already been checked and met with a
-    // user-oriented error report.
+
+    if (initializers.length == 0) {
+      // Degenerate case: Without initializers, we will obtain a reflector
+      // without any capabilities, which is not useful in practice. We do
+      // have this degenerate case in tests "just because we can", and
+      // there is no technical reason to prohibit it, so we will handle
+      // it here.
+      return new Capabilities(<ReflectCapability>[]);
+    }
+    // TODO(eernst): Ensure again that this can be a mere assertion.
     assert(initializers.length == 1);
+
+    // Main case: the initializer is exactly one element. We must
+    // handle two cases: `super(..)` and `super.fromList(<_>[..])`.
     SuperConstructorInvocation superInvocation = initializers[0];
-    assert(superInvocation.constructorName == null);
+
+    ReflectCapability capabilityOfExpression(Expression expression) {
+      return _capabilityOfExpression(capabilityLibrary, expression);
+    }
+
+    if (superInvocation.constructorName == null) {
+      // Subcase: `super(..)` where 0..k arguments are accepted for some
+      // k that we need not worry about here.
+      NodeList<Expression> arguments = superInvocation.argumentList.arguments;
+      return new Capabilities(arguments.map(capabilityOfExpression).toList());
+    }
+    assert(superInvocation.constructorName == "fromList");
+
+    // Subcase: `super.fromList(const <..>[..])`.
     NodeList<Expression> arguments = superInvocation.argumentList.arguments;
     assert(arguments.length == 1);
     ListLiteral listLiteral = arguments[0];
     NodeList<Expression> expressions = listLiteral.elements;
-
-    ReflectCapability capabilityOfExpression(Expression expression) =>
-        _capabilityOfExpression(capabilityLibrary, expression);
-
     return new Capabilities(expressions.map(capabilityOfExpression).toList());
   }
 
@@ -795,7 +819,6 @@ class ${_staticClassMirrorName(classDomain)} extends ClassMirrorUnimpl {
   /// method of the static `InstanceMirror` class corresponding to
   /// the given [classElement], bounded by the permissions given
   /// in [capabilities].
-
   String _staticInstanceMirrorInvokeCode(ClassDomain classDomain) {
     String invokeCode = """
   Object invoke(String memberName,
@@ -818,10 +841,10 @@ class ${_staticClassMirrorName(classDomain)} extends ClassMirrorUnimpl {
     // Handle the cases where permission is given even though there is
     // no corresponding method. One case is where _all_ methods can be
     // invoked. Another case is when the user has specified a name
-    // `"foo"` and a Reflectable metadata value @reflector allowing
-    // for invocation of `foo`, and then attached @reflector to a
-    // class that does not define nor inherit any method `foo`.  In these
-    // cases we invoke `noSuchMethod`.
+    // `"foo"` and a reflector `@reflector` allowing for invocation
+    // of `foo`, and then attached `@reflector` to a class that does
+    // not define nor inherit any method `foo`.  In these cases we
+    // invoke `noSuchMethod`.
     // We have the capability to invoke _all_ methods, and since the
     // requested one does not fit, it should give rise to an invocation
     // of `noSuchMethod`.
@@ -876,8 +899,8 @@ $rest}
   /// assumed to be the contents of the file associated with the
   /// [targetLibrary], which is the library currently being transformed.
   /// [reflectableClasses] models the define/use relation where
-  /// reflector classes declare material for use as metadata
-  /// and annotated classes use that material.
+  /// reflector classes declare material for use as metadata,
+  /// and reflector-annotated classes use that material.
   /// [libraryToAssetMap] is used in the generation of `import` directives
   /// that enable reflector classes to see static mirror
   /// classes that it must be able to `reflect` which are declared in
@@ -929,7 +952,7 @@ $rest}
     // If needed, add an import such that generated classes can see their
     // superclasses.  Note that we make no attempt at following the style guide,
     // e.g., by keeping the imports sorted.  Also add imports such that each
-    // reflector class can see all its classes annotated with it
+    // reflector class can see all the classes annotated with it
     // (such that the implementation of `reflect` etc. will work).
     String newImport = generatedSource.length == 0
         ? ""
@@ -1021,8 +1044,8 @@ $rest}
 
         if (reflectablesInLibary.isNotEmpty) {
           if (transformedViaEntryPoint.containsKey(asset.id)) {
-            // It is not safe to transform a library that contains a reflector
-            // relative to multiple entry points, because each
+            // It is not safe to transform a library that contains a
+            // reflector relative to multiple entry points, because each
             // entry point defines a set of libraries which amounts to the
             // complete program, and different sets of libraries correspond to
             // potentially different sets of static mirror classes as well as

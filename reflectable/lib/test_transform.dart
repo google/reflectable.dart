@@ -57,7 +57,8 @@ class TestAggregateTransform implements AggregateTransform {
 
   /// Gets the asset for an input [id].
   ///
-  /// If an input with [id] cannot be found, throws an [AssetNotFoundException].
+  /// If an input with [id] cannot be found, it will throw an
+  /// [AssetNotFoundException].
   Future<Asset> getInput(AssetId id) async {
     Asset content = assets[id];
     if (content != null) return content;

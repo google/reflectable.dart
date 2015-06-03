@@ -7,10 +7,8 @@ library test_reflectable.serialize;
 import "package:reflectable/reflectable.dart";
 
 class Serializable extends Reflectable {
-  const Serializable() : super(const [
-        invokeInstanceMembersCapability,
-        const InvokeConstructorCapability("")
-      ]);
+  const Serializable() : super(invokeInstanceMembersCapability,
+      const InvokeConstructorCapability(""));
 }
 
 /// Serializes instances of classes marked with a `Serializable`

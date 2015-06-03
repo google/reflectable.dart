@@ -29,8 +29,8 @@ A simple usage example:
 import 'package:reflectable/reflectable.dart';
 
 class MyReflectable extends Reflectable {
-  const MyReflectable():
-      super(/* ..constrain, but do not prevent invoke on #foo.. */);
+  const MyReflectable()
+      : super(/* ..constrain, but do not prevent invoke on #foo.. */);
 }
 
 const myReflectable = const MyReflectable();

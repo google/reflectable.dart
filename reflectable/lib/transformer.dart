@@ -5,7 +5,6 @@
 library reflectable.transformer;
 
 import 'dart:async';
-import 'package:analyzer/src/generated/element.dart';
 import 'package:barback/barback.dart';
 import 'package:logging/logging.dart';
 import 'src/transformer_implementation.dart' as implementation;
@@ -40,7 +39,8 @@ class ReflectableTransformer extends AggregateTransformer {
       } else if (entryPoint is List) {
         entryPoint.forEach((value) => addToEntryPoints(value));
       } else {
-        _reportEarlyError("Encountered non-String $value in 'entry_points'.");
+        _reportEarlyError(
+            "Encountered non-String $entryPoint in 'entry_points'.");
       }
     }
 

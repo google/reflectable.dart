@@ -11,7 +11,7 @@ library reflectable.test.to_be_transformed.three_files_meta;
 import 'package:reflectable/reflectable.dart';
 
 class MyReflectable extends Reflectable {
-  const MyReflectable(): super(const <ReflectCapability>[]);
+  const MyReflectable() : super();
 }
 
 const myReflectable = const MyReflectable();

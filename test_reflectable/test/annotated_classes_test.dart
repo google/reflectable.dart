@@ -6,11 +6,11 @@ import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
 
 class MyReflectable extends Reflectable {
-  const MyReflectable() : super(const []);
+  const MyReflectable();
 }
 
 class MyReflectable2 extends Reflectable {
-  const MyReflectable2() : super(const []);
+  const MyReflectable2();
 }
 
 @MyReflectable()

@@ -1,0 +1,16 @@
+#!/bin/bash --norc
+
+# Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+# source code is governed by a BSD-style license that can be found in
+# the LICENSE file.
+
+# A trivial script which is only used to capture the common structure
+# of a few make tasks. Expected arguments: $1 is the task that is being
+# performed (such as 'Testing'); $2 is the directory where the make
+# subtask should run; $3 is the make goal.
+
+echo "-------------------- $1 in $2"
+pushd $2
+make -s $3
+popd
+
