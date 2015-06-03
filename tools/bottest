@@ -15,77 +15,76 @@
 # software (existence or location) which is not available on the package
 # bot.
 
-unset preserveOutput
-
-if [ "$#" == "1" ]; then
-  case $1 in
-    (--preserve-output) preserveOutput="true";;
-    (--help) echo "Usage: $0 [--help] [--preserve-output]"; exit 0;;
-    (*) echo "$0: Argument '$1' not understood. Exiting."; exit -1;;
-  esac
-fi
-
-if [ "$#" -gt "1" ]; then
-  echo "$0: Received $# options/arguments, expected at most one."
-  exit -1
-fi
-
-if [ -z "$BOTTEST_DART_REPO" -o -z "$BOTTEST_LOCAL_PKG" -o -z "$BOTTEST_PKG" ]
-then
-  echo "$0: Please provide a value for the following environment variables:"
-  echo "  BOTTEST_DART_REPO: path to location where tests are performed."
-  echo "  BOTTEST_LOCAL_PKG: path to root of local copy of package."
-  echo "  BOTTEST_PKG: name of package for which the tests are performed."
-  exit -1
-fi
-
-# Functions.
-
 show_section () {
   echo "---------------------------------------- $1"
 }
 
-# Setup.
+function setup {
+  show_section cleanup
+  echo Removing $BOTTEST_DART_REPO
+  rm -rf $BOTTEST_DART_REPO
 
-show_section setup
+  show_section setup
+  mkdir -p $BOTTEST_DART_REPO
+  cd $BOTTEST_DART_REPO
+  gclient config https://github.com/dart-lang/package-bots/trunk
+  gclient sync
 
-rm -rf $BOTTEST_DART_REPO
-mkdir $BOTTEST_DART_REPO
-pushd $BOTTEST_DART_REPO
-gclient config https://github.com/dart-lang/package-bots/trunk
-gclient sync
+  cd $BOTTEST_DART_REPO/dart/third_party
+  rm -rf package-bots
+  git clone https://github.com/dart-lang/package-bots.git
 
-cd $BOTTEST_DART_REPO/dart/third_party
-rm -rf package-bots
-git clone https://github.com/dart-lang/package-bots.git
+  mkdir pkg
+  cd pkg
+  ln -s $BOTTEST_LOCAL_PKG $BOTTEST_PKG
+}
 
-mkdir pkg
-cd pkg
-ln -s $BOTTEST_LOCAL_PKG $BOTTEST_PKG
+function run_annotated_steps {
+  show_section run
 
-# Run annotated steps.
+  tmpfile=$BOTTEST_DART_REPO/testlog.log
+  cd $BOTTEST_DART_REPO/dart
+  BUILDBOT_BUILDERNAME=packages-linux-$BOTTEST_PKG \
+    third_party/package-bots/annotated_steps.py |\
+    tee $tmpfile
+  grep '^=== [a-zA-Z0-9]' $tmpfile
+  echo Log is in $tmpfile
+}
 
-show_section run
+# Sets up the following
+# BOTTEST_DART_REPO: path to location where tests are performed.
+# BOTTEST_LOCAL_PKG: path to root of local copy of package.
+# BOTTEST_PKG: name of package for which the tests are performed.
+function set_variables {
+  # This script expects to be in tools/ in the package to be tested.
+  BOTTEST_LOCAL_PKG="$(realpath "$(dirname "${BASH_SOURCE[0]}")"/..)"
+  # The name of the package is what comes after the last '/'.
+  BOTTEST_PKG="${BOTTEST_LOCAL_PKG##*/}"
+  BOTTEST_DART_REPO="/tmp/bottest-$BOTTEST_PKG"
+  echo Testing BOTTEST_PKG at $BOTTEST_LOCAL_PKG
+}
 
-tmpfile=/tmp/$BOTTEST_PKG-$$.txt
-cd $BOTTEST_DART_REPO/dart
-BUILDBOT_BUILDERNAME=packages-linux-$BOTTEST_PKG \
-	third_party/package-bots/annotated_steps.py |\
-	tee $tmpfile
-grep '^=== [a-zA-Z0-9]' $tmpfile
+original_dir=$(pwd)
+# No matter how this script exits, go back do the original working directory.
+trap 'cd $original_dir' EXIT
 
-# Clean up.
+set_variables
+while [ -n "$1" ]; do
+  case $1 in
+    (--use-existing-bottest) useExisting="true" ; shift ;;
+    (--help) echo "Usage: $0 [--help] [--use-existing-bottest]"; exit 0;;
+    (*) echo "$0: Argument '$1' not understood. Exiting."; exit -1;;
+  esac
+done
 
-show_section cleanup
-
-cd $BOTTEST_DART_REPO/dart
-cd third_party
-rm -rf package-bots
-cd pkg
-rm -rf $BOTTEST_PKG
-if [ "$preserveOutput" = "true" ]; then
-  echo less -S $tmpfile
+if [ -n "$useExisting" ]; then
+  if [ ! -d $BOTTEST_DART_REPO ]; then
+    echo "No existing bottest directory found at $BOTTEST_DART_REPO"
+    exit -1
+  fi
+  echo reusing the bottest directory at $BOTTEST_DART_REPO.
 else
-  rm -f $tmpfile
+  setup
 fi
-popd
+
+run_annotated_steps
