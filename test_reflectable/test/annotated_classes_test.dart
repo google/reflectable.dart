@@ -34,10 +34,12 @@ class F implements A {}
 class G {}
 
 main() {
-  expect(const MyReflectable().annotatedClasses
-          .map((ClassMirror classMirror) => classMirror.simpleName),
-      ["A", "B", "G"].toSet());
-  expect(const MyReflectable2().annotatedClasses
-          .map((ClassMirror classMirror) => classMirror.simpleName),
-      ["E", "F", "G"].toSet());
+  test("Annotated classes", () {
+    expect(const MyReflectable().annotatedClasses
+            .map((ClassMirror classMirror) => classMirror.simpleName),
+        ["A", "B", "G"].toSet());
+    expect(const MyReflectable2().annotatedClasses
+            .map((ClassMirror classMirror) => classMirror.simpleName),
+        ["E", "F", "G"].toSet());
+  });
 }

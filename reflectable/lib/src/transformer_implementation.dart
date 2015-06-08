@@ -7,6 +7,7 @@ library reflectable.src.transformer_implementation;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' show max;
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
@@ -36,6 +37,11 @@ class ReflectionWorld {
       return classDomain.classElement.library == library;
     });
   }
+
+  void computeNames(Namer namer) {
+    reflectors
+        .forEach((ReflectorDomain reflector) => reflector.computeNames(namer));
+  }
 }
 
 /// Information about the program parts that can be reflected by a given
@@ -49,6 +55,11 @@ class ReflectorDomain {
   final Set<LibraryElement> missingImports = new Set<LibraryElement>();
 
   ReflectorDomain(this.reflector, this.annotatedClasses, this.capabilities);
+
+  void computeNames(Namer namer) {
+    annotatedClasses
+        .forEach((ClassDomain classDomain) => classDomain.computeNames(namer));
+  }
 }
 
 /// Information about reflectability for a given class.
@@ -56,8 +67,17 @@ class ClassDomain {
   final ClassElement classElement;
   Iterable<MethodElement> invokableMethods;
   ReflectorDomain reflectorDomain;
+  String staticClassMirrorName;
+  String staticInstanceMirrorName;
+  String get baseName => classElement.name;
 
   ClassDomain(this.classElement, this.invokableMethods, this.reflectorDomain);
+
+  void computeNames(Namer namer) {
+    staticClassMirrorName = namer.freshName("Static_${baseName}_ClassMirror");
+    staticInstanceMirrorName =
+        namer.freshName("Static_${baseName}_InstanceMirror");
+  }
 }
 
 /// A wrapper around a list of Capabilities.
@@ -110,6 +130,39 @@ class Capabilities {
   }
 }
 
+/// Provides support for generating fresh names.
+class Namer {
+  // Maps a name without final digits to the highest number it has been seen
+  // followed by (0 if it was only seen without following digits.
+  final Map<String, int> nameCounts = new Map<String, int>();
+
+  final RegExp splitFinalDigits = new RegExp(r'(.*?)(\d*)$');
+
+  /// Registers [name] such that any results from [freshName] will not collide
+  /// with it.
+  void registerName(String name) {
+    Match match = splitFinalDigits.matchAsPrefix(name);
+    String base = match.group(1);
+    // Prefixing with '0' makes the empty string yield 0 instead of throwing.
+    int numberSuffix = int.parse("0${match.group(2)}");
+    int baseCount = nameCounts[base];
+    nameCounts[base] = max(baseCount == null ? 0 : baseCount, numberSuffix);
+  }
+
+  String freshName(String proposedName) {
+    Match match = splitFinalDigits.matchAsPrefix(proposedName);
+    String base = match.group(1);
+    // Prefixing with '0' makes the empty string yield 0 instead of throwing.
+    int numberSuffix = int.parse("0${match.group(2)}");
+    if (nameCounts[base] == null) {
+      nameCounts[base] = numberSuffix;
+      return proposedName;
+    }
+    nameCounts[base]++;
+    return "$base${nameCounts[base]}";
+  }
+}
+
 // TODO(eernst): Keep in mind, with reference to
 // http://dartbug.com/21654 comment #5, that it would be very valuable
 // if this transformation can interact smoothly with incremental
@@ -129,8 +182,7 @@ class TransformerImplementation {
   TransformLogger logger;
   Resolver resolver;
 
-  static final int _antiNameClashSaltInitValue = 9238478278;
-  int _antiNameClashSalt = _antiNameClashSaltInitValue;
+  Namer namer = new Namer();
 
   /// Checks whether the given [type] from the target program is "our"
   /// class [Reflectable] by looking up the static field
@@ -318,7 +370,26 @@ class TransformerImplementation {
         resolver.getLibraryByName("reflectable.capability");
     for (LibraryElement library in resolver.libraries) {
       for (CompilationUnitElement unit in library.units) {
+        for (FunctionElement function in unit.functions) {
+          namer.registerName(function.name);
+        }
+        for (PropertyAccessorElement accessor in unit.accessors) {
+          namer.registerName(accessor.name);
+        }
+        for (TopLevelVariableElement variable in unit.topLevelVariables) {
+          namer.registerName(variable.name);
+        }
+        for (TopLevelVariableElement variable in unit.topLevelVariables) {
+          namer.registerName(variable.name);
+        }
+        for (ClassElement enumClass in unit.enums) {
+          namer.registerName(enumClass.name);
+        }
+        for (ClassElement enumClass in unit.enums) {
+          namer.registerName(enumClass.name);
+        }
         for (ClassElement type in unit.types) {
+          namer.registerName(type.name);
           for (ElementAnnotation metadatum in type.metadata) {
             ClassElement reflector =
                 _getReflectableAnnotation(metadatum, focusClass);
@@ -340,6 +411,7 @@ class TransformerImplementation {
     domains.values.forEach(_collectMissingImports);
 
     world.reflectors.addAll(domains.values.toList());
+    world.computeNames(namer);
     return world;
   }
 
@@ -406,57 +478,6 @@ class TransformerImplementation {
   /// clashes must be taken into account when using the return value.
   String _classElementName(ClassDomain classDomain) =>
       classDomain.classElement.node.name.name.toString();
-
-  // _staticClassNamePrefixMap, _antiNameClashSaltInitValue,
-  // _antiNameClashSalt: Auxiliary state used to generate names which are
-  // unlikely to clash with existing names and which cannot possibly clash
-  // with each other, because they contain the number [_antiNameClashSalt],
-  // which is updated each time it is used.
-  final Map<ClassElement, String> _staticClassNamePrefixMap =
-      <ClassElement, String>{};
-
-  /// Reset [_antiNameClashSalt] to its initial value, such that
-  /// transformation of a given program can be deterministic even though
-  /// the order of transformation of a set of programs may differ from
-  /// between multiple runs of `pub build`.  Also reset caching data
-  /// structures depending on [_antiNameClashSalt]:
-  /// [_staticClassNamePrefixMap].
-  void resetAntiNameClashSalt() {
-    _antiNameClashSalt = _antiNameClashSaltInitValue;
-    _staticClassNamePrefixMap.clear();
-  }
-
-  /// Returns the shared prefix of names of generated entities
-  /// associated with [targetClass]. Uses [_antiNameClashSalt]
-  /// to prevent name clashes among generated names, and to make
-  /// name clashes with user-defined names unlikely.
-  String _staticNamePrefix(ClassDomain targetClass) {
-    String namePrefix = _staticClassNamePrefixMap[targetClass];
-    if (namePrefix == null) {
-      String nameOfTargetClass = _classElementName(targetClass);
-      // TODO(eernst): Use the following version "with Salt" when we have
-      // switched to the version of `checktransforms_test` that only checks
-      // a handful of the very simplest transformations:
-      //   namePrefix = "Static_${nameOfTargetClass}_${_antiNameClashSalt++}";
-      // Currently we use the following version of this statement in order to
-      // avoid the salt, because it breaks `checktransforms_test`:
-      namePrefix = "Static_${nameOfTargetClass}";
-      _staticClassNamePrefixMap[targetClass.classElement] = namePrefix;
-    }
-    return namePrefix;
-  }
-
-  /// Returns the name of the statically generated subclass of ClassMirror
-  /// corresponding to the given [targetClass]. Uses [_antiNameClashSalt]
-  /// to make name clashes unlikely.
-  String _staticClassMirrorName(ClassDomain targetClass) =>
-      "${_staticNamePrefix(targetClass)}_ClassMirror";
-
-  // Returns the name of the statically generated subclass of InstanceMirror
-  // corresponding to the given [targetClass]. Uses [_antiNameClashSalt]
-  /// to make name clashes unlikely.
-  String _staticInstanceMirrorName(ClassDomain targetClass) =>
-      "${_staticNamePrefix(targetClass)}_InstanceMirror";
 
   static const String generatedComment = "// Generated";
 
@@ -624,7 +645,7 @@ class TransformerImplementation {
 
     String reflectCaseOfClass(ClassDomain classDomain) => """
     if (reflectee.runtimeType == ${_classElementName(classDomain)}) {
-      return new ${_staticInstanceMirrorName(classDomain)}(reflectee);
+      return new ${classDomain.staticInstanceMirrorName}(reflectee);
     }
 """;
 
@@ -641,15 +662,19 @@ class TransformerImplementation {
         "UnimplementedError"
         "(\"`reflect` on unexpected object '\$reflectee'\");\n";
 
-    // Add the `reflect` method to [metadataClass].
     String prefix = prefixElement == null ? "" : "${prefixElement.name}.";
     insert("  ${prefix}InstanceMirror "
         "reflect(Object reflectee) {\n$reflectCases  }");
     // Add failure case to [reflectCases]: No matching classes, so the
     // user is asking for a kind of reflection that was not requested,
     // which is a runtime error.
-    // TODO(eernst): Should use the Reflectable specific exception that Sigurd
-    // introduced in a not-yet-landed CL.
+    // TODO(eernst, sigurdm): throw NoSuchCapability if no match was found.
+    List<String> annotatedClassesStrings = reflector.annotatedClasses
+        .map((ClassDomain x) => "new ${x.staticClassMirrorName}()").toList();
+    insert("""
+  Iterable<${prefix}ClassMirror> get annotatedClasses {
+    return [${annotatedClassesStrings.join(", ")}];
+  }""");
   }
 
   /// Returns the source code for the reflection free subclass of
@@ -657,7 +682,8 @@ class TransformerImplementation {
   /// is the class modeled by [classElement].
   String _staticClassMirrorCode(ClassDomain classDomain) {
     return """
-class ${_staticClassMirrorName(classDomain)} extends ClassMirrorUnimpl {
+class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
+  final String simpleName = "${classDomain.classElement.name}";
 }
 """;
   }
@@ -888,9 +914,9 @@ class ${_staticClassMirrorName(classDomain)} extends ClassMirrorUnimpl {
     rest += _staticInstanceMirrorInvokeCode(classDomain);
     // TODO(eernst): add code for other mirror methods than `invoke`.
     return """
-class ${_staticInstanceMirrorName(classDomain)} extends InstanceMirrorUnimpl {
+class ${classDomain.staticInstanceMirrorName} extends InstanceMirrorUnimpl {
   final ${_classElementName(classDomain)} reflectee;
-  ${_staticInstanceMirrorName(classDomain)}(this.reflectee);
+  ${classDomain.staticInstanceMirrorName}(this.reflectee);
 $rest}
 """;
   }
@@ -979,6 +1005,10 @@ $rest}
         "$generatedSource";
   }
 
+  resetUsedNames() {
+    namer = new Namer();
+  }
+
   /// Performs the transformation which eliminates all imports of
   /// `package:reflectable/reflectable.dart` and instead provides a set of
   /// statically generated mirror classes.
@@ -1010,7 +1040,7 @@ $rest}
       }
       Transform wrappedTransform =
           new AggregateTransformWrapper(aggregateTransform, entryPointAsset);
-      resetAntiNameClashSalt(); // Each entry point has a closed world.
+      resetUsedNames(); // Each entry point has a closed world.
 
       resolver = await resolvers.get(wrappedTransform);
       LibraryElement reflectableLibrary =
