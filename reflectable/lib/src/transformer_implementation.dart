@@ -13,6 +13,7 @@ import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
 import 'package:barback/barback.dart';
 import 'package:code_transformers/resolver.dart';
+import 'encoding_constants.dart' as constants;
 import "reflectable_class_constants.dart" as reflectable_class_constants;
 import 'source_manager.dart';
 import 'transformer_errors.dart' as errors;
@@ -65,13 +66,67 @@ class ReflectorDomain {
 /// Information about reflectability for a given class.
 class ClassDomain {
   final ClassElement classElement;
-  Iterable<MethodElement> invokableMethods;
+  final Iterable<MethodElement> invokableMethods;
+  final Iterable<MethodElement> declaredMethods;
+
   ReflectorDomain reflectorDomain;
   String staticClassMirrorName;
   String staticInstanceMirrorName;
   String get baseName => classElement.name;
 
-  ClassDomain(this.classElement, this.invokableMethods, this.reflectorDomain);
+  ClassDomain(this.classElement, this.invokableMethods, this.declaredMethods,
+      this.reflectorDomain);
+
+  Iterable<ExecutableElement> get declarations {
+    // TODO(sigurdm): Include constructors.
+    // TODO(sigurdm): Include fields.
+    // TODO(sigurdm): Include getters and setters.
+    // TODO(sigurdm): Include type variables (if we decide to keep them).
+    return [declaredMethods].expand((x) => x);
+  }
+
+  /// Returns an integer encoding the kind and attributes of the given
+  /// method/constructor/getter/setter.
+  int _declarationDescriptor(ExecutableElement element) {
+    int result;
+    if (element is PropertyAccessorElement) {
+      result = element.isGetter ? constants.getter : constants.setter;
+    } else if (element is ConstructorElement) {
+      if (element.isFactory) {
+        result = constants.factoryConstructor;
+      } else if (element.redirectedConstructor != null) {
+        result = constants.redirectingConstructor;
+      } else {
+        result = constants.generativeConstructor;
+      }
+      if (element.isConst) {
+        result += constants.constAttribute;
+      }
+    } else {
+      result = constants.method;
+    }
+    if (element.isPrivate) {
+      result += constants.privateAttribute;
+    }
+    if (element.isAbstract) {
+      result += constants.abstractAttribute;
+    }
+    if (element.isStatic) {
+      result += constants.staticAttribute;
+    }
+    return result;
+  }
+
+  /// Returns a String with the textual representation of the declarations-map.
+  String get declarationsString {
+    Iterable<String> declarationParts = declarations.map(
+        (ExecutableElement instanceMember) {
+      return '"${instanceMember.name}": '
+          'new MethodMirrorImpl("${instanceMember.name}", '
+          '${_declarationDescriptor(instanceMember)}, this)';
+    });
+    return "{${declarationParts.join(", ")}}";
+  }
 
   void computeNames(Namer namer) {
     staticClassMirrorName = namer.freshName("Static_${baseName}_ClassMirror");
@@ -338,6 +393,18 @@ class TransformerImplementation {
     return result;
   }
 
+  Iterable<MethodElement> declaredMethods(
+      ClassElement classElement, Capabilities capabilities) {
+    return classElement.methods.where((MethodElement method) {
+      if (method.isStatic) {
+        // TODO(sigurdm): Ask capability about support.
+        return true;
+      } else {
+        return capabilities.supportsInstanceInvoke(method.name);
+      }
+    });
+  }
+
   Iterable<MethodElement> invocableInstanceMethods(
       ClassElement classElement, Capabilities capabilities) {
     return allMethods(classElement).where((MethodElement method) {
@@ -402,8 +469,10 @@ class TransformerImplementation {
             });
             List<MethodElement> instanceMethods =
                 invocableInstanceMethods(type, domain.capabilities).toList();
-            domain.annotatedClasses
-                .add(new ClassDomain(type, instanceMethods, domain));
+            List<MethodElement> declaredMethodsOfClass =
+                declaredMethods(type, domain.capabilities).toList();
+            domain.annotatedClasses.add(new ClassDomain(
+                type, instanceMethods, declaredMethodsOfClass, domain));
           }
         }
       }
@@ -674,6 +743,8 @@ class TransformerImplementation {
         .toList();
 
     List<String> reflectTypeCases = [];
+    // TODO(eernst, sigurdm): This is a linear search. Might want to make
+    // smarter lookup if benchmarks require it.
     for (ClassDomain classDomain in reflector.annotatedClasses) {
       reflectTypeCases.add("if (type == ${classDomain.classElement.name}) "
           "return new ${classDomain.staticClassMirrorName}();");
@@ -699,9 +770,19 @@ class TransformerImplementation {
   /// [ClassMirror] which is specialized for a `reflectedType` which
   /// is the class modeled by [classElement].
   String _staticClassMirrorCode(ClassDomain classDomain) {
+    String declarationsString = classDomain.declarationsString;
     return """
 class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
   final String simpleName = "${classDomain.classElement.name}";
+
+  Map<String, MethodMirror> _declarationsCache;
+
+  Map<String, MethodMirror> get declarations {
+    if (_declarationsCache == null) {
+      _declarationsCache = new UnmodifiableMapView($declarationsString);
+    }
+    return _declarationsCache;
+  }
 }
 """;
   }
@@ -868,13 +949,13 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
     for (MethodElement methodElement in classDomain.invokableMethods) {
       String methodName = methodElement.name;
       methodCases.add("if (memberName == '$methodName') {"
-                      "method = reflectee.$methodName; }");
+          "method = reflectee.$methodName; }");
     }
-      // TODO(eernst, sigurdm): Create an instance of [Invocation] in user code.
-      methodCases.add("if (instanceMethodFilter.hasMatch(memberName)) {"
-      "throw new UnimplementedError('Should call noSuchMethod'); }");
-      methodCases.add("{ throw new NoSuchInvokeCapabilityError("
-          "reflectee, memberName, positionalArguments, namedArguments); }");
+    // TODO(eernst, sigurdm): Create an instance of [Invocation] in user code.
+    methodCases.add("if (instanceMethodFilter.hasMatch(memberName)) {"
+        "throw new UnimplementedError('Should call noSuchMethod'); }");
+    methodCases.add("{ throw new NoSuchInvokeCapabilityError("
+        "reflectee, memberName, positionalArguments, namedArguments); }");
     // Handle the cases where permission is given even though there is
     // no corresponding method. One case is where _all_ methods can be
     // invoked. Another case is when the user has specified a name

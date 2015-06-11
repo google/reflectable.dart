@@ -3,8 +3,10 @@
 // the LICENSE file.
 
 import '../mirrors.dart';
-
+import 'encoding_constants.dart' as constants;
+export 'dart:collection' show UnmodifiableMapView;
 export '../capability.dart';
+export '../static_reflectable.dart';
 
 // Mirror classes with default implementations of all methods, to be used as
 // superclasses of transformer generated static mirror classes.  They serve to
@@ -158,6 +160,92 @@ abstract class MethodMirrorUnimpl extends DeclarationMirrorUnimpl
   bool get isFactoryConstructor => _unsupported();
   bool operator ==(other) => _unsupported();
   int get hashCode => _unsupported();
+}
+
+class MethodMirrorImpl implements MethodMirror {
+  final int descriptor;
+  final String name;
+  @override
+  final DeclarationMirror owner;
+
+  const MethodMirrorImpl(this.name, this.descriptor, this.owner);
+
+  int get kind => constants.kindFromEncoding(descriptor);
+
+  @override
+  String get constructorName => name;
+
+  @override
+  bool get isAbstract => 0 != descriptor & constants.abstractAttribute;
+
+  @override
+  bool get isConstConstructor => 0 != descriptor & constants.constAttribute;
+
+  @override
+  bool get isConstructor => isGenerativeConstructor ||
+      isFactoryConstructor ||
+      isRedirectingConstructor;
+
+  @override
+  bool get isFactoryConstructor => kind == constants.factoryConstructor;
+
+  @override
+  bool get isGenerativeConstructor => kind == constants.generativeConstructor;
+
+  @override
+  bool get isGetter => kind == constants.getter;
+
+  @override
+  bool get isOperator => isRegularMethod &&
+      ["+", "-", "*", "/", "[", "<", ">", "=", "~", "%"].contains(name[0]);
+
+  @override
+  bool get isPrivate => 0 != descriptor & constants.privateAttribute;
+
+  @override
+  bool get isRedirectingConstructor => kind == constants.redirectingConstructor;
+
+  @override
+  bool get isRegularMethod => kind == constants.method;
+
+  @override
+  bool get isSetter => kind == constants.setter;
+
+  @override
+  bool get isStatic => 0 != descriptor & constants.staticAttribute;
+
+  @override
+  bool get isSynthetic => 0 != descriptor & constants.syntheticAttribute;
+
+  @override
+  bool get isTopLevel => owner is LibraryMirror;
+
+  @override
+  SourceLocation get location =>
+      throw new UnsupportedError("Location not supported");
+
+  // TODO(sigurdm, eernst): implement metadata
+  @override
+  List<Object> get metadata => throw new UnimplementedError();
+
+  // TODO(sigurdm, eernst): implement parameters
+  @override
+  List<ParameterMirror> get parameters => throw new UnimplementedError();
+
+  @override
+  String get qualifiedName => "${owner.qualifiedName}.$name";
+
+  // TODO(sigurdm, eernst): implement returnType
+  @override
+  TypeMirror get returnType => throw new UnimplementedError();
+
+  @override
+  String get simpleName => isConstructor
+      ? (name == '' ? "$owner.simpleName" : "${owner.simpleName}.$name")
+      : name;
+
+  @override
+  String get source => null;
 }
 
 abstract class VariableMirrorUnimpl extends DeclarationMirrorUnimpl
