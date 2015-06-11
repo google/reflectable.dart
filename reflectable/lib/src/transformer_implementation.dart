@@ -119,8 +119,8 @@ class ClassDomain {
 
   /// Returns a String with the textual representation of the declarations-map.
   String get declarationsString {
-    Iterable<String> declarationParts = declarations.map(
-        (ExecutableElement instanceMember) {
+    Iterable<String> declarationParts = declarations
+        .map((ExecutableElement instanceMember) {
       return '"${instanceMember.name}": '
           'new MethodMirrorImpl("${instanceMember.name}", '
           '${_declarationDescriptor(instanceMember)}, this)';
@@ -142,46 +142,39 @@ class Capabilities {
   Capabilities(this.capabilities);
 
   instanceMethodsFilterRegexpString() {
-    if (capabilities.contains(invokeInstanceMembersCapability)) return ".*";
-    if (capabilities.contains(invokeMembersCapability)) return ".*";
+    if (capabilities.contains(instanceInvokeCapability)) return ".*";
+    if (capabilities.contains(invokingCapability)) return ".*";
     return capabilities.where((ReflectCapability capability) {
-      return capability is InvokeInstanceMemberCapability;
-    }).map((InvokeInstanceMemberCapability capability) {
-      return capability.name;
+      return capability is InstanceInvokeCapability;
+    }).map((InstanceInvokeCapability capability) {
+      return "(${capability.namePattern})";
     }).join('|');
   }
 
   bool supportsInstanceInvoke(String methodName) {
-    if (capabilities.contains(invokeInstanceMembersCapability)) return true;
-    if (capabilities.contains(invokeMembersCapability)) return true;
+    if (capabilities.contains(invokingCapability)) return true;
+    if (capabilities.contains(instanceInvokeCapability)) return true;
 
     bool handleMetadataCapability(ReflectCapability capability) {
-      if (capability is! InvokeMembersWithMetadataCapability) return false;
-      // TODO(eernst): Handle InvokeMembersWithMetadataCapability
+      if (capability is! MetadataQuantifiedCapability &&
+          capability is! GlobalQuantifyMetaCapability) {
+        return false;
+      }
+      // TODO(eernst): Handle MetadataQuantifiedCapability and
+      // GlobalQuantifyMetaCapability.
       throw new UnimplementedError();
     }
     if (capabilities.any(handleMetadataCapability)) return true;
 
-    bool handleMembersUpToSuperCapability(ReflectCapability capability) {
-      if (capability is InvokeInstanceMembersUpToSuperCapability) {
-        if (capability.superType == Object) return true;
-        // TODO(eernst): Handle InvokeInstanceMembersUpToSuperCapability up
-        // to something non-trivial.
-        throw new UnimplementedError();
+    bool handleInstanceInvokeCapability(ReflectCapability capability) {
+      if (capability is InstanceInvokeCapability) {
+        return new RegExp(capability.namePattern).firstMatch(methodName) !=
+            null;
       } else {
         return false;
       }
     }
-    if (capabilities.any(handleMembersUpToSuperCapability)) return true;
-
-    bool handleInstanceMemberCapability(ReflectCapability capability) {
-      if (capability is InvokeInstanceMemberCapability) {
-        return capability.name == methodName;
-      } else {
-        return false;
-      }
-    }
-    return capabilities.any(handleInstanceMemberCapability);
+    return capabilities.any(handleInstanceInvokeCapability);
   }
 }
 
@@ -867,19 +860,144 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
         "element": classElement
       }), span: resolver.getSourceSpan(classElement));
     }
+
+    void processInstanceCreationExpression(
+        InstanceCreationExpression expression, String expectedConstructorName,
+        ReflectCapability defaultCapability,
+        ReflectCapability factory(String arg)) {
+      // The [expression] came from a static evaluation of a const,
+      // could never be a non-const.
+      assert(expression.isConst);
+      // We do not invoke some other constructor (in that case
+      // [expression] would have had a different type).
+      assert(expression.constructorName == expectedConstructorName);
+      // There is only one constructor in that class, with one argument.
+      assert(expression.argumentList.length == 1);
+      Expression argument = expression.argumentList.arguments[0];
+      if (argument is SimpleStringLiteral) {
+        if (argument.value == "") return defaultCapability;
+        return factory(argument.value);
+      }
+      // TODO(eernst): Deny support for all other kinds of arguments, or
+      // implement some more cases.
+      throw new UnimplementedError("$expression not yet supported!");
+    }
+
     switch (classElement.name) {
-      case "_InvokeMembersCapability":
-        return invokeMembersCapability;
-      case "InvokeMembersWithMetadataCapability":
-        throw new UnimplementedError("$classElement not yet supported");
-      case "InvokeInstanceMembersUpToSuperCapability":
-        throw new UnimplementedError("$classElement not yet supported");
-      case "_InvokeStaticMembersCapability":
-        return invokeStaticMembersCapability;
-      case "InvokeInstanceMemberCapability":
-        throw new UnimplementedError("$classElement not yet supported");
-      case "InvokeStaticMemberCapability":
-        throw new UnimplementedError("$classElement not yet supported");
+      case "_NameCapability":
+        return nameCapability;
+      case "_ClassifyCapability":
+        return classifyCapability;
+      case "_MetadataCapability":
+        return metadataCapability;
+      case "_TypeRelationsCapability":
+        return typeRelationsCapability;
+      case "_OwnerCapability":
+        return ownerCapability;
+      case "_DeclarationsCapability":
+        return declarationsCapability;
+      case "_UriCapability":
+        return uriCapability;
+      case "_LibraryDependenciesCapability":
+        return libraryDependenciesCapability;
+
+      case "InstanceInvokeCapability":
+        if (evaluatedExpression is SimpleIdentifier &&
+            evaluatedExpression.name == "instanceInvokeCapability") {
+          return instanceInvokeCapability;
+        }
+        // In simple cases, the [evaluatedExpression] is directly an
+        // invocation of the constructor in this class.
+        if (evaluatedExpression is InstanceCreationExpression) {
+          return processInstanceCreationExpression(evaluatedExpression,
+              "InstanceInvokeCapability", instanceInvokeCapability,
+              (String arg) => new InstanceInvokeCapability(arg));
+        }
+        // TODO(eernst): other cases
+        throw new UnimplementedError("$expression not yet supported!");
+      case "InstanceInvokeMetaCapability":
+        // TODO(eernst)
+        throw new UnimplementedError("$classElement not yet supported!");
+      case "StaticInvokeCapability":
+        if (evaluatedExpression is SimpleIdentifier &&
+            evaluatedExpression.name == "staticInvokeCapability") {
+          return staticInvokeCapability;
+        }
+        // In simple cases, the [evaluatedExpression] is directly an
+        // invocation of the constructor in this class.
+        if (evaluatedExpression is InstanceCreationExpression) {
+          return processInstanceCreationExpression(evaluatedExpression,
+              "StaticInvokeCapability", staticInvokeCapability,
+              (String arg) => new StaticInvokeCapability(arg));
+        }
+        // TODO(eernst): other cases
+        throw new UnimplementedError("$expression not yet supported!");
+      case "StaticInvokeMetaCapability":
+        // TODO(eernst)
+        throw new UnimplementedError("$classElement not yet supported!");
+      case "NewInstanceCapability":
+        if (evaluatedExpression is SimpleIdentifier &&
+            evaluatedExpression.name == "newInstanceCapability") {
+          return newInstanceCapability;
+        }
+        // In simple cases, the [evaluatedExpression] is directly an
+        // invocation of the constructor in this class.
+        if (evaluatedExpression is InstanceCreationExpression) {
+          return processInstanceCreationExpression(evaluatedExpression,
+              "NewInstanceCapability", newInstanceCapability,
+              (String arg) => new newInstanceCapability(arg));
+        }
+        // TODO(eernst): other cases
+        throw new UnimplementedError("$expression not yet supported!");
+      case "NewInstanceMetaCapability":
+        // TODO(eernst)
+        throw new UnimplementedError("$classElement not yet supported!");
+      case "TypeCapability":
+        if (evaluatedExpression is SimpleIdentifier &&
+            evaluatedExpression.name == "typeCapability") {
+          return typeCapability;
+        }
+        if (evaluatedExpression is SimpleIdentifier &&
+            evaluatedExpression.name == "localTypeCapability") {
+          return localTypeCapability;
+        }
+        // TODO(eernst): problem, how can we create a Type object
+        // corresponding to the one denoted by part of the given
+        // evaluatedExpression?
+        throw new UnimplementedError(
+            "$classElement with an argument not yet supported!");
+      case "InvokingCapability":
+        if (evaluatedExpression is SimpleIdentifier &&
+            evaluatedExpression.name == "invokingCapability") {
+          return invokingCapability;
+        }
+        // In simple cases, the [evaluatedExpression] is directly an
+        // invocation of the constructor in this class.
+        if (evaluatedExpression is InstanceCreationExpression) {
+          return processInstanceCreationExpression(evaluatedExpression,
+              "InvokingCapability", invokingCapability,
+              (String arg) => new InvokingCapability(arg));
+        }
+        // TODO(eernst): other cases.
+        throw new UnimplementedError("$classElement not yet supported!");
+      case "InvokingMetaCapability":
+        // TODO(eernst)
+        throw new UnimplementedError("$classElement not yet supported!");
+      case "TypingCapability":
+        // TODO(eernst)
+        throw new UnimplementedError("$classElement not yet supported!");
+      case "SubtypeQuantifyCapability":
+        // TODO(eernst)
+        throw new UnimplementedError("$classElement not yet supported!");
+      case "AdmitSubtypeCapability":
+        // TODO(eernst)
+        throw new UnimplementedError("$classElement not yet supported!");
+      case "GlobalQuantifyCapability":
+        // TODO(eernst)
+        throw new UnimplementedError("$classElement not yet supported!");
+      case "GlobalQuantifyMetaCapability":
+        // TODO(eernst)
+        throw new UnimplementedError("$classElement not yet supported!");
       default:
         throw new UnimplementedError("Unexpected capability $classElement");
     }

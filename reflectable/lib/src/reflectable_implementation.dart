@@ -163,26 +163,16 @@ bool reflectableSupportsInstanceInvoke(
     r.Reflectable reflectable, String name, dm.ClassMirror classMirror) {
   Symbol nameSymbol = new Symbol(name);
   return reflectable.capabilities.any((ReflectCapability capability) {
-    if (capability == invokeMembersCapability ||
-        capability == invokeInstanceMembersCapability) {
+    if (capability == invokingCapability ||
+        capability == instanceInvokeCapability) {
       return true;
-    } else if (capability is InvokeInstanceMemberCapability) {
-      return capability.name == name;
-    } else if (capability is InvokeMembersWithMetadataCapability) {
+    } else if (capability is InstanceInvokeCapability) {
+      return new RegExp(capability.namePattern).firstMatch(name) != null;
+    } else if (capability is InstanceInvokeMetaCapability) {
       dm.DeclarationMirror declarationMirror =
           classMirror.instanceMembers[nameSymbol];
       return declarationMirror != null &&
           declarationMirror.metadata.contains(capability.metadata);
-    } else if (capability is InvokeInstanceMembersUpToSuperCapability) {
-      dm.ClassMirror currentClass = classMirror;
-      while (currentClass != null &&
-          currentClass.reflectedType != capability.superType) {
-        if (currentClass.instanceMembers.containsKey(nameSymbol)) {
-          return true;
-        }
-        currentClass = currentClass.superclass;
-      }
-      return false;
     } else {
       return false;
     }
@@ -192,8 +182,8 @@ bool reflectableSupportsInstanceInvoke(
 /// Returns true iff [reflectable] supports static invoke of [name].
 bool reflectableSupportsStaticInvoke(r.Reflectable reflectable, String name) {
   return reflectable.capabilities.any((ReflectCapability capability) {
-    if (capability is InvokeStaticMemberCapability) {
-      return capability.name == name;
+    if (capability is StaticInvokeCapability) {
+      return new RegExp(capability.namePattern).firstMatch(name) != null;
     }
     return false;
   });
@@ -203,11 +193,11 @@ bool reflectableSupportsStaticInvoke(r.Reflectable reflectable, String name) {
 bool reflectableSupportsConstructorInvoke(
     r.Reflectable reflectable, dm.ClassMirror classMirror, String name) {
   return reflectable.capabilities.any((ReflectCapability capability) {
-    if (capability == r.invokeConstructorsCapability) {
+    if (capability == r.newInstanceCapability) {
       return true;
-    } else if (capability is r.InvokeConstructorCapability) {
-      return capability.name == name;
-    } else if (capability is r.InvokeConstructorsWithMetaDataCapability) {
+    } else if (capability is r.NewInstanceCapability) {
+      return new RegExp(capability.namePattern).firstMatch(name) != null;
+    } else if (capability is r.NewInstanceMetaCapability) {
       dm.MethodMirror constructorMirror = classMirror.declarations.values
           .firstWhere((dm.DeclarationMirror declarationMirror) {
         Symbol nameSymbol = new Symbol(name);

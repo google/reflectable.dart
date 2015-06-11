@@ -10,7 +10,7 @@ import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 
 class MyReflectable extends Reflectable {
-  const MyReflectable() : super(const InvokeInstanceMemberCapability("x"));
+  const MyReflectable() : super(const InstanceInvokeCapability("x"));
 }
 const myReflectable = const MyReflectable();
 

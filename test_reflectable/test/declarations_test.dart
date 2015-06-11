@@ -8,7 +8,7 @@ import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
 
 class Reflector extends Reflectable {
-  const Reflector() : super(invokeMembersCapability);
+  const Reflector() : super(instanceInvokeCapability);
 }
 
 @Reflector()

@@ -8,7 +8,7 @@
 RTOOLS=../reflectable/tool
 TTOOLS=../test_reflectable/tool
 
-all: check build full_test
+all: get check build full_test
 
 g: get
 
@@ -40,7 +40,7 @@ test:
 
 bot_test:
 	@echo '------------------- bottest'
-	./bottest --preserve-output
+	./bottest
 
 full_test: test bot_test
 

@@ -37,6 +37,8 @@ abstract class ReflectCapability {
   const ReflectCapability();
 }
 
+// ---------- API oriented capability classes and instances.
+
 /// Abstract superclass of all capabilities concerned with the request for
 /// reflective support for a certain part of the mirror class APIs, as
 /// opposed to the second order capabilities which are used to associate
@@ -250,6 +252,8 @@ class TypingCapability extends TypeCapability
   const TypingCapability(Type upperBound) : super(upperBound);
 }
 
+// ---------- Reflectee quantification oriented capability classes.
+
 /// Abstract superclass for all capability classes supporting quantification
 /// over the set of potential reflectees. The quantifying capability classes
 /// are capable of recieving a list of up to ten [ApiReflectCapability]
@@ -393,7 +397,7 @@ class GlobalQuantifyMetaCapability implements ReflectCapability {
   const GlobalQuantifyMetaCapability(this.metadata, this.reflector);
 }
 
-// Private classes used to enable capability instances above.
+// ---------- Private classes used to enable capability instances above.
 
 class _NameCapability implements ApiReflectCapability {
   const _NameCapability();
@@ -427,80 +431,7 @@ class _LibraryDependenciesCapability implements ApiReflectCapability {
   const _LibraryDependenciesCapability();
 }
 
-/// Specifies for a class `C` that all members can be invoked: Instance
-/// members declared in `C` or a superclass of `C` can be invoked on an
-/// InstanceMirror, and static members declared in `C` can be invoked on
-/// a ClassMirror.
-const invokeMembersCapability = const _InvokeMembersCapability();
-
-/// Specifies that all members whose metadata includes [metadata]
-/// can be invoked; for such members it works like InvokeMembers.
-class InvokeMembersWithMetadataCapability implements ReflectCapability {
-  final Object metadata;
-  const InvokeMembersWithMetadataCapability(this.metadata);
-}
-
-/// Specifies for a class `C` that all instance members declared in `C`
-/// or a superclass of `C` up to [superType] can be invoked.
-class InvokeInstanceMembersUpToSuperCapability implements ReflectCapability {
-  final Type superType;
-  const InvokeInstanceMembersUpToSuperCapability(this.superType);
-}
-
-/// Specifies for a class `C` that all instance members declared in `C`
-/// or a superclass of `C` can be invoked.
-const invokeInstanceMembersCapability =
-    const InvokeInstanceMembersUpToSuperCapability(Object);
-
-/// Specifies for a class `C` that all static members
-/// declared in `C` can be invoked.
-const invokeStaticMembersCapability = const _InvokeStaticMembersCapability();
-
-/// Specifies for a class `C` that the instance member named
-/// [name] can be invoked.
-class InvokeInstanceMemberCapability implements ReflectCapability {
-  final String name;
-  const InvokeInstanceMemberCapability(this.name);
-}
-
-/// Specifies for a class `C` that the static member named [name]
-/// can be invoked.
-class InvokeStaticMemberCapability implements ReflectCapability {
-  final String name;
-  const InvokeStaticMemberCapability(this.name);
-}
-
-/// Specifies for a class `C` that the constructor named [name]
-/// can be invoked with `newInstance` on the `ClassMirror`.
-class InvokeConstructorCapability implements ReflectCapability {
-  final String name;
-  const InvokeConstructorCapability(this.name);
-}
-
-const invokeConstructorsCapability = const _InvokeConstructorsCapability();
-
-/// Specifies for a class `C` that all constructors with the given metadata
-///  can be invoked with `newInstance` on the `ClassMirror`.
-class InvokeConstructorsWithMetaDataCapability implements ReflectCapability {
-  final Object metadata;
-  const InvokeConstructorsWithMetaDataCapability(this.metadata);
-}
-
-// Private classes
-
-class _InvokeMembersCapability implements ReflectCapability {
-  const _InvokeMembersCapability();
-}
-
-class _InvokeStaticMembersCapability implements ReflectCapability {
-  const _InvokeStaticMembersCapability();
-}
-
-/// Specifies for a class `C` that all constructors can be invoked with
-/// `newInstance` on the `ClassMirror`.
-class _InvokeConstructorsCapability implements ReflectCapability {
-  const _InvokeConstructorsCapability();
-}
+// ---------- Exception handling.
 
 /// Thrown when reflection is invoked outside given capabilities.
 abstract class NoSuchCapabilityError extends Error {

@@ -7,8 +7,8 @@ library test_reflectable.serialize;
 import "package:reflectable/reflectable.dart";
 
 class Serializable extends Reflectable {
-  const Serializable() : super(invokeInstanceMembersCapability,
-      const InvokeConstructorCapability(""));
+  const Serializable()
+      : super(instanceInvokeCapability, const NewInstanceCapability(r"^$"));
 }
 
 /// Serializes instances of classes marked with a `Serializable`
@@ -33,8 +33,8 @@ class Serializer {
 
   List<VariableMirror> _getPublicFields(ClassMirror classMirror) {
     // TODO(sigurdm): Handle fields in superclasses.
-    return new List<VariableMirror>.from(classMirror.declarations.values.where(
-        (DeclarationMirror declaration) {
+    return new List<VariableMirror>.from(classMirror.declarations.values
+        .where((DeclarationMirror declaration) {
       return declaration is VariableMirror && !declaration.isPrivate;
     }));
   }

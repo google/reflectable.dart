@@ -12,10 +12,10 @@ import 'package:reflectable/capability.dart' as c;
 
 class MyReflectableStatic extends r.Reflectable {
   const MyReflectableStatic()
-      : super(const c.InvokeStaticMemberCapability("foo"),
-              const c.InvokeStaticMemberCapability("getFoo"),
-              const c.InvokeStaticMemberCapability("setFoo="),
-              const c.InvokeStaticMemberCapability("nonExisting"));
+      : super(const c.StaticInvokeCapability("foo"),
+              const c.StaticInvokeCapability("getFoo"),
+              const c.StaticInvokeCapability("setFoo="),
+              const c.StaticInvokeCapability("nonExisting"));
 }
 
 @MyReflectableStatic()
@@ -31,10 +31,10 @@ class A {
 
 class MyReflectableInstance extends r.Reflectable {
   const MyReflectableInstance()
-      : super(const c.InvokeInstanceMemberCapability("foo"),
-              const c.InvokeInstanceMemberCapability("getFoo"),
-              const c.InvokeInstanceMemberCapability("setFoo="),
-              const c.InvokeInstanceMemberCapability("nonExisting"));
+      : super(const c.InstanceInvokeCapability("foo"),
+              const c.InstanceInvokeCapability("getFoo"),
+              const c.InstanceInvokeCapability("setFoo="),
+              const c.InstanceInvokeCapability("nonExisting"));
 }
 
 @MyReflectableInstance()
