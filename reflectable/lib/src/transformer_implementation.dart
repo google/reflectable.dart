@@ -864,24 +864,17 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
   /// the given [classElement], bounded by the permissions given
   /// in [capabilities].
   String _staticInstanceMirrorInvokeCode(ClassDomain classDomain) {
-    String invokeCode = """
-  Object invoke(String memberName,
-                List positionalArguments,
-                [Map<Symbol, dynamic> namedArguments]) {
-""";
-
+    List<String> methodCases = new List<String>();
     for (MethodElement methodElement in classDomain.invokableMethods) {
       String methodName = methodElement.name;
-      if (true) {
-        invokeCode += """
-    if (memberName == '$methodName') {
-      return Function.apply(
-          reflectee.$methodName,
-          positionalArguments, namedArguments);
+      methodCases.add("if (memberName == '$methodName') {"
+                      "method = reflectee.$methodName; }");
     }
-""";
-      }
-    }
+      // TODO(eernst, sigurdm): Create an instance of [Invocation] in user code.
+      methodCases.add("if (instanceMethodFilter.hasMatch(memberName)) {"
+      "throw new UnimplementedError('Should call noSuchMethod'); }");
+      methodCases.add("{ throw new NoSuchInvokeCapabilityError("
+          "reflectee, memberName, positionalArguments, namedArguments); }");
     // Handle the cases where permission is given even though there is
     // no corresponding method. One case is where _all_ methods can be
     // invoked. Another case is when the user has specified a name
@@ -900,16 +893,15 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
     // useful.
     // Even if we make our own class, we would have to have a table to construct
     // the symbol from the string.
-    invokeCode += """
-    // TODO(eernst, sigurdm): Create an instance of [Invocation] in user code.
-    if (instanceMethodFilter.hasMatch(memberName)) {
-      throw new UnimplementedError('Should call noSuchMethod');
-    }
-    throw new NoSuchInvokeCapabilityError(
-        reflectee, memberName, positionalArguments, namedArguments);
+    return """
+  Object invoke(String memberName,
+                List positionalArguments,
+                [Map<Symbol, dynamic> namedArguments]) {
+    Function method;
+    ${methodCases.join("\n    else ")}
+    return Function.apply(method, positionalArguments, namedArguments);
   }
 """;
-    return invokeCode;
   }
 
   String instanceMethodFilter(Capabilities capabilities) {
