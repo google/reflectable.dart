@@ -30,7 +30,7 @@ r.InstanceMirror reflect(o, r.Reflectable reflectable) {
 
 r.ClassMirror reflectType(Type t, r.Reflectable reflectable) {
   dm.TypeMirror typeMirror = dm.reflectType(t);
-  if (typeMirror is dm.ClassMirror) {
+  if (typeMirror is dm.ClassMirror && _isReflectable(typeMirror, reflectable)) {
     return wrapClassMirror(typeMirror, reflectable);
   } else {
     throw new NoSuchCapabilityError(
@@ -51,14 +51,14 @@ Iterable<r.ClassMirror> annotatedClasses(r.Reflectable reflectable) {
         in library.declarations.values) {
       // TODO(sigurdm, eernst): Update when we can annotate top-level functions.
       if (declarationMirror is! dm.ClassMirror) continue;
-      if (!_isAnnotatedBy(declarationMirror, reflectable)) continue;
+      if (!_isReflectable(declarationMirror, reflectable)) continue;
       result.add(wrapClassMirror(declarationMirror, reflectable));
     }
   }
   return result;
 }
 
-bool _isAnnotatedBy(dm.DeclarationMirror declarationMirror, Object annotation) {
+bool _isReflectable(dm.DeclarationMirror declarationMirror, Object annotation) {
   return declarationMirror.metadata.any((dm.InstanceMirror metadataMirror) {
     return metadataMirror.reflectee == annotation;
   });

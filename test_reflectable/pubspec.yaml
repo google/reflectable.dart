@@ -17,6 +17,7 @@ transformers:
       - test/invoke_test.dart
       - test/members_capability_test.dart
       - test/annotated_classes_test.dart
+      - test/reflect_type_test.dart
 # Disabled next three entries to avoid failing transformation
 #      - test/member_capability_test.dart
 #      - test/serialize_test.dart

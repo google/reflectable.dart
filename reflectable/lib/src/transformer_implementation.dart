@@ -670,7 +670,25 @@ class TransformerImplementation {
     // which is a runtime error.
     // TODO(eernst, sigurdm): throw NoSuchCapability if no match was found.
     List<String> annotatedClassesStrings = reflector.annotatedClasses
-        .map((ClassDomain x) => "new ${x.staticClassMirrorName}()").toList();
+        .map((ClassDomain x) => "new ${x.staticClassMirrorName}()")
+        .toList();
+
+    List<String> reflectTypeCases = [];
+    for (ClassDomain classDomain in reflector.annotatedClasses) {
+      reflectTypeCases.add("if (type == ${classDomain.classElement.name}) "
+          "return new ${classDomain.staticClassMirrorName}();");
+    }
+    reflectTypeCases.add("throw new ${prefix}NoSuchCapabilityError("
+        "'No capability to reflect on type \$type.');");
+
+    insert("""
+  ${prefix}ClassMirror reflectType(Type type) {
+    ${reflectTypeCases.join("\n    else ")}
+  }""");
+    // TODO(sigurdm, eernst): Model type arguments. Here we could just use the
+    // trivial arguments, because the type-literal is implicitly instantiated
+    // with all `dynamic`.
+
     insert("""
   Iterable<${prefix}ClassMirror> get annotatedClasses {
     return [${annotatedClassesStrings.join(", ")}];
@@ -753,9 +771,9 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
     // users cannot write their own capability classes).
     if (dartType.element is! ClassElement) {
       if (dartType.element.source != null) {
-        logger.error(errors.applyTemplate(
-            errors.SUPER_ARGUMENT_NON_CLASS, {"type": dartType.displayName}),
-                     span: resolver.getSourceSpan(dartType.element));
+        logger.error(errors.applyTemplate(errors.SUPER_ARGUMENT_NON_CLASS, {
+          "type": dartType.displayName
+        }), span: resolver.getSourceSpan(dartType.element));
       } else {
         logger.error(errors.applyTemplate(
             errors.SUPER_ARGUMENT_NON_CLASS, {"type": dartType.displayName}));
