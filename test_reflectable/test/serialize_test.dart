@@ -18,27 +18,45 @@ class A {
 
   toString() => "A(a = $a, b = $b)";
 
+  /// Special case lists.
+  _equalsHandlingLists(dynamic x, dynamic y) {
+    if (x is List) {
+      if (y is! List) return false;
+      for (int i = 0; i < x.length; i++) {
+        if (!_equalsHandlingLists(x[i], y[i])) return false;
+      }
+      return true;
+    }
+    return x == y;
+  }
+
   // The == operator is defined for testing if the reconstructed object is the
   // same as the original.
   bool operator ==(other) {
-    /// Special case lists.
-    equalsHandlingLists(dynamic x, dynamic y) {
-      if (x is List) {
-        if (y is! List) return false;
-        for (int i = 0; i < x.length; i++) {
-          if (!equalsHandlingLists(x[i], y[i])) return false;
-        }
-        return true;
-      }
-      return x == y;
-    }
-    return equalsHandlingLists(a, other.a) && equalsHandlingLists(b, other.b);
+    return _equalsHandlingLists(a, other.a) && _equalsHandlingLists(b, other.b);
+  }
+}
+
+@Serializable()
+class B extends A {
+  var c;
+  B();
+
+  B.fromValues(a, b, this.c) : super.fromValues(a, b);
+
+  // The == operator is defined for testing if the reconstructed object is the
+  // same as the original.
+  // This is defined for easier testing.
+  bool operator ==(other) {
+    return _equalsHandlingLists(a, other.a) &&
+        _equalsHandlingLists(b, other.b) &&
+        _equalsHandlingLists(c, other.c);
   }
 }
 
 main() {
+  Serializer serializer = new Serializer();
   test("Round trip test", () {
-    Serializer serializer = new Serializer();
     var input = new A.fromValues(
         "one", new A.fromValues(2, [3, new A.fromValues(4, 5)]));
     var out = serializer.serialize(input);
@@ -72,5 +90,24 @@ main() {
     // Assert that deserializing the output gives a result that is equal to the
     // original input.
     expect(serializer.deserialize(out), input);
+  });
+  test("Serialize subtype", () {
+    var input = new A.fromValues(1, new B.fromValues(1, 2, 3));
+    var output = serializer.serialize(input);
+    expect(output, {
+      "type": "test_reflectable.serialize_test.A",
+      "fields": {
+        "a": {"type": "num", "val": 1},
+        "b": {
+          "type": "test_reflectable.serialize_test.B",
+          "fields": {
+            "a": {"type": "num", "val": 1},
+            "b": {"type": "num", "val": 2},
+            "c": {"type": "num", "val": 3}
+          }
+        }
+      }
+    });
+    expect(serializer.deserialize(output), input);
   });
 }

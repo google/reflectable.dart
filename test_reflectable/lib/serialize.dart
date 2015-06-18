@@ -2,6 +2,7 @@
 /// example of how package:reflectable can be used
 /// Doesn't check for cycles in the serialized data, and is not customizable
 /// at all.
+/// Only serializes public fields.
 library test_reflectable.serialize;
 
 import "package:reflectable/reflectable.dart";
@@ -31,12 +32,15 @@ class Serializer {
     }
   }
 
-  List<VariableMirror> _getPublicFields(ClassMirror classMirror) {
-    // TODO(sigurdm): Handle fields in superclasses.
-    return new List<VariableMirror>.from(classMirror.declarations.values
-        .where((DeclarationMirror declaration) {
-      return declaration is VariableMirror && !declaration.isPrivate;
-    }));
+  /// Returns the names of all the public non-final fields in the class
+  /// represented by [classMirror].
+  List<String> _getPublicFieldNames(ClassMirror classMirror) {
+    Map<String, MethodMirror> instanceMembers = classMirror.instanceMembers;
+    return instanceMembers.values.where((MethodMirror method) {
+      return method.isGetter && method.isSynthetic &&
+          // Check that the setter also exists.
+          instanceMembers[method.simpleName + '='] != null && !method.isPrivate;
+    }).map((MethodMirror method) => method.simpleName).toList();
   }
 
   Map<String, dynamic> serialize(Object o) {
@@ -54,9 +58,8 @@ class Serializer {
     ClassMirror classMirror = im.type;
     result["type"] = classMirror.qualifiedName;
     result["fields"] = {};
-    for (VariableMirror field in _getPublicFields(classMirror)) {
-      result["fields"][field.simpleName] =
-          serialize(im.invokeGetter(field.simpleName));
+    for (String fieldName in _getPublicFieldNames(classMirror)) {
+      result["fields"][fieldName] = serialize(im.invokeGetter(fieldName));
     }
     return result;
   }
