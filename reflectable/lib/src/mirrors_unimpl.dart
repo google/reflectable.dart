@@ -182,9 +182,7 @@ class MethodMirrorImpl implements MethodMirror {
   bool get isConstConstructor => 0 != descriptor & constants.constAttribute;
 
   @override
-  bool get isConstructor => isGenerativeConstructor ||
-      isFactoryConstructor ||
-      isRedirectingConstructor;
+  bool get isConstructor => isFactoryConstructor || isGenerativeConstructor;
 
   @override
   bool get isFactoryConstructor => kind == constants.factoryConstructor;
@@ -203,7 +201,8 @@ class MethodMirrorImpl implements MethodMirror {
   bool get isPrivate => 0 != descriptor & constants.privateAttribute;
 
   @override
-  bool get isRedirectingConstructor => kind == constants.redirectingConstructor;
+  bool get isRedirectingConstructor =>
+      0 != descriptor & constants.redirectingConstructor;
 
   @override
   bool get isRegularMethod => kind == constants.method;
@@ -241,7 +240,7 @@ class MethodMirrorImpl implements MethodMirror {
 
   @override
   String get simpleName => isConstructor
-      ? (name == '' ? "$owner.simpleName" : "${owner.simpleName}.$name")
+      ? (name == '' ? "${owner.simpleName}" : "${owner.simpleName}.$name")
       : name;
 
   @override

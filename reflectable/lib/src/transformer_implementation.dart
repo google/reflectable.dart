@@ -68,6 +68,8 @@ class ClassDomain {
   final ClassElement classElement;
   final Iterable<MethodElement> invokableMethods;
   final Iterable<MethodElement> declaredMethods;
+  final Iterable<PropertyAccessorElement> declaredAccessors;
+  final Iterable<ConstructorElement> constructors;
 
   ReflectorDomain reflectorDomain;
   String staticClassMirrorName;
@@ -75,14 +77,12 @@ class ClassDomain {
   String get baseName => classElement.name;
 
   ClassDomain(this.classElement, this.invokableMethods, this.declaredMethods,
-      this.reflectorDomain);
+      this.declaredAccessors, this.constructors, this.reflectorDomain);
 
   Iterable<ExecutableElement> get declarations {
-    // TODO(sigurdm): Include constructors.
     // TODO(sigurdm): Include fields.
-    // TODO(sigurdm): Include getters and setters.
     // TODO(sigurdm): Include type variables (if we decide to keep them).
-    return [declaredMethods].expand((x) => x);
+    return [declaredMethods, declaredAccessors, constructors].expand((x) => x);
   }
 
   /// Returns an integer encoding the kind and attributes of the given
@@ -94,13 +94,14 @@ class ClassDomain {
     } else if (element is ConstructorElement) {
       if (element.isFactory) {
         result = constants.factoryConstructor;
-      } else if (element.redirectedConstructor != null) {
-        result = constants.redirectingConstructor;
       } else {
         result = constants.generativeConstructor;
       }
       if (element.isConst) {
         result += constants.constAttribute;
+      }
+      if (element.redirectedConstructor != null) {
+        result += constants.redirectingConstructor;
       }
     } else {
       result = constants.method;
@@ -117,13 +118,22 @@ class ClassDomain {
     return result;
   }
 
+  String nameOfDeclaration(ExecutableElement element) {
+    if (element is ConstructorElement) {
+      return element.name == ""
+          ? classElement.name
+          : "${classElement.name}.${element.name}";
+    }
+    return element.name;
+  }
+
   /// Returns a String with the textual representation of the declarations-map.
   String get declarationsString {
     Iterable<String> declarationParts = declarations.map(
-        (ExecutableElement instanceMember) {
-      return '"${instanceMember.name}": '
-          'new MethodMirrorImpl("${instanceMember.name}", '
-          '${_declarationDescriptor(instanceMember)}, this)';
+        (ExecutableElement declaration) {
+      return '"${nameOfDeclaration(declaration)}": '
+          'new MethodMirrorImpl("${declaration.name}", '
+          '${_declarationDescriptor(declaration)}, this)';
     });
     return "{${declarationParts.join(", ")}}";
   }
@@ -389,12 +399,33 @@ class TransformerImplementation {
   Iterable<MethodElement> declaredMethods(
       ClassElement classElement, Capabilities capabilities) {
     return classElement.methods.where((MethodElement method) {
+      if (method.isAbstract) return false;
       if (method.isStatic) {
-        // TODO(sigurdm): Ask capability about support.
+        // TODO(sigurdm): Ask capabilities about support.
         return true;
       } else {
         return capabilities.supportsInstanceInvoke(method.name);
       }
+    });
+  }
+
+  Iterable<PropertyAccessorElement> declaredAccessors(
+      ClassElement classElement, Capabilities capabilities) {
+    return classElement.accessors.where((PropertyAccessorElement accessor) {
+      if (accessor.isStatic) {
+        // TODO(sigurdm): Ask capabilities about support.
+        return true;
+      } else {
+        return capabilities.supportsInstanceInvoke(accessor.name);
+      }
+    });
+  }
+
+  Iterable<ConstructorElement> declaredConstructors(
+      ClassElement classElement, Capabilities capabilities) {
+    return classElement.constructors.where((ConstructorElement constructor) {
+      // TODO(sigurdm): Ask capabilities about support.
+      return true;
     });
   }
 
@@ -464,8 +495,13 @@ class TransformerImplementation {
                 invocableInstanceMethods(type, domain.capabilities).toList();
             List<MethodElement> declaredMethodsOfClass =
                 declaredMethods(type, domain.capabilities).toList();
-            domain.annotatedClasses.add(new ClassDomain(
-                type, instanceMethods, declaredMethodsOfClass, domain));
+            List<PropertyAccessorElement> declaredAccessorsOfClass =
+                declaredAccessors(type, domain.capabilities).toList();
+            List<ConstructorElement> declaredConstructorsOfClass =
+                declaredConstructors(type, domain.capabilities).toList();
+            domain.annotatedClasses.add(new ClassDomain(type, instanceMethods,
+                declaredMethodsOfClass, declaredAccessorsOfClass,
+                declaredConstructorsOfClass, domain));
           }
         }
       }

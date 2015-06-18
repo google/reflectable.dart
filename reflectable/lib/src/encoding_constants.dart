@@ -4,22 +4,23 @@
 
 library reflectable.encoding_constants;
 
-// The first bits are used to enumerate the "kind" of the declaration.
-// The more significant bits are flags.
+// The first `flagsBit-1` bits are used to enumerate the "kind" of the
+// declaration. The more significant bits are flags.
+const flagsBit = 4;
 
 // Kinds:
 const generativeConstructor = 0;
 const factoryConstructor = 1;
-const redirectingConstructor = 2;
-const method = 3;
-const getter = 4;
-const setter = 5;
+const method = 2;
+const getter = 3;
+const setter = 4;
 
 // Flags:
-const staticAttribute = 16;
-const abstractAttribute = 32;
-const constAttribute = 64;
-const privateAttribute = 128;
-const syntheticAttribute = 256;
+const staticAttribute = 1 << (flagsBit);
+const privateAttribute = 1 << (flagsBit + 1);
+const syntheticAttribute = 1 << (flagsBit + 2);
+const constAttribute = 1 << (flagsBit + 3);
+const redirectingConstructor = 1 << (flagsBit + 4);
+const abstractAttribute = 1 << (flagsBit + 5);
 
-int kindFromEncoding(int encoding) => encoding & 15;
+int kindFromEncoding(int encoding) => encoding & ((1 << flagsBit) - 1);
