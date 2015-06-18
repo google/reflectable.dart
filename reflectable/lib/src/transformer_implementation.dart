@@ -119,8 +119,8 @@ class ClassDomain {
 
   /// Returns a String with the textual representation of the declarations-map.
   String get declarationsString {
-    Iterable<String> declarationParts = declarations
-        .map((ExecutableElement instanceMember) {
+    Iterable<String> declarationParts = declarations.map(
+        (ExecutableElement instanceMember) {
       return '"${instanceMember.name}": '
           'new MethodMirrorImpl("${instanceMember.name}", '
           '${_declarationDescriptor(instanceMember)}, this)';
@@ -764,9 +764,15 @@ class TransformerImplementation {
   /// is the class modeled by [classElement].
   String _staticClassMirrorCode(ClassDomain classDomain) {
     String declarationsString = classDomain.declarationsString;
+    String simpleName = classDomain.classElement.name;
+    // When/if we have library-mirrors there could be a generic implementation:
+    // String get qualifiedName => "${owner.qualifiedName}.${simpleName}";
+    String qualifiedName =
+        "${classDomain.classElement.library.name}.$simpleName";
     return """
 class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
-  final String simpleName = "${classDomain.classElement.name}";
+  final String simpleName = "$simpleName";
+  final String qualifiedName = "$qualifiedName";
 
   Map<String, MethodMirror> _declarationsCache;
 
@@ -1121,6 +1127,8 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
     String rest = "";
     rest += instanceMethodFilter(classDomain.reflectorDomain.capabilities);
     rest += _staticInstanceMirrorInvokeCode(classDomain);
+    rest += "  ClassMirror get type => "
+        "new ${classDomain.staticClassMirrorName}();\n";
     // TODO(eernst): add code for other mirror methods than `invoke`.
     return """
 class ${classDomain.staticInstanceMirrorName} extends InstanceMirrorUnimpl {

@@ -17,11 +17,17 @@ class A {}
 class B {}
 
 main() {
+  const myReflectable = const MyReflectable();
   test("reflectType", () {
-    ClassMirror cm = const MyReflectable().reflectType(A);
+    ClassMirror cm = myReflectable.reflectType(A);
     expect(cm, new isInstanceOf<ClassMirror>());
     expect(cm.simpleName, "A");
     expect(() => const MyReflectable().reflectType(B),
         throwsA(new isInstanceOf<NoSuchCapabilityError>()));
+  });
+  test("InstanceMirror.type", () {
+    ClassMirror cm = const MyReflectable().reflectType(A);
+    ClassMirror cm2 = myReflectable.reflect(new A()).type;
+    expect(cm.qualifiedName, cm2.qualifiedName);
   });
 }
