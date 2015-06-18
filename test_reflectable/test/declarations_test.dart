@@ -13,6 +13,8 @@ class Reflector extends Reflectable {
   const Reflector() : super(instanceInvokeCapability);
 }
 
+// TODO(sigurdm): Adapt this test when we support fields.
+
 @Reflector()
 abstract class A {
   A();
@@ -43,14 +45,13 @@ class B extends A {
 
 main() {
   const reflector = const Reflector();
-  test("Test declarations", () {
-    // TODO(sigurdm): Adapt this test when we support constructors, fields,
-    // in declarations.
-    Map<String, DeclarationMirror> declarationsA =
-        reflector.reflectType(A).declarations;
-    expect(declarationsA.values
-        .where((DeclarationMirror x) => x is MethodMirror)
-        .map((x) => x.simpleName), new Set.from([
+  Map<String, DeclarationMirror> declarationsA =
+      reflector.reflectType(A).declarations;
+  Map<String, DeclarationMirror> declarationsB =
+      reflector.reflectType(B).declarations;
+
+  test("declarations", () {
+    expect(declarationsA.values.map((x) => x.simpleName), new Set.from([
       "foo",
       "getter1",
       "getter2",
@@ -62,6 +63,12 @@ main() {
       "A.redirectingFactory",
       "A.c"
     ]));
+
+    expect(declarationsB.values.map((x) => x.simpleName),
+        new Set.from(["bar", "getter1", "getter2", "setter2=", "B"]));
+  });
+
+  test("MethodMirror properties", () {
     MethodMirror foo = declarationsA["foo"] as MethodMirror;
     expect(foo.isRegularMethod, isTrue);
     expect(foo.isStatic, isFalse);
@@ -152,10 +159,37 @@ main() {
     expect(redirectingFactoryConstructorA.isFactoryConstructor, isTrue);
     expect(redirectingFactoryConstructorA.isConstConstructor, isTrue);
     expect(redirectingFactoryConstructorA.isRedirectingConstructor, isTrue);
-    var declarationsB = reflector.reflectType(B).declarations;
-    expect(declarationsB.values
-            .where((DeclarationMirror x) => x is MethodMirror)
-            .map((x) => x.simpleName),
-        new Set.from(["bar", "getter1", "getter2", "setter2=", "B"]));
+  });
+
+  test("instanceMethods", () {
+    Map<String, DeclarationMirror> instanceMembersA =
+        reflector.reflectType(A).instanceMembers;
+    expect(instanceMembersA.values.map((x) => x.simpleName), new Set.from([
+      "toString",
+      "hashCode",
+      "==",
+      "noSuchMethod",
+    "runtimeType",
+      "foo",
+      "getter1",
+      "setter1=",
+      "+"
+    ]));
+    Map<String, DeclarationMirror> instanceMembersB =
+        reflector.reflectType(B).instanceMembers;
+    expect(instanceMembersB.values.map((x) => x.simpleName), new Set.from([
+      "toString",
+      "hashCode",
+      "==",
+      "noSuchMethod",
+      "runtimeType",
+      "foo",
+      "bar",
+      "getter1",
+      "getter2",
+      "setter1=",
+      "setter2=",
+      "+"
+    ]));
   });
 }

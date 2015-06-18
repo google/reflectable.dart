@@ -21,11 +21,17 @@ class A {
   int arg0() => 42;
   int arg1(int x) => x - 42;
   int arg1to3(int x, int y, [int z = 0, w]) => x + y + z * 42;
-  int argNamed(int x, int y, {int z: 42}) => x + y - z;
+  int argNamed(int x, int y,
+               {int z: 42}) => x + y - z;
+  int operator+(x) => 42 + x;
+  int operator[](x) => 42 + x;
+  void operator[]=(x, v) => f = x + v;
+  int f = 0;
 }
 
 main() {
-  InstanceMirror instanceMirror = myReflectable.reflect(new A());
+  A instance = new A();
+  InstanceMirror instanceMirror = myReflectable.reflect(instance);
   test('invoke with no arguments', () {
     expect(instanceMirror.invoke("arg0", []), 42);
   });
@@ -47,4 +53,15 @@ main() {
   test('invoke with mandatory arguments, plus named ones', () {
     expect(instanceMirror.invoke("argNamed", [21, 21], {#z: 0}), 42);
   });
+  test('invoke operator +', () {
+    expect(instanceMirror.invoke("+", [42]), 84);
+  });
+  test('invoke operator []', () {
+    expect(instanceMirror.invoke("[]", [42]), 84);
+  });
+  test('invoke operator []=', () {
+    instanceMirror.invoke("[]=", [1, 2]);
+    expect(instance.f, 3);
+  });
+
 }

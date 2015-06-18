@@ -50,39 +50,99 @@ class ReflectionWorld {
 class ReflectorDomain {
   final ClassElement reflector;
   final List<ClassDomain> annotatedClasses;
+  final Map<ClassElement, ClassDomain> classMap =
+      new Map<ClassElement, ClassDomain>();
   final Capabilities capabilities;
 
   /// Libraries that must be imported to `reflector.library`.
   final Set<LibraryElement> missingImports = new Set<LibraryElement>();
 
-  ReflectorDomain(this.reflector, this.annotatedClasses, this.capabilities);
+  ReflectorDomain(this.reflector, this.annotatedClasses, this.capabilities) {
+    for (ClassDomain classDomain in annotatedClasses) {
+      classMap[classDomain.classElement] = classDomain;
+    }
+  }
 
   void computeNames(Namer namer) {
     annotatedClasses
         .forEach((ClassDomain classDomain) => classDomain.computeNames(namer));
   }
+
+  // TODO(eernst, sigurdm): Perhaps reconsider what the best strategy for
+  // caching is.
+  Map<ClassElement, Map<String, ExecutableElement>> _instanceMemberCache =
+      new Map<ClassElement, Map<String, ExecutableElement>>();
 }
 
 /// Information about reflectability for a given class.
 class ClassDomain {
   final ClassElement classElement;
-  final Iterable<MethodElement> invokableMethods;
   final Iterable<MethodElement> declaredMethods;
   final Iterable<PropertyAccessorElement> declaredAccessors;
   final Iterable<ConstructorElement> constructors;
 
   ReflectorDomain reflectorDomain;
+
+  Iterable<MethodElement> get invokableMethods => instanceMembers
+      .where((ExecutableElement element) => element is MethodElement);
+
   String staticClassMirrorName;
   String staticInstanceMirrorName;
   String get baseName => classElement.name;
 
-  ClassDomain(this.classElement, this.invokableMethods, this.declaredMethods,
-      this.declaredAccessors, this.constructors, this.reflectorDomain);
+  ClassDomain(this.classElement, this.declaredMethods, this.declaredAccessors,
+      this.constructors, this.reflectorDomain);
 
   Iterable<ExecutableElement> get declarations {
     // TODO(sigurdm): Include fields.
     // TODO(sigurdm): Include type variables (if we decide to keep them).
     return [declaredMethods, declaredAccessors, constructors].expand((x) => x);
+  }
+
+  /// Finds all instance members by going through the class hierarchy.
+  Iterable<ExecutableElement> get instanceMembers {
+    Map<String, ExecutableElement> helper(ClassElement classElement) {
+      if (reflectorDomain._instanceMemberCache[classElement] != null) {
+        return reflectorDomain._instanceMemberCache[classElement];
+      }
+      Map<String, ExecutableElement> result =
+          new Map<String, ExecutableElement>();
+
+      void addIfCapable(ExecutableElement member) {
+        if (reflectorDomain.capabilities.supportsInstanceInvoke(member.name)) {
+          result[member.name] = member;
+        }
+      }
+      if (classElement.supertype != null) {
+        helper(classElement.supertype.element)
+            .forEach((String name, ExecutableElement member) {
+          addIfCapable(member);
+        });
+      }
+      for (InterfaceType mixin in classElement.mixins) {
+        helper(mixin.element).forEach((String name, ExecutableElement member) {
+          addIfCapable(member);
+        });
+      }
+      for (MethodElement member in classElement.methods) {
+        if (member.isAbstract || member.isStatic) continue;
+        addIfCapable(member);
+      }
+      for (PropertyAccessorElement member in classElement.accessors) {
+        if (member.isAbstract || member.isStatic) continue;
+        addIfCapable(member);
+      }
+      for (FieldElement field in classElement.fields) {
+        if (field.isStatic) continue;
+        if (field.isSynthetic) continue;
+        addIfCapable(field.getter);
+        if (!field.isFinal) {
+          addIfCapable(field.setter);
+        }
+      }
+      return result;
+    }
+    return helper(classElement).values;
   }
 
   /// Returns an integer encoding the kind and attributes of the given
@@ -109,11 +169,14 @@ class ClassDomain {
     if (element.isPrivate) {
       result += constants.privateAttribute;
     }
-    if (element.isAbstract) {
-      result += constants.abstractAttribute;
-    }
     if (element.isStatic) {
       result += constants.staticAttribute;
+    }
+    if (element.isSynthetic) {
+      result += constants.syntheticAttribute;
+    }
+    if (element.isAbstract) {
+      result += constants.abstractAttribute;
     }
     return result;
   }
@@ -136,6 +199,19 @@ class ClassDomain {
           '${_declarationDescriptor(declaration)}, this)';
     });
     return "{${declarationParts.join(", ")}}";
+  }
+
+  /// Returns a String with the textual representation of the
+  /// instanceMembers-map.
+  String get instanceMembersString {
+    // TODO(sigurdm): Find out how to set the right owner.
+    Iterable<String> instanceMemberParts = instanceMembers
+        .map((ExecutableElement declaration) {
+      return '"${nameOfDeclaration(declaration)}": '
+          'new MethodMirrorImpl("${declaration.name}", '
+          '${_declarationDescriptor(declaration)}, null)';
+    });
+    return "{${instanceMemberParts.join(", ")}}";
   }
 
   /// Returns a String with the textual representations of the metadata list.
@@ -416,20 +492,9 @@ class TransformerImplementation {
     return null;
   }
 
-  /// Finds all the methods in the class and all super-classes.
-  Iterable<MethodElement> allMethods(ClassElement classElement) {
-    List<MethodElement> result = new List<MethodElement>();
-    result.addAll(classElement.methods);
-    classElement.allSupertypes.forEach((InterfaceType superType) {
-      result.addAll(superType.methods);
-    });
-    return result;
-  }
-
   Iterable<MethodElement> declaredMethods(
       ClassElement classElement, Capabilities capabilities) {
     return classElement.methods.where((MethodElement method) {
-      if (method.isAbstract) return false;
       if (method.isStatic) {
         // TODO(sigurdm): Ask capabilities about support.
         return true;
@@ -456,19 +521,6 @@ class TransformerImplementation {
     return classElement.constructors.where((ConstructorElement constructor) {
       // TODO(sigurdm): Ask capabilities about support.
       return true;
-    });
-  }
-
-  Iterable<MethodElement> invocableInstanceMethods(
-      ClassElement classElement, Capabilities capabilities) {
-    return allMethods(classElement).where((MethodElement method) {
-      MethodDeclaration methodDeclaration = method.node;
-      // TODO(eernst): We currently ignore method declarations when
-      // they are operators. One issue is generation of code (which
-      // does not work if we go ahead naively).
-      if (methodDeclaration.isOperator) return false;
-      String methodName = methodDeclaration.name.name;
-      return capabilities.supportsInstanceInvoke(methodName);
     });
   }
 
@@ -521,15 +573,13 @@ class TransformerImplementation {
               return new ReflectorDomain(
                   reflector, new List<ClassDomain>(), capabilities);
             });
-            List<MethodElement> instanceMethods =
-                invocableInstanceMethods(type, domain.capabilities).toList();
             List<MethodElement> declaredMethodsOfClass =
                 declaredMethods(type, domain.capabilities).toList();
             List<PropertyAccessorElement> declaredAccessorsOfClass =
                 declaredAccessors(type, domain.capabilities).toList();
             List<ConstructorElement> declaredConstructorsOfClass =
                 declaredConstructors(type, domain.capabilities).toList();
-            domain.annotatedClasses.add(new ClassDomain(type, instanceMethods,
+            domain.annotatedClasses.add(new ClassDomain(type,
                 declaredMethodsOfClass, declaredAccessorsOfClass,
                 declaredConstructorsOfClass, domain));
           }
@@ -831,8 +881,7 @@ class TransformerImplementation {
   String _staticClassMirrorCode(ClassDomain classDomain) {
     List<String> implementedMembers = new List<String>();
     String simpleName = classDomain.classElement.name;
-    implementedMembers
-        .add('final String simpleName = "$simpleName";');
+    implementedMembers.add('final String simpleName = "$simpleName";');
     // When/if we have library-mirrors there could be a generic implementation:
     // String get qualifiedName => "${owner.qualifiedName}.${simpleName}";
     String qualifiedName =
@@ -846,6 +895,16 @@ class TransformerImplementation {
       _declarationsCache = new UnmodifiableMapView($declarationsString);
     }
     return _declarationsCache;
+  }""");
+    String instanceMembersString = classDomain.instanceMembersString;
+    implementedMembers.add("""
+  Map<String, MethodMirror> _instanceMembersCache;
+
+  Map<String, MethodMirror> get instanceMembers {
+    if (_instanceMembersCache == null) {
+      _instanceMembersCache = new UnmodifiableMapView($instanceMembersString);
+    }
+    return _instanceMembersCache;
   }""");
     if (classDomain.reflectorDomain.capabilities.supportsMetadata) {
       implementedMembers
@@ -1142,11 +1201,17 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
   /// the given [classElement], bounded by the permissions given
   /// in [capabilities].
   String _staticInstanceMirrorInvokeCode(ClassDomain classDomain) {
+    String tearOff(MethodElement methodElement) {
+      if (!methodElement.isOperator) return "reflectee.${methodElement.name}";
+      if (methodElement.name == "[]=") return "(x, v) => reflectee[x] = v";
+      if (methodElement.name == "[]") return "(x) => reflectee[x]";
+      return "(x) => reflectee ${methodElement.name} x";
+    }
+
     List<String> methodCases = new List<String>();
     for (MethodElement methodElement in classDomain.invokableMethods) {
-      String methodName = methodElement.name;
-      methodCases.add("if (memberName == '$methodName') {"
-          "method = reflectee.$methodName; }");
+      methodCases.add("if (memberName == '${methodElement.name}') {"
+          "method = ${tearOff(methodElement)}; }");
     }
     // TODO(eernst, sigurdm): Create an instance of [Invocation] in user code.
     methodCases.add("if (instanceMethodFilter.hasMatch(memberName)) {"

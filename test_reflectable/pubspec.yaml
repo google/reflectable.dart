@@ -8,21 +8,22 @@ transformers:
 - reflectable:
     $include: ["test/*.dart"]
     entry_points:
-      - test/metadata_test.dart
-      - test/import_reflectable.dart
-      - test/use_annotation.dart
-      - test/reflect_test.dart
-      - test/export_test.dart
-      - test/use_prefix_test.dart
-      - test/three_files_test.dart
-      - test/invoke_test.dart
-      - test/members_capability_test.dart
-      - test/annotated_classes_test.dart
-      - test/reflect_type_test.dart
+#      - test/metadata_test.dart
+#      - test/import_reflectable.dart
+#      - test/use_annotation.dart
+#      - test/reflect_test.dart
+#      - test/export_test.dart
+#      - test/use_prefix_test.dart
+#      - test/three_files_test.dart
+#      - test/invoke_test.dart
+#      - test/members_capability_test.dart
+#      - test/annotated_classes_test.dart
+#      - test/reflect_type_test.dart
       - test/declarations_test.dart
 # Disabled next three entries to avoid failing transformation
 #      - test/capabilities_test.dart
 #      - test/member_capability_test.dart
 #      - test/serialize_test.dart
 #      - test/basic_test.dart
-
+- $dart2js:
+    $include: []
