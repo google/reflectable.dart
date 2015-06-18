@@ -861,7 +861,7 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
       }), span: resolver.getSourceSpan(classElement));
     }
 
-    void processInstanceCreationExpression(
+    ReflectCapability processInstanceCreationExpression(
         InstanceCreationExpression expression, String expectedConstructorName,
         ReflectCapability defaultCapability,
         ReflectCapability factory(String arg)) {
@@ -945,7 +945,7 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
         if (evaluatedExpression is InstanceCreationExpression) {
           return processInstanceCreationExpression(evaluatedExpression,
               "NewInstanceCapability", newInstanceCapability,
-              (String arg) => new newInstanceCapability(arg));
+              (String arg) => newInstanceCapability(arg));
         }
         // TODO(eernst): other cases
         throw new UnimplementedError("$expression not yet supported!");
