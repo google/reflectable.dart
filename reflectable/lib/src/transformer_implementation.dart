@@ -129,13 +129,38 @@ class ClassDomain {
 
   /// Returns a String with the textual representation of the declarations-map.
   String get declarationsString {
-    Iterable<String> declarationParts = declarations.map(
-        (ExecutableElement declaration) {
+    Iterable<String> declarationParts = declarations
+        .map((ExecutableElement declaration) {
       return '"${nameOfDeclaration(declaration)}": '
           'new MethodMirrorImpl("${declaration.name}", '
           '${_declarationDescriptor(declaration)}, this)';
     });
     return "{${declarationParts.join(", ")}}";
+  }
+
+  /// Returns a String with the textual representations of the metadata list.
+  // TODO(sigurdm, 17307): Make this less fragile when the analyzer's
+  // element-model exposes the metadata in a more friendly way.
+  String get metadataString {
+    List<String> metadataParts = new List<String>();
+    Iterator<Annotation> nodeIterator = classElement.node.metadata.iterator;
+    Iterator<ElementAnnotation> elementIterator =
+        classElement.metadata.iterator;
+    while (nodeIterator.moveNext()) {
+      bool r = elementIterator.moveNext();
+      assert(r);
+      Annotation annotationNode = nodeIterator.current;
+      ElementAnnotation elementAnnotation = elementIterator.current;
+      // Remove the @-sign.
+      String source = annotationNode.toSource().substring(1);
+      if (elementAnnotation.element is ConstructorElement) {
+        // If this is a constructor call, add the otherwise implicit 'const'.
+        metadataParts.add("const $source");
+      } else {
+        metadataParts.add(source);
+      }
+    }
+    return "new UnmodifiableListView([${metadataParts.join(", ")}])";
   }
 
   void computeNames(Namer namer) {
@@ -185,6 +210,11 @@ class Capabilities {
       }
     }
     return capabilities.any(handleInstanceInvokeCapability);
+  }
+
+  bool get supportsMetadata {
+    return capabilities.any(
+        (ReflectCapability capability) => capability == metadataCapability);
   }
 }
 
@@ -799,25 +829,32 @@ class TransformerImplementation {
   /// [ClassMirror] which is specialized for a `reflectedType` which
   /// is the class modeled by [classElement].
   String _staticClassMirrorCode(ClassDomain classDomain) {
-    String declarationsString = classDomain.declarationsString;
+    List<String> implementedMembers = new List<String>();
     String simpleName = classDomain.classElement.name;
+    implementedMembers
+        .add('final String simpleName = "$simpleName";');
     // When/if we have library-mirrors there could be a generic implementation:
     // String get qualifiedName => "${owner.qualifiedName}.${simpleName}";
     String qualifiedName =
         "${classDomain.classElement.library.name}.$simpleName";
-    return """
-class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
-  final String simpleName = "$simpleName";
-  final String qualifiedName = "$qualifiedName";
-
+    implementedMembers.add('final String qualifiedName = "$qualifiedName";');
+    String declarationsString = classDomain.declarationsString;
+    implementedMembers.add("""
   Map<String, MethodMirror> _declarationsCache;
-
   Map<String, MethodMirror> get declarations {
     if (_declarationsCache == null) {
       _declarationsCache = new UnmodifiableMapView($declarationsString);
     }
     return _declarationsCache;
-  }
+  }""");
+    if (classDomain.reflectorDomain.capabilities.supportsMetadata) {
+      implementedMembers
+          .add("List<Object> metadata = ${classDomain.metadataString};");
+    }
+
+    return """
+class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
+  ${implementedMembers.join("\n\n  ")}
 }
 """;
   }

@@ -650,8 +650,12 @@ abstract class _DeclarationMirrorImpl implements r.DeclarationMirror {
   bool get isTopLevel => _declarationMirror.isTopLevel;
 
   @override
-  List<Object> get metadata =>
-      _declarationMirror.metadata.map((m) => m.reflectee).toList();
+  List<Object> get metadata {
+    if (_reflectable.capabilities.contains(metadataCapability)) {
+      return _declarationMirror.metadata.map((m) => m.reflectee).toList();
+    }
+    throw new NoSuchCapabilityError('.metadata witout metadataCapability');
+  }
 
   @override
   r.SourceLocation get location {

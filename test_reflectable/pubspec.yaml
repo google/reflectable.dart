@@ -8,6 +8,7 @@ transformers:
 - reflectable:
     $include: ["test/*.dart"]
     entry_points:
+      - test/metadata_test.dart
       - test/import_reflectable.dart
       - test/use_annotation.dart
       - test/reflect_test.dart

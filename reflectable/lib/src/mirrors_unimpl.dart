@@ -4,7 +4,8 @@
 
 import '../mirrors.dart';
 import 'encoding_constants.dart' as constants;
-export 'dart:collection' show UnmodifiableMapView;
+import '../capability.dart';
+export 'dart:collection' show UnmodifiableMapView, UnmodifiableListView;
 export '../capability.dart';
 export '../static_reflectable.dart';
 
@@ -118,6 +119,10 @@ abstract class ClassMirrorUnimpl extends TypeMirrorUnimpl
   bool operator ==(other) => _unsupported();
   int get hashCode => _unsupported();
   bool isSubclassOf(ClassMirror other) => _unsupported();
+  List<Object> get metadata {
+    throw new NoSuchCapabilityError(
+        ".metadata witout metadataCapability");
+  }
 }
 
 abstract class FunctionTypeMirrorUnimpl extends ClassMirrorUnimpl
