@@ -1,2 +1,3 @@
 [ $compiler == dart2js ]
 test/declarations_test: RuntimeError # Dart2js does not implement all properties of mirrors.
+test/new_instance_test: RuntimeError # dartbug.com/19635

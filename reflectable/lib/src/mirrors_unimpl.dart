@@ -180,9 +180,8 @@ class MethodMirrorImpl implements MethodMirror {
   @override
   String get constructorName => name;
 
-  // We do not support reflection on abstract methods.
   @override
-  bool get isAbstract => 0 !=  descriptor & constants.abstractAttribute;
+  bool get isAbstract => 0 != descriptor & constants.abstractAttribute;
 
   @override
   bool get isConstConstructor => 0 != descriptor & constants.constAttribute;

@@ -239,6 +239,80 @@ class ClassDomain {
     return "new UnmodifiableListView([${metadataParts.join(", ")}])";
   }
 
+  String get newInstanceString {
+    List<String> constructorLines = new List<String>();
+
+    String name(int i) {
+      String alphabet = "abcdefghijklmnopqrstuvwxyz";
+      int alphabetLength = alphabet.length;
+      if (i < alphabetLength) {
+        return "_${alphabet[i]}";
+      }
+      return "_${alphabet[i % alphabetLength]}${i ~/ alphabetLength}";
+    }
+    for (ConstructorElement constructor in constructors) {
+      FunctionType type = constructor.type;
+      int requiredPositionalCount = type.normalParameterTypes.length;
+      int optionalPositionalCount = type.optionalParameterTypes.length;
+      List<String> argumentNames = type.namedParameterTypes.keys.toList();
+      String positionals = new Iterable.generate(
+          requiredPositionalCount, (int i) => name(i)).join(", ");
+      String optionalsWithDefaults = new Iterable.generate(
+          optionalPositionalCount, (int i) {
+        String defaultValueCode = constructor.parameters[
+            requiredPositionalCount + i].defaultValueCode;
+        String defaultValueString =
+            defaultValueCode == null ? "" : " = $defaultValueCode";
+        return "${name(i + requiredPositionalCount)}$defaultValueString";
+      }).join(", ");
+      String namedWithDefaults = new Iterable.generate(argumentNames.length,
+          (int i) {
+        // TODO(eernst, sigurdm, #8): Recreate the default values faithfully.
+        // TODO(eernst, sigurdm, #8): Until that is done, recognize unhandled
+        // cases, and emit error/warning.
+        String defaultValueCode = constructor.parameters[
+            requiredPositionalCount + i].defaultValueCode;
+        String defaultValueString =
+            defaultValueCode == null ? "" : ": $defaultValueCode";
+        return "${argumentNames[i]}$defaultValueString";
+      }).join(", ");
+
+      String optionalArguments = new Iterable.generate(optionalPositionalCount,
+          (int i) => name(i + requiredPositionalCount)).join(", ");
+      String namedArguments =
+          argumentNames.map((String name) => "$name: $name").join(", ");
+      List<String> parameterParts = new List<String>();
+      List<String> argumentParts = new List<String>();
+      if (requiredPositionalCount != 0) {
+        parameterParts.add(positionals);
+        argumentParts.add(positionals);
+      }
+      if (optionalPositionalCount != 0) {
+        parameterParts.add("[$optionalsWithDefaults]");
+        argumentParts.add(optionalArguments);
+      }
+      if (argumentNames.isNotEmpty) {
+        parameterParts.add("{${namedWithDefaults}}");
+        argumentParts.add(namedArguments);
+      }
+      constructorLines.add('case "${constructor.name}": '
+          'c = (${parameterParts.join(', ')}) => '
+          'new ${nameOfDeclaration(constructor)}'
+          '(${argumentParts.join(", ")});');
+      constructorLines.add('  break;');
+    }
+    return """newInstance(String constructorName, List positionalArguments,
+      [Map<Symbol, dynamic> namedArguments]) {
+    Function c;
+    switch (constructorName) {
+      ${constructorLines.join("\n      ")}
+      default: throw new NoSuchInvokeCapabilityError(${classElement.name},
+          constructorName, positionalArguments, namedArguments);
+    }
+    return Function.apply(c, positionalArguments, namedArguments);
+  }""";
+  }
+
   void computeNames(Namer namer) {
     staticClassMirrorName = namer.freshName("Static_${baseName}_ClassMirror");
     staticInstanceMirrorName =
@@ -909,6 +983,9 @@ class TransformerImplementation {
     if (classDomain.reflectorDomain.capabilities.supportsMetadata) {
       implementedMembers
           .add("List<Object> metadata = ${classDomain.metadataString};");
+    }
+    if (!classDomain.classElement.isAbstract) {
+      implementedMembers.add(classDomain.newInstanceString);
     }
 
     return """
