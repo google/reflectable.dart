@@ -26,7 +26,7 @@ get:
 	( cd ..; pub get )
 
 check:
-	dartanalyzer $(OPTIONS) ../{lib,test}/{,*/}*.dart
+	( cd ..; dartanalyzer {lib,test}/{,*/}*.dart )
 
 build:
 	( cd ..; pub build --mode=debug test )

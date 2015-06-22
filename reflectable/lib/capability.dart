@@ -2,6 +2,8 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
+library reflectable.capability;
+
 // The class [ReflectCapability] and its subclasses form a domain
 // specific language (DSL) in that they can be used to create tree
 // structures that correspond to abstract syntax trees for expressions.
@@ -16,8 +18,10 @@
 // the apparent functionality of mirrors.dart, and the amount of code
 // generated for such a subset will be much smaller than the amount of
 // code generated for the unconstrained case.
-
-library reflectable.capability;
+//
+// NB! It is crucial that all changes made in this library are
+// performed in the corresponding manner in `src/element_capability.dart`,
+// and vice versa.
 
 import 'reflectable.dart';
 
@@ -239,7 +243,8 @@ const invokingCapability = const InvokingCapability("");
 /// InstanceInvokeMetaCapability, StaticInvokeMetaCapability, and
 /// NewInstanceMetaCapability, all holding the same [metadata].
 class InvokingMetaCapability extends MetadataQuantifiedCapability
-    implements InstanceInvokeMetaCapability, StaticInvokeMetaCapability, NewInstanceMetaCapability {
+    implements InstanceInvokeMetaCapability, StaticInvokeMetaCapability,
+    NewInstanceMetaCapability {
   const InvokingMetaCapability(Object metadata) : super(metadata);
 }
 
@@ -248,7 +253,9 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
 /// metadataCapability, typeRelationsCapability, ownerCapability,
 /// declarationsCapability, uriCapability, and libraryDependenciesCapability.
 class TypingCapability extends TypeCapability
-    implements _NameCapability, _ClassifyCapability, _MetadataCapability, _TypeRelationsCapability, _OwnerCapability, _DeclarationsCapability, _UriCapability, _LibraryDependenciesCapability {
+    implements _NameCapability, _ClassifyCapability, _MetadataCapability,
+    _TypeRelationsCapability, _OwnerCapability, _DeclarationsCapability,
+    _UriCapability, _LibraryDependenciesCapability {
   const TypingCapability(Type upperBound) : super(upperBound);
 }
 
@@ -260,7 +267,7 @@ class TypingCapability extends TypeCapability
 /// arguments in a varargs style (just a comma separated list of arguments,
 /// rather than enclosing them in `<ApiReflectCapability>[]`). When even more
 /// than ten arguments are needed, the `fromList` constructor should be used.
-abstract class TargetQuantifyCapability implements ReflectCapability {
+abstract class ReflecteeQuantifyCapability implements ReflectCapability {
   // Fields holding capabilities; we use discrete fields rather than a list
   // of fields because this allows us to use a syntax similar to a varargs
   // invocation as the superinitializer (omitting `<ReflectCapability>[]` and
@@ -299,7 +306,7 @@ abstract class TargetQuantifyCapability implements ReflectCapability {
 
   /// Const constructor, allowing for varargs style invocation with up
   /// to ten arguments.
-  const TargetQuantifyCapability([this._cap0 = null, this._cap1 = null,
+  const ReflecteeQuantifyCapability([this._cap0 = null, this._cap1 = null,
       this._cap2 = null, this._cap3 = null, this._cap4 = null,
       this._cap5 = null, this._cap6 = null, this._cap7 = null,
       this._cap8 = null, this._cap9 = null])
@@ -307,7 +314,7 @@ abstract class TargetQuantifyCapability implements ReflectCapability {
         _capabilities = null;
 
   /// Const constructor, allowing for arbitrary length list.
-  const TargetQuantifyCapability.fromList(this._capabilities)
+  const ReflecteeQuantifyCapability.fromList(this._capabilities)
       : _capabilitiesGivenAsList = true,
         _cap0 = null,
         _cap1 = null,
@@ -326,7 +333,7 @@ abstract class TargetQuantifyCapability implements ReflectCapability {
 /// be provided not just for the target class whose metadata includes this
 /// capability, but also all classes which are subtypes of the target
 /// class.
-class SubtypeQuantifyCapability extends TargetQuantifyCapability {
+class SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
   const SubtypeQuantifyCapability([ApiReflectCapability cap0,
       ApiReflectCapability cap1, ApiReflectCapability cap2,
       ApiReflectCapability cap3, ApiReflectCapability cap4,
@@ -365,7 +372,7 @@ class SubtypeQuantifyCapability extends TargetQuantifyCapability {
 /// For more information about this potentially dangerous device, please
 /// refer to the design document.
 /// TODO(eernst): Insert a link to the design document.
-class AdmitSubtypeCapability extends TargetQuantifyCapability {
+class AdmitSubtypeCapability extends ReflecteeQuantifyCapability {
   const AdmitSubtypeCapability([ApiReflectCapability cap0,
       ApiReflectCapability cap1, ApiReflectCapability cap2,
       ApiReflectCapability cap3, ApiReflectCapability cap4,
@@ -378,23 +385,38 @@ class AdmitSubtypeCapability extends TargetQuantifyCapability {
       : super.fromList(capabilities);
 }
 
-/// Second order capability class specifying that the reflection support
-/// requested by the given [reflector] should be provided for every class
-/// in the program whose qualified name matches the given [classNamePattern]
-/// considered as a regular expression.
-class GlobalQuantifyCapability implements ReflectCapability {
-  final String classNamePattern;
+
+/// Abstract superclass for all capabilities which are used to specify
+/// that a given reflector must be considered to be applied as metadata
+/// to a set of targets. Note that in order to work correctly, this
+/// kind of capability can only be used as metadata on an import of
+/// 'package:reflectable/reflectable.dart'.
+class ImportAttachedCapability {
   final Reflectable reflector;
-  const GlobalQuantifyCapability(this.classNamePattern, this.reflector);
+  const ImportAttachedCapability(this.reflector);
 }
 
 /// Second order capability class specifying that the reflection support
 /// requested by the given [reflector] should be provided for every class
-/// in the program whose metadata includes the given [metadata].
-class GlobalQuantifyMetaCapability implements ReflectCapability {
+/// in the program whose qualified name matches the given [classNamePattern]
+/// considered as a regular expression. Note that in order to get this
+/// semantics, this kind of capability can only be used as metadata on an
+/// import of 'package:reflectable/reflectable.dart'.
+class GlobalQuantifyCapability extends ImportAttachedCapability {
+  final String classNamePattern;
+  const GlobalQuantifyCapability(this.classNamePattern, Reflectable reflector)
+      : super(reflector);
+}
+
+/// Second order capability class specifying that the reflection support
+/// requested by the given [reflector] should be provided for every class
+/// in the program whose metadata includes the given [metadata]. Note that
+/// in order to get this semantics, this kind of capability can only be used
+/// as metadata on an import of 'package:reflectable/reflectable.dart'.
+class GlobalQuantifyMetaCapability extends ImportAttachedCapability {
   final Object metadata;
-  final Reflectable reflector;
-  const GlobalQuantifyMetaCapability(this.metadata, this.reflector);
+  const GlobalQuantifyMetaCapability(this.metadata, Reflectable reflector)
+      : super(reflector);
 }
 
 // ---------- Private classes used to enable capability instances above.

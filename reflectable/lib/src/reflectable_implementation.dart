@@ -23,7 +23,7 @@ r.InstanceMirror reflect(o, r.Reflectable reflectable) {
   dm.InstanceMirror mirror = dm.reflect(o);
   if (!hasReflectable(mirror.type)) {
     throw new NoSuchCapabilityError(
-        "Reflecting on object of unannotated class.");
+        "Reflecting on object of unannotated class: ${o.runtimeType}.");
   }
   return wrapInstanceMirror(dm.reflect(o), reflectable);
 }

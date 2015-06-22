@@ -4,5 +4,5 @@
 
 [ $runtime != vm ]
 test/mock_tests/*: SkipByDesign # Use dart:io.
-build/*: SkipByDesign # Nothing relies on getting build.
+build/*: SkipByDesign # Nothing relies on getting built.
 

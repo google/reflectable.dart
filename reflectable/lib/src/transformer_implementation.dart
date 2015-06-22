@@ -13,11 +13,11 @@ import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
 import 'package:barback/barback.dart';
 import 'package:code_transformers/resolver.dart';
+import 'element_capability.dart' as ec;
 import 'encoding_constants.dart' as constants;
 import "reflectable_class_constants.dart" as reflectable_class_constants;
 import 'source_manager.dart';
 import 'transformer_errors.dart' as errors;
-import '../capability.dart';
 
 class ReflectionWorld {
   final List<ReflectorDomain> reflectors = new List<ReflectorDomain>();
@@ -109,7 +109,8 @@ class ClassDomain {
           new Map<String, ExecutableElement>();
 
       void addIfCapable(ExecutableElement member) {
-        if (reflectorDomain.capabilities.supportsInstanceInvoke(member.name)) {
+        if (reflectorDomain.capabilities.supportsInstanceInvoke(
+            member.name, member.metadata)) {
           result[member.name] = member;
         }
       }
@@ -323,48 +324,147 @@ class ClassDomain {
 /// A wrapper around a list of Capabilities.
 /// Supports queries about the methods supported by the set of capabilities.
 class Capabilities {
-  List<ReflectCapability> capabilities;
+  List<ec.ReflectCapability> capabilities;
   Capabilities(this.capabilities);
 
   instanceMethodsFilterRegexpString() {
-    if (capabilities.contains(instanceInvokeCapability)) return ".*";
-    if (capabilities.contains(invokingCapability)) return ".*";
-    return capabilities.where((ReflectCapability capability) {
-      return capability is InstanceInvokeCapability;
-    }).map((InstanceInvokeCapability capability) {
+    if (capabilities.contains(ec.instanceInvokeCapability)) return ".*";
+    if (capabilities.contains(ec.invokingCapability)) return ".*";
+    return capabilities.where((ec.ReflectCapability capability) {
+      return capability is ec.InstanceInvokeCapability;
+    }).map((ec.InstanceInvokeCapability capability) {
       return "(${capability.namePattern})";
     }).join('|');
   }
 
-  bool supportsInstanceInvoke(String methodName) {
-    if (capabilities.contains(invokingCapability)) return true;
-    if (capabilities.contains(instanceInvokeCapability)) return true;
+  bool _supportsName(ec.NamePatternCapability capability, String methodName) {
+    RegExp regexp = new RegExp(capability.namePattern);
+    return regexp.firstMatch(methodName) != null;
+  }
 
-    bool handleMetadataCapability(ReflectCapability capability) {
-      if (capability is! MetadataQuantifiedCapability &&
-          capability is! GlobalQuantifyMetaCapability) {
-        return false;
-      }
-      // TODO(eernst): Handle MetadataQuantifiedCapability and
-      // GlobalQuantifyMetaCapability.
-      throw new UnimplementedError();
-    }
-    if (capabilities.any(handleMetadataCapability)) return true;
+  bool _supportsMeta(ec.MetadataQuantifiedCapability capability,
+      List<ElementAnnotation> metadata) {
+    throw new UnimplementedError("Metadata comparison not yet supported");
+  }
 
-    bool handleInstanceInvokeCapability(ReflectCapability capability) {
-      if (capability is InstanceInvokeCapability) {
-        return new RegExp(capability.namePattern).firstMatch(methodName) !=
-            null;
-      } else {
-        return false;
-      }
+  bool _supportsInstanceInvoke(List<ec.ReflectCapability> capabilities,
+      String methodName, List<ElementAnnotation> metadata) {
+
+    // Handle API based capabilities.
+
+    if (capabilities.contains(ec.invokingCapability)) return true;
+    if (capabilities.contains(ec.instanceInvokeCapability)) return true;
+
+    bool supportsInvoking(ec.ReflectCapability cap) =>
+        cap is ec.InvokingCapability && _supportsName(cap, methodName);
+    if (capabilities.any(supportsInvoking)) return true;
+
+    bool supportsInstanceInvoke(ec.ReflectCapability cap) =>
+        cap is ec.InstanceInvokeCapability && _supportsName(cap, methodName);
+    if (capabilities.any(supportsInstanceInvoke)) return true;
+
+    bool supportsInvokingMeta(ec.ReflectCapability cap) =>
+        cap is ec.InvokingMetaCapability && _supportsMeta(cap, metadata);
+    if (capabilities.any(supportsInvokingMeta)) return true;
+
+    bool supportsInstanceInvokeMeta(ec.ReflectCapability cap) =>
+        cap is ec.InstanceInvokeMetaCapability && _supportsMeta(cap, metadata);
+    if (capabilities.any(supportsInstanceInvokeMeta)) return true;
+
+    // Handle reflectee based capabilities.
+
+    bool supportsTarget(ec.ReflecteeQuantifyCapability capability) {
+      // TODO(eernst): implement this correctly; will need something
+      // like this, which will cover the case where we have applied
+      // the trivial subtype:
+      return _supportsInstanceInvoke(
+          capability.capabilities, methodName, metadata);
     }
-    return capabilities.any(handleInstanceInvokeCapability);
+
+    bool supportsSubtype(ec.ReflectCapability cap) =>
+        cap is ec.SubtypeQuantifyCapability && supportsTarget(cap);
+    if (capabilities.any(supportsSubtype)) return true;
+
+    bool supportsAdmit(ec.ReflectCapability cap) =>
+        cap is ec.AdmitSubtypeCapability && supportsTarget(cap);
+    if (capabilities.any(supportsAdmit)) return true;
+
+    // Handle globally quantified capabilities.
+
+    // TODO(eernst): We probably need to refactor a lot of stuff
+    // to get this right, so the first approach will simply be to
+    // discover the relevant capabilities, and indicate that they
+    // are not yet supported.
+    capabilities.forEach((ec.ReflectCapability cap) {
+      if (cap is ec.GlobalQuantifyCapability ||
+          cap is ec.GlobalQuantifyMetaCapability) {
+        throw new UnimplementedError("Global quantification not yet supported");
+      }
+    });
+
+    // All options exhausted, give up.
+
+    return false;
+  }
+
+  bool supportsInstanceInvoke(
+      String methodName, List<ElementAnnotation> metadata) {
+    return _supportsInstanceInvoke(capabilities, methodName, metadata);
+  }
+
+  bool _supportsStaticInvoke(List<ec.ReflectCapability> capabilities,
+      String methodName, List<ElementAnnotation> metadata) {
+
+    // Handle API based capabilities.
+
+    if (capabilities.contains(ec.invokingCapability)) return true;
+    if (capabilities.contains(ec.staticInvokeCapability)) return true;
+
+    bool supportsInvoking(ec.ReflectCapability cap) =>
+        cap is ec.InvokingCapability && _supportsName(cap, methodName);
+    if (capabilities.any(supportsInvoking)) return true;
+
+    bool supportsStaticInvoke(ec.ReflectCapability cap) =>
+        cap is ec.StaticInvokeCapability && _supportsName(cap, methodName);
+    if (capabilities.any(supportsStaticInvoke)) return true;
+
+    bool supportsInvokingMeta(ec.ReflectCapability cap) =>
+        cap is ec.InvokingMetaCapability && _supportsMeta(cap, metadata);
+    if (capabilities.any(supportsInvokingMeta)) return true;
+
+    bool supportsStaticInvokeMeta(ec.ReflectCapability cap) =>
+        cap is ec.StaticInvokeMetaCapability && _supportsMeta(cap, metadata);
+    if (capabilities.any(supportsStaticInvokeMeta)) return true;
+
+    // Handle reflectee based capabilities.
+
+    bool supportsTarget(ec.ReflecteeQuantifyCapability capability) {
+      // TODO(eernst): implement this correctly.
+      return _supportsStaticInvoke(
+          capability.capabilities, methodName, metadata);
+    }
+
+    bool supportsSubtype(ec.ReflectCapability cap) =>
+        cap is ec.SubtypeQuantifyCapability && supportsTarget(cap);
+    if (capabilities.any(supportsSubtype)) return true;
+
+    bool supportsAdmit(ec.ReflectCapability cap) =>
+        cap is ec.AdmitSubtypeCapability && supportsTarget(cap);
+    if (capabilities.any(supportsAdmit)) return true;
+
+    // All options exhausted, give up.
+
+    return false;
+  }
+
+  bool supportsStaticInvoke(
+      String methodName, List<ElementAnnotation> metadata) {
+    return _supportsStaticInvoke(capabilities, methodName, metadata);
   }
 
   bool get supportsMetadata {
-    return capabilities.any(
-        (ReflectCapability capability) => capability == metadataCapability);
+    return capabilities.any((ec.ReflectCapability capability) =>
+        capability == ec.metadataCapability);
   }
 }
 
@@ -573,7 +673,8 @@ class TransformerImplementation {
         // TODO(sigurdm): Ask capabilities about support.
         return true;
       } else {
-        return capabilities.supportsInstanceInvoke(method.name);
+        return capabilities.supportsInstanceInvoke(
+            method.name, method.metadata);
       }
     });
   }
@@ -585,7 +686,8 @@ class TransformerImplementation {
         // TODO(sigurdm): Ask capabilities about support.
         return true;
       } else {
-        return capabilities.supportsInstanceInvoke(accessor.name);
+        return capabilities.supportsInstanceInvoke(
+            accessor.name, accessor.metadata);
       }
     });
   }
@@ -1046,7 +1148,7 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
   }
 
   /// Returns the [ReflectCapability] denoted by the given [initializer].
-  ReflectCapability _capabilityOfExpression(
+  ec.ReflectCapability _capabilityOfExpression(
       LibraryElement capabilityLibrary, Expression expression) {
     Expression evaluatedExpression = _constEvaluate(expression);
 
@@ -1076,10 +1178,10 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
       }), span: resolver.getSourceSpan(classElement));
     }
 
-    ReflectCapability processInstanceCreationExpression(
+    ec.ReflectCapability processInstanceCreationExpression(
         InstanceCreationExpression expression, String expectedConstructorName,
-        ReflectCapability defaultCapability,
-        ReflectCapability factory(String arg)) {
+        ec.ReflectCapability defaultCapability,
+        ec.ReflectCapability factory(String arg)) {
       // The [expression] came from a static evaluation of a const,
       // could never be a non-const.
       assert(expression.isConst);
@@ -1100,33 +1202,33 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
 
     switch (classElement.name) {
       case "_NameCapability":
-        return nameCapability;
+        return ec.nameCapability;
       case "_ClassifyCapability":
-        return classifyCapability;
+        return ec.classifyCapability;
       case "_MetadataCapability":
-        return metadataCapability;
+        return ec.metadataCapability;
       case "_TypeRelationsCapability":
-        return typeRelationsCapability;
+        return ec.typeRelationsCapability;
       case "_OwnerCapability":
-        return ownerCapability;
+        return ec.ownerCapability;
       case "_DeclarationsCapability":
-        return declarationsCapability;
+        return ec.declarationsCapability;
       case "_UriCapability":
-        return uriCapability;
+        return ec.uriCapability;
       case "_LibraryDependenciesCapability":
-        return libraryDependenciesCapability;
+        return ec.libraryDependenciesCapability;
 
       case "InstanceInvokeCapability":
         if (evaluatedExpression is SimpleIdentifier &&
             evaluatedExpression.name == "instanceInvokeCapability") {
-          return instanceInvokeCapability;
+          return ec.instanceInvokeCapability;
         }
         // In simple cases, the [evaluatedExpression] is directly an
         // invocation of the constructor in this class.
         if (evaluatedExpression is InstanceCreationExpression) {
           return processInstanceCreationExpression(evaluatedExpression,
-              "InstanceInvokeCapability", instanceInvokeCapability,
-              (String arg) => new InstanceInvokeCapability(arg));
+              "InstanceInvokeCapability", ec.instanceInvokeCapability,
+              (String arg) => new ec.InstanceInvokeCapability(arg));
         }
         // TODO(eernst): other cases
         throw new UnimplementedError("$expression not yet supported!");
@@ -1136,14 +1238,14 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
       case "StaticInvokeCapability":
         if (evaluatedExpression is SimpleIdentifier &&
             evaluatedExpression.name == "staticInvokeCapability") {
-          return staticInvokeCapability;
+          return ec.staticInvokeCapability;
         }
         // In simple cases, the [evaluatedExpression] is directly an
         // invocation of the constructor in this class.
         if (evaluatedExpression is InstanceCreationExpression) {
           return processInstanceCreationExpression(evaluatedExpression,
-              "StaticInvokeCapability", staticInvokeCapability,
-              (String arg) => new StaticInvokeCapability(arg));
+              "StaticInvokeCapability", ec.staticInvokeCapability,
+              (String arg) => new ec.StaticInvokeCapability(arg));
         }
         // TODO(eernst): other cases
         throw new UnimplementedError("$expression not yet supported!");
@@ -1153,14 +1255,14 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
       case "NewInstanceCapability":
         if (evaluatedExpression is SimpleIdentifier &&
             evaluatedExpression.name == "newInstanceCapability") {
-          return newInstanceCapability;
+          return ec.newInstanceCapability;
         }
         // In simple cases, the [evaluatedExpression] is directly an
         // invocation of the constructor in this class.
         if (evaluatedExpression is InstanceCreationExpression) {
           return processInstanceCreationExpression(evaluatedExpression,
-              "NewInstanceCapability", newInstanceCapability,
-              (String arg) => newInstanceCapability(arg));
+              "NewInstanceCapability", ec.newInstanceCapability,
+              (String arg) => new ec.NewInstanceCapability(arg));
         }
         // TODO(eernst): other cases
         throw new UnimplementedError("$expression not yet supported!");
@@ -1170,11 +1272,11 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
       case "TypeCapability":
         if (evaluatedExpression is SimpleIdentifier &&
             evaluatedExpression.name == "typeCapability") {
-          return typeCapability;
+          return ec.typeCapability;
         }
         if (evaluatedExpression is SimpleIdentifier &&
             evaluatedExpression.name == "localTypeCapability") {
-          return localTypeCapability;
+          return ec.localTypeCapability;
         }
         // TODO(eernst): problem, how can we create a Type object
         // corresponding to the one denoted by part of the given
@@ -1184,14 +1286,14 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
       case "InvokingCapability":
         if (evaluatedExpression is SimpleIdentifier &&
             evaluatedExpression.name == "invokingCapability") {
-          return invokingCapability;
+          return ec.invokingCapability;
         }
         // In simple cases, the [evaluatedExpression] is directly an
         // invocation of the constructor in this class.
         if (evaluatedExpression is InstanceCreationExpression) {
           return processInstanceCreationExpression(evaluatedExpression,
-              "InvokingCapability", invokingCapability,
-              (String arg) => new InvokingCapability(arg));
+              "InvokingCapability", ec.invokingCapability,
+              (String arg) => new ec.InvokingCapability(arg));
         }
         // TODO(eernst): other cases.
         throw new UnimplementedError("$classElement not yet supported!");
@@ -1244,7 +1346,7 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
       // have this degenerate case in tests "just because we can", and
       // there is no technical reason to prohibit it, so we will handle
       // it here.
-      return new Capabilities(<ReflectCapability>[]);
+      return new Capabilities(<ec.ReflectCapability>[]);
     }
     // TODO(eernst): Ensure again that this can be a mere assertion.
     assert(initializers.length == 1);
@@ -1253,7 +1355,7 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
     // handle two cases: `super(..)` and `super.fromList(<_>[..])`.
     SuperConstructorInvocation superInvocation = initializers[0];
 
-    ReflectCapability capabilityOfExpression(Expression expression) {
+    ec.ReflectCapability capabilityOfExpression(Expression expression) {
       return _capabilityOfExpression(capabilityLibrary, expression);
     }
 

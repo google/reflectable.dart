@@ -9,8 +9,10 @@
 # performed (such as 'Testing'); $2 is the directory where the make
 # subtask should run; $3 is the make goal.
 
-echo "-------------------- $1 in $2"
-pushd $2
-make -s $3
-popd
+original_dir=$(pwd)
+finish () { cd $original_dir; }
+trap finish EXIT
 
+echo "-------------------- $1 in $2"
+cd $2
+make -s $3
