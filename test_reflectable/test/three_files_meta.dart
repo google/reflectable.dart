@@ -6,7 +6,7 @@
 // Uses 'reflect' across file boundaries.  Provider of the
 // metadata class.
 
-library reflectable.test.to_be_transformed.three_files_meta;
+library test_reflectable.test.three_files_meta;
 
 import 'package:reflectable/reflectable.dart';
 

@@ -6,7 +6,8 @@
 // Imports the core file of this package and gives it a
 // prefix, then proceeds to use the imported material.
 
-library reflectable.test.to_be_transformed.use_prefix_test;
+library test_reflectable.test.use_prefix_test;
+
 import 'package:reflectable/reflectable.dart' as r;
 import 'package:unittest/unittest.dart';
 

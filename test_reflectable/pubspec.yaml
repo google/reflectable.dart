@@ -21,6 +21,8 @@ transformers:
       - test/reflect_type_test.dart
       - test/declarations_test.dart
       - test/new_instance_test.dart
+      - test/proxy_test.dart
+      - test/polymer_basic_needs_test.dart
 # Disabled next three entries to avoid failing transformation
 #      - test/new_instance_default_values_test.dart # Issue # 8
 #      - test/capabilities_test.dart

@@ -6,7 +6,7 @@
 // Uses 'reflect', with a constraint to invocation based on
 // 'invokeMembersCapability'.
 
-library reflectable.test.to_be_transformed.members_capability_test;
+library test_reflectable.test.members_capability_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';

@@ -1178,7 +1178,7 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
       }), span: resolver.getSourceSpan(classElement));
     }
 
-    ec.ReflectCapability processInstanceCreationExpression(
+    ec.ReflectCapability processInstanceCreationFromString(
         InstanceCreationExpression expression, String expectedConstructorName,
         ec.ReflectCapability defaultCapability,
         ec.ReflectCapability factory(String arg)) {
@@ -1190,7 +1190,8 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
       assert(expression.constructorName == expectedConstructorName);
       // There is only one constructor in that class, with one argument.
       assert(expression.argumentList.length == 1);
-      Expression argument = expression.argumentList.arguments[0];
+      Expression argument =
+          _constEvaluate(expression.argumentList.arguments[0]);
       if (argument is SimpleStringLiteral) {
         if (argument.value == "") return defaultCapability;
         return factory(argument.value);
@@ -1198,6 +1199,24 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
       // TODO(eernst): Deny support for all other kinds of arguments, or
       // implement some more cases.
       throw new UnimplementedError("$expression not yet supported!");
+    }
+
+    ec.ReflectCapability processInstanceCreationFromOther(
+        InstanceCreationExpression expression, String expectedConstructorName,
+        ec.ReflectCapability defaultCapability,
+        ec.ReflectCapability factory(arg)) {
+      // The [expression] came from a static evaluation of a const,
+      // could never be a non-const.
+      assert(expression.isConst);
+      // We do not invoke some other constructor (in that case
+      // [expression] would have had a different type).
+      assert(expression.constructorName == expectedConstructorName);
+      // There is only one constructor in that class, with one argument.
+      assert(expression.argumentList.length == 1);
+      Expression argument =
+          _constEvaluate(expression.argumentList.arguments[0]);
+      if (argument is NullLiteral) return defaultCapability;
+      return factory(argument);
     }
 
     switch (classElement.name) {
@@ -1226,7 +1245,7 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
         // In simple cases, the [evaluatedExpression] is directly an
         // invocation of the constructor in this class.
         if (evaluatedExpression is InstanceCreationExpression) {
-          return processInstanceCreationExpression(evaluatedExpression,
+          return processInstanceCreationFromString(evaluatedExpression,
               "InstanceInvokeCapability", ec.instanceInvokeCapability,
               (String arg) => new ec.InstanceInvokeCapability(arg));
         }
@@ -1243,7 +1262,7 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
         // In simple cases, the [evaluatedExpression] is directly an
         // invocation of the constructor in this class.
         if (evaluatedExpression is InstanceCreationExpression) {
-          return processInstanceCreationExpression(evaluatedExpression,
+          return processInstanceCreationFromString(evaluatedExpression,
               "StaticInvokeCapability", ec.staticInvokeCapability,
               (String arg) => new ec.StaticInvokeCapability(arg));
         }
@@ -1260,9 +1279,9 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
         // In simple cases, the [evaluatedExpression] is directly an
         // invocation of the constructor in this class.
         if (evaluatedExpression is InstanceCreationExpression) {
-          return processInstanceCreationExpression(evaluatedExpression,
+          return processInstanceCreationFromString(evaluatedExpression,
               "NewInstanceCapability", ec.newInstanceCapability,
-              (String arg) => new ec.NewInstanceCapability(arg));
+              (arg) => new ec.NewInstanceCapability(arg));
         }
         // TODO(eernst): other cases
         throw new UnimplementedError("$expression not yet supported!");
@@ -1278,6 +1297,23 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
             evaluatedExpression.name == "localTypeCapability") {
           return ec.localTypeCapability;
         }
+        // In simple cases, the [evaluatedExpression] is directly an
+        // invocation of the constructor in this class.
+        if (evaluatedExpression is InstanceCreationExpression) {
+          return processInstanceCreationFromOther(evaluatedExpression,
+              "TypeCapability", ec.localTypeCapability,
+              (arg) {
+                if (arg is SimpleIdentifier) {
+                  if (arg.name == "Object") return ec.typeCapability;
+                  new ec.TypeCapability(arg.staticElement);
+                }
+                // TODO(eernst): other cases.
+                throw new UnimplementedError(
+                    "TypeCapability(..) only supported with Object or null!");
+              });
+        }
+        // TODO(eernst): other cases.
+
         // TODO(eernst): problem, how can we create a Type object
         // corresponding to the one denoted by part of the given
         // evaluatedExpression?
@@ -1291,7 +1327,7 @@ class ${classDomain.staticClassMirrorName} extends ClassMirrorUnimpl {
         // In simple cases, the [evaluatedExpression] is directly an
         // invocation of the constructor in this class.
         if (evaluatedExpression is InstanceCreationExpression) {
-          return processInstanceCreationExpression(evaluatedExpression,
+          return processInstanceCreationFromString(evaluatedExpression,
               "InvokingCapability", ec.invokingCapability,
               (String arg) => new ec.InvokingCapability(arg));
         }

@@ -5,7 +5,7 @@
 // File being transformed by the reflectable transformer.
 // Uses 'reflect'.
 
-library reflectable.test.to_be_transformed.reflect_test;
+library test_reflectable.test.reflect_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';

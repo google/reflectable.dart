@@ -7,7 +7,8 @@
 // it.  Such an export must be adjusted similarly to the
 // adjustment applied to the import.
 
-library reflectable.test.to_be_transformed.bad_export_test;
+library test_reflectable.test.export_test;
+
 import 'package:reflectable/reflectable.dart';
 export 'package:reflectable/reflectable.dart';
 

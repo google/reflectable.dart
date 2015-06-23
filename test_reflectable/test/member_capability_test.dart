@@ -6,6 +6,8 @@
 // Uses 'reflect', with a constraint to invocation based on
 // 'InvokeInstanceMemberCapability'.
 
+library test_reflectable.test.member_capability_test;
+
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 

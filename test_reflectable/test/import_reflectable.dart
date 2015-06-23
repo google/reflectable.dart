@@ -5,7 +5,8 @@
 // File being transformed by the reflectable transformer.
 // Imports the core file of this package.
 
-library reflectable.test.to_be_transformed.import_reflectable;
+library test_reflectable.test.import_reflectable;
+
 import 'package:reflectable/reflectable.dart';
 
 const Reflectable ignored = null;  // To avoid 'unused import'.

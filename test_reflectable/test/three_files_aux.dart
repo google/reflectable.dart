@@ -6,7 +6,7 @@
 // Uses 'reflect' across file boundaries.  Additional library
 // declaring a class with a Reflectable annotation.
 
-library reflectable.test.to_be_transformed.three_files_aux;
+library test_reflectable.test.three_files_aux;
 
 import 'three_files_meta.dart';
 

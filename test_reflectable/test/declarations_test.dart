@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library reflectable_test.declarations_test;
+library test_reflectable.test.declarations_test;
 
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";

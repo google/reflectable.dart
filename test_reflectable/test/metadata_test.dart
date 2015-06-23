@@ -5,7 +5,8 @@
 /// Tests that metadata is preserved when the metadataCapability is present.
 // TODO(sigurdm): Support for metadata-annotations of members.
 // TODO(sigurdm): Support for metadata-anmntations of arguments.
-library reflectable.test.to_be_transformed.metadata_test;
+
+library test_reflectable.test.metadata_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';

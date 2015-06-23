@@ -5,7 +5,7 @@
 // File being transformed by the reflectable transformer.
 // Uses `invoke`.
 
-library reflectable.test.to_be_transformed.invoke_test;
+library test_reflectable.test.invoke_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';

@@ -76,7 +76,7 @@ const classifyCapability = const _ClassifyCapability();
 const metadataCapability = const _MetadataCapability();
 
 class TypeCapability implements ApiReflectCapability {
-  final Type upperBound;
+  final Element upperBound;
   const TypeCapability(this.upperBound);
 }
 
@@ -112,7 +112,7 @@ class TypingCapability extends TypeCapability implements
     _NameCapability, _ClassifyCapability, _MetadataCapability,
     _TypeRelationsCapability, _OwnerCapability, _DeclarationsCapability,
     _UriCapability, _LibraryDependenciesCapability {
-  const TypingCapability(Type upperBound) : super(upperBound);
+  const TypingCapability(Element upperBound) : super(upperBound);
 }
 
 abstract class ReflecteeQuantifyCapability implements ReflectCapability {

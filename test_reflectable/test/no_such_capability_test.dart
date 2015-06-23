@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.test.to_be_transformed.no_such_capability_test;
+library test_reflectable.test.no_such_capability_test;
 
 import 'package:reflectable/reflectable.dart' as r;
 import 'package:unittest/unittest.dart';

@@ -1,3 +1,9 @@
+
+[ $compiler == dart2js || $compiler == none ]
+build/test/polymer_basic_needs_test: RuntimeError # TODO: debug
+build/test/proxy_test: RuntimeError # TODO: impl. invokeGetter
+
 [ $compiler == dart2js ]
 test/declarations_test: RuntimeError # Dart2js does not implement all properties of mirrors.
 test/new_instance_test: RuntimeError # dartbug.com/19635
+

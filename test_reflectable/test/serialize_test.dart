@@ -1,4 +1,8 @@
-library test_reflectable.serialize_test;
+// Copyright (c) 2015, the Dart project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
+library test_reflectable.test.serialize_test;
 
 import "package:unittest/unittest.dart";
 import "package:test_reflectable/serialize.dart";
@@ -63,11 +67,11 @@ main() {
     // Assert that the output of the serialization is equals to
     // the expected map:
     expect(out, {
-      "type": "test_reflectable.serialize_test.A",
+      "type": "test_reflectable.test.serialize_test.A",
       "fields": {
         "a": {"type": "String", "val": "one"},
         "b": {
-          "type": "test_reflectable.serialize_test.A",
+          "type": "test_reflectable.test.serialize_test.A",
           "fields": {
             "a": {"type": "num", "val": 2},
             "b": {
@@ -75,7 +79,7 @@ main() {
               "val": [
                 {"type": "num", "val": 3},
                 {
-                  "type": "test_reflectable.serialize_test.A",
+                  "type": "test_reflectable.test.serialize_test.A",
                   "fields": {
                     "a": {"type": "num", "val": 4},
                     "b": {"type": "num", "val": 5}
@@ -95,11 +99,11 @@ main() {
     var input = new A.fromValues(1, new B.fromValues(1, 2, 3));
     var output = serializer.serialize(input);
     expect(output, {
-      "type": "test_reflectable.serialize_test.A",
+      "type": "test_reflectable.test.serialize_test.A",
       "fields": {
         "a": {"type": "num", "val": 1},
         "b": {
-          "type": "test_reflectable.serialize_test.B",
+          "type": "test_reflectable.test.serialize_test.B",
           "fields": {
             "a": {"type": "num", "val": 1},
             "b": {"type": "num", "val": 2},

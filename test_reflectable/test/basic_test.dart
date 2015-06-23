@@ -4,7 +4,7 @@
 
 // Tests some basic functionality of instance mirrors and class mirrors.
 
-library test.basic_test;
+library test_reflectable.test.basic_test;
 
 import 'package:unittest/unittest.dart';
 import 'package:reflectable/reflectable.dart' as r;
