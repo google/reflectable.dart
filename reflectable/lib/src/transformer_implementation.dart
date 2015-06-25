@@ -192,6 +192,35 @@ class ReflectorDomain {
       });
     }
 
+    String gettingClosure(String getterName) {
+      String closure;
+      if (getterName.startsWith(new RegExp(r"[A-Za-z$_]"))) {
+        // Starts with letter, not an operator.
+        closure = "(dynamic instance) => instance.${getterName}";
+      } else if (getterName == "[]=") {
+        closure = "(dynamic instance) => (x, v) => instance[x] = v";
+      } else if (getterName == "[]") {
+        closure = "(dynamic instance) => (x) => instance[x]";
+      } else {
+        closure = "(dynamic instance) => (x) => instance ${getterName} x";
+      }
+      return '"${getterName}": $closure';
+    }
+
+    String staticGettingClosure(ClassElement classElement, String getterName) {
+      String className = classElement.name;
+      // Operators cannot be static.
+      return '"${getterName}": () => $className.$getterName';
+    }
+
+    String settingClosure(String name) {
+      return '"$name": (dynamic instance, value) => instance.$name value';
+    }
+    String staticSettingClosure(ClassElement classElement, String name) {
+      String className = classElement.name;
+      return '"$name": (value) => $className.$name value';
+    }
+
     String classMirrors = formatList(new Iterable<String>.generate(
         annotatedClasses.length, (int i) {
       ClassDomain classDomain = annotatedClasses[i];
@@ -222,30 +251,28 @@ class ReflectorDomain {
       } else {
         metadataCode = "null";
       }
+
+      String staticGettersCode = formatMap([
+        classDomain.classElement.methods
+            .where((ExecutableElement element) => element.isStatic),
+        classDomain.classElement.accessors.where(
+            (PropertyAccessorElement element) =>
+                element.isStatic && element.isGetter)
+      ].expand((x) => x).map((ExecutableElement element) =>
+          staticGettingClosure(classDomain.classElement, element.name)));
+      String staticSettersCode = formatMap(classDomain.classElement.accessors
+          .where((PropertyAccessorElement element) =>
+              element.isStatic && element.isSetter)
+          .map((PropertyAccessorElement element) =>
+              staticSettingClosure(classDomain.classElement, element.name)));
       return 'new r.ClassMirrorImpl("${classDomain.simpleName}", '
           '"${classDomain.qualifiedName}", $i, const ${reflector.name}(), '
           '$declarationsCode, $instanceMembersCode, $superclassIndex, '
-          '$metadataCode)';
+          '$staticGettersCode, $staticSettersCode, $metadataCode)';
     }));
-    String gettersCode = formatMap(instanceGetterNames.map((String methodName) {
-      String closure;
-      // TODO(eernst, sigurdm): Investigate generating specialized versions.
-      if (methodName.startsWith(new RegExp(r"[A-Za-z$_]"))) {
-        // Starts with letter, not an operator.
-        closure = "(dynamic instance) => instance.${methodName}";
-      } else if (methodName == "[]=") {
-        closure = "(dynamic instance) => (x, v) => instance[x] = v";
-      } else if (methodName == "[]") {
-        closure = "(dynamic instance) => (x) => instance[x]";
-      } else {
-        closure = "(dynamic instance) => (x) => instance ${methodName} x";
-      }
-      return '"${methodName}": $closure';
-    }));
-    String settersCode = formatMap(instanceSetterNames.map((String setterName) {
-      return '"${setterName}": '
-          '(dynamic instance, dynamic value) => instance.${setterName} value';
-    }));
+
+    String gettersCode = formatMap(instanceGetterNames.map(gettingClosure));
+    String settersCode = formatMap(instanceSetterNames.map(settingClosure));
 
     String methodsCode = formatList(members.items
         .map((ExecutableElement element) {
@@ -255,8 +282,6 @@ class ReflectorDomain {
           '$ownerIndex, const ${reflector.name}())';
     }));
 
-    // TODO(sigurdm): Implement static functions.
-    String staticMembersCode = "null";
     String typesCode = formatList(
         classes.items.map((ClassElement classElement) => classElement.name));
     String constructorsCode = formatMap(annotatedClasses
@@ -268,9 +293,8 @@ class ReflectorDomain {
       });
     }));
 
-    return "new r.ReflectorData($classMirrors, $methodsCode, "
-        "$staticMembersCode, $typesCode, $constructorsCode, "
-        "$gettersCode, $settersCode)";
+    return "new r.ReflectorData($classMirrors, $methodsCode, $typesCode, "
+        "$constructorsCode, $gettersCode, $settersCode)";
   }
 }
 

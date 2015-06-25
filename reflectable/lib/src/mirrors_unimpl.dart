@@ -68,11 +68,16 @@ typedef Object InvokerOfGetter(Object instance);
 /// Invokes a setter on an object.
 typedef Object InvokerOfSetter(Object instance, Object value);
 
+/// Invokes a static getter.
+typedef Object StaticGetter();
+
+/// Invokes a setter on an object.
+typedef Object StaticSetter(Object value);
+
 /// The data backing a reflector.
 class ReflectorData {
   final List<ClassMirror> classMirrors;
   final List<MethodMirror> memberMirrors;
-  final Map<String, Function> staticMethods;
   final List<Type> types;
   final Map<String, Function> constructors;
   final Map<String, InvokerOfGetter> getters;
@@ -80,8 +85,8 @@ class ReflectorData {
 
   Map<Type, ClassMirror> _typeToClassMirrorCache;
 
-  ReflectorData(this.classMirrors, this.memberMirrors, this.staticMethods,
-      this.types, this.constructors, this.getters, this.setters);
+  ReflectorData(this.classMirrors, this.memberMirrors, this.types,
+      this.constructors, this.getters, this.setters);
 
   ClassMirror classMirrorForType(Type type) {
     if (_typeToClassMirrorCache == null) {
@@ -98,7 +103,10 @@ class ReflectorData {
 
 /// This mapping contains the mirror-data for each reflector.
 /// It will be initialized in the generated code.
-Map<Reflectable, ReflectorData> data;
+Map<Reflectable, ReflectorData> data = throw new StateError(
+    "Reflectable has not been initialized. "
+    "Did you forget to add the main file to the "
+    "reflectable transformer's entry_points in pubspec.yaml?");
 
 class InstanceMirrorImpl implements InstanceMirror {
   ReflectorData _dataCache;
@@ -223,10 +231,12 @@ class ClassMirrorImpl implements ClassMirror {
   final String simpleName;
   final String qualifiedName;
   final List<Object> _metadata;
+  final Map<String, StaticGetter> getters;
+  final Map<String, StaticSetter> setters;
 
   ClassMirrorImpl(this.simpleName, this.qualifiedName, this._classIndex,
       this._reflectable, this._declarationIndices, this._instanceMemberIndices,
-      this._superclassIndex, metadata)
+      this._superclassIndex, this.getters, this.setters, metadata)
       : _metadata = metadata == null
           ? null
           : new UnmodifiableListView(metadata);
@@ -295,22 +305,38 @@ class ClassMirrorImpl implements ClassMirror {
   }
 
   @override
-  bool get hasReflectedType => _unsupported();
+  bool get hasReflectedType => true;
 
   @override
   Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
-    // TODO(sigurdm): Implement static methods.
-    return _unsupported();
+    StaticGetter getter = getters[memberName];
+    if (getter == null) {
+      throw new NoSuchInvokeCapabilityError(
+          reflectedType, memberName, positionalArguments, namedArguments);
+    }
+    return Function.apply(
+        getters[memberName](), positionalArguments, namedArguments);
   }
 
-  // TODO(eernst, sigurdm): Implement.
   @override
-  Object invokeGetter(String getterName) => _unsupported();
+  Object invokeGetter(String getterName) {
+    StaticGetter getter = getters[getterName];
+    if (getter == null) {
+      throw new NoSuchInvokeCapabilityError(reflectedType, getterName, [], {});
+    }
+    return getter();
+  }
 
-  // TODO(eernst, sigurdm): Implement.
   @override
-  Object invokeSetter(String setterName, Object value) => _unsupported();
+  Object invokeSetter(String setterName, Object value) {
+    StaticSetter setter = setters[setterName];
+    if (setter == null) {
+      throw new NoSuchInvokeCapabilityError(
+          reflectedType, setterName, [value], {});
+    }
+    return setter(value);
+  }
 
   // TODO(eernst, sigurdm): Implement.
   @override

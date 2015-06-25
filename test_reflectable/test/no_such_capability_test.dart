@@ -21,5 +21,8 @@ main() {
     r.InstanceMirror instanceMirror = myReflectable.reflect(new A());
     expect(() => instanceMirror.invoke("foo", []),
            throwsA(const isInstanceOf<r.NoSuchInvokeCapabilityError>()));
+    r.ClassMirror classMirror = myReflectable.reflectType(A);
+    expect(() => classMirror.invoke("foo", []),
+           throwsA(const isInstanceOf<r.NoSuchInvokeCapabilityError>()));
   });
 }
