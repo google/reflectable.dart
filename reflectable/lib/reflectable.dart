@@ -10,12 +10,36 @@ library reflectable.reflectable;
 
 import 'capability.dart';
 import 'mirrors.dart';
-import 'src/reflectable_base.dart';
-import 'src/reflectable_class_constants.dart' as reflectable_class_constants;
 import 'src/reflectable_implementation.dart' as implementation;
+import 'src/reflectable_class_constants.dart' as reflectable_class_constants;
 
 export 'capability.dart';
 export 'mirrors.dart';
+
+abstract class ReflectableInterface {
+  /// Returns a mirror of the given object [reflectee]
+  InstanceMirror reflect(o);
+
+  /// Returns a mirror of the given type [type].  In the case where
+  /// [type] is a parameterized type, i.e., a generic class which has
+  /// been applied to a list of actual type arguments, the returned mirror
+  /// will have no declared type variables, but it has a list of actual
+  /// type arguments. If a mirror of the generic class as such is needed,
+  /// it can be obtained from `originalDeclaration`. That mirror will
+  /// have no actual type arguments, but it will have declared type
+  /// variables. Other types than classes are not (yet) supported.
+  ClassMirror reflectType(Type type);
+
+  /// Returns a mirror of the given library [library].
+  LibraryMirror findLibrary(String library);
+
+  /// Returns a map of all libraries in the current isolate.
+  Map<Uri, LibraryMirror> get libraries;
+
+  /// Returns an [Iterable] of all the classes that can be reflected over in
+  /// this [Reflectable].
+  Iterable<ClassMirror> get annotatedClasses;
+}
 
 /// [Reflectable] is used as metadata, marking classes for reflection.
 ///
@@ -55,18 +79,11 @@ export 'mirrors.dart';
 /// which means that the behavior of the instance can be expressed by
 /// generating code in the class.  Generalizations of this setup may
 /// be supported in the future if compelling use cases come up.
-class Reflectable extends ReflectableBase {
+class Reflectable extends implementation.Reflectable
+    implements ReflectableInterface {
   // Intended to near-uniquely identify this class in target programs.
   static const thisClassName = reflectable_class_constants.name;
   static const thisClassId = reflectable_class_constants.id;
-
-  // Fields holding capabilities; we use discrete fields rather than a list
-  // of fields because this allows us to use a syntax similar to a varargs
-  // invocation as the superinitializer (omitting `<ReflectCapability>[]` and
-  // directly giving the elements of that list as constructor arguments).
-  // This will only work up to a fixed number of arguments (we have chosen
-  // to support at most 10 arguments), and with a larger number of arguments
-  // the fromList constructor must be used.
 
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
@@ -80,58 +97,4 @@ class Reflectable extends ReflectableBase {
 
   const Reflectable.fromList(List<ReflectCapability> capabilities)
       : super.fromList(capabilities);
-
-  // dart:mirrors
-  // -------------------------------------------------------
-  // The following declarations are identical to top level
-  // declarations in dart:mirrors for better portability. The
-  // 'Currently skip' comments indicate omitted declarations.
-
-  // Currently skip 'MirrorSystem currentMirrorSystem'
-
-  /// Returns a mirror of the given object [reflectee]
-  InstanceMirror reflect(Object reflectee) =>
-      implementation.reflect(reflectee, this);
-
-  /// Returns a mirror of the given type [type].  In the case where
-  /// [type] is a parameterized type, i.e., a generic class which has
-  /// been applied to a list of actual type arguments, the returned mirror
-  /// will have no declared type variables, but it has a list of actual
-  /// type arguments. If a mirror of the generic class as such is needed,
-  /// it can be obtained from `originalDeclaration`. That mirror will
-  /// have no actual type arguments, but it will have declared type
-  /// variables. Other types than classes are not (yet) supported.
-  ClassMirror reflectType(Type type) => implementation.reflectType(type, this);
-
-  // MirrorSystem
-  // -------------------------------------------------------
-  // The following declarations are identical to declarations in
-  // MirrorSystem from dart:mirrors for better portability. The
-  // 'Currently skip' comments indicate omitted declarations.
-
-  /// Returns a mirror of the given library [library].
-  LibraryMirror findLibrary(String library) {
-    return implementation.findLibrary(library, this);
-  }
-
-  // Currently skip 'IsolateMirror get isolate'
-
-  /// Returns a map of all libraries in the current isolate.
-  Map<Uri, LibraryMirror> get libraries => implementation.libraries(this);
-
-  // Reflectable
-  // -------------------------------------------------------
-  // The following declarations are particular to this package
-  // and may be changed without ill effects on portability.
-
-  /// A mirror for the [Object] class.
-  static final typeMirrorForObject = _unsupported();
-
-  /// Returns an [Iterable] of all the classes that can be reflected over in
-  /// this [Reflectable].
-  Iterable<ClassMirror> get annotatedClasses {
-    return implementation.annotatedClasses(this);
-  }
 }
-
-_unsupported() => throw new UnimplementedError();

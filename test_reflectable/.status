@@ -1,9 +1,17 @@
 
 [ $compiler == dart2js || $compiler == none ]
 build/test/polymer_basic_needs_test: RuntimeError # TODO: debug
-build/test/proxy_test: RuntimeError # TODO: impl. invokeGetter
+build/test/basic_test: RuntimeError # Missing implementation
+build/test/capabilities_test: RuntimeError # Missing implementation
+build/test/invoke_capabilities_test: RuntimeError # Missing implementation
+build/test/no_such_capability_test: RuntimeError # Missing implementation
 
 [ $compiler == dart2js ]
 test/declarations_test: RuntimeError # Dart2js does not implement all properties of mirrors.
 test/new_instance_test: RuntimeError # dartbug.com/19635
 
+[ ($compiler == none && $runtime != dartium) || $compiler == dart2js || $compiler == dartanalyzer || $compiler == dart2analyzer]
+build/test/new_instance_default_values_test: CompileTimeError # Issue #8
+
+[ ($compiler == none && $runtime == dartium) ]
+build/test/new_instance_default_values_test: RuntimeError # Issue #8

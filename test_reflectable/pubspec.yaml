@@ -23,13 +23,14 @@ transformers:
       - test/new_instance_test.dart
       - test/proxy_test.dart
       - test/polymer_basic_needs_test.dart
+      - test/serialize_test.dart
+      - test/new_instance_default_values_test.dart
+      - test/capabilities_test.dart
+      - test/basic_test.dart
+      - test/member_capability_test.dart
 # Disabled next three entries to avoid failing transformation
-#      - test/new_instance_default_values_test.dart # Issue # 8
-#      - test/capabilities_test.dart
-#      - test/member_capability_test.dart
-#      - test/serialize_test.dart
-#      - test/basic_test.dart
 # Our test-script will invoke dart2js on all the files in build/test, so
 # we leave it out here.
+#      - test/invoke_capabilities_test.dart
 - $dart2js:
     $include: []

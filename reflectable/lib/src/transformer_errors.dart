@@ -24,24 +24,6 @@ const String METADATA_NOT_DIRECT_SUBCLASS =
     "Metadata has type Reflectable, but is not an instance of "
     "a direct subclass of Reflectable";
 
-/// It is a transformation time error to use `show` with
-/// the import of `../reflectable.dart`.
-const String LIBRARY_UNSUPPORTED_SHOW =
-    "The library 'package:reflectable/reflectable.dart' is imported "
-    " with a `show` clause.";
-
-/// It is a transformation time error to use `hide` with
-/// the import of `../reflectable.dart`.
-const String LIBRARY_UNSUPPORTED_HIDE =
-    "The library 'package:reflectable/reflectable.dart' is imported "
-    " with a `hide` clause.";
-
-/// It is a transformation time error to use `show` or `hide` with
-/// the import of `../reflectable.dart`, or to make it `deferred`.
-const String LIBRARY_UNSUPPORTED_DEFERRED =
-    "The library 'package:reflectable/reflectable.dart' is imported "
-    " as a `deferred` library.";
-
 /// It is a transformation time error to give an argument to the super
 /// constructor invocation in a subclass of Reflectable that is of
 /// a non-class type.
@@ -63,8 +45,7 @@ const String SUPER_ARGUMENT_NON_CONST =
     " which is not a constant.";
 
 /// It is a transformation time error to use an enum as a reflector class.
-const String IS_ENUM =
-    "Encountered a reflector class which is an enum.";
+const String IS_ENUM = "Encountered a reflector class which is an enum.";
 
 /// Finds any template holes of the form {name} in [template] and replaces them
 /// with the corresponding value in [replacements].

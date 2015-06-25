@@ -6,73 +6,20 @@
 library reflectable.src.reflectable_implementation;
 
 import 'dart:mirrors' as dm;
+import 'reflectable_base.dart';
 import '../capability.dart';
-import '../reflectable.dart' as r;
-
-r.InstanceMirror reflect(o, r.Reflectable reflectable) {
-  bool hasReflectable(dm.ClassMirror type) {
-    if (type == null) return false;
-    if (type.metadata
-        .map((dm.InstanceMirror reflectable) => reflectable.reflectee)
-        .contains(reflectable)) {
-      return true;
-    }
-    return false;
-  }
-
-  dm.InstanceMirror mirror = dm.reflect(o);
-  if (!hasReflectable(mirror.type)) {
-    throw new NoSuchCapabilityError(
-        "Reflecting on object of unannotated class: ${o.runtimeType}.");
-  }
-  return wrapInstanceMirror(dm.reflect(o), reflectable);
-}
-
-r.ClassMirror reflectType(Type t, r.Reflectable reflectable) {
-  dm.TypeMirror typeMirror = dm.reflectType(t);
-  if (typeMirror is dm.ClassMirror && _isReflectable(typeMirror, reflectable)) {
-    return wrapClassMirror(typeMirror, reflectable);
-  } else {
-    throw new NoSuchCapabilityError(
-        "Reflecting on currently unsupported kind of entity: $typeMirror");
-  }
-}
-
-r.LibraryMirror findLibrary(String libraryName, r.Reflectable reflectable) {
-  Symbol librarySymbol = new Symbol(libraryName);
-  return new _LibraryMirrorImpl(
-      dm.currentMirrorSystem().findLibrary(librarySymbol), reflectable);
-}
-
-Iterable<r.ClassMirror> annotatedClasses(r.Reflectable reflectable) {
-  List<r.ClassMirror> result = new List<r.ClassMirror>();
-  for (dm.LibraryMirror library in dm.currentMirrorSystem().libraries.values) {
-    for (dm.DeclarationMirror declarationMirror
-        in library.declarations.values) {
-      // TODO(sigurdm, eernst): Update when we can annotate top-level functions.
-      if (declarationMirror is! dm.ClassMirror) continue;
-      if (!_isReflectable(declarationMirror, reflectable)) continue;
-      result.add(wrapClassMirror(declarationMirror, reflectable));
-    }
-  }
-  return result;
-}
+import '../mirrors.dart' as rm;
+import '../reflectable.dart';
 
 bool _isReflectable(dm.DeclarationMirror declarationMirror, Object annotation) {
   return declarationMirror.metadata.any((dm.InstanceMirror metadataMirror) {
     return metadataMirror.reflectee == annotation;
   });
+  // TODO(eernst, sigurdm): Handle quantification.
 }
 
-Map<Uri, r.LibraryMirror> libraries(r.Reflectable reflectable) {
-  Map<Uri, dm.LibraryMirror> libs = dm.currentMirrorSystem().libraries;
-  return new Map<Uri, r.LibraryMirror>.fromIterable(libs.keys,
-      key: (k) => k,
-      value: (k) => new _LibraryMirrorImpl(libs[k], reflectable));
-}
-
-r.ClassMirror wrapClassMirror(
-    dm.ClassMirror classMirror, r.Reflectable reflectable) {
+rm.ClassMirror wrapClassMirror(
+    dm.ClassMirror classMirror, Reflectable reflectable) {
   if (classMirror is dm.FunctionTypeMirror) {
     return new _FunctionTypeMirrorImpl(classMirror, reflectable);
   } else {
@@ -81,8 +28,8 @@ r.ClassMirror wrapClassMirror(
   }
 }
 
-r.DeclarationMirror wrapDeclarationMirror(
-    dm.DeclarationMirror declarationMirror, r.Reflectable reflectable) {
+rm.DeclarationMirror wrapDeclarationMirror(
+    dm.DeclarationMirror declarationMirror, Reflectable reflectable) {
   if (declarationMirror is dm.MethodMirror) {
     return new _MethodMirrorImpl(declarationMirror, reflectable);
   } else if (declarationMirror is dm.ParameterMirror) {
@@ -102,8 +49,8 @@ r.DeclarationMirror wrapDeclarationMirror(
   }
 }
 
-r.InstanceMirror wrapInstanceMirror(
-    dm.InstanceMirror instanceMirror, r.Reflectable reflectable) {
+rm.InstanceMirror wrapInstanceMirror(
+    dm.InstanceMirror instanceMirror, Reflectable reflectable) {
   if (instanceMirror is dm.ClosureMirror) {
     return new _ClosureMirrorImpl(instanceMirror, reflectable);
   } else {
@@ -112,7 +59,7 @@ r.InstanceMirror wrapInstanceMirror(
   }
 }
 
-r.ObjectMirror wrapObjectMirror(dm.ObjectMirror m, r.Reflectable reflectable) {
+rm.ObjectMirror wrapObjectMirror(dm.ObjectMirror m, Reflectable reflectable) {
   if (m is dm.LibraryMirror) {
     return new _LibraryMirrorImpl(m, reflectable);
   } else if (m is dm.InstanceMirror) {
@@ -123,8 +70,8 @@ r.ObjectMirror wrapObjectMirror(dm.ObjectMirror m, r.Reflectable reflectable) {
   }
 }
 
-r.TypeMirror wrapTypeMirror(
-    dm.TypeMirror typeMirror, r.Reflectable reflectable) {
+rm.TypeMirror wrapTypeMirror(
+    dm.TypeMirror typeMirror, Reflectable reflectable) {
   if (typeMirror is dm.TypeVariableMirror) {
     return new _TypeVariableMirrorImpl(typeMirror, reflectable);
   } else if (typeMirror is dm.TypedefMirror) {
@@ -135,11 +82,11 @@ r.TypeMirror wrapTypeMirror(
   }
 }
 
-r.CombinatorMirror wrapCombinatorMirror(dm.CombinatorMirror combinatorMirror) {
+rm.CombinatorMirror wrapCombinatorMirror(dm.CombinatorMirror combinatorMirror) {
   return new _CombinatorMirrorImpl(combinatorMirror);
 }
 
-dm.ClassMirror unwrapClassMirror(r.ClassMirror m) {
+dm.ClassMirror unwrapClassMirror(rm.ClassMirror m) {
   if (m is _ClassMirrorImpl) {
     // This also works for _FunctionTypeMirrorImpl
     return m._classMirror;
@@ -148,7 +95,7 @@ dm.ClassMirror unwrapClassMirror(r.ClassMirror m) {
   }
 }
 
-dm.TypeMirror unwrapTypeMirror(r.TypeMirror TypeMirror) {
+dm.TypeMirror unwrapTypeMirror(rm.TypeMirror TypeMirror) {
   if (TypeMirror is _TypeMirrorImpl) {
     return TypeMirror._typeMirror;
   } else {
@@ -160,7 +107,7 @@ dm.TypeMirror unwrapTypeMirror(r.TypeMirror TypeMirror) {
 /// instance-member named [name] according to the
 /// capabilities of [reflectable].
 bool reflectableSupportsInstanceInvoke(
-    r.Reflectable reflectable, String name, dm.ClassMirror classMirror) {
+    Reflectable reflectable, String name, dm.ClassMirror classMirror) {
   Symbol nameSymbol = new Symbol(name);
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability == invokingCapability ||
@@ -180,7 +127,7 @@ bool reflectableSupportsInstanceInvoke(
 }
 
 /// Returns true iff [reflectable] supports static invoke of [name].
-bool reflectableSupportsStaticInvoke(r.Reflectable reflectable, String name) {
+bool reflectableSupportsStaticInvoke(Reflectable reflectable, String name) {
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability is StaticInvokeCapability) {
       return new RegExp(capability.namePattern).firstMatch(name) != null;
@@ -191,13 +138,13 @@ bool reflectableSupportsStaticInvoke(r.Reflectable reflectable, String name) {
 
 /// Returns true iff [reflectable] supports invoke of [name].
 bool reflectableSupportsConstructorInvoke(
-    r.Reflectable reflectable, dm.ClassMirror classMirror, String name) {
+    Reflectable reflectable, dm.ClassMirror classMirror, String name) {
   return reflectable.capabilities.any((ReflectCapability capability) {
-    if (capability == r.newInstanceCapability) {
+    if (capability == newInstanceCapability) {
       return true;
-    } else if (capability is r.NewInstanceCapability) {
+    } else if (capability is NewInstanceCapability) {
       return new RegExp(capability.namePattern).firstMatch(name) != null;
-    } else if (capability is r.NewInstanceMetaCapability) {
+    } else if (capability is NewInstanceMetaCapability) {
       dm.MethodMirror constructorMirror = classMirror.declarations.values
           .firstWhere((dm.DeclarationMirror declarationMirror) {
         Symbol nameSymbol = new Symbol(name);
@@ -231,31 +178,31 @@ String _getterToSetter(String getterName) {
   return '$getterName=';
 }
 
-abstract class _ObjectMirrorImplMixin implements r.ObjectMirror {
-  r.Reflectable get _reflectable;
+abstract class _ObjectMirrorImplMixin implements rm.ObjectMirror {
+  Reflectable get _reflectable;
 }
 
 class _LibraryMirrorImpl extends _DeclarationMirrorImpl
-    with _ObjectMirrorImplMixin implements r.LibraryMirror {
+    with _ObjectMirrorImplMixin implements rm.LibraryMirror {
   dm.LibraryMirror get _libraryMirror => _declarationMirror;
 
-  _LibraryMirrorImpl(dm.LibraryMirror m, r.Reflectable reflectable)
+  _LibraryMirrorImpl(dm.LibraryMirror m, Reflectable reflectable)
       : super(m, reflectable) {}
 
   @override
   Uri get uri => _libraryMirror.uri;
 
   @override
-  Map<String, r.DeclarationMirror> get declarations {
+  Map<String, rm.DeclarationMirror> get declarations {
     Map<Symbol, dm.DeclarationMirror> decls = _libraryMirror.declarations;
     Iterable<Symbol> relevantKeys = decls.keys.where((k) {
       List<dm.InstanceMirror> metadata = decls[k].metadata;
       for (var item in metadata) {
-        if (item.hasReflectee && item.reflectee is r.Reflectable) return true;
+        if (item.hasReflectee && item.reflectee is Reflectable) return true;
       }
       return false;
     });
-    return new Map<String, r.DeclarationMirror>.fromIterable(relevantKeys,
+    return new Map<String, rm.DeclarationMirror>.fromIterable(relevantKeys,
         key: (k) => dm.MirrorSystem.getName(k),
         value: (v) => wrapDeclarationMirror(decls[v], _reflectable));
   }
@@ -303,7 +250,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   int get hashCode => _libraryMirror.hashCode;
 
   @override
-  List<r.LibraryDependencyMirror> get libraryDependencies {
+  List<rm.LibraryDependencyMirror> get libraryDependencies {
     return _libraryMirror.libraryDependencies
         .map((dep) => new _LibraryDependencyMirrorImpl(dep, _reflectable))
         .toList();
@@ -317,9 +264,9 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   }
 }
 
-class _LibraryDependencyMirrorImpl implements r.LibraryDependencyMirror {
+class _LibraryDependencyMirrorImpl implements rm.LibraryDependencyMirror {
   final dm.LibraryDependencyMirror _libraryDependencyMirror;
-  final r.Reflectable _reflectable;
+  final Reflectable _reflectable;
 
   _LibraryDependencyMirrorImpl(
       this._libraryDependencyMirror, this._reflectable);
@@ -331,13 +278,13 @@ class _LibraryDependencyMirrorImpl implements r.LibraryDependencyMirror {
   bool get isExport => _libraryDependencyMirror.isExport;
 
   @override
-  r.LibraryMirror get sourceLibrary {
+  rm.LibraryMirror get sourceLibrary {
     return new _LibraryMirrorImpl(
         _libraryDependencyMirror.sourceLibrary, _reflectable);
   }
 
   @override
-  r.LibraryMirror get targetLibrary {
+  rm.LibraryMirror get targetLibrary {
     return new _LibraryMirrorImpl(
         _libraryDependencyMirror.targetLibrary, _reflectable);
   }
@@ -350,12 +297,12 @@ class _LibraryDependencyMirrorImpl implements r.LibraryDependencyMirror {
       _libraryDependencyMirror.metadata.map((m) => m.reflectee).toList();
 
   @override
-  r.SourceLocation get location {
+  rm.SourceLocation get location {
     return new _SourceLocationImpl(_libraryDependencyMirror.location);
   }
 
   @override
-  List<r.CombinatorMirror> get combinators {
+  List<rm.CombinatorMirror> get combinators {
     return _libraryDependencyMirror.combinators
         .map(wrapCombinatorMirror)
         .toList();
@@ -371,14 +318,14 @@ class _LibraryDependencyMirrorImpl implements r.LibraryDependencyMirror {
 }
 
 class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
-    implements r.InstanceMirror {
+    implements rm.InstanceMirror {
   final dm.InstanceMirror _instanceMirror;
-  final r.Reflectable _reflectable;
+  final Reflectable _reflectable;
 
   _InstanceMirrorImpl(this._instanceMirror, this._reflectable);
 
   @override
-  r.TypeMirror get type => wrapTypeMirror(_instanceMirror.type, _reflectable);
+  rm.TypeMirror get type => wrapTypeMirror(_instanceMirror.type, _reflectable);
 
   @override
   bool get hasReflectee => _instanceMirror.hasReflectee;
@@ -438,32 +385,32 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
 }
 
 class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
-    implements r.ClassMirror {
+    implements rm.ClassMirror {
   dm.ClassMirror get _classMirror => _declarationMirror;
 
-  _ClassMirrorImpl(dm.ClassMirror cm, r.Reflectable reflectable)
+  _ClassMirrorImpl(dm.ClassMirror cm, Reflectable reflectable)
       : super(cm, reflectable) {}
 
   @override
-  List<r.TypeVariableMirror> get typeVariables {
+  List<rm.TypeVariableMirror> get typeVariables {
     return _classMirror.typeVariables.map((v) {
       return new _TypeVariableMirrorImpl(v, _reflectable);
     }).toList();
   }
 
   @override
-  List<r.TypeMirror> get typeArguments => _classMirror.typeArguments.map((a) {
+  List<rm.TypeMirror> get typeArguments => _classMirror.typeArguments.map((a) {
     return wrapTypeMirror(a, _reflectable);
   }).toList();
 
   @override
-  r.TypeMirror get superclass {
+  rm.TypeMirror get superclass {
     dm.ClassMirror sup = _classMirror.superclass;
     return wrapClassMirror(sup, _reflectable);
   }
 
   @override
-  List<r.TypeMirror> get superinterfaces {
+  List<rm.TypeMirror> get superinterfaces {
     List<dm.TypeMirror> superinterfaces = _classMirror.superinterfaces;
     return superinterfaces.map((dm.TypeMirror superInterface) {
       return wrapTypeMirror(superInterface, _reflectable);
@@ -474,12 +421,12 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
   bool get isAbstract => _classMirror.isAbstract;
 
   @override
-  Map<String, r.DeclarationMirror> get declarations {
+  Map<String, rm.DeclarationMirror> get declarations {
     // TODO(sigurdm): Possibly cache this.
-    Map<String, r.DeclarationMirror> result =
-        new Map<String, r.DeclarationMirror>();
-    _classMirror.declarations.forEach(
-        (Symbol nameSymbol, dm.DeclarationMirror declarationMirror) {
+    Map<String, rm.DeclarationMirror> result =
+        new Map<String, rm.DeclarationMirror>();
+    _classMirror.declarations
+        .forEach((Symbol nameSymbol, dm.DeclarationMirror declarationMirror) {
       String name = dm.MirrorSystem.getName(nameSymbol);
       if (declarationMirror is dm.MethodMirror) {
         if ((declarationMirror.isStatic &&
@@ -510,27 +457,27 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
   }
 
   @override
-  Map<String, r.MethodMirror> get instanceMembers {
+  Map<String, rm.MethodMirror> get instanceMembers {
     // TODO(sigurdm): Only expose members that are allowed by the capabilities
     // of the reflectable.
     Map<Symbol, dm.MethodMirror> members = _classMirror.instanceMembers;
-    return new Map<String, r.MethodMirror>.fromIterable(members.keys,
+    return new Map<String, rm.MethodMirror>.fromIterable(members.keys,
         key: (k) => dm.MirrorSystem.getName(k),
         value: (v) => new _MethodMirrorImpl(members[v], _reflectable));
   }
 
   @override
-  Map<String, r.MethodMirror> get staticMembers {
+  Map<String, rm.MethodMirror> get staticMembers {
     // TODO(sigurdm): Only expose members that are allowed by the capabilities
     // of the reflectable.
     Map<Symbol, dm.MethodMirror> members = _classMirror.staticMembers;
-    return new Map<String, r.MethodMirror>.fromIterable(members.keys,
+    return new Map<String, rm.MethodMirror>.fromIterable(members.keys,
         key: (k) => dm.MirrorSystem.getName(k),
         value: (v) => new _MethodMirrorImpl(members[v], _reflectable));
   }
 
   @override
-  r.TypeMirror get mixin => wrapTypeMirror(_classMirror.mixin, _reflectable);
+  rm.TypeMirror get mixin => wrapTypeMirror(_classMirror.mixin, _reflectable);
 
   @override
   Object newInstance(String constructorName, List positionalArguments,
@@ -587,7 +534,7 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
   int get hashCode => _classMirror.hashCode;
 
   @override
-  bool isSubclassOf(r.ClassMirror other) {
+  bool isSubclassOf(rm.ClassMirror other) {
     return _classMirror.isSubclassOf(unwrapClassMirror(other));
   }
 
@@ -598,35 +545,35 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
 }
 
 class _FunctionTypeMirrorImpl extends _ClassMirrorImpl
-    implements r.FunctionTypeMirror {
+    implements rm.FunctionTypeMirror {
   dm.FunctionTypeMirror get _functionTypeMirror => _classMirror;
 
   _FunctionTypeMirrorImpl(
-      dm.FunctionTypeMirror functionTypeMirror, r.Reflectable reflectable)
+      dm.FunctionTypeMirror functionTypeMirror, Reflectable reflectable)
       : super(functionTypeMirror, reflectable);
 
   @override
-  r.MethodMirror get callMethod {
+  rm.MethodMirror get callMethod {
     return new _MethodMirrorImpl(_functionTypeMirror.callMethod, _reflectable);
   }
 
   @override
-  List<r.ParameterMirror> get parameters {
-    return _functionTypeMirror.parameters.map(
-        (dm.ParameterMirror parameterMirror) {
+  List<rm.ParameterMirror> get parameters {
+    return _functionTypeMirror.parameters
+        .map((dm.ParameterMirror parameterMirror) {
       return new _ParameterMirrorImpl(parameterMirror, _reflectable);
     });
   }
 
   @override
-  r.TypeMirror get returnType {
+  rm.TypeMirror get returnType {
     return wrapTypeMirror(_functionTypeMirror.returnType, _reflectable);
   }
 }
 
-abstract class _DeclarationMirrorImpl implements r.DeclarationMirror {
+abstract class _DeclarationMirrorImpl implements rm.DeclarationMirror {
   final dm.DeclarationMirror _declarationMirror;
-  final r.Reflectable _reflectable;
+  final Reflectable _reflectable;
 
   _DeclarationMirrorImpl(this._declarationMirror, this._reflectable);
 
@@ -639,7 +586,7 @@ abstract class _DeclarationMirrorImpl implements r.DeclarationMirror {
       dm.MirrorSystem.getName(_declarationMirror.qualifiedName);
 
   @override
-  r.DeclarationMirror get owner {
+  rm.DeclarationMirror get owner {
     return wrapDeclarationMirror(_declarationMirror.owner, _reflectable);
   }
 
@@ -658,7 +605,7 @@ abstract class _DeclarationMirrorImpl implements r.DeclarationMirror {
   }
 
   @override
-  r.SourceLocation get location {
+  rm.SourceLocation get location {
     return new _SourceLocationImpl(_declarationMirror.location);
   }
 
@@ -669,21 +616,21 @@ abstract class _DeclarationMirrorImpl implements r.DeclarationMirror {
 }
 
 class _MethodMirrorImpl extends _DeclarationMirrorImpl
-    implements r.MethodMirror {
+    implements rm.MethodMirror {
   dm.MethodMirror get _methodMirror => _declarationMirror;
 
-  _MethodMirrorImpl(dm.MethodMirror mm, r.Reflectable reflectable)
+  _MethodMirrorImpl(dm.MethodMirror mm, Reflectable reflectable)
       : super(mm, reflectable);
 
   @override
-  r.TypeMirror get returnType =>
+  rm.TypeMirror get returnType =>
       wrapTypeMirror(_methodMirror.returnType, _reflectable);
 
   @override
   String get source => _methodMirror.source;
 
   @override
-  List<r.ParameterMirror> get parameters {
+  List<rm.ParameterMirror> get parameters {
     return _methodMirror.parameters.map((p) {
       return new _ParameterMirrorImpl(p, _reflectable);
     }).toList();
@@ -744,10 +691,10 @@ class _MethodMirrorImpl extends _DeclarationMirrorImpl
 }
 
 class _ClosureMirrorImpl extends _InstanceMirrorImpl
-    implements r.ClosureMirror {
+    implements rm.ClosureMirror {
   dm.ClosureMirror get _closureMirror => _instanceMirror;
 
-  _ClosureMirrorImpl(dm.ClosureMirror closureMirror, r.Reflectable reflectable)
+  _ClosureMirrorImpl(dm.ClosureMirror closureMirror, Reflectable reflectable)
       : super(closureMirror, reflectable);
 
   @override
@@ -757,7 +704,7 @@ class _ClosureMirrorImpl extends _InstanceMirrorImpl
   }
 
   @override
-  r.MethodMirror get function {
+  rm.MethodMirror get function {
     return new _MethodMirrorImpl(_closureMirror.function, _reflectable);
   }
 
@@ -766,14 +713,14 @@ class _ClosureMirrorImpl extends _InstanceMirrorImpl
 }
 
 class _VariableMirrorImpl extends _DeclarationMirrorImpl
-    implements r.VariableMirror {
+    implements rm.VariableMirror {
   dm.VariableMirror get _variableMirror => _declarationMirror;
 
-  _VariableMirrorImpl(dm.VariableMirror vm, r.Reflectable reflectable)
+  _VariableMirrorImpl(dm.VariableMirror vm, Reflectable reflectable)
       : super(vm, reflectable);
 
   @override
-  r.TypeMirror get type => wrapTypeMirror(_variableMirror.type, _reflectable);
+  rm.TypeMirror get type => wrapTypeMirror(_variableMirror.type, _reflectable);
 
   @override
   bool get isStatic => _variableMirror.isStatic;
@@ -797,10 +744,10 @@ class _VariableMirrorImpl extends _DeclarationMirrorImpl
 }
 
 class _ParameterMirrorImpl extends _VariableMirrorImpl
-    implements r.ParameterMirror {
+    implements rm.ParameterMirror {
   dm.ParameterMirror get _parameterMirror => _declarationMirror;
 
-  _ParameterMirrorImpl(dm.ParameterMirror pm, r.Reflectable reflectable)
+  _ParameterMirrorImpl(dm.ParameterMirror pm, Reflectable reflectable)
       : super(pm, reflectable);
 
   @override
@@ -828,17 +775,17 @@ class _ParameterMirrorImpl extends _VariableMirrorImpl
 }
 
 abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
-    implements r.TypeMirror {
+    implements rm.TypeMirror {
   dm.TypeMirror get _typeMirror => _declarationMirror;
 
-  _TypeMirrorImpl(dm.TypeMirror typeMirror, r.Reflectable reflectable)
+  _TypeMirrorImpl(dm.TypeMirror typeMirror, Reflectable reflectable)
       : super(typeMirror, reflectable);
 
   @override
   bool get hasReflectedType => _typeMirror.hasReflectedType;
 
   @override
-  bool isAssignableTo(r.TypeMirror other) {
+  bool isAssignableTo(rm.TypeMirror other) {
     return _typeMirror.isAssignableTo(unwrapTypeMirror(other));
   }
 
@@ -846,12 +793,12 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
   bool get isOriginalDeclaration => _typeMirror.isOriginalDeclaration;
 
   @override
-  bool isSubtypeOf(r.TypeMirror other) {
+  bool isSubtypeOf(rm.TypeMirror other) {
     return _typeMirror.isSubtypeOf(unwrapTypeMirror(other));
   }
 
   @override
-  r.TypeMirror get originalDeclaration {
+  rm.TypeMirror get originalDeclaration {
     return wrapTypeMirror(_typeMirror.originalDeclaration, _reflectable);
   }
 
@@ -859,14 +806,14 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
   Type get reflectedType => _typeMirror.reflectedType;
 
   @override
-  List<r.TypeMirror> get typeArguments {
+  List<rm.TypeMirror> get typeArguments {
     return _typeMirror.typeArguments.map((dm.TypeMirror typeArgument) {
       return wrapTypeMirror(typeArgument, _reflectable);
     }).toList();
   }
 
   @override
-  List<r.TypeVariableMirror> get typeVariables {
+  List<rm.TypeVariableMirror> get typeVariables {
     return _typeMirror.typeVariables
         .map((dm.TypeVariableMirror typeVariableMirror) {
       return new _TypeVariableMirrorImpl(typeVariableMirror, _reflectable);
@@ -875,11 +822,11 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
 }
 
 class _TypeVariableMirrorImpl extends _TypeMirrorImpl
-    implements r.TypeVariableMirror {
+    implements rm.TypeVariableMirror {
   dm.TypeVariableMirror get _typeVariableMirror => _typeMirror;
 
   _TypeVariableMirrorImpl(
-      dm.TypeVariableMirror typeVariableMirror, r.Reflectable reflectable)
+      dm.TypeVariableMirror typeVariableMirror, Reflectable reflectable)
       : super(typeVariableMirror, reflectable);
 
   @override
@@ -895,7 +842,7 @@ class _TypeVariableMirrorImpl extends _TypeMirrorImpl
   int get hashCode => _typeVariableMirror.hashCode;
 
   @override
-  r.TypeMirror get upperBound {
+  rm.TypeMirror get upperBound {
     return wrapTypeMirror(_typeVariableMirror.upperBound, _reflectable);
   }
 
@@ -905,14 +852,14 @@ class _TypeVariableMirrorImpl extends _TypeMirrorImpl
   }
 }
 
-class _TypedefMirrorImpl extends _TypeMirrorImpl implements r.TypedefMirror {
+class _TypedefMirrorImpl extends _TypeMirrorImpl implements rm.TypedefMirror {
   dm.TypedefMirror get _typedefMirror => _typeMirror;
 
-  _TypedefMirrorImpl(dm.TypedefMirror typedefMirror, r.Reflectable reflectable)
+  _TypedefMirrorImpl(dm.TypedefMirror typedefMirror, Reflectable reflectable)
       : super(typedefMirror, reflectable);
 
   @override
-  r.FunctionTypeMirror get referent {
+  rm.FunctionTypeMirror get referent {
     return new _FunctionTypeMirrorImpl(_typedefMirror.referent, _reflectable);
   }
 
@@ -930,7 +877,7 @@ class _TypedefMirrorImpl extends _TypeMirrorImpl implements r.TypedefMirror {
   }
 }
 
-class _CombinatorMirrorImpl implements r.CombinatorMirror {
+class _CombinatorMirrorImpl implements rm.CombinatorMirror {
   dm.CombinatorMirror _combinatorMirror;
 
   _CombinatorMirrorImpl(this._combinatorMirror);
@@ -960,7 +907,7 @@ class _CombinatorMirrorImpl implements r.CombinatorMirror {
   }
 }
 
-class _SourceLocationImpl implements r.SourceLocation {
+class _SourceLocationImpl implements rm.SourceLocation {
   dm.SourceLocation _sourceLocation;
 
   _SourceLocationImpl(this._sourceLocation);
@@ -987,3 +934,91 @@ class _SourceLocationImpl implements r.SourceLocation {
     return "_SourceLocationImpl('${_sourceLocation}')";
   }
 }
+
+/// An implementation of [ReflectableInterface] based on dart:mirrors.
+class Reflectable extends ReflectableBase implements ReflectableInterface {
+  // Fields holding capabilities; we use discrete fields rather than a list
+  // of fields because this allows us to use a syntax similar to a varargs
+  // invocation as the superinitializer (omitting `<ReflectCapability>[]` and
+  // directly giving the elements of that list as constructor arguments).
+  // This will only work up to a fixed number of arguments (we have chosen
+  // to support at most 10 arguments), and with a larger number of arguments
+  // the fromList constructor must be used.
+
+  /// Const constructor, to enable usage as metadata, allowing for varargs
+  /// style invocation with up to ten arguments.
+  const Reflectable([ReflectCapability cap0 = null,
+      ReflectCapability cap1 = null, ReflectCapability cap2 = null,
+      ReflectCapability cap3 = null, ReflectCapability cap4 = null,
+      ReflectCapability cap5 = null, ReflectCapability cap6 = null,
+      ReflectCapability cap7 = null, ReflectCapability cap8 = null,
+      ReflectCapability cap9 = null])
+      : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
+
+  const Reflectable.fromList(List<ReflectCapability> capabilities)
+      : super.fromList(capabilities);
+
+  /// Returns a mirror of the given object [reflectee]
+  @override
+  rm.InstanceMirror reflect(o) {
+    bool hasReflectable(dm.ClassMirror type) {
+      if (type == null) return false;
+      if (type.metadata
+          .map((dm.InstanceMirror reflectable) => reflectable.reflectee)
+          .contains(this)) {
+        return true;
+      }
+      return false;
+    }
+
+    dm.InstanceMirror mirror = dm.reflect(o);
+    if (!hasReflectable(mirror.type)) {
+      throw new NoSuchCapabilityError(
+          "Reflecting on object of unannotated class.");
+    }
+    return wrapInstanceMirror(dm.reflect(o), this);
+  }
+
+  @override
+  rm.ClassMirror reflectType(Type type) {
+    dm.TypeMirror typeMirror = dm.reflectType(type);
+    if (typeMirror is dm.ClassMirror && _isReflectable(typeMirror, this)) {
+      return wrapClassMirror(typeMirror, this);
+    } else {
+      throw new NoSuchCapabilityError(
+          "Reflecting on currently unsupported kind of entity: $typeMirror");
+    }
+  }
+
+  @override
+  rm.LibraryMirror findLibrary(String library) {
+    Symbol librarySymbol = new Symbol(library);
+    return new _LibraryMirrorImpl(
+        dm.currentMirrorSystem().findLibrary(librarySymbol), this);
+  }
+
+  @override
+  Map<Uri, rm.LibraryMirror> get libraries {
+    Map<Uri, dm.LibraryMirror> libs = dm.currentMirrorSystem().libraries;
+    return new Map<Uri, rm.LibraryMirror>.fromIterable(libs.keys,
+        key: (k) => k, value: (k) => new _LibraryMirrorImpl(libs[k], this));
+  }
+
+  @override
+  Iterable<rm.ClassMirror> get annotatedClasses {
+    List<rm.ClassMirror> result = new List<rm.ClassMirror>();
+    for (dm.LibraryMirror library
+        in dm.currentMirrorSystem().libraries.values) {
+      for (dm.DeclarationMirror declarationMirror
+          in library.declarations.values) {
+        // TODO(sigurdm, eernst): Update when we can annotate top-level functions.
+        if (declarationMirror is! dm.ClassMirror) continue;
+        if (!_isReflectable(declarationMirror, this)) continue;
+        result.add(wrapClassMirror(declarationMirror, this));
+      }
+    }
+    return result;
+  }
+}
+
+_unsupported() => throw new UnimplementedError();

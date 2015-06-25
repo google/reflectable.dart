@@ -10,129 +10,47 @@ import "package:reflectable/src/transformer_implementation.dart";
 import "package:reflectable/test_transform.dart";
 import "package:unittest/unittest.dart";
 
-var noReflectable = [{"a|main.dart": """
-main() {}
-"""}, {}];
-
-var importReflectable = [{"a|main.dart": """
-import 'package:reflectable/reflectable.dart';
-"""}, {"a|main.dart": """
-// This file has been transformed by reflectable.
-// Import modified by the reflectable transformer:
-import 'package:reflectable/static_reflectable.dart';
-"""}];
-
-var useAnnotation = [{"a|main.dart": """
-import 'package:reflectable/reflectable.dart';
-
-class MyReflectable extends Reflectable {
-  const MyReflectable(): super(const <ReflectCapability>[]);
-}
-
-@MyReflectable()
-class A {}
-"""}, {"a|main.dart": """
-// This file has been transformed by reflectable.
-// Import modified by the reflectable transformer:
-import 'package:reflectable/static_reflectable.dart';
-import 'package:reflectable/src/mirrors_unimpl.dart';
-
-class MyReflectable extends Reflectable {
-  const MyReflectable(): super(const <ReflectCapability>[]);
-  // Generated: Rest of class
-  InstanceMirror reflect(Object reflectee) {
-    if (reflectee.runtimeType == A) {
-      return new Static_A_InstanceMirror(reflectee);
-    }
-    throw new UnimplementedError("`reflect` on unexpected object '\$reflectee'");
-  }
-}
-
-@MyReflectable()
-class A {}
-
-// Generated: Rest of file
-
-class Static_A_ClassMirror extends ClassMirrorUnimpl {
-}
-
-class Static_A_InstanceMirror extends InstanceMirrorUnimpl {
-  final A reflectee;
-  Static_A_InstanceMirror(this.reflectee);
-  RegExp instanceMethodFilter = new RegExp(r"");
-  Object invoke(String memberName,
-                List positionalArguments,
-                [Map<Symbol, dynamic> namedArguments]) {
-    // TODO(eernst, sigurdm): Create an instance of [Invocation] in user code.
-    if (instanceMethodFilter.hasMatch(memberName)) {
-      throw new UnimplementedError(\'Should call noSuchMethod\');
-    }
-    throw new NoSuchInvokeCapabilityError(
-        reflectee, memberName, positionalArguments, namedArguments);
-  }
-}
-"""}];
-
 var useReflect = [{"a|main.dart": """
 import 'package:reflectable/reflectable.dart';
 
 class MyReflectable extends Reflectable {
-  const MyReflectable(): super(const <ReflectCapability>[]);
+  const MyReflectable(): super();
 }
 
-const myReflectable = const MyReflectable();
-
-@myReflectable
+@MyReflectable()
 class A {}
 
 main() {
   InstanceMirror instanceMirror = myReflectable.reflect(new A());
 }
+
 """}, {"a|main.dart": """
 // This file has been transformed by reflectable.
-// Import modified by the reflectable transformer:
-import 'package:reflectable/static_reflectable.dart';
-import 'package:reflectable/src/mirrors_unimpl.dart';
+import 'package:reflectable/reflectable.dart';
+import "main_reflection_data.dart" show initializeReflectable;
 
 class MyReflectable extends Reflectable {
-  const MyReflectable(): super(const <ReflectCapability>[]);
-  // Generated: Rest of class
-  InstanceMirror reflect(Object reflectee) {
-    if (reflectee.runtimeType == A) {
-      return new Static_A_InstanceMirror(reflectee);
-    }
-    throw new UnimplementedError("`reflect` on unexpected object '\$reflectee'");
-  }
+  const MyReflectable(): super();
 }
 
-const myReflectable = const MyReflectable();
-
-@myReflectable
+@MyReflectable()
 class A {}
 
-main() {
+_main() {
   InstanceMirror instanceMirror = myReflectable.reflect(new A());
 }
 
-// Generated: Rest of file
+void main() {
+  initializeReflectable();
+  _main();
+}""", "a|main_reflection_data.dart": """
+library main_reflection_data.dart;
+import "package:reflectable/src/mirrors_unimpl.dart" as r;
+import 'main.dart';
+import 'main.dart';
 
-class Static_A_ClassMirror extends ClassMirrorUnimpl {
-}
-
-class Static_A_InstanceMirror extends InstanceMirrorUnimpl {
-  final A reflectee;
-  Static_A_InstanceMirror(this.reflectee);
-  RegExp instanceMethodFilter = new RegExp(r"");
-  Object invoke(String memberName,
-                List positionalArguments,
-                [Map<Symbol, dynamic> namedArguments]) {
-    // TODO(eernst, sigurdm): Create an instance of [Invocation] in user code.
-    if (instanceMethodFilter.hasMatch(memberName)) {
-      throw new UnimplementedError('Should call noSuchMethod');
-    }
-    throw new NoSuchInvokeCapabilityError(
-        reflectee, memberName, positionalArguments, namedArguments);
-  }
+initializeReflectable() {
+  r.data = {const MyReflectable(): new r.ReflectorData([new r.ClassMirrorImpl("A", ".A", 0, const MyReflectable(), [0], [], -1, null)], [new r.MethodMirrorImpl("", 64, 0, const MyReflectable())], null, [A], {".A.": () => new A()}, {}, {})};
 }
 """}];
 
@@ -153,10 +71,7 @@ checkTransform(List maps) async {
 }
 
 main() async {
-  test("Check transforms", () {
-    checkTransform(noReflectable);
-    checkTransform(importReflectable);
-    checkTransform(useAnnotation);
-    checkTransform(useReflect);
+  test("Check transforms", () async {
+    await checkTransform(useReflect);
   });
 }

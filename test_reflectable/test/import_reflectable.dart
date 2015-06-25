@@ -10,3 +10,5 @@ library test_reflectable.test.import_reflectable;
 import 'package:reflectable/reflectable.dart';
 
 const Reflectable ignored = null;  // To avoid 'unused import'.
+
+main() {}
