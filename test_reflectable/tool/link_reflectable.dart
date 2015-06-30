@@ -13,5 +13,7 @@ void main(List<String> args) {
   Uri destination = projectRootUri.resolve("../reflectable/reflectable");
   print("Making a link to ${reflectableLocation.toFilePath()} "
         "at ${destination.toFilePath()}");
+  bool exists = new Directory(reflectableLocation.toFilePath()).existsSync();
+  print("Target exists: $exists");
   new Link.fromUri(destination).create(reflectableLocation.toFilePath());
 }
