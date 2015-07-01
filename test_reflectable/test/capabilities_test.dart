@@ -13,11 +13,11 @@ import 'package:reflectable/capability.dart' as c;
 // TODO(sigurdm): Write tests that covers top-level invocations.
 
 class MyReflectableStatic extends r.Reflectable {
-  const MyReflectableStatic()
-      : super(const c.StaticInvokeCapability("foo"),
-              const c.StaticInvokeCapability("getFoo"),
-              const c.StaticInvokeCapability("setFoo="),
-              const c.StaticInvokeCapability("nonExisting"));
+  const MyReflectableStatic() : super(const c.StaticInvokeCapability("foo"),
+          const c.StaticInvokeCapability("getFoo"),
+          const c.StaticInvokeCapability("setFoo="),
+          const c.StaticInvokeCapability("nonExisting"),
+          const c.StaticInvokeMetaCapability(const C()));
 }
 
 @MyReflectableStatic()
@@ -29,14 +29,20 @@ class A {
   static set setFoo(int x) => field = x;
   static set setBar(int x) => field = x;
   static int field = 46;
+  @C()
+  static int boo() => 47;
+}
+
+class C {
+  const C();
 }
 
 class MyReflectableInstance extends r.Reflectable {
-  const MyReflectableInstance()
-      : super(const c.InstanceInvokeCapability("foo"),
-              const c.InstanceInvokeCapability("getFoo"),
-              const c.InstanceInvokeCapability("setFoo="),
-              const c.InstanceInvokeCapability("nonExisting"));
+  const MyReflectableInstance() : super(const c.InstanceInvokeCapability("foo"),
+          const c.InstanceInvokeCapability("getFoo"),
+          const c.InstanceInvokeCapability("setFoo="),
+          const c.InstanceInvokeCapability("nonExisting"),
+          const c.InstanceInvokeMetaCapability(const C()));
 }
 
 @MyReflectableInstance()
@@ -48,6 +54,8 @@ class B {
   set setFoo(int x) => field = x;
   set setBar(int x) => field = x;
   int field = 46;
+  @C()
+  int boo() => 47;
 }
 
 class BSubclass extends B {}
@@ -60,16 +68,17 @@ class BImplementer implements B {
   set setFoo(int x) => field = x;
   set setBar(int x) => field = x;
   int field = 46;
+  int boo() => 47;
 }
 
-Matcher throwsNoSuchCapabilityError =
-    throwsA(isNoSuchCapabilityError);
+Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
 Matcher isNoSuchCapabilityError = new isInstanceOf<c.NoSuchCapabilityError>();
 
 void testDynamic(B o, String description) {
   test("Dynamic invocation $description", () {
     r.InstanceMirror instanceMirror = const MyReflectableInstance().reflect(o);
     expect(instanceMirror.invoke("foo", []), 42);
+    expect(instanceMirror.invoke("boo", []), 47);
     expect(() {
       instanceMirror.invoke("bar", []);
     }, throwsNoSuchCapabilityError);
@@ -83,10 +92,7 @@ void testDynamic(B o, String description) {
     expect(() {
       instanceMirror.invokeSetter("setBar=", 100);
     }, throwsNoSuchCapabilityError);
-    // When we have the capability we get the NoSuchMethodError, not
-    // NoSuchCapabilityError.
-    expect(() => instanceMirror.invoke("nonExisting", []),
-           throwsNoSuchMethodError);
+
   });
 }
 
@@ -108,16 +114,14 @@ void main() {
       classMirror.invokeSetter("setBar=", 100);
     }, throwsNoSuchCapabilityError);
     expect(classMirror.declarations.keys,
-           ["foo", "setFoo=", "getFoo"].toSet());
-    // When we have the capability we get the NoSuchMethodError, not
-    // NoSuchCapabilityError.
-    expect(() => classMirror.invoke("nonExisting", []), throwsNoSuchMethodError);
+        ["foo", "setFoo=", "getFoo", "boo"].toSet());
+    expect(classMirror.invoke("boo", []), 47);
   });
   testDynamic(new B(), "Annotated");
   test("Declarations", () {
-    expect(const MyReflectableInstance()
-           .reflect(new B()).type.declarations.keys,
-           ["foo", "setFoo=", "getFoo"].toSet());
+    expect(
+        const MyReflectableInstance().reflect(new B()).type.declarations.keys,
+        ["foo", "setFoo=", "getFoo", "boo"].toSet());
   });
 
   test("Can't reflect subclass of annotated", () {

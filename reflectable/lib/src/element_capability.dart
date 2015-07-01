@@ -20,6 +20,7 @@ library reflectable.src.element_capability;
 // performed in the corresponding manner here, and vice versa.
 
 import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer/src/generated/constant.dart';
 
 abstract class ReflectCapability {
   const ReflectCapability();
@@ -35,7 +36,7 @@ abstract class NamePatternCapability implements ApiReflectCapability {
 }
 
 abstract class MetadataQuantifiedCapability implements ApiReflectCapability {
-  final Object metadata;
+  final DartObjectImpl metadata;
   const MetadataQuantifiedCapability(this.metadata);
 }
 
@@ -46,7 +47,7 @@ class InstanceInvokeCapability extends NamePatternCapability {
 const instanceInvokeCapability = const InstanceInvokeCapability("");
 
 class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const InstanceInvokeMetaCapability(Element metadata) : super(metadata);
+  const InstanceInvokeMetaCapability(DartObjectImpl metadata) : super(metadata);
 }
 
 class StaticInvokeCapability extends NamePatternCapability {
@@ -56,7 +57,7 @@ class StaticInvokeCapability extends NamePatternCapability {
 const staticInvokeCapability = const StaticInvokeCapability("");
 
 class StaticInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const StaticInvokeMetaCapability(Element metadata) : super(metadata);
+  const StaticInvokeMetaCapability(DartObjectImpl metadata) : super(metadata);
 }
 
 class NewInstanceCapability extends NamePatternCapability {
@@ -66,7 +67,7 @@ class NewInstanceCapability extends NamePatternCapability {
 const newInstanceCapability = const NewInstanceCapability("");
 
 class NewInstanceMetaCapability extends MetadataQuantifiedCapability {
-  const NewInstanceMetaCapability(Element metadata) : super(metadata);
+  const NewInstanceMetaCapability(DartObjectImpl metadata) : super(metadata);
 }
 
 const nameCapability = const _NameCapability();
@@ -105,7 +106,7 @@ const invokingCapability = const InvokingCapability("");
 class InvokingMetaCapability extends MetadataQuantifiedCapability implements
     InstanceInvokeMetaCapability, StaticInvokeMetaCapability,
     NewInstanceMetaCapability {
-  const InvokingMetaCapability(Object metadata) : super(metadata);
+  const InvokingMetaCapability(DartObjectImpl metadata) : super(metadata);
 }
 
 class TypingCapability extends TypeCapability implements

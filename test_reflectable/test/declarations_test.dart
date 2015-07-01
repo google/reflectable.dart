@@ -10,7 +10,7 @@ import "package:unittest/unittest.dart";
 class Reflector extends Reflectable {
   // TODO(sigurdm): Include capability to reflect on constructors when
   // available.
-  const Reflector() : super(instanceInvokeCapability);
+  const Reflector() : super(instanceInvokeCapability, newInstanceCapability);
 }
 
 // TODO(sigurdm): Adapt this test when we support fields.

@@ -121,20 +121,32 @@ class InstanceMirrorImpl implements InstanceMirror {
 
   final Object reflectee;
 
-  InstanceMirrorImpl(this.reflectee, this.reflectable);
+  InstanceMirrorImpl(this.reflectee, this.reflectable) {
+    if (this.type == null) {
+      throw new NoSuchCapabilityError(
+          "Reflecting on instance on unannotated type: ${this.runtimeType}");
+    }
+  }
 
+  // TODO: To handle `AdmitSubtypeCapability`, we would need to apply a class
+  // mirror for type T to a reflectee of some proper subtype T' of T, in which
+  // case the above `throw new NoSuchCapabilityError(..)` would be too harsh
+  // (or, alternatively, `classMirrorForType` should return a mirror for a
+  // proper supertype of `reflectee.runtimeType`). The specification of
+  // `classMirrorForType` would help making the choice among the two.
   ClassMirror get type => _data.classMirrorForType(reflectee.runtimeType);
 
   Object invoke(String methodName, List<Object> positionalArguments,
       [Map<Symbol, Object> namedArguments]) {
-    Function methodTearer = _data.getters[methodName];
-    if (methodTearer != null) {
+    Function getter = _data.getters[methodName];
+    if (getter != null) {
       return Function.apply(
-          methodTearer(reflectee), positionalArguments, namedArguments);
+          getter(reflectee), positionalArguments, namedArguments);
     }
     throw new NoSuchInvokeCapabilityError(
         reflectee, methodName, positionalArguments, namedArguments);
   }
+
   bool get hasReflectee => true;
   bool operator ==(other) {
     return other is InstanceMirrorImpl &&
@@ -148,7 +160,12 @@ class InstanceMirrorImpl implements InstanceMirror {
 
   @override
   Object invokeGetter(String getterName) {
-    return _data.getters[getterName](reflectee);
+    Function getter = _data.getters[getterName];
+    if (getter != null) {
+      return getter(reflectee);
+    }
+    throw new NoSuchInvokeCapabilityError(
+        reflectee, getterName, [], {});
   }
 
   @override
@@ -156,7 +173,12 @@ class InstanceMirrorImpl implements InstanceMirror {
     if (setterName.substring(setterName.length - 1) != "=") {
       setterName += "=";
     }
-    return _data.setters[setterName](reflectee, value);
+    Function setter = _data.setters[setterName];
+    if (setter != null) {
+      return setter(reflectee, value);
+    }
+    throw new NoSuchInvokeCapabilityError(
+        reflectee, setterName, [value], {});
   }
 }
 
