@@ -245,6 +245,18 @@ class ReflectorDomain {
         }
         superclassIndex = "$index";
       }
+
+      String constructorsCode;
+
+      if (classDomain.classElement.isAbstract) {
+        constructorsCode = '{}';
+      } else {
+        constructorsCode = formatMap(classDomain.constructors
+            .map((ConstructorElement constructor) {
+          return '"${constructor.name}": ${constructorCode(constructor)}';
+        }));
+      }
+
       String metadataCode;
       if (capabilities.supportsMetadata) {
         metadataCode = classDomain.metadataCode;
@@ -267,7 +279,8 @@ class ReflectorDomain {
       return 'new r.ClassMirrorImpl("${classDomain.simpleName}", '
           '"${classDomain.qualifiedName}", $i, const ${reflector.name}(), '
           '$declarationsCode, $instanceMembersCode, $superclassIndex, '
-          '$staticGettersCode, $staticSettersCode, $metadataCode)';
+          '$staticGettersCode, $staticSettersCode, $constructorsCode, '
+          '$metadataCode)';
     }));
 
     String gettersCode = formatMap(instanceGetterNames.map(gettingClosure));
@@ -283,17 +296,9 @@ class ReflectorDomain {
 
     String typesCode = formatList(
         classes.items.map((ClassElement classElement) => classElement.name));
-    String constructorsCode = formatMap(annotatedClasses
-        .expand((ClassDomain classDomain) {
-      if (classDomain.classElement.isAbstract) return [];
-      return classDomain.constructors.map((ConstructorElement constructor) {
-        String longName = "${classDomain.qualifiedName}.${constructor.name}";
-        return '"$longName": ${constructorCode(constructor)}';
-      });
-    }));
 
     return "new r.ReflectorData($classMirrors, $methodsCode, $typesCode, "
-        "$constructorsCode, $gettersCode, $settersCode)";
+        "$gettersCode, $settersCode)";
   }
 }
 
@@ -530,18 +535,18 @@ class Capabilities {
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
       if ((capability is ec.InvokingCapability ||
-           capability is ec.StaticInvokeCapability) &&
+              capability is ec.StaticInvokeCapability) &&
           _supportsName(capability, methodName)) {
         return true;
       }
       if ((capability is ec.InvokingMetaCapability ||
-           capability is ec.StaticInvokeMetaCapability) &&
+              capability is ec.StaticInvokeMetaCapability) &&
           _supportsMeta(capability, metadata)) {
         return true;
       }
       // Handle reflectee based capabilities.
       if ((capability is ec.AdmitSubtypeCapability ||
-           capability is ec.SubtypeQuantifyCapability) &&
+              capability is ec.SubtypeQuantifyCapability) &&
           supportsTarget(capability)) {
         return true;
       }

@@ -50,7 +50,7 @@ import 'main.dart';
 import 'main.dart';
 
 initializeReflectable() {
-  r.data = {const MyReflectable(): new r.ReflectorData([new r.ClassMirrorImpl("A", ".A", 0, const MyReflectable(), [], [], -1, {}, {}, null)], [], [A], {}, {}, {})};
+  r.data = {const MyReflectable(): new r.ReflectorData([new r.ClassMirrorImpl("A", ".A", 0, const MyReflectable(), [], [], -1, {}, {}, {}, null)], [], [A], {}, {})};
 }
 """}];
 

@@ -79,14 +79,13 @@ class ReflectorData {
   final List<ClassMirror> classMirrors;
   final List<MethodMirror> memberMirrors;
   final List<Type> types;
-  final Map<String, Function> constructors;
   final Map<String, InvokerOfGetter> getters;
   final Map<String, InvokerOfSetter> setters;
 
   Map<Type, ClassMirror> _typeToClassMirrorCache;
 
-  ReflectorData(this.classMirrors, this.memberMirrors, this.types,
-      this.constructors, this.getters, this.setters);
+  ReflectorData(this.classMirrors, this.memberMirrors, this.types, this.getters,
+      this.setters);
 
   ClassMirror classMirrorForType(Type type) {
     if (_typeToClassMirrorCache == null) {
@@ -164,8 +163,7 @@ class InstanceMirrorImpl implements InstanceMirror {
     if (getter != null) {
       return getter(reflectee);
     }
-    throw new NoSuchInvokeCapabilityError(
-        reflectee, getterName, [], {});
+    throw new NoSuchInvokeCapabilityError(reflectee, getterName, [], {});
   }
 
   @override
@@ -177,8 +175,7 @@ class InstanceMirrorImpl implements InstanceMirror {
     if (setter != null) {
       return setter(reflectee, value);
     }
-    throw new NoSuchInvokeCapabilityError(
-        reflectee, setterName, [value], {});
+    throw new NoSuchInvokeCapabilityError(reflectee, setterName, [value], {});
   }
 }
 
@@ -255,10 +252,12 @@ class ClassMirrorImpl implements ClassMirror {
   final List<Object> _metadata;
   final Map<String, StaticGetter> getters;
   final Map<String, StaticSetter> setters;
+  final Map<String, Function> constructors;
 
   ClassMirrorImpl(this.simpleName, this.qualifiedName, this._classIndex,
       this._reflectable, this._declarationIndices, this._instanceMemberIndices,
-      this._superclassIndex, this.getters, this.setters, metadata)
+      this._superclassIndex, this.getters, this.setters, this.constructors,
+      metadata)
       : _metadata = metadata == null
           ? null
           : new UnmodifiableListView(metadata);
@@ -306,8 +305,8 @@ class ClassMirrorImpl implements ClassMirror {
   Object newInstance(String constructorName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
     // TODO(sigurdm): Move the constructors-data to the ClassMirrors.
-    return Function.apply(_data.constructors["$qualifiedName.$constructorName"],
-        positionalArguments, namedArguments);
+    return Function.apply(
+        constructors["$constructorName"], positionalArguments, namedArguments);
   }
 
   bool operator ==(other) => _unsupported();
