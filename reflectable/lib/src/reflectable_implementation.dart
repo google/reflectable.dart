@@ -19,7 +19,7 @@ bool _isReflectable(dm.DeclarationMirror declarationMirror, Object annotation) {
 }
 
 rm.ClassMirror wrapClassMirror(
-    dm.ClassMirror classMirror, Reflectable reflectable) {
+    dm.ClassMirror classMirror, ReflectableImpl reflectable) {
   if (classMirror is dm.FunctionTypeMirror) {
     return new _FunctionTypeMirrorImpl(classMirror, reflectable);
   } else {
@@ -29,7 +29,7 @@ rm.ClassMirror wrapClassMirror(
 }
 
 rm.DeclarationMirror wrapDeclarationMirror(
-    dm.DeclarationMirror declarationMirror, Reflectable reflectable) {
+    dm.DeclarationMirror declarationMirror, ReflectableImpl reflectable) {
   if (declarationMirror is dm.MethodMirror) {
     return new _MethodMirrorImpl(declarationMirror, reflectable);
   } else if (declarationMirror is dm.ParameterMirror) {
@@ -50,7 +50,7 @@ rm.DeclarationMirror wrapDeclarationMirror(
 }
 
 rm.InstanceMirror wrapInstanceMirror(
-    dm.InstanceMirror instanceMirror, Reflectable reflectable) {
+    dm.InstanceMirror instanceMirror, ReflectableImpl reflectable) {
   if (instanceMirror is dm.ClosureMirror) {
     return new _ClosureMirrorImpl(instanceMirror, reflectable);
   } else {
@@ -59,7 +59,7 @@ rm.InstanceMirror wrapInstanceMirror(
   }
 }
 
-rm.ObjectMirror wrapObjectMirror(dm.ObjectMirror m, Reflectable reflectable) {
+rm.ObjectMirror wrapObjectMirror(dm.ObjectMirror m, ReflectableImpl reflectable) {
   if (m is dm.LibraryMirror) {
     return new _LibraryMirrorImpl(m, reflectable);
   } else if (m is dm.InstanceMirror) {
@@ -71,7 +71,7 @@ rm.ObjectMirror wrapObjectMirror(dm.ObjectMirror m, Reflectable reflectable) {
 }
 
 rm.TypeMirror wrapTypeMirror(
-    dm.TypeMirror typeMirror, Reflectable reflectable) {
+    dm.TypeMirror typeMirror, ReflectableImpl reflectable) {
   if (typeMirror is dm.TypeVariableMirror) {
     return new _TypeVariableMirrorImpl(typeMirror, reflectable);
   } else if (typeMirror is dm.TypedefMirror) {
@@ -107,7 +107,7 @@ dm.TypeMirror unwrapTypeMirror(rm.TypeMirror TypeMirror) {
 /// instance-member named [name] according to the
 /// capabilities of [reflectable].
 bool reflectableSupportsInstanceInvoke(
-    Reflectable reflectable, String name, dm.ClassMirror classMirror) {
+    ReflectableImpl reflectable, String name, dm.ClassMirror classMirror) {
   Symbol nameSymbol = new Symbol(name);
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability == invokingCapability ||
@@ -127,7 +127,7 @@ bool reflectableSupportsInstanceInvoke(
 }
 
 /// Returns true iff [reflectable] supports static invoke of [name].
-bool reflectableSupportsStaticInvoke(Reflectable reflectable, String name) {
+bool reflectableSupportsStaticInvoke(ReflectableImpl reflectable, String name) {
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability is StaticInvokeCapability) {
       return new RegExp(capability.namePattern).firstMatch(name) != null;
@@ -138,7 +138,7 @@ bool reflectableSupportsStaticInvoke(Reflectable reflectable, String name) {
 
 /// Returns true iff [reflectable] supports invoke of [name].
 bool reflectableSupportsConstructorInvoke(
-    Reflectable reflectable, dm.ClassMirror classMirror, String name) {
+    ReflectableImpl reflectable, dm.ClassMirror classMirror, String name) {
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability == newInstanceCapability) {
       return true;
@@ -179,14 +179,14 @@ String _getterToSetter(String getterName) {
 }
 
 abstract class _ObjectMirrorImplMixin implements rm.ObjectMirror {
-  Reflectable get _reflectable;
+  ReflectableImpl get _reflectable;
 }
 
 class _LibraryMirrorImpl extends _DeclarationMirrorImpl
     with _ObjectMirrorImplMixin implements rm.LibraryMirror {
   dm.LibraryMirror get _libraryMirror => _declarationMirror;
 
-  _LibraryMirrorImpl(dm.LibraryMirror m, Reflectable reflectable)
+  _LibraryMirrorImpl(dm.LibraryMirror m, ReflectableImpl reflectable)
       : super(m, reflectable) {}
 
   @override
@@ -198,7 +198,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
     Iterable<Symbol> relevantKeys = decls.keys.where((k) {
       List<dm.InstanceMirror> metadata = decls[k].metadata;
       for (var item in metadata) {
-        if (item.hasReflectee && item.reflectee is Reflectable) return true;
+        if (item.hasReflectee && item.reflectee is ReflectableImpl) return true;
       }
       return false;
     });
@@ -266,7 +266,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
 
 class _LibraryDependencyMirrorImpl implements rm.LibraryDependencyMirror {
   final dm.LibraryDependencyMirror _libraryDependencyMirror;
-  final Reflectable _reflectable;
+  final ReflectableImpl _reflectable;
 
   _LibraryDependencyMirrorImpl(
       this._libraryDependencyMirror, this._reflectable);
@@ -320,7 +320,7 @@ class _LibraryDependencyMirrorImpl implements rm.LibraryDependencyMirror {
 class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
     implements rm.InstanceMirror {
   final dm.InstanceMirror _instanceMirror;
-  final Reflectable _reflectable;
+  final ReflectableImpl _reflectable;
 
   _InstanceMirrorImpl(this._instanceMirror, this._reflectable);
 
@@ -388,7 +388,7 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
     implements rm.ClassMirror {
   dm.ClassMirror get _classMirror => _declarationMirror;
 
-  _ClassMirrorImpl(dm.ClassMirror cm, Reflectable reflectable)
+  _ClassMirrorImpl(dm.ClassMirror cm, ReflectableImpl reflectable)
       : super(cm, reflectable) {}
 
   @override
@@ -549,7 +549,7 @@ class _FunctionTypeMirrorImpl extends _ClassMirrorImpl
   dm.FunctionTypeMirror get _functionTypeMirror => _classMirror;
 
   _FunctionTypeMirrorImpl(
-      dm.FunctionTypeMirror functionTypeMirror, Reflectable reflectable)
+      dm.FunctionTypeMirror functionTypeMirror, ReflectableImpl reflectable)
       : super(functionTypeMirror, reflectable);
 
   @override
@@ -573,7 +573,7 @@ class _FunctionTypeMirrorImpl extends _ClassMirrorImpl
 
 abstract class _DeclarationMirrorImpl implements rm.DeclarationMirror {
   final dm.DeclarationMirror _declarationMirror;
-  final Reflectable _reflectable;
+  final ReflectableImpl _reflectable;
 
   _DeclarationMirrorImpl(this._declarationMirror, this._reflectable);
 
@@ -619,7 +619,7 @@ class _MethodMirrorImpl extends _DeclarationMirrorImpl
     implements rm.MethodMirror {
   dm.MethodMirror get _methodMirror => _declarationMirror;
 
-  _MethodMirrorImpl(dm.MethodMirror mm, Reflectable reflectable)
+  _MethodMirrorImpl(dm.MethodMirror mm, ReflectableImpl reflectable)
       : super(mm, reflectable);
 
   @override
@@ -694,7 +694,7 @@ class _ClosureMirrorImpl extends _InstanceMirrorImpl
     implements rm.ClosureMirror {
   dm.ClosureMirror get _closureMirror => _instanceMirror;
 
-  _ClosureMirrorImpl(dm.ClosureMirror closureMirror, Reflectable reflectable)
+  _ClosureMirrorImpl(dm.ClosureMirror closureMirror, ReflectableImpl reflectable)
       : super(closureMirror, reflectable);
 
   @override
@@ -716,7 +716,7 @@ class _VariableMirrorImpl extends _DeclarationMirrorImpl
     implements rm.VariableMirror {
   dm.VariableMirror get _variableMirror => _declarationMirror;
 
-  _VariableMirrorImpl(dm.VariableMirror vm, Reflectable reflectable)
+  _VariableMirrorImpl(dm.VariableMirror vm, ReflectableImpl reflectable)
       : super(vm, reflectable);
 
   @override
@@ -747,7 +747,7 @@ class _ParameterMirrorImpl extends _VariableMirrorImpl
     implements rm.ParameterMirror {
   dm.ParameterMirror get _parameterMirror => _declarationMirror;
 
-  _ParameterMirrorImpl(dm.ParameterMirror pm, Reflectable reflectable)
+  _ParameterMirrorImpl(dm.ParameterMirror pm, ReflectableImpl reflectable)
       : super(pm, reflectable);
 
   @override
@@ -778,7 +778,7 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
     implements rm.TypeMirror {
   dm.TypeMirror get _typeMirror => _declarationMirror;
 
-  _TypeMirrorImpl(dm.TypeMirror typeMirror, Reflectable reflectable)
+  _TypeMirrorImpl(dm.TypeMirror typeMirror, ReflectableImpl reflectable)
       : super(typeMirror, reflectable);
 
   @override
@@ -826,7 +826,7 @@ class _TypeVariableMirrorImpl extends _TypeMirrorImpl
   dm.TypeVariableMirror get _typeVariableMirror => _typeMirror;
 
   _TypeVariableMirrorImpl(
-      dm.TypeVariableMirror typeVariableMirror, Reflectable reflectable)
+      dm.TypeVariableMirror typeVariableMirror, ReflectableImpl reflectable)
       : super(typeVariableMirror, reflectable);
 
   @override
@@ -855,7 +855,7 @@ class _TypeVariableMirrorImpl extends _TypeMirrorImpl
 class _TypedefMirrorImpl extends _TypeMirrorImpl implements rm.TypedefMirror {
   dm.TypedefMirror get _typedefMirror => _typeMirror;
 
-  _TypedefMirrorImpl(dm.TypedefMirror typedefMirror, Reflectable reflectable)
+  _TypedefMirrorImpl(dm.TypedefMirror typedefMirror, ReflectableImpl reflectable)
       : super(typedefMirror, reflectable);
 
   @override
@@ -936,7 +936,7 @@ class _SourceLocationImpl implements rm.SourceLocation {
 }
 
 /// An implementation of [ReflectableInterface] based on dart:mirrors.
-class Reflectable extends ReflectableBase implements ReflectableInterface {
+class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   // Fields holding capabilities; we use discrete fields rather than a list
   // of fields because this allows us to use a syntax similar to a varargs
   // invocation as the superinitializer (omitting `<ReflectCapability>[]` and
@@ -947,7 +947,7 @@ class Reflectable extends ReflectableBase implements ReflectableInterface {
 
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
-  const Reflectable([ReflectCapability cap0 = null,
+  const ReflectableImpl([ReflectCapability cap0 = null,
       ReflectCapability cap1 = null, ReflectCapability cap2 = null,
       ReflectCapability cap3 = null, ReflectCapability cap4 = null,
       ReflectCapability cap5 = null, ReflectCapability cap6 = null,
@@ -955,7 +955,7 @@ class Reflectable extends ReflectableBase implements ReflectableInterface {
       ReflectCapability cap9 = null])
       : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
 
-  const Reflectable.fromList(List<ReflectCapability> capabilities)
+  const ReflectableImpl.fromList(List<ReflectCapability> capabilities)
       : super.fromList(capabilities);
 
   /// Returns a mirror of the given object [reflectee]

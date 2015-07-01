@@ -10,8 +10,8 @@ library reflectable.reflectable;
 
 import 'capability.dart';
 import 'mirrors.dart';
-import 'src/reflectable_implementation.dart' as implementation;
 import 'src/reflectable_class_constants.dart' as reflectable_class_constants;
+import 'src/reflectable_implementation.dart' as implementation;
 
 export 'capability.dart';
 export 'mirrors.dart';
@@ -79,7 +79,7 @@ abstract class ReflectableInterface {
 /// which means that the behavior of the instance can be expressed by
 /// generating code in the class.  Generalizations of this setup may
 /// be supported in the future if compelling use cases come up.
-class Reflectable extends implementation.Reflectable
+class Reflectable extends implementation.ReflectableImpl
     implements ReflectableInterface {
   // Intended to near-uniquely identify this class in target programs.
   static const thisClassName = reflectable_class_constants.name;

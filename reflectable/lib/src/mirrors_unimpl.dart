@@ -2,15 +2,15 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.mirrors_unimpl;
+library reflectable.src.mirrors_unimpl;
+
+import 'dart:collection' show UnmodifiableMapView, UnmodifiableListView;
 
 import '../capability.dart';
 import '../mirrors.dart';
 import '../reflectable.dart';
 import 'encoding_constants.dart' as constants;
 import 'reflectable_base.dart';
-
-import 'dart:collection' show UnmodifiableMapView, UnmodifiableListView;
 
 // Mirror classes with default implementations of all methods, to be used as
 // superclasses of transformer generated static mirror classes.  They serve to
@@ -103,7 +103,7 @@ class ReflectorData {
 
 /// This mapping contains the mirror-data for each reflector.
 /// It will be initialized in the generated code.
-Map<Reflectable, ReflectorData> data = throw new StateError(
+Map<ReflectableImpl, ReflectorData> data = throw new StateError(
     "Reflectable has not been initialized. "
     "Did you forget to add the main file to the "
     "reflectable transformer's entry_points in pubspec.yaml?");
@@ -117,7 +117,7 @@ class InstanceMirrorImpl implements InstanceMirror {
     return _dataCache;
   }
 
-  final Reflectable reflectable;
+  final ReflectableImpl reflectable;
 
   final Object reflectee;
 
@@ -214,7 +214,7 @@ class ClassMirrorImpl implements ClassMirror {
     }
     return _dataCache;
   }
-  final Reflectable _reflectable;
+  final ReflectableImpl _reflectable;
   /// The index of this mirror in the [ReflectorData.classMirrors] table.
   /// Also this is the index of the Type of the reflected class in
   /// [ReflectorData.types].
@@ -426,7 +426,7 @@ class MethodMirrorImpl implements MethodMirror {
   final int descriptor;
   final String name;
   final int ownerIndex;
-  final Reflectable reflectable;
+  final ReflectableImpl reflectable;
 
   const MethodMirrorImpl(
       this.name, this.descriptor, this.ownerIndex, this.reflectable);
@@ -538,12 +538,12 @@ abstract class SourceLocationUnimpl {
   Uri get sourceUri => _unsupported();
 }
 
-abstract class Reflectable extends ReflectableBase
+abstract class ReflectableImpl extends ReflectableBase
     implements ReflectableInterface {
 
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
-  const Reflectable([ReflectCapability cap0 = null,
+  const ReflectableImpl([ReflectCapability cap0 = null,
       ReflectCapability cap1 = null, ReflectCapability cap2 = null,
       ReflectCapability cap3 = null, ReflectCapability cap4 = null,
       ReflectCapability cap5 = null, ReflectCapability cap6 = null,
@@ -551,7 +551,7 @@ abstract class Reflectable extends ReflectableBase
       ReflectCapability cap9 = null])
       : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
 
-  const Reflectable.fromList(List<ReflectCapability> capabilities)
+  const ReflectableImpl.fromList(List<ReflectCapability> capabilities)
       : super.fromList(capabilities);
 
   @override
