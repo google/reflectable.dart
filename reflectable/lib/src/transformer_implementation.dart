@@ -175,11 +175,33 @@ class ReflectorDomain {
     for (ClassDomain classDomain in annotatedClasses) {
       classMap[classDomain.classElement] = classDomain;
     }
+
     for (ClassDomain classDomain in annotatedClasses) {
+      // For each annotated class we need a class domain.
       classes.add(classDomain.classElement);
+
+      // Gather the behavioral interface into [members]. Note that
+      // this includes implicitly generated getters and setters, but
+      // omits fields. Also note that this does not match the
+      // semantics of the `declarations` method in a [ClassMirror].
       classDomain.declarations.forEach(members.add);
-      classDomain.declaredFields.forEach(fields.add);
+
+      // Add the behavioral interface from this class (redundantly) and
+      // all superclasses (which matters) to [members], such that it
+      // contains both the behavioral parts for the target class and its
+      // superclasses, and the program structure oriented parts for the
+      // target class (omitting those from its superclasses).
       classDomain.instanceMembers.forEach(members.add);
+
+      // Gather the fields declared in the target class (not inherited
+      // ones) in [fields], i.e., the elements missing from [members]
+      // at this point, in order to support `declarations` in a
+      // [ClassMirror].
+      classDomain.declaredFields.forEach(fields.add);
+
+      // Gather all getters and setters based on [instanceMembers], including
+      // both explicitly declared ones, implicitly generated ones for fields,
+      // and the implicitly generated ones that correspond to method tear-offs.
       classDomain.instanceMembers.forEach((ExecutableElement instanceMember) {
         if (instanceMember is PropertyAccessorElement) {
           // A getter or a setter, synthetic or declared.
@@ -232,20 +254,33 @@ class ReflectorDomain {
         annotatedClasses.length, (int i) {
       ClassDomain classDomain = annotatedClasses[i];
 
-      String fieldsCode = formatList(classDomain.declaredFields
+      // Fields go first in [memberMirrors], so they will get the
+      // same index as in [fields].
+      List<int> fieldsIndices = classDomain.declaredFields
           .map((FieldElement element) {
         return fields.indexOf(element);
-      }));
+      });
 
-      String declarationsCode = formatList(classDomain.declarations
+      int fieldsLength = fields.length;
+
+      // All the elements in the behavioral interface go after the
+      // fields in [memberMirrors], so they must get an offset of
+      // `fields.length` on the index.
+      List<int> methodsIndices = classDomain.declarations
           .where(_executableIsntImplicitGetterOrSetter)
           .map((ExecutableElement element) {
-        return members.indexOf(element);
-      }));
+        return members.indexOf(element) + fieldsLength;
+      });
 
+      List<int> declarationsIndices =
+        <int>[]..addAll(fieldsIndices)..addAll(methodsIndices);
+      String declarationsCode = formatList(declarationsIndices);
+
+      // All instance members belong to the behavioral interface, so they
+      // also get an offset of `fields.length`.
       String instanceMembersCode = formatList(classDomain.instanceMembers
           .map((ExecutableElement element) {
-        return members.indexOf(element);
+        return members.indexOf(element) + fieldsLength;
       }));
 
       ClassElement superclass = classDomain.classElement.supertype.element;
@@ -255,6 +290,7 @@ class ReflectorDomain {
       } else {
         int index = classes.indexOf(superclass);
         if (index == null) {
+          // There is a superclass, but we have no capability for it.
           index = -1;
         }
         superclassIndex = "$index";
@@ -294,34 +330,38 @@ class ReflectorDomain {
                   classDomain.classElement, element.name)));
       return 'new r.ClassMirrorImpl("${classDomain.simpleName}", '
           '"${classDomain.qualifiedName}", $i, const ${reflector.name}(), '
-          '$fieldsCode, $declarationsCode, $instanceMembersCode, '
-          '$superclassIndex, $staticGettersCode, $staticSettersCode, '
-          '$constructorsCode, $metadataCode)';
+          '$declarationsCode, $instanceMembersCode, $superclassIndex, '
+          '$staticGettersCode, $staticSettersCode, $constructorsCode, '
+          '$metadataCode)';
     }));
 
     String gettersCode = formatMap(instanceGetterNames.map(gettingClosure));
     String settersCode = formatMap(instanceSetterNames.map(settingClosure));
 
-    String methodsCode = formatList(members.items
-        .map((ExecutableElement element) {
+    List<String> methodsList = members.items.map((ExecutableElement element) {
       int descriptor = _declarationDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
       return 'new r.MethodMirrorImpl("${element.name}", $descriptor, '
           '$ownerIndex, const ${reflector.name}())';
-    }));
+    });
 
-    String fieldsCode = formatList(fields.items.map((FieldElement element) {
+    List<String> fieldsList = fields.items.map((FieldElement element) {
       int descriptor = _fieldDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
       return 'new r.VariableMirrorImpl("${element.name}", $descriptor, '
           '$ownerIndex, const ${reflector.name}())';
-    }));
+    });
+
+    List<String> membersList = <String>[]
+      ..addAll(fieldsList)
+      ..addAll(methodsList);
+    String membersCode = formatList(membersList);
 
     String typesCode = formatList(
         classes.items.map((ClassElement classElement) => classElement.name));
 
-    return "new r.ReflectorData($classMirrors, $methodsCode, $fieldsCode, "
-        "$typesCode, $gettersCode, $settersCode)";
+    return "new r.ReflectorData($classMirrors, $membersCode, $typesCode, "
+        "$gettersCode, $settersCode)";
   }
 }
 
@@ -370,8 +410,9 @@ class ClassDomain {
 
   /// Returns the declared methods, accessors and constructors in
   /// [classElement]. Note that this includes synthetic getters and
-  /// setters, and omits fields. See the comment on `declaredAccessors`
-  /// for more information about how to detect the relevant cases.
+  /// setters, and omits fields; in other words, it provides the
+  /// behavioral point of view on the class. Also note that this is not
+  /// the same semantics as that of `declarations` in [ClassMirror].
   Iterable<ExecutableElement> get declarations {
     // TODO(sigurdm): Include type variables (if we decide to keep them).
     return [

@@ -81,20 +81,19 @@ class ReflectorData {
   /// by this [ReflectorData].
   final List<ClassMirror> classMirrors;
 
-  /// Repository of method mirrors used (via indices into this
-  /// list) by the above class mirrors to describe the behavior
-  /// of the mirrored class and its instances. From this behavioral
-  /// point of view there are no fields, but each of them gives
-  /// rise to a getter and possibly a setter (whose `isSynthetic`
-  /// is true). Filter those out, and use [fieldMirrors] to supplement
-  /// with fields in order to obtain the source code oriented point
-  /// of view needed for `declarations`.
-  final List<MethodMirror> memberMirrors;
-
-  /// Repository of variable mirrors used (via indices into this list)
-  /// by the above class mirrors to describe the declarations in the
-  /// mirrored class.
-  final List<VariableMirror> fieldMirrors;
+  /// Repository of method mirrors used (via indices into this list) by
+  /// the above class mirrors to describe the behavior of the mirrored
+  /// class and its instances, and of variable mirrors used to describe
+  /// their state. From the behavioral point of view there are no fields,
+  /// but each of them gives rise to a getter and possibly a setter (whose
+  /// `isSynthetic` is true). The implicit getters/setters are not stored
+  /// in this list, but they can be reconstructed based on the variable
+  /// mirrors describing the fields. From the program structure point of
+  /// view (used for `declarations`), the method mirrors and the field
+  /// mirrors must both be included directly. Hence, both points of view
+  /// require a little bit of processing, but in return we avoid some
+  /// redundancy in the stored information.
+  final List<DeclarationMirror> memberMirrors;
 
   /// List of [Type]s used to select class mirrors: If M is a class
   /// mirror in [classMirrors] at index `i`, the mirrored class (and
@@ -113,8 +112,8 @@ class ReflectorData {
 
   Map<Type, ClassMirror> _typeToClassMirrorCache;
 
-  ReflectorData(this.classMirrors, this.memberMirrors, this.fieldMirrors,
-      this.types, this.getters, this.setters);
+  ReflectorData(this.classMirrors, this.memberMirrors, this.types, this.getters,
+      this.setters);
 
   ClassMirror classMirrorForType(Type type) {
     if (_typeToClassMirrorCache == null) {
@@ -283,16 +282,16 @@ class ClassMirrorImpl implements ClassMirror {
   /// [ReflectorData.types].
   final int _classIndex;
 
-  /// A list of the indices in [ReflectorData.fieldMirrors] of the field
-  /// declarations of the reflected class.
-  final List<int> _fieldIndices;
-
-  /// A list of the indices in [ReflectorData.memberMirrors] of the declarations
-  /// of the reflected class.
+  /// A list of the indices in [ReflectorData.memberMirrors] of the
+  /// declarations of the reflected class. This includes method mirrors
+  /// and variable mirrors and it directly corresponds to `declarations`.
   final List<int> _declarationIndices;
 
   /// A list of the indices in [ReflectorData.memberMirrors] of the
-  /// instanceMembers of the reflected class.
+  /// instance members of the reflected class, except that it includes
+  /// variable mirrors describing fields which must be converted to
+  /// implicit getters and possibly implicit setters in order to
+  /// obtain the correct result for `instanceMembers`.
   final List<int> _instanceMemberIndices;
 
   /// The index of the mirror of the superclass in the
@@ -307,9 +306,9 @@ class ClassMirrorImpl implements ClassMirror {
   final Map<String, Function> constructors;
 
   ClassMirrorImpl(this.simpleName, this.qualifiedName, this._classIndex,
-      this._reflectable, this._fieldIndices, this._declarationIndices,
-      this._instanceMemberIndices, this._superclassIndex, this.getters,
-      this.setters, this.constructors, metadata)
+      this._reflectable, this._declarationIndices, this._instanceMemberIndices,
+      this._superclassIndex, this.getters, this.setters, this.constructors,
+      metadata)
       : _metadata = metadata == null
           ? null
           : new UnmodifiableListView(metadata);
@@ -328,19 +327,10 @@ class ClassMirrorImpl implements ClassMirror {
     if (_declarations == null) {
       Map<String, DeclarationMirror> result =
           new Map<String, DeclarationMirror>();
-      // In `memberMirrors` at `_declarationIndices` we have the behavioral
-      // model of the features of this class and its instances; in
-      // particular, fields are omitted (they are stored at _fieldsIndices),
-      // and so are he implicitly generated getters and setters for fields.
-      // So we must assemble the declarations here by taking declared
-      // methods and declared fields separately.
       for (int declarationIndex in _declarationIndices) {
-        MethodMirror methodMirror = _data.memberMirrors[declarationIndex];
-        result[methodMirror.simpleName] = methodMirror;
-      }
-      for (int fieldIndex in _fieldIndices) {
-        VariableMirror variableMirror = _data.fieldMirrors[fieldIndex];
-        result[variableMirror.simpleName] = variableMirror;
+        DeclarationMirror declarationMirror =
+            _data.memberMirrors[declarationIndex];
+        result[declarationMirror.simpleName] = declarationMirror;
       }
       _declarations =
           new UnmodifiableMapView<String, DeclarationMirror>(result);
@@ -353,17 +343,21 @@ class ClassMirrorImpl implements ClassMirror {
   Map<String, MethodMirror> get instanceMembers {
     if (_instanceMembers == null) {
       Map<String, MethodMirror> result = new Map<String, MethodMirror>();
-      for (int methodIndex in _instanceMemberIndices) {
-        MethodMirror methodMirror = _data.memberMirrors[methodIndex];
-        result[methodMirror.simpleName] = methodMirror;
-      }
-      for (int fieldIndex in _fieldIndices) {
-        VariableMirrorImpl variableMirror = _data.fieldMirrors[fieldIndex];
-        result[variableMirror.simpleName] =
-            _variableToGetterMirror(variableMirror);
-        if (!variableMirror.isFinal) {
-          result[variableMirror.simpleName + "="] =
-              _variableToSetterMirror(variableMirror);
+      for (int instanceMemberIndex in _instanceMemberIndices) {
+        DeclarationMirror declarationMirror =
+            _data.memberMirrors[instanceMemberIndex];
+        if (declarationMirror is MethodMirror) {
+          result[declarationMirror.simpleName] = declarationMirror;
+        } else {
+          assert(declarationMirror is VariableMirror);
+          // Need declaration because `assert` provides no type propagation.
+          VariableMirror variableMirror = declarationMirror;
+          result[variableMirror.simpleName] =
+              _variableToGetterMirror(variableMirror);
+          if (!variableMirror.isFinal) {
+            result[variableMirror.simpleName + "="] =
+                _variableToSetterMirror(variableMirror);
+          }
         }
       }
       _instanceMembers = new UnmodifiableMapView<String, MethodMirror>(result);
