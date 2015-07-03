@@ -9,9 +9,8 @@ import 'dart:async';
 import 'package:barback/barback.dart';
 
 class ImportTransformer extends Transformer {
-  final BarbackSettings _settings;
 
-  ImportTransformer.asPlugin(this._settings);
+  ImportTransformer.asPlugin();
 
   Future<bool> isPrimary(AssetId path) async {
     // This is for internal use, and should only ever be applied to

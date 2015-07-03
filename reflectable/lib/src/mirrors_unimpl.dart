@@ -76,16 +76,45 @@ typedef Object StaticSetter(Object value);
 
 /// The data backing a reflector.
 class ReflectorData {
+  /// List of class mirrors, one class mirror for each class that is
+  /// supported by reflection as specified by the reflector backed up
+  /// by this [ReflectorData].
   final List<ClassMirror> classMirrors;
+
+  /// Repository of method mirrors used (via indices into this
+  /// list) by the above class mirrors to describe the behavior
+  /// of the mirrored class and its instances. From this behavioral
+  /// point of view there are no fields, but each of them gives
+  /// rise to a getter and possibly a setter (whose `isSynthetic`
+  /// is true). Filter those out, and use [fieldMirrors] to supplement
+  /// with fields in order to obtain the source code oriented point
+  /// of view needed for `declarations`.
   final List<MethodMirror> memberMirrors;
+
+  /// Repository of variable mirrors used (via indices into this list)
+  /// by the above class mirrors to describe the declarations in the
+  /// mirrored class.
+  final List<VariableMirror> fieldMirrors;
+
+  /// List of [Type]s used to select class mirrors: If M is a class
+  /// mirror in [classMirrors] at index `i`, the mirrored class (and
+  /// hence the runtime type of the mirrored instances) is found in
+  /// `types[i]`.
   final List<Type> types;
+
+  /// Map from getter names to closures accepting an instance and returning
+  /// the result of invoking the getter with that name on that instance.
   final Map<String, InvokerOfGetter> getters;
+
+  /// Map from setter names to closures accepting an instance and a new value,
+  /// invoking the setter of that name on that instance, and returning its
+  /// return value.
   final Map<String, InvokerOfSetter> setters;
 
   Map<Type, ClassMirror> _typeToClassMirrorCache;
 
-  ReflectorData(this.classMirrors, this.memberMirrors, this.types, this.getters,
-      this.setters);
+  ReflectorData(this.classMirrors, this.memberMirrors, this.fieldMirrors,
+      this.types, this.getters, this.setters);
 
   ClassMirror classMirrorForType(Type type) {
     if (_typeToClassMirrorCache == null) {
@@ -102,7 +131,7 @@ class ReflectorData {
 
 /// This mapping contains the mirror-data for each reflector.
 /// It will be initialized in the generated code.
-Map<ReflectableImpl, ReflectorData> data = throw new StateError(
+Map<Reflectable, ReflectorData> data = throw new StateError(
     "Reflectable has not been initialized. "
     "Did you forget to add the main file to the "
     "reflectable transformer's entry_points in pubspec.yaml?");
@@ -120,27 +149,16 @@ class InstanceMirrorImpl implements InstanceMirror {
 
   final Object reflectee;
 
-  InstanceMirrorImpl(this.reflectee, this.reflectable) {
-    if (this.type == null) {
-      throw new NoSuchCapabilityError(
-          "Reflecting on instance on unannotated type: ${this.runtimeType}");
-    }
-  }
+  InstanceMirrorImpl(this.reflectee, this.reflectable);
 
-  // TODO: To handle `AdmitSubtypeCapability`, we would need to apply a class
-  // mirror for type T to a reflectee of some proper subtype T' of T, in which
-  // case the above `throw new NoSuchCapabilityError(..)` would be too harsh
-  // (or, alternatively, `classMirrorForType` should return a mirror for a
-  // proper supertype of `reflectee.runtimeType`). The specification of
-  // `classMirrorForType` would help making the choice among the two.
   ClassMirror get type => _data.classMirrorForType(reflectee.runtimeType);
 
   Object invoke(String methodName, List<Object> positionalArguments,
       [Map<Symbol, Object> namedArguments]) {
-    Function getter = _data.getters[methodName];
-    if (getter != null) {
+    Function methodTearer = _data.getters[methodName];
+    if (methodTearer != null) {
       return Function.apply(
-          getter(reflectee), positionalArguments, namedArguments);
+          methodTearer(reflectee), positionalArguments, namedArguments);
     }
     throw new NoSuchInvokeCapabilityError(
         reflectee, methodName, positionalArguments, namedArguments);
@@ -225,6 +243,28 @@ abstract class TypeMirrorUnimpl extends DeclarationMirrorUnimpl
   bool isAssignableTo(TypeMirror other) => _unsupported();
 }
 
+int _variableToImplicitAccessorAttributes(VariableMirror variableMirror) {
+  int attributes = 0;
+  if (variableMirror.isPrivate) attributes |= constants.privateAttribute;
+  if (variableMirror.isStatic) attributes |= constants.staticAttribute;
+  attributes |= constants.syntheticAttribute;
+  return attributes;
+}
+
+MethodMirror _variableToGetterMirror(VariableMirrorImpl variableMirror) {
+  int descriptor = constants.getter;
+  descriptor |= _variableToImplicitAccessorAttributes(variableMirror);
+  return new MethodMirrorImpl(variableMirror.simpleName, descriptor,
+      variableMirror.ownerIndex, variableMirror.reflectable);
+}
+
+MethodMirror _variableToSetterMirror(VariableMirrorImpl variableMirror) {
+  int descriptor = constants.setter;
+  descriptor |= _variableToImplicitAccessorAttributes(variableMirror);
+  return new MethodMirrorImpl(variableMirror.simpleName + "=", descriptor,
+      variableMirror.ownerIndex, variableMirror.reflectable);
+}
+
 class ClassMirrorImpl implements ClassMirror {
   ReflectorData _dataCache;
   ReflectorData get _data {
@@ -233,20 +273,32 @@ class ClassMirrorImpl implements ClassMirror {
     }
     return _dataCache;
   }
+
+  /// The reflector which represents the mirror system that this
+  /// mirror belongs to.
   final ReflectableImpl _reflectable;
+
   /// The index of this mirror in the [ReflectorData.classMirrors] table.
   /// Also this is the index of the Type of the reflected class in
   /// [ReflectorData.types].
   final int _classIndex;
+
+  /// A list of the indices in [ReflectorData.fieldMirrors] of the field
+  /// declarations of the reflected class.
+  final List<int> _fieldIndices;
+
   /// A list of the indices in [ReflectorData.memberMirrors] of the declarations
   /// of the reflected class.
   final List<int> _declarationIndices;
+
   /// A list of the indices in [ReflectorData.memberMirrors] of the
   /// instanceMembers of the reflected class.
   final List<int> _instanceMemberIndices;
+
   /// The index of the mirror of the superclass in the
   /// [ReflectorData.classMirrors] table.
   final int _superclassIndex;
+
   final String simpleName;
   final String qualifiedName;
   final List<Object> _metadata;
@@ -255,9 +307,9 @@ class ClassMirrorImpl implements ClassMirror {
   final Map<String, Function> constructors;
 
   ClassMirrorImpl(this.simpleName, this.qualifiedName, this._classIndex,
-      this._reflectable, this._declarationIndices, this._instanceMemberIndices,
-      this._superclassIndex, this.getters, this.setters, this.constructors,
-      metadata)
+      this._reflectable, this._fieldIndices, this._declarationIndices,
+      this._instanceMemberIndices, this._superclassIndex, this.getters,
+      this.setters, this.constructors, metadata)
       : _metadata = metadata == null
           ? null
           : new UnmodifiableListView(metadata);
@@ -274,17 +326,29 @@ class ClassMirrorImpl implements ClassMirror {
 
   Map<String, DeclarationMirror> get declarations {
     if (_declarations == null) {
-      Map<String, MethodMirror> result = new Map<String, MethodMirror>();
-      for (int methodIndex in _declarationIndices) {
-        MethodMirror methodMirror = _data.memberMirrors[methodIndex];
+      Map<String, DeclarationMirror> result =
+          new Map<String, DeclarationMirror>();
+      // In `memberMirrors` at `_declarationIndices` we have the behavioral
+      // model of the features of this class and its instances; in
+      // particular, fields are omitted (they are stored at _fieldsIndices),
+      // and so are he implicitly generated getters and setters for fields.
+      // So we must assemble the declarations here by taking declared
+      // methods and declared fields separately.
+      for (int declarationIndex in _declarationIndices) {
+        MethodMirror methodMirror = _data.memberMirrors[declarationIndex];
         result[methodMirror.simpleName] = methodMirror;
       }
-      _declarations = new Map.unmodifiable(result);
+      for (int fieldIndex in _fieldIndices) {
+        VariableMirror variableMirror = _data.fieldMirrors[fieldIndex];
+        result[variableMirror.simpleName] = variableMirror;
+      }
+      _declarations =
+          new UnmodifiableMapView<String, DeclarationMirror>(result);
     }
     return _declarations;
   }
 
-  Map<String, DeclarationMirror> _instanceMembers;
+  Map<String, MethodMirror> _instanceMembers;
 
   Map<String, MethodMirror> get instanceMembers {
     if (_instanceMembers == null) {
@@ -293,7 +357,16 @@ class ClassMirrorImpl implements ClassMirror {
         MethodMirror methodMirror = _data.memberMirrors[methodIndex];
         result[methodMirror.simpleName] = methodMirror;
       }
-      _instanceMembers = new Map.unmodifiable(result);
+      for (int fieldIndex in _fieldIndices) {
+        VariableMirrorImpl variableMirror = _data.fieldMirrors[fieldIndex];
+        result[variableMirror.simpleName] =
+            _variableToGetterMirror(variableMirror);
+        if (!variableMirror.isFinal) {
+          result[variableMirror.simpleName + "="] =
+              _variableToSetterMirror(variableMirror);
+        }
+      }
+      _instanceMembers = new UnmodifiableMapView<String, MethodMirror>(result);
     }
     return _instanceMembers;
   }
@@ -486,7 +559,7 @@ class MethodMirrorImpl implements MethodMirror {
 
   @override
   bool get isRedirectingConstructor =>
-      0 != descriptor & constants.redirectingConstructor;
+      0 != descriptor & constants.redirectingConstructorAttribute;
 
   @override
   bool get isRegularMethod => kind == constants.method;
@@ -544,6 +617,58 @@ abstract class VariableMirrorUnimpl extends DeclarationMirrorUnimpl
   int get hashCode => _unsupported();
 }
 
+class VariableMirrorImpl implements VariableMirror {
+  final int descriptor;
+  final String name;
+  final int ownerIndex;
+  final ReflectableImpl reflectable;
+
+  const VariableMirrorImpl(
+      this.name, this.descriptor, this.ownerIndex, this.reflectable);
+
+  int get kind => constants.kindFromEncoding(descriptor);
+
+  ClassMirror get owner => data[reflectable].classMirrors[ownerIndex];
+
+  @override
+  String get qualifiedName => "${owner.qualifiedName}.$name";
+
+  @override
+  bool get isPrivate => 0 != descriptor & constants.privateAttribute;
+
+  @override
+  bool get isTopLevel => owner is LibraryMirror;
+
+  @override
+  SourceLocation get location =>
+      throw new UnsupportedError("Location not supported");
+
+  // TODO(eernst): implement metadata
+  @override
+  List<Object> get metadata => throw new UnimplementedError();
+
+  @override
+  TypeMirror get type => _unsupported();
+
+  @override
+  bool get isStatic => 0 != descriptor & constants.staticAttribute;
+
+  @override
+  bool get isFinal => 0 != descriptor & constants.finalAttribute;
+
+  @override
+  bool get isConst => 0 != descriptor & constants.constAttribute;
+
+  @override
+  bool operator ==(other) => _unsupported();
+
+  @override
+  int get hashCode => _unsupported();
+
+  @override
+  String get simpleName => name;
+}
+
 abstract class ParameterMirrorUnimpl extends VariableMirrorUnimpl
     implements ParameterMirror {
   TypeMirror get type => _unsupported();
@@ -593,6 +718,6 @@ abstract class ReflectableImpl extends ReflectableBase
 
   @override
   Iterable<ClassMirror> get annotatedClasses {
-    return new List<ClassMirror>.unmodifiable(data[this].classMirrors);
+    return new UnmodifiableListView<ClassMirror>(data[this].classMirrors);
   }
 }

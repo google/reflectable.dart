@@ -2,7 +2,7 @@
 # source code is governed by a BSD-style license that can be found in
 # the LICENSE file.
 
-[ $runtime != vm ]
-test/mock_tests/*: SkipByDesign # Use dart:io.
 build/*: SkipByDesign # Nothing relies on getting built.
 
+[ $runtime != vm ]
+test/mock_tests/*: SkipByDesign # Use dart:io.

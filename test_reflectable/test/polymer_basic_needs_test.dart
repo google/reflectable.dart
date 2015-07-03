@@ -92,7 +92,7 @@ main() {
     List<ThinDeclarationMirror> thinDeclarations = buildMirrors(A);
 
     // Check in a few ways that the thin declarations are as expected.
-    expect(thinDeclarations.length, 4);
+    expect(thinDeclarations.length, 3);
     for (ThinDeclarationMirror thinDeclaration in thinDeclarations) {
       if (thinDeclaration.name == "i") {
         expect(thinDeclaration.isField, isTrue);
@@ -103,7 +103,6 @@ main() {
         expect(thinDeclaration.isField, isFalse);
       } else {
         String name = thinDeclaration.name;
-        print(name);  //DEBUG
         expect(name == "bar" || name == "A", isTrue);
       }
     }

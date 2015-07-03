@@ -8,12 +8,12 @@ version: 0.0.1
 author: The Dart Team <dart@google.com>
 homepage: https://www.github.com/dart-lang/reflectable
 dependencies:
-  analyzer: '>=0.24.0 <0.250+1'
-  barback: '>=0.15.0 <0.16.0'
-  code_transformers: '>=0.2.0 <0.3.0'
-  logging: '>=0.9.3 <0.10.0'
+  analyzer: '^0.25.0'
+  barback: '^0.15.0'
+  code_transformers: '^0.2.0'
+  logging: '^0.11.0'
 dev_dependencies:
-  unittest: '>=0.11.0 <0.12.0'
+  unittest: '^0.11.0'
 transformers:
 - reflectable/src/transform_import:
     $include: lib/reflectable.dart

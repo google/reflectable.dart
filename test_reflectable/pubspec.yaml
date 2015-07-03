@@ -3,7 +3,7 @@ dependencies:
   reflectable:
     path: ../reflectable
 dev_dependencies:
-  unittest: '>=0.11.0 <0.12.0'
+  unittest: '^0.11.0'
 transformers:
 - reflectable:
     $include: ["test/*.dart"]

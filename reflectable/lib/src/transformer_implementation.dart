@@ -7,7 +7,6 @@ library reflectable.src.transformer_implementation;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math' show max;
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
@@ -158,7 +157,7 @@ class ReflectorDomain {
     }
 
     return ('(${parameterParts.join(', ')}) => '
-        'new ${nameOfDeclaration(constructor)}'
+        'new ${_nameOfDeclaration(constructor)}'
         '(${argumentParts.join(", ")})');
   }
 
@@ -167,8 +166,9 @@ class ReflectorDomain {
   String formatMap(Iterable parts) => "{${parts.join(", ")}}";
 
   String generateCode() {
-    Enumerator<ExecutableElement> members = new Enumerator<MethodElement>();
     Enumerator<ClassElement> classes = new Enumerator<ClassElement>();
+    Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
+    Enumerator<FieldElement> fields = new Enumerator<FieldElement>();
     Set<String> instanceGetterNames = new Set<String>();
     Set<String> instanceSetterNames = new Set<String>();
 
@@ -178,16 +178,23 @@ class ReflectorDomain {
     for (ClassDomain classDomain in annotatedClasses) {
       classes.add(classDomain.classElement);
       classDomain.declarations.forEach(members.add);
+      classDomain.declaredFields.forEach(fields.add);
       classDomain.instanceMembers.forEach(members.add);
       classDomain.instanceMembers.forEach((ExecutableElement instanceMember) {
         if (instanceMember is PropertyAccessorElement) {
+          // A getter or a setter, synthetic or declared.
           if (instanceMember.isGetter) {
             instanceGetterNames.add(instanceMember.name);
           } else {
             instanceSetterNames.add(instanceMember.name);
           }
-        } else {
+        } else if (instanceMember is MethodElement) {
           instanceGetterNames.add(instanceMember.name);
+        } else {
+          // `instanceMember` is a ConstructorElement.
+          // Even though a generative constructor has a false
+          // `isStatic`, we do not wish to include them among
+          // instanceGetterNames, so we do nothing here.
         }
       });
     }
@@ -224,7 +231,14 @@ class ReflectorDomain {
     String classMirrors = formatList(new Iterable<String>.generate(
         annotatedClasses.length, (int i) {
       ClassDomain classDomain = annotatedClasses[i];
+
+      String fieldsCode = formatList(classDomain.declaredFields
+          .map((FieldElement element) {
+        return fields.indexOf(element);
+      }));
+
       String declarationsCode = formatList(classDomain.declarations
+          .where(_executableIsntImplicitGetterOrSetter)
           .map((ExecutableElement element) {
         return members.indexOf(element);
       }));
@@ -267,20 +281,22 @@ class ReflectorDomain {
       String staticGettersCode = formatMap([
         classDomain.declaredMethods
             .where((ExecutableElement element) => element.isStatic),
-        classDomain.declaredAccessors.where((PropertyAccessorElement element) =>
-            element.isStatic && element.isGetter)
+        classDomain.declaredAndImplicitAccessors.where(
+            (PropertyAccessorElement element) =>
+                element.isStatic && element.isGetter)
       ].expand((x) => x).map((ExecutableElement element) =>
           staticGettingClosure(classDomain.classElement, element.name)));
-      String staticSettersCode = formatMap(classDomain.declaredAccessors
-          .where((PropertyAccessorElement element) =>
-              element.isStatic && element.isSetter)
-          .map((PropertyAccessorElement element) =>
-              staticSettingClosure(classDomain.classElement, element.name)));
+      String staticSettersCode = formatMap(
+          classDomain.declaredAndImplicitAccessors
+              .where((PropertyAccessorElement element) =>
+                  element.isStatic && element.isSetter)
+              .map((PropertyAccessorElement element) => staticSettingClosure(
+                  classDomain.classElement, element.name)));
       return 'new r.ClassMirrorImpl("${classDomain.simpleName}", '
           '"${classDomain.qualifiedName}", $i, const ${reflector.name}(), '
-          '$declarationsCode, $instanceMembersCode, $superclassIndex, '
-          '$staticGettersCode, $staticSettersCode, $constructorsCode, '
-          '$metadataCode)';
+          '$fieldsCode, $declarationsCode, $instanceMembersCode, '
+          '$superclassIndex, $staticGettersCode, $staticSettersCode, '
+          '$constructorsCode, $metadataCode)';
     }));
 
     String gettersCode = formatMap(instanceGetterNames.map(gettingClosure));
@@ -294,25 +310,55 @@ class ReflectorDomain {
           '$ownerIndex, const ${reflector.name}())';
     }));
 
+    String fieldsCode = formatList(fields.items.map((FieldElement element) {
+      int descriptor = _fieldDescriptor(element);
+      int ownerIndex = classes.indexOf(element.enclosingElement);
+      return 'new r.VariableMirrorImpl("${element.name}", $descriptor, '
+          '$ownerIndex, const ${reflector.name}())';
+    }));
+
     String typesCode = formatList(
         classes.items.map((ClassElement classElement) => classElement.name));
 
-    return "new r.ReflectorData($classMirrors, $methodsCode, $typesCode, "
-        "$gettersCode, $settersCode)";
+    return "new r.ReflectorData($classMirrors, $methodsCode, $fieldsCode, "
+        "$typesCode, $gettersCode, $settersCode)";
   }
 }
 
 /// Information about reflectability for a given class.
 class ClassDomain {
+  /// Element describing the target class.
   final ClassElement classElement;
+
+  /// Fields declared by [classElement] and included for reflection support,
+  /// according to the reflector described by the [reflectorDomain];
+  /// obtained by filtering `classElement.fields`.
+  final Iterable<FieldElement> declaredFields;
+
+  /// Methods which are declared by [classElement] and included for
+  /// reflection support, according to the reflector described by
+  /// [reflectorDomain]; obtained by filtering `classElement.methods`.
   final Iterable<MethodElement> declaredMethods;
-  final Iterable<PropertyAccessorElement> declaredAccessors;
+
+  /// Getters and setters possessed by [classElement] and included for
+  /// reflection support, according to the reflector described by
+  /// [reflectorDomain]; obtained by filtering `classElement.accessors`.
+  /// Note that it includes declared as well as synthetic accessors,
+  /// implicitly created as getters/setters for fields.
+  final Iterable<PropertyAccessorElement> declaredAndImplicitAccessors;
+
+  /// Constructors declared by [classElement] and included for reflection
+  /// support, according to the reflector described by [reflectorDomain];
+  /// obtained by filtering `classElement.constructors`.
   final Iterable<ConstructorElement> constructors;
 
-  ReflectorDomain reflectorDomain;
+  /// The reflector domain that holds [this] object as one of its
+  /// class domains.
+  final ReflectorDomain reflectorDomain;
 
-  ClassDomain(this.classElement, this.declaredMethods, this.declaredAccessors,
-      this.constructors, this.reflectorDomain);
+  ClassDomain(this.classElement, this.declaredFields, this.declaredMethods,
+      this.declaredAndImplicitAccessors, this.constructors,
+      this.reflectorDomain);
 
   Iterable<MethodElement> get invokableMethods => instanceMembers
       .where((ExecutableElement element) => element is MethodElement);
@@ -322,10 +368,17 @@ class ClassDomain {
     return "${classElement.library.name}.${classElement.name}";
   }
 
+  /// Returns the declared methods, accessors and constructors in
+  /// [classElement]. Note that this includes synthetic getters and
+  /// setters, and omits fields. See the comment on `declaredAccessors`
+  /// for more information about how to detect the relevant cases.
   Iterable<ExecutableElement> get declarations {
-    // TODO(sigurdm): Include fields.
     // TODO(sigurdm): Include type variables (if we decide to keep them).
-    return [declaredMethods, declaredAccessors, constructors].expand((x) => x);
+    return [
+      declaredMethods,
+      declaredAndImplicitAccessors,
+      constructors
+    ].expand((x) => x);
   }
 
   /// Finds all instance members by going through the class hierarchy.
@@ -362,17 +415,18 @@ class ClassDomain {
         if (member.isAbstract || member.isStatic) continue;
         addIfCapable(member);
       }
-      for (FieldElement field in classElement.fields) {
-        if (field.isStatic) continue;
-        if (field.isSynthetic) continue;
-        addIfCapable(field.getter);
-        if (!field.isFinal) {
-          addIfCapable(field.setter);
-        }
-      }
       return result;
     }
     return helper(classElement).values;
+  }
+
+  String nameOfDeclaration(ExecutableElement element) {
+    if (element is ConstructorElement) {
+      return element.name == ""
+          ? classElement.name
+          : "${classElement.name}.${element.name}";
+    }
+    return element.name;
   }
 
   /// Returns a String with the textual representations of the metadata list.
@@ -740,28 +794,42 @@ class TransformerImplementation {
     return null;
   }
 
-  Iterable<MethodElement> declaredMethods(
+  Iterable<FieldElement> declaredFields(
       ClassElement classElement, Capabilities capabilities) {
-    return classElement.methods.where((MethodElement method) {
-      if (method.isStatic) {
-        return capabilities.supportsStaticInvoke(method.name, method.metadata);
-      } else {
-        return capabilities.supportsInstanceInvoke(
-            method.name, method.metadata);
-      }
+    return classElement.fields.where((FieldElement field) {
+      Function capabilityChecker = field.isStatic
+          ? capabilities.supportsStaticInvoke
+          : capabilities.supportsInstanceInvoke;
+      return !field.isSynthetic &&
+          capabilityChecker(field.name, field.metadata);
     });
   }
 
-  Iterable<PropertyAccessorElement> declaredAccessors(
+  Iterable<MethodElement> declaredMethods(
+      ClassElement classElement, Capabilities capabilities) {
+    return classElement.methods.where((MethodElement method) {
+      Function capabilityChecker = method.isStatic
+          ? capabilities.supportsStaticInvoke
+          : capabilities.supportsInstanceInvoke;
+      return capabilityChecker(method.name, method.metadata);
+    });
+  }
+
+  /// Returns the [PropertyAccessorElement]s which are the accessors
+  /// of the given [classElement], including both the declared ones
+  /// and the implicitly generated ones corresponding to fields. This
+  /// is the set of accessors that corresponds to the behavioral interface
+  /// of the corresponding instances, as opposed to the source code oriented
+  /// interface, e.g., `declarations`. But the latter can be computed from
+  /// here, by filtering out the accessors whose `isSynthetic` is true
+  /// and adding the fields.
+  Iterable<PropertyAccessorElement> declaredAndImplicitAccessors(
       ClassElement classElement, Capabilities capabilities) {
     return classElement.accessors.where((PropertyAccessorElement accessor) {
-      if (accessor.isStatic) {
-        return capabilities.supportsStaticInvoke(
-            accessor.name, accessor.metadata);
-      } else {
-        return capabilities.supportsInstanceInvoke(
-            accessor.name, accessor.metadata);
-      }
+      Function capabilityChecker = accessor.isStatic
+          ? capabilities.supportsStaticInvoke
+          : capabilities.supportsInstanceInvoke;
+      return capabilityChecker(accessor.name, accessor.metadata);
     });
   }
 
@@ -803,14 +871,18 @@ class TransformerImplementation {
               return new ReflectorDomain(
                   reflector, new List<ClassDomain>(), capabilities);
             });
+            List<FieldElement> declaredFieldsOfClass =
+                declaredFields(type, domain.capabilities).toList();
             List<MethodElement> declaredMethodsOfClass =
                 declaredMethods(type, domain.capabilities).toList();
-            List<PropertyAccessorElement> declaredAccessorsOfClass =
-                declaredAccessors(type, domain.capabilities).toList();
+            List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
+                declaredAndImplicitAccessors(type, domain.capabilities)
+                    .toList();
             List<ConstructorElement> declaredConstructorsOfClass =
                 declaredConstructors(type, domain.capabilities).toList();
             domain.annotatedClasses.add(new ClassDomain(type,
-                declaredMethodsOfClass, declaredAccessorsOfClass,
+                declaredFieldsOfClass, declaredMethodsOfClass,
+                declaredAndImplicitAccessorsOfClass,
                 declaredConstructorsOfClass, domain));
           }
         }
@@ -1011,8 +1083,7 @@ class TransformerImplementation {
       case "InvokingMetaCapability":
         return new ec.NewInstanceMetaCapability(extractMetaData(constant));
       case "TypingCapability":
-        // TODO(eernst)
-        throw new UnimplementedError("$classElement not yet supported!");
+        return new ec.TypingCapability(constant.fields["upperBound"].value);
       case "SubtypeQuantifyCapability":
         // TODO(eernst)
         throw new UnimplementedError("$classElement not yet supported!");
@@ -1222,7 +1293,28 @@ class AggregateTransformWrapper implements Transform {
   void consumePrimary() => _aggregateTransform.consumePrimary(primaryInput.id);
 }
 
-/// Returns an integer encoding the kind and attributes of the given
+bool _accessorIsntImplicitGetterOrSetter(PropertyAccessorElement accessor) {
+  return !accessor.isSynthetic || (!accessor.isGetter && !accessor.isSetter);
+}
+
+bool _executableIsntImplicitGetterOrSetter(ExecutableElement executable) {
+  return executable is! PropertyAccessorElement ||
+      _accessorIsntImplicitGetterOrSetter(executable);
+}
+
+/// Returns an integer encoding of the kind and attributes of the given
+/// field.
+int _fieldDescriptor(FieldElement element) {
+  int result = constants.field;
+  if (element.isPrivate) result |= constants.privateAttribute;
+  if (element.isSynthetic) result |= constants.syntheticAttribute;
+  if (element.isConst) result |= constants.constAttribute;
+  if (element.isFinal) result |= constants.finalAttribute;
+  if (element.isStatic) result |= constants.staticAttribute;
+  return result;
+}
+
+/// Returns an integer encoding of the kind and attributes of the given
 /// method/constructor/getter/setter.
 int _declarationDescriptor(ExecutableElement element) {
   int result;
@@ -1234,31 +1326,21 @@ int _declarationDescriptor(ExecutableElement element) {
     } else {
       result = constants.generativeConstructor;
     }
-    if (element.isConst) {
-      result += constants.constAttribute;
-    }
+    if (element.isConst) result |= constants.constAttribute;
     if (element.redirectedConstructor != null) {
-      result += constants.redirectingConstructor;
+      result |= constants.redirectingConstructorAttribute;
     }
   } else {
     result = constants.method;
   }
-  if (element.isPrivate) {
-    result += constants.privateAttribute;
-  }
-  if (element.isStatic) {
-    result += constants.staticAttribute;
-  }
-  if (element.isSynthetic) {
-    result += constants.syntheticAttribute;
-  }
-  if (element.isAbstract) {
-    result += constants.abstractAttribute;
-  }
+  if (element.isPrivate) result |= constants.privateAttribute;
+  if (element.isStatic) result |= constants.staticAttribute;
+  if (element.isSynthetic) result |= constants.syntheticAttribute;
+  if (element.isAbstract) result |= constants.abstractAttribute;
   return result;
 }
 
-String nameOfDeclaration(ExecutableElement element) {
+String _nameOfDeclaration(ExecutableElement element) {
   if (element is ConstructorElement) {
     return element.name == ""
         ? element.enclosingElement.name

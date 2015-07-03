@@ -8,8 +8,6 @@ import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
 
 class Reflector extends Reflectable {
-  // TODO(sigurdm): Include capability to reflect on constructors when
-  // available.
   const Reflector() : super(instanceInvokeCapability, newInstanceCapability);
 }
 

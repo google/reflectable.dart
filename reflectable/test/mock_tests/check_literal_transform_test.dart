@@ -14,7 +14,7 @@ var useReflect = [{"a|main.dart": """
 import 'package:reflectable/reflectable.dart';
 
 class MyReflectable extends Reflectable {
-  const MyReflectable(): super();
+  const MyReflectable(): super(newInstanceCapability);
 }
 
 @MyReflectable()
@@ -30,7 +30,7 @@ import 'package:reflectable/reflectable.dart';
 import "main_reflection_data.dart" show initializeReflectable;
 
 class MyReflectable extends Reflectable {
-  const MyReflectable(): super();
+  const MyReflectable(): super(newInstanceCapability);
 }
 
 @MyReflectable()
@@ -50,7 +50,7 @@ import 'main.dart';
 import 'main.dart';
 
 initializeReflectable() {
-  r.data = {const MyReflectable(): new r.ReflectorData([new r.ClassMirrorImpl("A", ".A", 0, const MyReflectable(), [], [], -1, {}, {}, {}, null)], [], [A], {}, {})};
+  r.data = {const MyReflectable(): new r.ReflectorData([new r.ClassMirrorImpl("A", ".A", 0, const MyReflectable(), [], [0], [], -1, {}, {}, {"": () => new A()}, null)], [new r.MethodMirrorImpl("", 64, 0, const MyReflectable())], [], [A], {}, {})};
 }
 """}];
 

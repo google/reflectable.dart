@@ -59,7 +59,8 @@ rm.InstanceMirror wrapInstanceMirror(
   }
 }
 
-rm.ObjectMirror wrapObjectMirror(dm.ObjectMirror m, ReflectableImpl reflectable) {
+rm.ObjectMirror wrapObjectMirror(
+    dm.ObjectMirror m, ReflectableImpl reflectable) {
   if (m is dm.LibraryMirror) {
     return new _LibraryMirrorImpl(m, reflectable);
   } else if (m is dm.InstanceMirror) {
@@ -128,8 +129,8 @@ bool reflectableSupportsInstanceInvoke(
 }
 
 /// Returns true iff [reflectable] supports static invoke of [name].
-bool reflectableSupportsStaticInvoke(
-    ReflectableImpl reflectable, String name, List<dm.InstanceMirror> metadata) {
+bool reflectableSupportsStaticInvoke(ReflectableImpl reflectable, String name,
+    List<dm.InstanceMirror> metadata) {
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability is StaticInvokeCapability) {
       return new RegExp(capability.namePattern).firstMatch(name) != null;
@@ -156,6 +157,7 @@ bool reflectableSupportsConstructorInvoke(
           .firstWhere((dm.DeclarationMirror declarationMirror) {
         Symbol nameSymbol = new Symbol(name);
         return declarationMirror is dm.MethodMirror &&
+            declarationMirror.isConstructor &&
             declarationMirror.constructorName == nameSymbol;
       });
       if (constructorMirror == null ||
@@ -439,29 +441,56 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
         .forEach((Symbol nameSymbol, dm.DeclarationMirror declarationMirror) {
       String name = dm.MirrorSystem.getName(nameSymbol);
       if (declarationMirror is dm.MethodMirror) {
-        if ((declarationMirror.isStatic &&
+        bool included = false;
+        if (declarationMirror.isConstructor) {
+          // Factory constructors are static, others not, so this decision
+          // is made independently of `isStatic`.
+          included = included ||
+              reflectableSupportsConstructorInvoke(
+                  _reflectable, _classMirror, name);
+        } else {
+          // `declarationMirror` is a non-constructor.
+          if (declarationMirror.isStatic) {
+            // `declarationMirror` is a static method/getter/setter.
+            included = included ||
                 reflectableSupportsStaticInvoke(
-                    _reflectable, name, declarationMirror.metadata)) ||
-            reflectableSupportsInstanceInvoke(
-                _reflectable, name, _classMirror)) {
+                    _reflectable, name, declarationMirror.metadata);
+          } else {
+            // `declarationMirror` is an instance method/getter/setter.
+            included = included ||
+                reflectableSupportsInstanceInvoke(
+                    _reflectable, name, _classMirror);
+          }
+        }
+        if (included) {
           result[name] = wrapDeclarationMirror(declarationMirror, _reflectable);
         }
       } else if (declarationMirror is dm.VariableMirror) {
         // For variableMirrors we test both for support of the name and the
         // derived setter name.
-        if ((declarationMirror.isStatic &&
-                (reflectableSupportsStaticInvoke(
-                        _reflectable, name, declarationMirror.metadata) ||
-                    reflectableSupportsStaticInvoke(_reflectable,
-                        _getterToSetter(name), declarationMirror.metadata))) ||
-            (reflectableSupportsInstanceInvoke(
-                    _reflectable, name, _classMirror) ||
-                reflectableSupportsInstanceInvoke(
-                    _reflectable, _getterToSetter(name), _classMirror))) {
+        bool included = false;
+        if (declarationMirror.isStatic) {
+          included = included ||
+              reflectableSupportsStaticInvoke(
+                  _reflectable, name, declarationMirror.metadata) ||
+              reflectableSupportsStaticInvoke(_reflectable,
+                  _getterToSetter(name), declarationMirror.metadata);
+        } else {
+          included = included ||
+              reflectableSupportsInstanceInvoke(
+                  _reflectable, name, _classMirror) ||
+              reflectableSupportsInstanceInvoke(
+                  _reflectable, _getterToSetter(name), _classMirror);
+        }
+        if (included) {
           result[name] = wrapDeclarationMirror(declarationMirror, _reflectable);
         }
       } else {
-        // TODO(sigurdm): Support capabilities for other declarations
+        // TODO(sigurdm): Consider capabilities for other declarations; the
+        // additional subtypes of DeclarationMirror are LibraryMirror (global),
+        // TypeMirror and the 4 subtypes thereof, and ParameterMirror (declared
+        // in a method, not class), so the only case that needs further
+        // clarification is TypeVariableMirror. For now we just let it through.
         result[name] = wrapDeclarationMirror(declarationMirror, _reflectable);
       }
     });
@@ -711,7 +740,8 @@ class _ClosureMirrorImpl extends _InstanceMirrorImpl
     implements rm.ClosureMirror {
   dm.ClosureMirror get _closureMirror => _instanceMirror;
 
-  _ClosureMirrorImpl(dm.ClosureMirror closureMirror, ReflectableImpl reflectable)
+  _ClosureMirrorImpl(
+      dm.ClosureMirror closureMirror, ReflectableImpl reflectable)
       : super(closureMirror, reflectable);
 
   @override
@@ -872,7 +902,8 @@ class _TypeVariableMirrorImpl extends _TypeMirrorImpl
 class _TypedefMirrorImpl extends _TypeMirrorImpl implements rm.TypedefMirror {
   dm.TypedefMirror get _typedefMirror => _typeMirror;
 
-  _TypedefMirrorImpl(dm.TypedefMirror typedefMirror, ReflectableImpl reflectable)
+  _TypedefMirrorImpl(
+      dm.TypedefMirror typedefMirror, ReflectableImpl reflectable)
       : super(typedefMirror, reflectable);
 
   @override
@@ -1037,5 +1068,3 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
     return result;
   }
 }
-
-_unsupported() => throw new UnimplementedError();

@@ -8,6 +8,8 @@
 RTOOLS=../reflectable/tool
 TTOOLS=../test_reflectable/tool
 
+all_except_bottest: get check build test
+
 all: get check build full_test
 
 g: get
@@ -44,5 +46,5 @@ bot_test:
 
 full_test: test bot_test
 
-.PHONY: all c b t ft check build test bot_test full_test
+.PHONY: all_except_bottest all c b t ft check build test bot_test full_test
 
