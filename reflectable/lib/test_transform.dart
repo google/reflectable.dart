@@ -38,9 +38,8 @@ class TestAggregateTransform implements AggregateTransform {
   }
 
   TestAggregateTransform(this.files, [String packageRoot]) {
-    this.packageRoot = packageRoot == null
-        ? io.Platform.packageRoot
-        : packageRoot;
+    this.packageRoot =
+        packageRoot == null ? io.Platform.packageRoot : packageRoot;
     files.forEach((String description, String content) {
       AssetId assetId = new AssetId.parse(description);
       assets[assetId] = new Asset.fromString(assetId, content);
@@ -64,8 +63,11 @@ class TestAggregateTransform implements AggregateTransform {
     if (content != null) return content;
     String pathWithoutLib =
         id.path.split('/').skip(1).join(io.Platform.pathSeparator);
-    String path = [packageRoot, id.package, pathWithoutLib]
-        .join(io.Platform.pathSeparator);
+    String path = [
+      packageRoot,
+      id.package,
+      pathWithoutLib
+    ].join(io.Platform.pathSeparator);
     io.File file = new io.File(path);
     if (!(await file.exists())) {
       throw new AssetNotFoundException(id);
@@ -107,5 +109,42 @@ class TestAggregateTransform implements AggregateTransform {
           "$id can't be consumed because it's not a primary input.");
     }
     consumed.add(id);
+  }
+}
+
+class TestDeclaringTransform implements DeclaringAggregateTransform {
+  Set<String> outputs = new Set<String>();
+  Set<String> assets = new Set<String>();
+  Set<String> consumed = new Set<String>();
+
+  TestDeclaringTransform(Map<String, String> files) {
+    files.forEach((String description, String content) {
+      assets.add(description);
+    });
+  }
+
+  @override
+  void consumePrimary(AssetId id) {
+    consumed.add(id.toString());
+  }
+
+  @override
+  void declareOutput(AssetId id) {
+    outputs.add(id.toString());
+  }
+
+  @override
+  String get key => null;
+
+  @override
+  TransformLogger get logger => null;
+
+  @override
+  String get package => null;
+
+  @override
+  Stream<AssetId> get primaryIds {
+    return new Stream.fromIterable(
+        assets.map((String a) => new AssetId.parse(a)));
   }
 }

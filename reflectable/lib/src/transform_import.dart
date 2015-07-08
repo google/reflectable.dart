@@ -8,7 +8,7 @@ import 'dart:async';
 
 import 'package:barback/barback.dart';
 
-class ImportTransformer extends Transformer {
+class ImportTransformer extends Transformer implements DeclaringTransformer {
 
   ImportTransformer.asPlugin();
 
@@ -31,5 +31,10 @@ class ImportTransformer extends Transformer {
         "'src/reflectable_implementation.dart'",
         "'src/mirrors_unimpl.dart'");
     transform.addOutput(new Asset.fromString(id, newContent));
+  }
+
+  @override
+  declareOutputs(DeclaringTransform transform) {
+    transform.declareOutput(transform.primaryId);
   }
 }

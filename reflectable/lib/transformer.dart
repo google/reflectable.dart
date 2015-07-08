@@ -9,7 +9,8 @@ import 'package:barback/barback.dart';
 import 'package:logging/logging.dart';
 import 'src/transformer_implementation.dart' as implementation;
 
-class ReflectableTransformer extends AggregateTransformer {
+class ReflectableTransformer extends AggregateTransformer
+    implements DeclaringAggregateTransformer {
   // TODO(eernst): Consider doing `implements DeclaringAggregateTransformer`,
   // which might help improving the performance of barback graph management.
   BarbackSettings _settings;
@@ -75,7 +76,23 @@ class ReflectableTransformer extends AggregateTransformer {
 
   /// Performs the transformation.
   Future apply(AggregateTransform transform) {
-    return new implementation.TransformerImplementation()
-        .apply(transform, _entryPoints);
+    return new implementation.TransformerImplementation().apply(
+        transform, _entryPoints);
+  }
+
+  @override
+  declareOutputs(DeclaringAggregateTransform transform) async {
+    List<AssetId> ids = await transform.primaryIds.toList();
+    _entryPoints.forEach((String entryPoint) {
+      AssetId id = ids.firstWhere((AssetId id) => id.path.endsWith(entryPoint),
+          orElse: () => null);
+      if (id == null) {
+        transform.logger.warning("Could not find entrypoint '$entryPoint'");
+        return;
+      }
+      transform.declareOutput(id);
+      AssetId dataId = id.changeExtension("_reflection_data.dart");
+      transform.declareOutput(dataId);
+    });
   }
 }
