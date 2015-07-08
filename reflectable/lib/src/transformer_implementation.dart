@@ -1201,23 +1201,25 @@ class TransformerImplementation {
   /// Returns the source of the file containing the reflection data for [world].
   /// [id] is used to create relative import uris.
   String reflectionWorldSource(ReflectionWorld world, AssetId id) {
-    String reflectorImports = world.reflectors.map((ReflectorDomain reflector) {
+    Set<String> imports = new Set<String>();
+    imports.addAll(world.reflectors
+        .map((ReflectorDomain reflector) {
       Uri uri = resolver.getImportUri(reflector.reflector.library, from: id);
       return "import '$uri';";
-    }).join('\n');
-    String reflectedImports = world.reflectors
+    }));
+    imports.addAll(world.reflectors
         .expand((ReflectorDomain reflector) => reflector.annotatedClasses)
         .map((ClassDomain classDomain) {
       Uri uri =
           resolver.getImportUri(classDomain.classElement.library, from: id);
       return "import '$uri';";
-    }).join('\n');
-    // TODO(sigurdm): mirrors_unimpl.dart should be imported with a prefix.
+    }));
+    List<String> importsList = new List<String>.from(imports);
+    importsList.sort();
     return """
 library ${id.path.replaceAll("/", ".")};
 import "package:reflectable/src/mirrors_unimpl.dart" as r;
-$reflectorImports
-$reflectedImports
+${importsList.join('\n')}
 
 initializeReflectable() {
   r.data = ${world.generateCode()};
