@@ -12,6 +12,8 @@ import '../reflectable.dart';
 import 'encoding_constants.dart' as constants;
 import 'reflectable_base.dart';
 
+bool get isTransformed => true;
+
 // Mirror classes with default implementations of all methods, to be used as
 // superclasses of transformer generated static mirror classes.  They serve to
 // ensure that the static mirror classes always implement all methods, such that

@@ -54,9 +54,16 @@ void main() {
     "a|main_reflection_data.dart": """
 library main_reflection_data.dart;
 import "package:reflectable/src/mirrors_unimpl.dart" as r;
+import "package:reflectable/reflectable.dart" show isTransformed;
 import 'main.dart';
 
 initializeReflectable() {
+  if (!isTransformed) {
+    throw new UnsupportedError(
+        "The transformed code is running with the untransformed "
+        "reflectable package. Remember to set your package-root to "
+        "'build/.../packages'.");
+  }
   r.data = {const MyReflectable(): new r.ReflectorData([new r.ClassMirrorImpl("A", ".A", 0, const MyReflectable(), [0], [], -1, {}, {}, {"": () => new A()}, null)], [new r.MethodMirrorImpl("", 64, 0, const MyReflectable())], [A], {}, {})};
 }
 """

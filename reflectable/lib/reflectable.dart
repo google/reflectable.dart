@@ -98,3 +98,6 @@ class Reflectable extends implementation.ReflectableImpl
   const Reflectable.fromList(List<ReflectCapability> capabilities)
       : super.fromList(capabilities);
 }
+
+/// Returns true if the transformed version is running, false otherwise.
+bool get isTransformed => implementation.isTransformed;

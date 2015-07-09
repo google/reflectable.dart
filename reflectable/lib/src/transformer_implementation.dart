@@ -1219,9 +1219,16 @@ class TransformerImplementation {
     return """
 library ${id.path.replaceAll("/", ".")};
 import "package:reflectable/src/mirrors_unimpl.dart" as r;
+import "package:reflectable/reflectable.dart" show isTransformed;
 ${importsList.join('\n')}
 
 initializeReflectable() {
+  if (!isTransformed) {
+    throw new UnsupportedError(
+        "The transformed code is running with the untransformed "
+        "reflectable package. Remember to set your package-root to "
+        "'build/.../packages'.");
+  }
   r.data = ${world.generateCode()};
 }
 """;

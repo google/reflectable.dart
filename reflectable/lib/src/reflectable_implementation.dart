@@ -11,6 +11,8 @@ import '../capability.dart';
 import '../mirrors.dart' as rm;
 import '../reflectable.dart';
 
+bool get isTransformed => false;
+
 bool _isReflectable(dm.DeclarationMirror declarationMirror, Object annotation) {
   return declarationMirror.metadata.any((dm.InstanceMirror metadataMirror) {
     return metadataMirror.reflectee == annotation;
