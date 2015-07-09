@@ -1,6 +1,5 @@
 
 [ $compiler == dart2js || $compiler == none ]
-build/test/capabilities_test: RuntimeError # Missing implementation
 # TODO Throwing NoSuchMethod when the function doesn't exist, but the capability
 # does.
 build/test/no_such_capability_test: RuntimeError # Missing implementation

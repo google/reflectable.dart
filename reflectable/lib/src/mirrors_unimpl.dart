@@ -150,9 +150,17 @@ class InstanceMirrorImpl implements InstanceMirror {
 
   final Object reflectee;
 
-  InstanceMirrorImpl(this.reflectee, this.reflectable);
+  InstanceMirrorImpl(this.reflectee, this.reflectable) {
+    _type = _data.classMirrorForType(reflectee.runtimeType);
+    if (_type == null) {
+      throw new NoSuchCapabilityError(
+          "Reflecting on un-marked type ${reflectee.runtimeType}");
+    }
+  }
 
-  ClassMirror get type => _data.classMirrorForType(reflectee.runtimeType);
+  ClassMirror _type;
+
+  ClassMirror get type => _type;
 
   Object invoke(String methodName, List<Object> positionalArguments,
       [Map<Symbol, Object> namedArguments]) {
