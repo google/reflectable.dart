@@ -161,9 +161,9 @@ class ReflectorDomain {
         '(${argumentParts.join(", ")})');
   }
 
-  String formatAsList(Iterable parts) => "[${parts.join(", ")}]";
+  String formatList(Iterable parts) => "[${parts.join(", ")}]";
 
-  String formatAsMap(Iterable parts) => "{${parts.join(", ")}}";
+  String formatMap(Iterable parts) => "{${parts.join(", ")}}";
 
   String generateCode() {
     Enumerator<ClassElement> classes = new Enumerator<ClassElement>();
@@ -250,7 +250,7 @@ class ReflectorDomain {
       return '"$name": (value) => $className.$name value';
     }
 
-    String classMirrors = formatAsList(new Iterable<String>.generate(
+    String classMirrors = formatList(new Iterable<String>.generate(
         annotatedClasses.length, (int i) {
       ClassDomain classDomain = annotatedClasses[i];
 
@@ -272,14 +272,13 @@ class ReflectorDomain {
         return members.indexOf(element) + fieldsLength;
       });
 
-      List<int> declarationsIndices = <int>[]
-        ..addAll(fieldsIndices)
-        ..addAll(methodsIndices);
-      String declarationsCode = formatAsList(declarationsIndices);
+      List<int> declarationsIndices =
+        <int>[]..addAll(fieldsIndices)..addAll(methodsIndices);
+      String declarationsCode = formatList(declarationsIndices);
 
       // All instance members belong to the behavioral interface, so they
       // also get an offset of `fields.length`.
-      String instanceMembersCode = formatAsList(classDomain.instanceMembers
+      String instanceMembersCode = formatList(classDomain.instanceMembers
           .map((ExecutableElement element) {
         return members.indexOf(element) + fieldsLength;
       }));
@@ -302,7 +301,7 @@ class ReflectorDomain {
       if (classDomain.classElement.isAbstract) {
         constructorsCode = '{}';
       } else {
-        constructorsCode = formatAsMap(classDomain.constructors
+        constructorsCode = formatMap(classDomain.constructors
             .map((ConstructorElement constructor) {
           return '"${constructor.name}": ${constructorCode(constructor)}';
         }));
@@ -315,7 +314,7 @@ class ReflectorDomain {
         metadataCode = "null";
       }
 
-      String staticGettersCode = formatAsMap([
+      String staticGettersCode = formatMap([
         classDomain.declaredMethods
             .where((ExecutableElement element) => element.isStatic),
         classDomain.declaredAndImplicitAccessors.where(
@@ -323,7 +322,7 @@ class ReflectorDomain {
                 element.isStatic && element.isGetter)
       ].expand((x) => x).map((ExecutableElement element) =>
           staticGettingClosure(classDomain.classElement, element.name)));
-      String staticSettersCode = formatAsMap(
+      String staticSettersCode = formatMap(
           classDomain.declaredAndImplicitAccessors
               .where((PropertyAccessorElement element) =>
                   element.isStatic && element.isSetter)
@@ -336,8 +335,8 @@ class ReflectorDomain {
           '$metadataCode)';
     }));
 
-    String gettersCode = formatAsMap(instanceGetterNames.map(gettingClosure));
-    String settersCode = formatAsMap(instanceSetterNames.map(settingClosure));
+    String gettersCode = formatMap(instanceGetterNames.map(gettingClosure));
+    String settersCode = formatMap(instanceSetterNames.map(settingClosure));
 
     List<String> methodsList = members.items.map((ExecutableElement element) {
       int descriptor = _declarationDescriptor(element);
@@ -356,9 +355,9 @@ class ReflectorDomain {
     List<String> membersList = <String>[]
       ..addAll(fieldsList)
       ..addAll(methodsList);
-    String membersCode = formatAsList(membersList);
+    String membersCode = formatList(membersList);
 
-    String typesCode = formatAsList(
+    String typesCode = formatList(
         classes.items.map((ClassElement classElement) => classElement.name));
 
     return "new r.ReflectorData($classMirrors, $membersCode, $typesCode, "
@@ -1203,7 +1202,8 @@ class TransformerImplementation {
   /// [id] is used to create relative import uris.
   String reflectionWorldSource(ReflectionWorld world, AssetId id) {
     Set<String> imports = new Set<String>();
-    imports.addAll(world.reflectors.map((ReflectorDomain reflector) {
+    imports.addAll(world.reflectors
+        .map((ReflectorDomain reflector) {
       Uri uri = resolver.getImportUri(reflector.reflector.library, from: id);
       return "import '$uri';";
     }));
