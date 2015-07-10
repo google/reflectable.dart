@@ -43,11 +43,15 @@ Matcher throwsNoSuchCapabilityError =
 
 main() {
   test("GlobalQuantifyCapability", () {
+    expect(reflector.reflectType(A), const isInstanceOf<ClassMirror>());
     expect(reflector.reflect(new A()).invoke("foo", []), 42);
+    expect(reflector.reflectType(B), const isInstanceOf<ClassMirror>());
     expect(reflector.reflect(new B()).invoke("foo", []), 43);
+    expect(() => reflector.reflectType(C), throwsNoSuchCapabilityError);
     expect(() => reflector.reflect(new C()), throwsNoSuchCapabilityError);
   });
   test("GlobalQuantifyMetaCapability", () {
+    expect(reflector.reflectType(B), const isInstanceOf<ClassMirror>());
     expect(reflector.reflect(new D()).invoke("foo", []), 45);
   });
 }

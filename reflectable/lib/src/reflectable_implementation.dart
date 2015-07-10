@@ -16,13 +16,6 @@ bool get isTransformed => false;
 /// The name of the reflectable library.
 const Symbol reflectableLibrarySymbol = #reflectable.reflectable;
 
-bool _isReflectable(dm.DeclarationMirror declarationMirror, Object annotation) {
-  return declarationMirror.metadata.any((dm.InstanceMirror metadataMirror) {
-    return metadataMirror.reflectee == annotation;
-  });
-  // TODO(eernst, sigurdm): Handle quantification.
-}
-
 rm.ClassMirror wrapClassMirror(
     dm.ClassMirror classMirror, ReflectableImpl reflectable) {
   if (classMirror is dm.FunctionTypeMirror) {
@@ -1025,7 +1018,8 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   @override
   rm.ClassMirror reflectType(Type type) {
     dm.TypeMirror typeMirror = dm.reflectType(type);
-    if (typeMirror is dm.ClassMirror && _isReflectable(typeMirror, this)) {
+    if (typeMirror is dm.ClassMirror &&
+        _supportedClasses.contains(typeMirror)) {
       return wrapClassMirror(typeMirror, this);
     } else {
       throw new NoSuchCapabilityError(
