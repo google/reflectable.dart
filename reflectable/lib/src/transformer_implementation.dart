@@ -78,15 +78,18 @@ class Enumerator<T> {
 /// Reflector.
 class ReflectorDomain {
   final ClassElement reflector;
-  final List<ClassDomain> annotatedClasses;
+
+  Iterable<ClassDomain> get annotatedClasses => classMap.values;
+
   final Map<ClassElement, ClassDomain> classMap =
       new Map<ClassElement, ClassDomain>();
+
   final Capabilities capabilities;
 
   /// Libraries that must be imported to `reflector.library`.
   final Set<LibraryElement> missingImports = new Set<LibraryElement>();
 
-  ReflectorDomain(this.reflector, this.annotatedClasses, this.capabilities) {}
+  ReflectorDomain(this.reflector, this.capabilities) {}
 
   // TODO(eernst, sigurdm): Perhaps reconsider what the best strategy for
   // caching is.
@@ -161,9 +164,9 @@ class ReflectorDomain {
         '(${argumentParts.join(", ")})');
   }
 
-  String formatList(Iterable parts) => "[${parts.join(", ")}]";
+  String formatAsList(Iterable parts) => "[${parts.join(", ")}]";
 
-  String formatMap(Iterable parts) => "{${parts.join(", ")}}";
+  String formatAsMap(Iterable parts) => "{${parts.join(", ")}}";
 
   String generateCode() {
     Enumerator<ClassElement> classes = new Enumerator<ClassElement>();
@@ -171,10 +174,6 @@ class ReflectorDomain {
     Enumerator<FieldElement> fields = new Enumerator<FieldElement>();
     Set<String> instanceGetterNames = new Set<String>();
     Set<String> instanceSetterNames = new Set<String>();
-
-    for (ClassDomain classDomain in annotatedClasses) {
-      classMap[classDomain.classElement] = classDomain;
-    }
 
     for (ClassDomain classDomain in annotatedClasses) {
       // For each annotated class we need a class domain.
@@ -250,9 +249,9 @@ class ReflectorDomain {
       return '"$name": (value) => $className.$name value';
     }
 
-    String classMirrors = formatList(new Iterable<String>.generate(
-        annotatedClasses.length, (int i) {
-      ClassDomain classDomain = annotatedClasses[i];
+    int classIndex = 0;
+    String classMirrors = formatAsList(annotatedClasses
+        .map((ClassDomain classDomain) {
 
       // Fields go first in [memberMirrors], so they will get the
       // same index as in [fields].
@@ -272,13 +271,14 @@ class ReflectorDomain {
         return members.indexOf(element) + fieldsLength;
       });
 
-      List<int> declarationsIndices =
-        <int>[]..addAll(fieldsIndices)..addAll(methodsIndices);
-      String declarationsCode = formatList(declarationsIndices);
+      List<int> declarationsIndices = <int>[]
+        ..addAll(fieldsIndices)
+        ..addAll(methodsIndices);
+      String declarationsCode = formatAsList(declarationsIndices);
 
       // All instance members belong to the behavioral interface, so they
       // also get an offset of `fields.length`.
-      String instanceMembersCode = formatList(classDomain.instanceMembers
+      String instanceMembersCode = formatAsList(classDomain.instanceMembers
           .map((ExecutableElement element) {
         return members.indexOf(element) + fieldsLength;
       }));
@@ -301,7 +301,7 @@ class ReflectorDomain {
       if (classDomain.classElement.isAbstract) {
         constructorsCode = '{}';
       } else {
-        constructorsCode = formatMap(classDomain.constructors
+        constructorsCode = formatAsMap(classDomain.constructors
             .map((ConstructorElement constructor) {
           return '"${constructor.name}": ${constructorCode(constructor)}';
         }));
@@ -314,7 +314,7 @@ class ReflectorDomain {
         metadataCode = "null";
       }
 
-      String staticGettersCode = formatMap([
+      String staticGettersCode = formatAsMap([
         classDomain.declaredMethods
             .where((ExecutableElement element) => element.isStatic),
         classDomain.declaredAndImplicitAccessors.where(
@@ -322,21 +322,24 @@ class ReflectorDomain {
                 element.isStatic && element.isGetter)
       ].expand((x) => x).map((ExecutableElement element) =>
           staticGettingClosure(classDomain.classElement, element.name)));
-      String staticSettersCode = formatMap(
+      String staticSettersCode = formatAsMap(
           classDomain.declaredAndImplicitAccessors
               .where((PropertyAccessorElement element) =>
                   element.isStatic && element.isSetter)
               .map((PropertyAccessorElement element) => staticSettingClosure(
                   classDomain.classElement, element.name)));
-      return 'new r.ClassMirrorImpl("${classDomain.simpleName}", '
-          '"${classDomain.qualifiedName}", $i, const ${reflector.name}(), '
+      String result = 'new r.ClassMirrorImpl("${classDomain.simpleName}", '
+          '"${classDomain.qualifiedName}", $classIndex, '
+          'const ${reflector.name}(), '
           '$declarationsCode, $instanceMembersCode, $superclassIndex, '
           '$staticGettersCode, $staticSettersCode, $constructorsCode, '
           '$metadataCode)';
+      classIndex++;
+      return result;
     }));
 
-    String gettersCode = formatMap(instanceGetterNames.map(gettingClosure));
-    String settersCode = formatMap(instanceSetterNames.map(settingClosure));
+    String gettersCode = formatAsMap(instanceGetterNames.map(gettingClosure));
+    String settersCode = formatAsMap(instanceSetterNames.map(settingClosure));
 
     List<String> methodsList = members.items.map((ExecutableElement element) {
       int descriptor = _declarationDescriptor(element);
@@ -355,9 +358,9 @@ class ReflectorDomain {
     List<String> membersList = <String>[]
       ..addAll(fieldsList)
       ..addAll(methodsList);
-    String membersCode = formatList(membersList);
+    String membersCode = formatAsList(membersList);
 
-    String typesCode = formatList(
+    String typesCode = formatAsList(
         classes.items.map((ClassElement classElement) => classElement.name));
 
     return "new r.ReflectorData($classMirrors, $membersCode, $typesCode, "
@@ -518,7 +521,7 @@ class Capabilities {
 
   bool _supportsName(ec.NamePatternCapability capability, String methodName) {
     RegExp regexp = new RegExp(capability.namePattern);
-    return regexp.firstMatch(methodName) != null;
+    return regexp.hasMatch(methodName);
   }
 
   bool _supportsMeta(
@@ -882,6 +885,100 @@ class TransformerImplementation {
     });
   }
 
+  warn(String message, Element element) {
+    logger.warning(message,
+        asset: resolver.getSourceAssetId(element),
+        span: resolver.getSourceSpan(element));
+  }
+
+  /// Finds all GlobalQuantifyCapability and GlobalQuantifyMetaCapability
+  /// annotations on imports of [reflectableLibrary], and record the arguments
+  /// of these annotations by modifying [globalPatterns] and [globalMetadata].
+  void findGlobalQuantifyAnnotations(
+      Map<RegExp, List<ClassElement>> globalPatterns,
+      Map<ClassElement, List<ClassElement>> globalMetadata) {
+    LibraryElement reflectableLibrary =
+        resolver.getLibraryByName("reflectable.reflectable");
+    LibraryElement capabilityLibrary =
+        resolver.getLibraryByName("reflectable.capability");
+    ClassElement reflectableClass = reflectableLibrary.getType("Reflectable");
+    ClassElement typeClass =
+        resolver.getLibraryByUri(Uri.parse("dart:core")).getType("Type");
+
+    ConstructorElement globalQuantifyCapabilityConstructor = capabilityLibrary
+        .getType("GlobalQuantifyCapability")
+        .getNamedConstructor("");
+    ConstructorElement globalQuantifyMetaCapabilityConstructor =
+        capabilityLibrary
+            .getType("GlobalQuantifyMetaCapability")
+            .getNamedConstructor("");
+
+    for (LibraryElement library in resolver.libraries) {
+      for (ImportElement import in library.imports) {
+        for (ElementAnnotationImpl metadatum in import.metadata) {
+          if (metadatum.element == globalQuantifyCapabilityConstructor) {
+            EvaluationResultImpl evaluation = metadatum.evaluationResult;
+            if (evaluation != null && evaluation.value != null) {
+              DartObjectImpl value = evaluation.value;
+              String pattern = value.fields["classNamePattern"].stringValue;
+              if (pattern == null) {
+                // TODO(sigurdm): Create a span for the annotation rather than
+                // the import.
+                warn("The classNamePattern must be a string", import);
+                continue;
+              }
+              ClassElement reflector =
+                  value.fields["(super)"].fields["reflector"].type.element;
+              if (reflector == null ||
+                  reflector.type.element.supertype.element !=
+                      reflectableClass) {
+                String found =
+                    reflector == null ? "" : " Found ${reflector.name}";
+                warn("The reflector must be a direct subclass of Reflectable." +
+                    found, import);
+                continue;
+              }
+              globalPatterns
+                  .putIfAbsent(
+                      new RegExp(pattern), () => new List<ClassElement>())
+                  .add(reflector);
+            }
+          } else if (metadatum.element ==
+              globalQuantifyMetaCapabilityConstructor) {
+            EvaluationResultImpl evaluation = metadatum.evaluationResult;
+            if (evaluation != null && evaluation.value != null) {
+              DartObjectImpl value = evaluation.value;
+              Object metadataFieldValue = value.fields["metadata"].value;
+              if (metadataFieldValue == null ||
+                  value.fields["metadata"].type.element != typeClass) {
+                // TODO(sigurdm): Create a span for the annotation.
+                warn("The metadata must be a Type. "
+                    "Found ${value.fields["metadata"].type.element.name}",
+                    import);
+                continue;
+              }
+              ClassElement reflector =
+                  value.fields["(super)"].fields["reflector"].type.element;
+              if (reflector == null ||
+                  reflector.type.element.supertype.element !=
+                      reflectableClass) {
+                String found =
+                    reflector == null ? "" : " Found ${reflector.name}";
+                warn("The reflector must be a direct subclass of Reflectable." +
+                    found, import);
+                continue;
+              }
+              globalMetadata
+                  .putIfAbsent(
+                      metadataFieldValue, () => new List<ClassElement>())
+                  .add(reflector);
+            }
+          }
+        }
+      }
+    }
+  }
+
   /// Returns a [ReflectionWorld] instantiated with all the reflectors seen by
   /// [resolver] and all classes annotated by them.
   ///
@@ -899,33 +996,79 @@ class TransformerImplementation {
     }
     LibraryElement capabilityLibrary =
         resolver.getLibraryByName("reflectable.capability");
+
+    // For each pattern, the list of Reflectors that are associated with it via
+    // a GlobalQuantifyCapability.
+    Map<RegExp, List<ClassElement>> globalPatterns =
+        new Map<RegExp, List<ClassElement>>();
+
+    // For each Type, the list of Reflectors that are associated with it via
+    // a GlobalQuantifyCapability.
+    Map<ClassElement, List<ClassElement>> globalMetadata =
+        new Map<ClassElement, List<ClassElement>>();
+
+    // This call populates [globalPatterns] and [globalMetadata].
+    findGlobalQuantifyAnnotations(globalPatterns, globalMetadata);
+
+    void addClass(ClassElement type, ClassElement reflector) {
+      ReflectorDomain domain = domains.putIfAbsent(reflector, () {
+        Capabilities capabilities =
+            _capabilitiesOf(capabilityLibrary, reflector);
+        return new ReflectorDomain(reflector, capabilities);
+      });
+      if (domain.classMap.containsKey(type)) return;
+
+      List<FieldElement> declaredFieldsOfClass =
+          declaredFields(type, domain.capabilities).toList();
+      List<MethodElement> declaredMethodsOfClass =
+          declaredMethods(type, domain.capabilities).toList();
+      List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
+          declaredAndImplicitAccessors(type, domain.capabilities).toList();
+      List<ConstructorElement> declaredConstructorsOfClass =
+          declaredConstructors(type, domain.capabilities).toList();
+      domain.classMap[type] = new ClassDomain(type, declaredFieldsOfClass,
+          declaredMethodsOfClass, declaredAndImplicitAccessorsOfClass,
+          declaredConstructorsOfClass, domain);
+    }
+
     for (LibraryElement library in resolver.libraries) {
       for (CompilationUnitElement unit in library.units) {
         for (ClassElement type in unit.types) {
-          for (ElementAnnotation metadatum in type.metadata) {
+          for (ElementAnnotationImpl metadatum in type.metadata) {
+            EvaluationResultImpl evaluation = metadatum.evaluationResult;
+            DartObject value = evaluation.value;
+            // Add the class to the domain of all reflectors associated with
+            // the type of this metadata via GlobalQuantifyMetaCapability
+            // (if any).
+            if (value != null) {
+              List<ClassElement> reflectors =
+                  globalMetadata[value.type.element];
+              if (reflectors != null) {
+                for (ClassElement reflector in reflectors) {
+                  addClass(type, reflector);
+                }
+              }
+            }
+
+            // Add the class if it is annotated by a reflector.
             ClassElement reflector =
                 _getReflectableAnnotation(metadatum, focusClass);
-            if (reflector == null) continue;
-            ReflectorDomain domain = domains.putIfAbsent(reflector, () {
-              Capabilities capabilities =
-                  _capabilitiesOf(capabilityLibrary, reflector);
-              return new ReflectorDomain(
-                  reflector, new List<ClassDomain>(), capabilities);
-            });
-            List<FieldElement> declaredFieldsOfClass =
-                declaredFields(type, domain.capabilities).toList();
-            List<MethodElement> declaredMethodsOfClass =
-                declaredMethods(type, domain.capabilities).toList();
-            List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
-                declaredAndImplicitAccessors(type, domain.capabilities)
-                    .toList();
-            List<ConstructorElement> declaredConstructorsOfClass =
-                declaredConstructors(type, domain.capabilities).toList();
-            domain.annotatedClasses.add(new ClassDomain(type,
-                declaredFieldsOfClass, declaredMethodsOfClass,
-                declaredAndImplicitAccessorsOfClass,
-                declaredConstructorsOfClass, domain));
+            if (reflector != null) {
+              addClass(type, reflector);
+            }
           }
+          // Add the class to the domain of all reflectors associated with a
+          // pattern, via GlobalQuantifyCapability, that matches the qualified
+          // name of the class.
+          globalPatterns
+              .forEach((RegExp pattern, List<ClassElement> reflectors) {
+            String qualifiedName = "${type.library.name}.${type.name}";
+            if (pattern.hasMatch(qualifiedName)) {
+              for (ClassElement reflector in reflectors) {
+                addClass(type, reflector);
+              }
+            }
+          });
         }
       }
     }
@@ -1077,17 +1220,6 @@ class TransformerImplementation {
       return constant.fields["(super)"].fields["metadata"];
     }
 
-    /// Extracts the upperbound property.
-    ClassElement extractUpperBound(DartObjectImpl constant) {
-      if (constant.fields == null ||
-          constant.fields["upperbound"] == null ||
-          constant.fields["upperbound"].value is! ClassElement) {
-        // TODO(sigurdm): Better error-message.
-        logger.warning("Could not extract metadata.");
-      }
-      return constant.fields["upperbound"].value;
-    }
-
     switch (classElement.name) {
       case "_NameCapability":
         return ec.nameCapability;
@@ -1202,8 +1334,7 @@ class TransformerImplementation {
   /// [id] is used to create relative import uris.
   String reflectionWorldSource(ReflectionWorld world, AssetId id) {
     Set<String> imports = new Set<String>();
-    imports.addAll(world.reflectors
-        .map((ReflectorDomain reflector) {
+    imports.addAll(world.reflectors.map((ReflectorDomain reflector) {
       Uri uri = resolver.getImportUri(reflector.reflector.library, from: id);
       return "import '$uri';";
     }));

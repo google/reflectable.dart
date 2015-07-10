@@ -30,5 +30,6 @@ transformers:
       - test/member_capability_test.dart
       - test/no_such_capability_test.dart
       - test/invoke_capabilities_test.dart
+      - test/global_quantify_test.dart
 - $dart2js:
     $include: []

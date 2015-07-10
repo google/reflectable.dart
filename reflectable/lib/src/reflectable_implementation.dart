@@ -13,6 +13,9 @@ import '../reflectable.dart';
 
 bool get isTransformed => false;
 
+/// The name of the reflectable library.
+const Symbol reflectableLibrarySymbol = #reflectable.reflectable;
+
 bool _isReflectable(dm.DeclarationMirror declarationMirror, Object annotation) {
   return declarationMirror.metadata.any((dm.InstanceMirror metadataMirror) {
     return metadataMirror.reflectee == annotation;
@@ -117,7 +120,7 @@ bool reflectableSupportsInstanceInvoke(
         capability == instanceInvokeCapability) {
       return true;
     } else if (capability is InstanceInvokeCapability) {
-      return new RegExp(capability.namePattern).firstMatch(name) != null;
+      return new RegExp(capability.namePattern).hasMatch(name);
     } else if (capability is InstanceInvokeMetaCapability) {
       dm.DeclarationMirror declarationMirror =
           classMirror.instanceMembers[nameSymbol];
@@ -135,7 +138,7 @@ bool reflectableSupportsStaticInvoke(ReflectableImpl reflectable, String name,
     List<dm.InstanceMirror> metadata) {
   return reflectable.capabilities.any((ReflectCapability capability) {
     if (capability is StaticInvokeCapability) {
-      return new RegExp(capability.namePattern).firstMatch(name) != null;
+      return new RegExp(capability.namePattern).hasMatch(name);
     }
     if (capability is StaticInvokeMetaCapability) {
       return metadata != null &&
@@ -153,7 +156,7 @@ bool reflectableSupportsConstructorInvoke(
     if (capability == newInstanceCapability) {
       return true;
     } else if (capability is NewInstanceCapability) {
-      return new RegExp(capability.namePattern).firstMatch(name) != null;
+      return new RegExp(capability.namePattern).hasMatch(name);
     } else if (capability is NewInstanceMetaCapability) {
       dm.MethodMirror constructorMirror = classMirror.declarations.values
           .firstWhere((dm.DeclarationMirror declarationMirror) {
@@ -1011,22 +1014,12 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   /// Returns a mirror of the given object [reflectee]
   @override
   rm.InstanceMirror reflect(o) {
-    bool hasReflectable(dm.ClassMirror type) {
-      if (type == null) return false;
-      if (type.metadata
-          .map((dm.InstanceMirror reflectable) => reflectable.reflectee)
-          .contains(this)) {
-        return true;
-      }
-      return false;
-    }
-
     dm.InstanceMirror mirror = dm.reflect(o);
-    if (!hasReflectable(mirror.type)) {
+    if (!_supportedClasses.contains(mirror.type)) {
       throw new NoSuchCapabilityError(
-          "Reflecting on object of unannotated class.");
+          "Reflecting on object of unannotated class ${o.runtimeType}.");
     }
-    return wrapInstanceMirror(dm.reflect(o), this);
+    return wrapInstanceMirror(mirror, this);
   }
 
   @override
@@ -1056,17 +1049,70 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
 
   @override
   Iterable<rm.ClassMirror> get annotatedClasses {
-    List<rm.ClassMirror> result = new List<rm.ClassMirror>();
-    for (dm.LibraryMirror library
-        in dm.currentMirrorSystem().libraries.values) {
-      for (dm.DeclarationMirror declarationMirror
-          in library.declarations.values) {
-        // TODO(sigurdm, eernst): Update when we can annotate top-level functions.
-        if (declarationMirror is! dm.ClassMirror) continue;
-        if (!_isReflectable(declarationMirror, this)) continue;
-        result.add(wrapClassMirror(declarationMirror, this));
-      }
-    }
-    return result;
+    return _supportedClasses.map(
+        (dm.ClassMirror classMirror) => wrapClassMirror(classMirror, this));
   }
+
+  Set<dm.ClassMirror> get _supportedClasses {
+    // TODO(sigurdm): This cache will break with deferred loading.
+    return _supportedClassesCache.putIfAbsent(this, () {
+      Set<dm.ClassMirror> result = new Set<dm.ClassMirror>();
+      List<RegExp> globalPatterns = new List<RegExp>();
+      Set<Type> globalMetadataClasses = new Set<Type>();
+
+      // First gather all global quantifications that are annotations of
+      // imports of 'reflectable.reflectable'.
+      for (dm.LibraryMirror library
+          in dm.currentMirrorSystem().libraries.values) {
+        for (dm.LibraryDependencyMirror dependency
+            in library.libraryDependencies) {
+          if (dependency.isImport &&
+              dependency.targetLibrary.qualifiedName ==
+                  reflectableLibrarySymbol) {
+            for (dm.InstanceMirror metadatumMirror in dependency.metadata) {
+              Object metadatum = metadatumMirror.reflectee;
+              if (metadatum is GlobalQuantifyCapability &&
+                  metadatum.reflector == this) {
+                globalPatterns.add(new RegExp(metadatum.classNamePattern));
+              }
+              if (metadatum is GlobalQuantifyMetaCapability &&
+                  metadatum.reflector == this) {
+                globalMetadataClasses.add(metadatum.metadata);
+              }
+            }
+          }
+        }
+      }
+      // Iterate all classes to find those that are annotated, or match a
+      // global quantification.
+      for (dm.LibraryMirror library
+          in dm.currentMirrorSystem().libraries.values) {
+        declarationLoop: for (dm.DeclarationMirror declaration
+            in library.declarations.values) {
+          if (declaration is dm.ClassMirror) {
+            for (dm.InstanceMirror metadatum in declaration.metadata) {
+              if (metadatum.reflectee == this ||
+                  globalMetadataClasses
+                      .contains(metadatum.reflectee.runtimeType)) {
+                result.add(declaration);
+                continue declarationLoop;
+              }
+            }
+            String qualifiedName =
+                dm.MirrorSystem.getName(declaration.qualifiedName);
+            for (RegExp pattern in globalPatterns) {
+              if (pattern.hasMatch(qualifiedName)) {
+                result.add(declaration);
+                continue declarationLoop;
+              }
+            }
+          }
+        }
+      }
+      return result;
+    });
+  }
+
+  static Map<ReflectableImpl, Set<dm.ClassMirror>> _supportedClassesCache =
+      new Map<ReflectableImpl, Set<dm.ClassMirror>>();
 }
