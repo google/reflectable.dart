@@ -64,7 +64,7 @@ initializeReflectable() {
         "reflectable package. Remember to set your package-root to "
         "'build/.../packages'.");
   }
-  r.data = {const MyReflectable(): new r.ReflectorData([new r.ClassMirrorImpl("A", ".A", 0, const MyReflectable(), [0], [], -1, {}, {}, {"": () => new A()}, null)], [new r.MethodMirrorImpl("", 64, 0, const MyReflectable())], [A], {}, {})};
+  r.data = {const MyReflectable(): new r.ReflectorData([new r.ClassMirrorImpl("A", ".A", 0, const MyReflectable(), [0], [], -1, {}, {}, {"": () => new A()}, null)], [new r.MethodMirrorImpl("", 64, 0, const MyReflectable(), null)], [A], {}, {})};
 }
 """
   }

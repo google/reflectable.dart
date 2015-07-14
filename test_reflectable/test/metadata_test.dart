@@ -3,8 +3,7 @@
 // the LICENSE file.
 
 /// Tests that metadata is preserved when the metadataCapability is present.
-// TODO(sigurdm): Support for metadata-annotations of members.
-// TODO(sigurdm): Support for metadata-anmntations of arguments.
+// TODO(sigurdm): Support for metadata-annotations of arguments.
 
 library test_reflectable.test.metadata_test;
 
@@ -12,13 +11,15 @@ import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 
 class MyReflectable extends Reflectable {
-  const MyReflectable() : super(metadataCapability);
+  const MyReflectable() : super(
+          metadataCapability, instanceInvokeCapability, staticInvokeCapability);
 }
 
 const myReflectable = const MyReflectable();
 
 class MyReflectable2 extends Reflectable {
-  const MyReflectable2() : super();
+  const MyReflectable2()
+      : super(instanceInvokeCapability, staticInvokeCapability);
 }
 
 const myReflectable2 = const MyReflectable2();
@@ -30,13 +31,23 @@ const c = const [const Bar(const {"a": 14})];
 @Bar(const {})
 @b
 @c
-class Foo {}
+class Foo {
+  @Bar(const {})
+  @b
+  @c
+  foo() {}
+}
 
 @myReflectable2
 @Bar(const {})
 @b
 @c
-class Foo2 {}
+class Foo2 {
+  @Bar(const {})
+  @b
+  @c
+  foo() {}
+}
 
 class Bar {
   final Map<String, int> m;
@@ -51,9 +62,16 @@ main() {
       13,
       const [const Bar(const {"a": 14})]
     ]);
+    expect(myReflectable.reflectType(Foo).declarations["foo"].metadata, [
+      const Bar(const {}),
+      13,
+      const [const Bar(const {"a": 14})]
+    ]);
   });
   test("metadata without capability", () {
     expect(() => myReflectable2.reflectType(Foo2).metadata,
+        throwsA(const isInstanceOf<NoSuchCapabilityError>()));
+    expect(() => myReflectable2.reflectType(Foo2).declarations["foo"].metadata,
         throwsA(const isInstanceOf<NoSuchCapabilityError>()));
   });
 }

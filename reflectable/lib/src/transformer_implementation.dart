@@ -164,10 +164,6 @@ class ReflectorDomain {
         '(${argumentParts.join(", ")})');
   }
 
-  String formatAsList(Iterable parts) => "[${parts.join(", ")}]";
-
-  String formatAsMap(Iterable parts) => "{${parts.join(", ")}}";
-
   String generateCode() {
     Enumerator<ClassElement> classes = new Enumerator<ClassElement>();
     Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
@@ -307,11 +303,11 @@ class ReflectorDomain {
         }));
       }
 
-      String metadataCode;
+      String classMetadataCode;
       if (capabilities.supportsMetadata) {
-        metadataCode = classDomain.metadataCode;
+        classMetadataCode = extractMetadataCode(classDomain.classElement);
       } else {
-        metadataCode = "null";
+        classMetadataCode = "null";
       }
 
       String staticGettersCode = formatAsMap([
@@ -333,7 +329,7 @@ class ReflectorDomain {
           'const ${reflector.name}(), '
           '$declarationsCode, $instanceMembersCode, $superclassIndex, '
           '$staticGettersCode, $staticSettersCode, $constructorsCode, '
-          '$metadataCode)';
+          '$classMetadataCode)';
       classIndex++;
       return result;
     }));
@@ -344,15 +340,27 @@ class ReflectorDomain {
     List<String> methodsList = members.items.map((ExecutableElement element) {
       int descriptor = _declarationDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
+      String metadataCode;
+      if (capabilities.supportsMetadata) {
+        metadataCode = extractMetadataCode(element);
+      } else {
+        metadataCode = null;
+      }
       return 'new r.MethodMirrorImpl("${element.name}", $descriptor, '
-          '$ownerIndex, const ${reflector.name}())';
+          '$ownerIndex, const ${reflector.name}(), $metadataCode)';
     });
 
     List<String> fieldsList = fields.items.map((FieldElement element) {
       int descriptor = _fieldDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
+      String metadataCode;
+      if (capabilities.supportsMetadata) {
+        metadataCode = extractMetadataCode(element);
+      } else {
+        metadataCode = null;
+      }
       return 'new r.VariableMirrorImpl("${element.name}", $descriptor, '
-          '$ownerIndex, const ${reflector.name}())';
+          '$ownerIndex, const ${reflector.name}(), $metadataCode)';
     });
 
     List<String> membersList = <String>[]
@@ -471,31 +479,6 @@ class ClassDomain {
           : "${classElement.name}.${element.name}";
     }
     return element.name;
-  }
-
-  /// Returns a String with the textual representations of the metadata list.
-  // TODO(sigurdm, 17307): Make this less fragile when the analyzer's
-  // element-model exposes the metadata in a more friendly way.
-  String get metadataCode {
-    List<String> metadataParts = new List<String>();
-    Iterator<Annotation> nodeIterator = classElement.node.metadata.iterator;
-    Iterator<ElementAnnotation> elementIterator =
-        classElement.metadata.iterator;
-    while (nodeIterator.moveNext()) {
-      bool r = elementIterator.moveNext();
-      assert(r);
-      Annotation annotationNode = nodeIterator.current;
-      ElementAnnotation elementAnnotation = elementIterator.current;
-      // Remove the @-sign.
-      String source = annotationNode.toSource().substring(1);
-      if (elementAnnotation.element is ConstructorElement) {
-        // If this is a constructor call, add the otherwise implicit 'const'.
-        metadataParts.add("const $source");
-      } else {
-        metadataParts.add(source);
-      }
-    }
-    return "[${metadataParts.join(", ")}]";
   }
 
   String toString() {
@@ -1528,4 +1511,37 @@ String _nameOfDeclaration(ExecutableElement element) {
         : "${element.enclosingElement.name}.${element.name}";
   }
   return element.name;
+}
+
+String formatAsList(Iterable parts) => "[${parts.join(", ")}]";
+
+String formatAsMap(Iterable parts) => "{${parts.join(", ")}}";
+
+/// Returns a String with the code used to build the metadata of [element].
+// TODO(sigurdm, 17307): Make this less fragile when the analyzer's
+// element-model exposes the metadata in a more friendly way.
+String extractMetadataCode(Element element) {
+  Iterable<ElementAnnotation> elementAnnotations = element.metadata;
+  if (elementAnnotations == null) return "[]";
+
+  List<String> metadataParts = new List<String>();
+  // Run through the two iterators in parallel.
+  Iterator<Annotation> nodeIterator =
+      (element.node as AnnotatedNode).metadata.iterator;
+  Iterator<ElementAnnotation> elementIterator = elementAnnotations.iterator;
+  while (nodeIterator.moveNext()) {
+    bool r = elementIterator.moveNext();
+    assert(r);
+    Annotation annotationNode = nodeIterator.current;
+    ElementAnnotation elementAnnotation = elementIterator.current;
+    // Remove the @-sign.
+    String source = annotationNode.toSource().substring(1);
+    if (elementAnnotation.element is ConstructorElement) {
+      // If this is a constructor call, add the otherwise implicit 'const'.
+      metadataParts.add("const $source");
+    } else {
+      metadataParts.add(source);
+    }
+  }
+  return formatAsList(metadataParts);
 }

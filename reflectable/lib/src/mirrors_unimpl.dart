@@ -264,14 +264,14 @@ MethodMirror _variableToGetterMirror(VariableMirrorImpl variableMirror) {
   int descriptor = constants.getter;
   descriptor |= _variableToImplicitAccessorAttributes(variableMirror);
   return new MethodMirrorImpl(variableMirror.simpleName, descriptor,
-      variableMirror.ownerIndex, variableMirror.reflectable);
+      variableMirror.ownerIndex, variableMirror.reflectable, []);
 }
 
 MethodMirror _variableToSetterMirror(VariableMirrorImpl variableMirror) {
   int descriptor = constants.setter;
   descriptor |= _variableToImplicitAccessorAttributes(variableMirror);
   return new MethodMirrorImpl(variableMirror.simpleName + "=", descriptor,
-      variableMirror.ownerIndex, variableMirror.reflectable);
+      variableMirror.ownerIndex, variableMirror.reflectable, []);
 }
 
 class ClassMirrorImpl implements ClassMirror {
@@ -319,7 +319,7 @@ class ClassMirrorImpl implements ClassMirror {
       this._reflectable, this._declarationIndices, this._instanceMemberIndices,
       this._superclassIndex, this.getters, this.setters, this.constructors,
       metadata)
-      : _metadata = metadata == null
+      : _metadata = (metadata == null)
           ? null
           : new UnmodifiableListView(metadata);
 
@@ -521,26 +521,41 @@ abstract class MethodMirrorUnimpl extends DeclarationMirrorUnimpl
 }
 
 class MethodMirrorImpl implements MethodMirror {
-  final int descriptor;
-  final String name;
-  final int ownerIndex;
-  final ReflectableImpl reflectable;
+  /// An encoding of the attributes and kind of this mirror.
+  final int _descriptor;
 
-  const MethodMirrorImpl(
-      this.name, this.descriptor, this.ownerIndex, this.reflectable);
+  /// The name of this method. Setters names will end in '='.
+  final String _name;
 
-  int get kind => constants.kindFromEncoding(descriptor);
+  /// The index of the [ClassMirror] of the owner of this method,
+  final int _ownerIndex;
 
-  ClassMirror get owner => data[reflectable].classMirrors[ownerIndex];
+  /// The [Reflectable] associated with this mirror.
+  final ReflectableImpl _reflector;
+
+  /// A cache of the metadata of the mirrored method. The empty list means
+  /// no metadata, null means that [_reflector] does not have
+  /// [metadataCapability].
+  final List<Object> _metadata;
+
+  MethodMirrorImpl(this._name, this._descriptor, this._ownerIndex,
+      this._reflector, List<Object> metadata)
+      : _metadata = (metadata == null)
+          ? null
+          : new UnmodifiableListView(metadata);
+
+  int get kind => constants.kindFromEncoding(_descriptor);
+
+  ClassMirror get owner => data[_reflector].classMirrors[_ownerIndex];
 
   @override
-  String get constructorName => name;
+  String get constructorName => _name;
 
   @override
-  bool get isAbstract => 0 != descriptor & constants.abstractAttribute;
+  bool get isAbstract => 0 != _descriptor & constants.abstractAttribute;
 
   @override
-  bool get isConstConstructor => 0 != descriptor & constants.constAttribute;
+  bool get isConstConstructor => 0 != _descriptor & constants.constAttribute;
 
   @override
   bool get isConstructor => isFactoryConstructor || isGenerativeConstructor;
@@ -556,14 +571,14 @@ class MethodMirrorImpl implements MethodMirror {
 
   @override
   bool get isOperator => isRegularMethod &&
-      ["+", "-", "*", "/", "[", "<", ">", "=", "~", "%"].contains(name[0]);
+      ["+", "-", "*", "/", "[", "<", ">", "=", "~", "%"].contains(_name[0]);
 
   @override
-  bool get isPrivate => 0 != descriptor & constants.privateAttribute;
+  bool get isPrivate => 0 != _descriptor & constants.privateAttribute;
 
   @override
   bool get isRedirectingConstructor =>
-      0 != descriptor & constants.redirectingConstructorAttribute;
+      0 != _descriptor & constants.redirectingConstructorAttribute;
 
   @override
   bool get isRegularMethod => kind == constants.method;
@@ -572,10 +587,10 @@ class MethodMirrorImpl implements MethodMirror {
   bool get isSetter => kind == constants.setter;
 
   @override
-  bool get isStatic => 0 != descriptor & constants.staticAttribute;
+  bool get isStatic => 0 != _descriptor & constants.staticAttribute;
 
   @override
-  bool get isSynthetic => 0 != descriptor & constants.syntheticAttribute;
+  bool get isSynthetic => 0 != _descriptor & constants.syntheticAttribute;
 
   @override
   bool get isTopLevel => owner is LibraryMirror;
@@ -584,16 +599,21 @@ class MethodMirrorImpl implements MethodMirror {
   SourceLocation get location =>
       throw new UnsupportedError("Location not supported");
 
-  // TODO(sigurdm, eernst): implement metadata
   @override
-  List<Object> get metadata => throw new UnimplementedError();
+  List<Object> get metadata {
+    if (_metadata == null) {
+      throw new NoSuchCapabilityError(
+          "Requesting metadata of method $simpleName without capability");
+    }
+    return _metadata;
+  }
 
   // TODO(sigurdm, eernst): implement parameters
   @override
   List<ParameterMirror> get parameters => throw new UnimplementedError();
 
   @override
-  String get qualifiedName => "${owner.qualifiedName}.$name";
+  String get qualifiedName => "${owner.qualifiedName}.$_name";
 
   // TODO(sigurdm, eernst): implement returnType
   @override
@@ -601,14 +621,14 @@ class MethodMirrorImpl implements MethodMirror {
 
   @override
   String get simpleName => isConstructor
-      ? (name == '' ? "${owner.simpleName}" : "${owner.simpleName}.$name")
-      : name;
+      ? (_name == '' ? "${owner.simpleName}" : "${owner.simpleName}.$_name")
+      : _name;
 
   @override
   String get source => null;
 
   @override
-  String toString() => "MethodMirror($name)";
+  String toString() => "MethodMirror($_name)";
 }
 
 abstract class VariableMirrorUnimpl extends DeclarationMirrorUnimpl
@@ -626,9 +646,13 @@ class VariableMirrorImpl implements VariableMirror {
   final String name;
   final int ownerIndex;
   final ReflectableImpl reflectable;
+  final List<Object> _metadata;
 
-  const VariableMirrorImpl(
-      this.name, this.descriptor, this.ownerIndex, this.reflectable);
+  VariableMirrorImpl(this.name, this.descriptor, this.ownerIndex,
+      this.reflectable, List<Object> metadata)
+      : _metadata = (metadata == null)
+          ? null
+          : new UnmodifiableListView(metadata);
 
   int get kind => constants.kindFromEncoding(descriptor);
 
@@ -647,9 +671,14 @@ class VariableMirrorImpl implements VariableMirror {
   SourceLocation get location =>
       throw new UnsupportedError("Location not supported");
 
-  // TODO(eernst): implement metadata
   @override
-  List<Object> get metadata => throw new UnimplementedError();
+  List<Object> get metadata {
+    if (_metadata == null) {
+      throw new NoSuchCapabilityError(
+          "Requesting metadata of field $simpleName without capability");
+    }
+    return _metadata;
+  }
 
   @override
   TypeMirror get type => _unsupported();
