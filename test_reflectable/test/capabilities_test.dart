@@ -76,6 +76,8 @@ Matcher isNoSuchCapabilityError = new isInstanceOf<c.NoSuchCapabilityError>();
 
 void testDynamic(B o, String description) {
   test("Dynamic invocation $description", () {
+    expect(const MyReflectableInstance().canReflect(o), true);
+    expect(const MyReflectableInstance().canReflectType(o.runtimeType), true);
     r.InstanceMirror instanceMirror = const MyReflectableInstance().reflect(o);
     expect(instanceMirror.invoke("foo", []), 42);
     expect(instanceMirror.invoke("boo", []), 47);
@@ -125,12 +127,16 @@ void main() {
   });
 
   test("Can't reflect subclass of annotated", () {
+    expect(const MyReflectableInstance().canReflect(new BSubclass()), false);
+    expect(const MyReflectableInstance().canReflectType(BSubclass), false);
     expect(() {
       const MyReflectableInstance().reflect(new BSubclass());
     }, throwsNoSuchCapabilityError);
   });
 
   test("Can't reflect subtype of annotated", () {
+    expect(const MyReflectableInstance().canReflect(new BImplementer()), false);
+    expect(const MyReflectableInstance().canReflectType(BImplementer), false);
     expect(() {
       const MyReflectableInstance().reflect(new BImplementer());
     }, throwsNoSuchCapabilityError);
@@ -138,6 +144,8 @@ void main() {
 
   test("Can't reflect unnanotated", () {
     expect(() {
+      expect(const MyReflectableInstance().canReflect(new Object()), false);
+      expect(const MyReflectableInstance().canReflectType(Object), false);
       const MyReflectableInstance().reflect(new Object());
     }, throwsNoSuchCapabilityError);
   });

@@ -1006,13 +1006,19 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
 
   /// Returns a mirror of the given object [reflectee]
   @override
-  rm.InstanceMirror reflect(o) {
+  rm.InstanceMirror reflect(Object o) {
     dm.InstanceMirror mirror = dm.reflect(o);
     if (!_supportedClasses.contains(mirror.type)) {
       throw new NoSuchCapabilityError(
           "Reflecting on object of unannotated class ${o.runtimeType}.");
     }
     return wrapInstanceMirror(mirror, this);
+  }
+
+  @override
+  bool canReflect(Object o) {
+    dm.InstanceMirror mirror = dm.reflect(o);
+    return _supportedClasses.contains(mirror.type);
   }
 
   @override
@@ -1025,6 +1031,12 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
       throw new NoSuchCapabilityError(
           "Reflecting on currently unsupported kind of entity: $typeMirror");
     }
+  }
+
+  @override
+  bool canReflectType(Type type) {
+    dm.TypeMirror mirror = dm.reflectType(type);
+    return _supportedClasses.contains(mirror);
   }
 
   @override

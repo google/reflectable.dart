@@ -17,10 +17,18 @@ export 'capability.dart';
 export 'mirrors.dart';
 
 abstract class ReflectableInterface {
-  /// Returns a mirror of the given object [reflectee]
-  InstanceMirror reflect(o);
+  /// Returns a mirror of the given object [reflectee].
+  ///
+  /// Throws a [NoSuchCapabilityError] if the class of [o] has not been marked
+  /// for reflection.
+  InstanceMirror reflect(Object o);
 
-  /// Returns a mirror of the given type [type].  In the case where
+  /// Returns true if this reflector has capabilities for the given instance.
+  bool canReflect(Object o);
+
+  /// Returns a mirror of the given type [type].
+  ///
+  /// In the case where
   /// [type] is a parameterized type, i.e., a generic class which has
   /// been applied to a list of actual type arguments, the returned mirror
   /// will have no declared type variables, but it has a list of actual
@@ -29,6 +37,9 @@ abstract class ReflectableInterface {
   /// have no actual type arguments, but it will have declared type
   /// variables. Other types than classes are not (yet) supported.
   ClassMirror reflectType(Type type);
+
+  /// Returns true if this reflector has capabilities for the given Type.
+  bool canReflectType(Type type);
 
   /// Returns a mirror of the given library [library].
   LibraryMirror findLibrary(String library);

@@ -117,16 +117,14 @@ class ReflectorData {
   ReflectorData(this.classMirrors, this.memberMirrors, this.types, this.getters,
       this.setters);
 
+  /// Returns a class-mirror for the given [type].
+  ///
+  /// Returns `null` if the given class is not marked for reflection.
   ClassMirror classMirrorForType(Type type) {
     if (_typeToClassMirrorCache == null) {
       _typeToClassMirrorCache = new Map.fromIterables(types, classMirrors);
     }
-    ClassMirror result = _typeToClassMirrorCache[type];
-    if (result == null) {
-      throw new NoSuchCapabilityError(
-          "Reflecting on type $type that is not reflector-marked.");
-    }
-    return result;
+    return _typeToClassMirrorCache[type];
   }
 }
 
@@ -739,8 +737,23 @@ abstract class ReflectableImpl extends ReflectableBase
   }
 
   @override
+  bool canReflect(Object reflectee) {
+    return data[this].classMirrorForType(reflectee.runtimeType) != null;
+  }
+
+  @override
   ClassMirror reflectType(Type type) {
-    return data[this].classMirrorForType(type);
+    ClassMirror result = data[this].classMirrorForType(type);
+    if (result == null) {
+      throw new NoSuchCapabilityError(
+          "Reflecting on type $type that is not reflector-marked.");
+    }
+    return result;
+  }
+
+  @override
+  bool canReflectType(Type type) {
+    return data[this].classMirrorForType(type) != null;
   }
 
   @override
