@@ -139,16 +139,16 @@ class InstanceMirrorImpl implements InstanceMirror {
   ReflectorData _dataCache;
   ReflectorData get _data {
     if (_dataCache == null) {
-      _dataCache = data[reflectable];
+      _dataCache = data[_reflectable];
     }
     return _dataCache;
   }
 
-  final ReflectableImpl reflectable;
+  final ReflectableImpl _reflectable;
 
   final Object reflectee;
 
-  InstanceMirrorImpl(this.reflectee, this.reflectable) {
+  InstanceMirrorImpl(this.reflectee, this._reflectable) {
     _type = _data.classMirrorForType(reflectee.runtimeType);
     if (_type == null) {
       throw new NoSuchCapabilityError(
@@ -172,13 +172,14 @@ class InstanceMirrorImpl implements InstanceMirror {
   }
 
   bool get hasReflectee => true;
+
   bool operator ==(other) {
     return other is InstanceMirrorImpl &&
-        other._data == _data &&
+        other._reflectable == _reflectable &&
         other.reflectee == reflectee;
   }
 
-  int get hashCode => reflectee.hashCode;
+  int get hashCode => reflectee.hashCode ^ _reflectable.hashCode;
 
   delegate(Invocation invocation) => _unsupported();
 
@@ -384,9 +385,6 @@ class ClassMirrorImpl implements ClassMirror {
         constructors["$constructorName"], positionalArguments, namedArguments);
   }
 
-  bool operator ==(other) => _unsupported();
-  int get hashCode => _unsupported();
-
   bool isSubclassOf(ClassMirror other) {
     if (other is FunctionTypeMirror) {
       return false;
@@ -481,6 +479,10 @@ class ClassMirrorImpl implements ClassMirror {
 
   @override
   List<TypeVariableMirror> get typeVariables => _unsupported();
+
+  // Because we take care to only ever create one instance for each
+  // type/reflector-combination we can rely on the default `hashCode` and `==`
+  // operations.
 }
 
 abstract class TypeVariableMirrorUnimpl extends TypeMirrorUnimpl
