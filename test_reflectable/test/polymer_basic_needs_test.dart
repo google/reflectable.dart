@@ -92,7 +92,6 @@ main() {
     List<ThinDeclarationMirror> thinDeclarations = buildMirrors(A);
 
     // Check in a few ways that the thin declarations are as expected.
-    print("${thinDeclarations.map((decl) => decl.name).toList()}");  // DEBUG
     expect(thinDeclarations.length, 3);
     for (ThinDeclarationMirror thinDeclaration in thinDeclarations) {
       if (thinDeclaration.name == "i") {

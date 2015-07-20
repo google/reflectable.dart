@@ -9,7 +9,7 @@ PACKAGE_ROOT=../packages
 OPTIONS=--package-root=$(PACKAGE_ROOT)
 TEST_DIR=../test
 
-all: check build full_test
+all: get check build full_test
 
 g: get
 

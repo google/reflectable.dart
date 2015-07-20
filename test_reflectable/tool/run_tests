@@ -4,10 +4,17 @@
 # source code is governed by a BSD-style license that can be found in
 # the LICENSE file.
 
-PACKAGE_ROOT=../test/packages
-
-for n in ..{,/build}/test/*_test.dart; do
+function run_dart {
   echo "---------- $(basename $n)"
-  dart --package-root=$PACKAGE_ROOT $n
-done
+  if dart --package-root="$1/test/packages" $n; then true; else
+    SUMMARY="$SUMMARY
+  $n"
+  fi
+}
+
+SUMMARY=""
+for n in ../test/*_test.dart; do run_dart ..; done
+for n in ../build/test/*_test.dart; do run_dart ../build; done
+
+echo "---------- Failed tests:$SUMMARY"
 
