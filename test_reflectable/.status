@@ -1,7 +1,4 @@
 
-[ $compiler == none ]
-test/invoker_operator_test: CompiletimeError # sdk issue #23880
-
 [ $compiler == dart2js || $compiler == none ]
 # TODO Throw NoSuchMethod when the function doesn't exist, but the capability
 # does.
@@ -18,5 +15,9 @@ build/test/metadata_name_clash_test: Fail # The printing of constants is broken.
 [ ($compiler == none && $runtime != dartium) || $compiler == dart2js || $compiler == dartanalyzer || $compiler == dart2analyzer]
 build/test/new_instance_default_values_test: CompileTimeError # Issue #8
 
+[ ($compiler == none && $runtime != dartium) ]
+test/invoker_operator_test: CompiletimeError # sdk issue #23880
+
 [ ($compiler == none && $runtime == dartium) ]
 build/test/new_instance_default_values_test: RuntimeError # Issue #8
+test/invoker_operator_test: RuntimeError # sdk issue #23880
