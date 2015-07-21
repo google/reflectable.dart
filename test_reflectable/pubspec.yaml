@@ -33,5 +33,7 @@ transformers:
       - test/global_quantify_test.dart
       - test/name_clash_test.dart
       - test/metadata_name_clash_test.dart
+      - test/invoker_test.dart
+      - test/invoker_operator_test.dart
 - $dart2js:
     $include: []

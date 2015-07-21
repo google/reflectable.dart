@@ -1,12 +1,15 @@
 
+[ $compiler == none ]
+test/invoker_operator_test: CompiletimeError # sdk issue #23880
+
 [ $compiler == dart2js || $compiler == none ]
-# TODO Throwing NoSuchMethod when the function doesn't exist, but the capability
+# TODO Throw NoSuchMethod when the function doesn't exist, but the capability
 # does.
 build/test/no_such_capability_test: RuntimeError # Missing implementation
 build/test/invoke_capabilities_test: RuntimeError # Missing implementation
 
 [ $compiler == dart2js ]
-test/*_test: skip # Dart2js does not implement of mirrors to support reflectable.
+test/*_test: skip # Some needed mirror features not implemented by dart2js.
 
 [ $compiler == none || $compiler == dart2js || $compiler == dartanalyzer || $compiler == dart2analyzer]
 build/test/name_clash_test: Fail # Disambiguation is needed.

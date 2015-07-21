@@ -586,6 +586,18 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
 
   @override
   String toString() => "_ClassMirrorImpl('${_classMirror}')";
+
+  @override
+  Function invoker(String memberName) {
+    Symbol memberNameSymbol = new Symbol(memberName);
+    Function helper(Object o) {
+      dm.InstanceMirror receiverMirror = dm.reflect(o);
+      dm.InstanceMirror memberMirror =
+          receiverMirror.getField(memberNameSymbol);
+      return memberMirror.reflectee;
+    }
+    return helper;
+  }
 }
 
 class _FunctionTypeMirrorImpl extends _ClassMirrorImpl

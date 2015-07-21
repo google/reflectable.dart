@@ -60,6 +60,40 @@
 // TODO(eernst): Change the preceeding comment to use a more
 // user-centric style.
 
+// TODO(eernst): This is a Meta-TODO, adding detail to several TODOs below
+// saying 'make this .. more user friendly' as well as the comment above
+// saying 'more user-centric'. All those "not-so-friendly" comments originate
+// in the `mirrors.dart` file that implements the `dart:mirrors` library, so
+// missing dartdoc comments in this file would typically be taken from
+// there and then adjusted to match the preferred style in this library.
+// The following points should be kept in mind in this adjustment process:
+//   1. The documentation from `dart:mirrors` is too abstract for typical
+// programmers (it is in a near-spec style), so maybe that kind of
+// documentation should be provided in a separate location, and the
+// documentation that programmers get to see first will be example based
+// and less abstract.
+//   2. Formatting: *name* is used to indicate pseudo-semantic entities
+// such as objects (that may or may not be the value of a known expression)
+// and meta-variables for identifiers, etc. This is explained in the
+// documentation for `dart:mirrors` (search 'Dart pseudo-code' on
+// https://api.dartlang.org/apidocs/channels/stable/dartdoc-viewer/dart:mirrors)
+//   3. Semantic precision may be pointless in cases where the underlying
+// concepts are obvious; having an example based frontmost layer and a more
+// spec-styled layer behind it would be helpful with this as well, because
+// the example layer could be quite simple.
+//   4. Considering `invokeGetter`, the example based approach could be
+// similar to the following:
+//
+//   Invokes a getter and returns the result. Conceptually, this function is
+//   equivalent to `this.reflectee.name` where the `name` identifier is the
+//   value of the given [getterName].
+//
+//   Example:
+//     var m = reflectable.reflect(o);
+//     m.invokeGetter("foo");  // Equivalent to o.foo.
+//
+//   (then give more detail if the simple explanation above needs it).
+
 library reflectable.mirrors;
 
 // Currently skip 'abstract class MirrorSystem'
@@ -128,7 +162,7 @@ abstract class DeclarationMirror implements Mirror {
 abstract class ObjectMirror implements Mirror {
 
   /**
-   * Invokes the named function and returns a mirror on the result.
+   * Invokes the function or method [memberName], and returns the result.
    *
    * Let *o* be the object reflected by this mirror, let
    * *f* be the simple name of the member denoted by [memberName],
@@ -142,7 +176,7 @@ abstract class ObjectMirror implements Mirror {
    * of *o* (if *o* is a class or library) or the private members of the
    * class of *o* (otherwise).
    * If the invocation returns a result *r*, this method returns
-   * the result of calling [reflect](*r*).
+   * the result *r*.
    * If the invocation causes a compilation error
    * the effect is the same as if a non-reflective compilation error
    * had been encountered.
@@ -153,15 +187,15 @@ abstract class ObjectMirror implements Mirror {
    * dart:mirrors is InstanceMirror.
    *
    * TODO(eernst): make this comment more user friendly.
+   * TODO(eernst): revise language on private members when semantics known.
    */
   Object invoke(String memberName,
                 List positionalArguments,
                 [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
 
   /**
-   * Invokes a getter and returns a mirror on the result. The getter
-   * can be the implicit getter for a field or a user-defined getter
-   * method.
+   * Invokes a getter and returns the result. The getter can be the
+   * implicit getter for a field, or a user-defined getter method.
    *
    * Let *o* be the object reflected by this mirror, let
    * *f* be the simple name of the getter denoted by [fieldName],
@@ -172,45 +206,19 @@ abstract class ObjectMirror implements Mirror {
    * class of *o* (otherwise).
    *
    * If this mirror is an [InstanceMirror], and [fieldName] denotes an instance
-   * method on its reflectee, the result of the invocation is an instance
-   * mirror on a closure corresponding to that method.
+   * method on its reflectee, the result of the invocation is a closure
+   * corresponding to that method.
    *
    * If this mirror is a [LibraryMirror], and [fieldName] denotes a top-level
-   * method in the corresponding library, the result of the invocation is an
-   * instance mirror on a closure corresponding to that method.
+   * method in the corresponding library, the result of the invocation is a
+   * closure corresponding to that method.
    *
    * If this mirror is a [ClassMirror], and [fieldName] denotes a static method
-   * in the corresponding class, the result of the invocation is an instance
-   * mirror on a closure corresponding to that method.
+   * in the corresponding class, the result of the invocation is a closure
+   * corresponding to that method.
    *
    * If the invocation returns a result *r*, this method returns
-   * the result of calling [reflect](*r*).
-   * If the invocation causes a compilation error
-   * the effect is the same as if a non-reflective compilation error
-   * had been encountered.
-   * If the invocation throws an exception *e* (that it does not catch)
-   * this method throws *e*.
-   *
-   * TODO(eernst): make this comment more user friendly.
-   */
-  Object invokeGetter(String getterName);
-
-  /**
-   * Invokes a setter and returns a mirror on the result. The setter
-   * may be either the implicit setter for a non-final field or a
-   * user-defined setter method. The name of the setter can include the
-   * final `=`, if it is not, it will be added.
-   *
-   * Let *o* be the object reflected by this mirror, let
-   * *f* be the simple name of the getter denoted by [fieldName],
-   * and let *a* be the object bound to [value].
-   * Then this method will perform the setter invocation
-   * *o.f = a*
-   * in a scope that has access to the private members
-   * of *o* (if *o* is a class or library) or the private members of the
-   * class of *o* (otherwise).
-   * If the invocation returns a result *r*, this method returns
-   * the result of calling [reflect]([value]).
+   * the result *r*.
    * If the invocation causes a compilation error
    * the effect is the same as if a non-reflective compilation error
    * had been encountered.
@@ -221,6 +229,37 @@ abstract class ObjectMirror implements Mirror {
    * dart:mirrors is InstanceMirror.
    *
    * TODO(eernst): make this comment more user friendly.
+   * TODO(eernst): revise language on private members when semantics known.
+   */
+  Object invokeGetter(String getterName);
+
+  /**
+   * Invokes a setter and returns the result. The setter may be either
+   * the implicit setter for a non-final field, or a user-defined setter
+   * method. The name of the setter can include the final `=`; if it is
+   * not present, it will be added.
+   *
+   * Let *o* be the object reflected by this mirror, let
+   * *f* be the simple name of the getter denoted by [fieldName],
+   * and let *a* be the object bound to [value].
+   * Then this method will perform the setter invocation
+   * *o.f = a*
+   * in a scope that has access to the private members
+   * of *o* (if *o* is a class or library) or the private members of the
+   * class of *o* (otherwise).
+   * If the invocation returns a result *r*, this method returns
+   * the result *r*.
+   * If the invocation causes a compilation error
+   * the effect is the same as if a non-reflective compilation error
+   * had been encountered.
+   * If the invocation throws an exception *e* (that it does not catch)
+   * this method throws *e*.
+   *
+   * Note that the return type of the corresponding method in
+   * dart:mirrors is InstanceMirror.
+   *
+   * TODO(eernst): make this comment more user friendly.
+   * TODO(eernst): revise language on private members when semantics known.
    */
   Object invokeSetter(String setterName, Object value);
 }
@@ -299,8 +338,8 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   Map<String, MethodMirror> get staticMembers;
   ClassMirror get mixin;
 
-   /**
-   * Invokes the named constructor and returns a mirror on the result.
+  /**
+   * Invokes the named constructor and returns the result.
    *
    * Let *c* be the class reflected by this mirror
    * let *a1, ..., an* be the elements of [positionalArguments]
@@ -319,7 +358,7 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
    * of *c*.
    * In either case:
    * If the expression evaluates to a result *r*, this method returns
-   * the result of calling [reflect](*r*).
+   * the result *r*.
    * If evaluating the expression causes a compilation error
    * the effect is the same as if a non-reflective compilation error
    * had been encountered.
@@ -331,6 +370,7 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
    * dart:mirrors is InstanceMirror.
    *
    * TODO(eernst): make this comment more user friendly.
+   * TODO(eernst): revise language on private members when semantics known.
    */
   Object newInstance(String constructorName,
                      List positionalArguments,
@@ -343,6 +383,46 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   // Input from Gilad on [TypeMirror#isSubtypeOf] is also relevant for this
   // case.
   bool isSubclassOf(ClassMirror other);
+
+  /**
+   * Returns an invoker builder for the given [memberName]. An invoker builder
+   * is a closure that takes an object and returns an invoker for that object.
+   * The returned invoker is a closure that invokes the [memberName] on the
+   * object it is specialized for. In other words, the invoker-builder returns
+   * a tear-off of [memberName] for any given object that implements the
+   * class this [ClassMirror] reflects on.
+   *
+   * Example:
+   *   var invokerBuilder = classMirror.invoker("foo");
+   *   var invoker = invokerBuilder(o);
+   *   invoker(42);  // Equivalent to o.foo(42).
+   *
+   * More precisely, let *c* be the returned closure, let *f* be the simple
+   * name of the member denoted by [memberName], and let *o* be an instance
+   * of the class reflected by this mirror. Consider the following invocation:
+   *  *c(o)(a1, ..., an, k1: v1, ..., km: vm)*
+   * This invocation corresponds to the following non-reflective invocation:
+   *  *o.f(a1, ..., an, k1: v1, ..., km: vm)*
+   * in a scope that has access to the private members
+   * of the class of *o*.
+   * If the invocation returns a result *r*, this method returns
+   * the result *r*.
+   * If the invocation causes a compilation error
+   * the effect is the same as if a non-reflective compilation error
+   * had been encountered.
+   * If the invocation throws an exception *e* (that it does not catch)
+   * this method throws *e*.
+   *
+   * Note that this method is not available in the corresponding dart:mirrors
+   * interface. It was added here because it enables many invocations
+   * of a reflectively chosen method on different receivers using just
+   * one reflective operation, whereas the dart:mirrors interface requires
+   * a reflective operation for each new receiver (which is in practice
+   * likely to mean a reflective operation for each invocation).
+   *
+   * TODO(eernst): revise language on private members when semantics known.
+   */
+  Function invoker(String memberName);
 }
 
 abstract class FunctionTypeMirror implements ClassMirror {

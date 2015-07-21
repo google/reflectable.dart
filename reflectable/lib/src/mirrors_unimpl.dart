@@ -480,6 +480,15 @@ class ClassMirrorImpl implements ClassMirror {
   @override
   List<TypeVariableMirror> get typeVariables => _unsupported();
 
+  @override
+  Function invoker(String memberName) {
+    Function getter = _data.getters[memberName];
+    if (getter == null) {
+      throw new NoSuchInvokeCapabilityError(reflectedType, memberName, [], {});
+    }
+    return getter;
+  }
+
   // Because we take care to only ever create one instance for each
   // type/reflector-combination we can rely on the default `hashCode` and `==`
   // operations.
