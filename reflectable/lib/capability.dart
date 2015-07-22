@@ -67,8 +67,8 @@ abstract class NamePatternCapability implements ApiReflectCapability {
 /// used for other purposes related to other packages, but which happens
 /// to occur in just the right locations.
 abstract class MetadataQuantifiedCapability implements ApiReflectCapability {
-  final Object metadata;
-  const MetadataQuantifiedCapability(this.metadata);
+  final Type metadataType;
+  const MetadataQuantifiedCapability(this.metadataType);
 }
 
 /// Capability class requesting support for reflective invocation
@@ -89,7 +89,7 @@ const instanceInvokeCapability = const InstanceInvokeCapability("");
 /// each candidate member declaration, and that member declaration
 /// receives reflection support iff the search succeeds.
 class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const InstanceInvokeMetaCapability(Object metadata) : super(metadata);
+  const InstanceInvokeMetaCapability(Type metadataType) : super(metadataType);
 }
 
 /// Capability class requesting support for reflective invocation
@@ -110,7 +110,7 @@ const staticInvokeCapability = const StaticInvokeCapability("");
 /// each candidate member declaration, and that member declaration
 /// receives reflection support iff the search succeeds.
 class StaticInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const StaticInvokeMetaCapability(Object metadata) : super(metadata);
+  const StaticInvokeMetaCapability(Type metadata) : super(metadata);
 }
 
 /// Capability class requesting support for reflective invocation
@@ -132,7 +132,7 @@ const newInstanceCapability = const NewInstanceCapability("");
 /// constructor declaration, and that constructor declaration
 /// receives reflection support iff the search succeeds.
 class NewInstanceMetaCapability extends MetadataQuantifiedCapability {
-  const NewInstanceMetaCapability(Object metadata) : super(metadata);
+  const NewInstanceMetaCapability(Type metadataType) : super(metadataType);
 }
 
 /// Short hand for the right hand side.
@@ -232,7 +232,8 @@ const libraryDependenciesCapability = const _LibraryDependenciesCapability();
 /// InstanceInvokeCapability, StaticInvokeCapability, and NewInstanceCapability,
 /// all holding the same [namePattern].
 class InvokingCapability extends NamePatternCapability
-    implements InstanceInvokeCapability, StaticInvokeCapability, NewInstanceCapability {
+    implements InstanceInvokeCapability, StaticInvokeCapability,
+    NewInstanceCapability {
   const InvokingCapability(String namePattern) : super(namePattern);
 }
 
@@ -245,7 +246,7 @@ const invokingCapability = const InvokingCapability("");
 class InvokingMetaCapability extends MetadataQuantifiedCapability
     implements InstanceInvokeMetaCapability, StaticInvokeMetaCapability,
     NewInstanceMetaCapability {
-  const InvokingMetaCapability(Object metadata) : super(metadata);
+  const InvokingMetaCapability(Type metadataType) : super(metadataType);
 }
 
 /// Grouping capability, used to request all the capabilities requested by
@@ -385,7 +386,6 @@ class AdmitSubtypeCapability extends ReflecteeQuantifyCapability {
       : super.fromList(capabilities);
 }
 
-
 /// Abstract superclass for all capabilities which are used to specify
 /// that a given reflector must be considered to be applied as metadata
 /// to a set of targets. Note that in order to work correctly, this
@@ -414,8 +414,8 @@ class GlobalQuantifyCapability extends ImportAttachedCapability {
 /// in order to get this semantics, this kind of capability can only be used
 /// as metadata on an import of 'package:reflectable/reflectable.dart'.
 class GlobalQuantifyMetaCapability extends ImportAttachedCapability {
-  final Object metadata;
-  const GlobalQuantifyMetaCapability(this.metadata, Reflectable reflector)
+  final Type metadataType;
+  const GlobalQuantifyMetaCapability(this.metadataType, Reflectable reflector)
       : super(reflector);
 }
 

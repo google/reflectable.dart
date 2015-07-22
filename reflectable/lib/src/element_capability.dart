@@ -36,8 +36,8 @@ abstract class NamePatternCapability implements ApiReflectCapability {
 }
 
 abstract class MetadataQuantifiedCapability implements ApiReflectCapability {
-  final DartObjectImpl metadata;
-  const MetadataQuantifiedCapability(this.metadata);
+  final ClassElement metadataType;
+  const MetadataQuantifiedCapability(this.metadataType);
 }
 
 class InstanceInvokeCapability extends NamePatternCapability {
@@ -47,7 +47,8 @@ class InstanceInvokeCapability extends NamePatternCapability {
 const instanceInvokeCapability = const InstanceInvokeCapability("");
 
 class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const InstanceInvokeMetaCapability(DartObjectImpl metadata) : super(metadata);
+  const InstanceInvokeMetaCapability(ClassElement metadataType)
+      : super(metadataType);
 }
 
 class StaticInvokeCapability extends NamePatternCapability {
@@ -57,7 +58,8 @@ class StaticInvokeCapability extends NamePatternCapability {
 const staticInvokeCapability = const StaticInvokeCapability("");
 
 class StaticInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const StaticInvokeMetaCapability(DartObjectImpl metadata) : super(metadata);
+  const StaticInvokeMetaCapability(ClassElement metadataType)
+      : super(metadataType);
 }
 
 class NewInstanceCapability extends NamePatternCapability {
@@ -67,7 +69,8 @@ class NewInstanceCapability extends NamePatternCapability {
 const newInstanceCapability = const NewInstanceCapability("");
 
 class NewInstanceMetaCapability extends MetadataQuantifiedCapability {
-  const NewInstanceMetaCapability(DartObjectImpl metadata) : super(metadata);
+  const NewInstanceMetaCapability(ClassElement metadataType)
+      : super(metadataType);
 }
 
 const nameCapability = const _NameCapability();
@@ -96,21 +99,22 @@ const uriCapability = const _UriCapability();
 
 const libraryDependenciesCapability = const _LibraryDependenciesCapability();
 
-class InvokingCapability extends NamePatternCapability implements
-    InstanceInvokeCapability, StaticInvokeCapability, NewInstanceCapability {
+class InvokingCapability extends NamePatternCapability
+    implements InstanceInvokeCapability, StaticInvokeCapability,
+    NewInstanceCapability {
   const InvokingCapability(String namePattern) : super(namePattern);
 }
 
 const invokingCapability = const InvokingCapability("");
 
-class InvokingMetaCapability extends MetadataQuantifiedCapability implements
-    InstanceInvokeMetaCapability, StaticInvokeMetaCapability,
+class InvokingMetaCapability extends MetadataQuantifiedCapability
+    implements InstanceInvokeMetaCapability, StaticInvokeMetaCapability,
     NewInstanceMetaCapability {
-  const InvokingMetaCapability(DartObjectImpl metadata) : super(metadata);
+  const InvokingMetaCapability(ClassElement metadataType) : super(metadataType);
 }
 
-class TypingCapability extends TypeCapability implements
-    _NameCapability, _ClassifyCapability, _MetadataCapability,
+class TypingCapability extends TypeCapability
+    implements _NameCapability, _ClassifyCapability, _MetadataCapability,
     _TypeRelationsCapability, _OwnerCapability, _DeclarationsCapability,
     _UriCapability, _LibraryDependenciesCapability {
   const TypingCapability(Element upperBound) : super(upperBound);
@@ -203,8 +207,8 @@ class GlobalQuantifyCapability extends ImportAttachedCapability {
 }
 
 class GlobalQuantifyMetaCapability extends ImportAttachedCapability {
-  final Element metadata;
-  const GlobalQuantifyMetaCapability(this.metadata, Element reflector)
+  final Element metadataType;
+  const GlobalQuantifyMetaCapability(this.metadataType, Element reflector)
       : super(reflector);
 }
 

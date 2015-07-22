@@ -17,7 +17,7 @@ class MyReflectableStatic extends r.Reflectable {
           const c.StaticInvokeCapability("getFoo"),
           const c.StaticInvokeCapability("setFoo="),
           const c.StaticInvokeCapability("nonExisting"),
-          const c.StaticInvokeMetaCapability(const C()));
+          const c.StaticInvokeMetaCapability(C));
 }
 
 @MyReflectableStatic()
@@ -42,7 +42,7 @@ class MyReflectableInstance extends r.Reflectable {
           const c.InstanceInvokeCapability("getFoo"),
           const c.InstanceInvokeCapability("setFoo="),
           const c.InstanceInvokeCapability("nonExisting"),
-          const c.InstanceInvokeMetaCapability(const C()));
+          const c.InstanceInvokeMetaCapability(C));
 }
 
 @MyReflectableInstance()

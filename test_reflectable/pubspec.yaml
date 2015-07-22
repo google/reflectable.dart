@@ -16,7 +16,7 @@ transformers:
       - test/use_prefix_test.dart
       - test/three_files_test.dart
       - test/invoke_test.dart
-      - test/members_capability_test.dart
+      - test/member_capability_test.dart
       - test/annotated_classes_test.dart
       - test/reflect_type_test.dart
       - test/declarations_test.dart

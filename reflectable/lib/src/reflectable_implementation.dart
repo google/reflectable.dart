@@ -102,6 +102,15 @@ dm.TypeMirror unwrapTypeMirror(rm.TypeMirror TypeMirror) {
   }
 }
 
+// Returns true iff an element of the [metadata] is supported by the
+// [capability].
+bool metadataSupported(
+    List<dm.InstanceMirror> metadata, MetadataQuantifiedCapability capability) {
+  return metadata
+      .map((dm.InstanceMirror x) => x.reflectee.runtimeType)
+      .contains(capability.metadataType);
+}
+
 /// Returns true if [classMirror] supports reflective invoke of the
 /// instance-member named [name] according to the
 /// capabilities of [reflectable].
@@ -115,11 +124,13 @@ bool reflectableSupportsInstanceInvoke(
     } else if (capability is InstanceInvokeCapability) {
       return new RegExp(capability.namePattern).hasMatch(name);
     } else if (capability is InstanceInvokeMetaCapability) {
+      // We have to use 'declarations' here instead of instanceMembers, because
+      // the synthetic field mirrors generated from fields do not have metadata
+      // attached.
       dm.DeclarationMirror declarationMirror =
-          classMirror.instanceMembers[nameSymbol];
+          classMirror.declarations[nameSymbol];
       return declarationMirror != null &&
-          declarationMirror.metadata.length != 0 &&
-          declarationMirror.metadata.contains(dm.reflect(capability.metadata));
+          metadataSupported(declarationMirror.metadata, capability);
     } else {
       return false;
     }
@@ -134,9 +145,7 @@ bool reflectableSupportsStaticInvoke(ReflectableImpl reflectable, String name,
       return new RegExp(capability.namePattern).hasMatch(name);
     }
     if (capability is StaticInvokeMetaCapability) {
-      return metadata != null &&
-          metadata.length != 0 &&
-          metadata.contains(dm.reflect(capability.metadata));
+      return metadataSupported(metadata, capability);
     }
     return false;
   });
@@ -160,7 +169,7 @@ bool reflectableSupportsConstructorInvoke(
       });
       if (constructorMirror == null ||
           !constructorMirror.isConstructor) return false;
-      return constructorMirror.metadata.contains(capability.metadata);
+      return metadataSupported(constructorMirror.metadata, metadataCapability);
     }
     return false;
   });
@@ -1095,7 +1104,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
               }
               if (metadatum is GlobalQuantifyMetaCapability &&
                   metadatum.reflector == this) {
-                globalMetadataClasses.add(metadatum.metadata);
+                globalMetadataClasses.add(metadatum.metadataType);
               }
             }
           }

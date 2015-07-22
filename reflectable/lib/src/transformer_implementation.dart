@@ -474,8 +474,14 @@ class ClassDomain {
           new Map<String, ExecutableElement>();
 
       void addIfCapable(ExecutableElement member) {
+        // If [member] is a synthetic accessor created from a field, search for
+        // the metadata on the original field.
+        List<ElementAnnotation> metadata =
+            (member is PropertyAccessorElement && member.isSynthetic)
+            ? member.variable.metadata
+            : member.metadata;
         if (reflectorDomain.capabilities.supportsInstanceInvoke(
-            member.name, member.metadata)) {
+            member.name, metadata)) {
           result[member.name] = member;
         }
       }
@@ -541,7 +547,9 @@ class Capabilities {
   bool _supportsMeta(
       ec.MetadataQuantifiedCapability capability, List<DartObject> metadata) {
     if (metadata == null) return false;
-    return metadata.contains(capability.metadata);
+    return metadata
+        .map((DartObject o) => o.type.element)
+        .contains(capability.metadataType);
   }
 
   bool _supportsInstanceInvoke(List<ec.ReflectCapability> capabilities,
@@ -991,12 +999,12 @@ class TransformerImplementation {
             EvaluationResultImpl evaluation = metadatum.evaluationResult;
             if (evaluation != null && evaluation.value != null) {
               DartObjectImpl value = evaluation.value;
-              Object metadataFieldValue = value.fields["metadata"].value;
+              Object metadataFieldValue = value.fields["metadataType"].value;
               if (metadataFieldValue == null ||
-                  value.fields["metadata"].type.element != typeClass) {
+                  value.fields["metadataType"].type.element != typeClass) {
                 // TODO(sigurdm): Create a span for the annotation.
                 warn("The metadata must be a Type. "
-                    "Found ${value.fields["metadata"].type.element.name}",
+                    "Found ${value.fields["metadataType"].type.element.name}",
                     import);
                 continue;
               }
@@ -1255,14 +1263,22 @@ class TransformerImplementation {
 
     /// Extracts the metadata property from an instance of a subclass of
     /// MetadataCapability.
-    DartObject extractMetaData(DartObjectImpl constant) {
+    ClassElement extractMetaData(DartObjectImpl constant) {
       if (constant.fields == null ||
           constant.fields["(super)"] == null ||
-          constant.fields["(super)"].fields["metadata"] == null) {
-        // TODO(sigurdm): Better error-message.
-        logger.warning("Could not extract metadata.");
+          constant.fields["(super)"].fields["metadataType"] == null) {
+        // TODO(sigurdm): Better error-message. We need a way to get a source
+        // location from a constant.
+        logger.warning("Could not extract the metadata field.");
+        return null;
       }
-      return constant.fields["(super)"].fields["metadata"];
+      Object metadataFieldValue =
+          constant.fields["(super)"].fields["metadataType"].value;
+      if (metadataFieldValue is! ClassElement) {
+        logger.warning("The metadataType field must be a Type object.");
+        return null;
+      }
+      return constant.fields["(super)"].fields["metadataType"].value;
     }
 
     switch (classElement.name) {
