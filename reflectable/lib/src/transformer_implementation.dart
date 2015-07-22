@@ -21,6 +21,7 @@ import 'transformer_errors.dart' as errors;
 class ReflectionWorld {
   final List<ReflectorDomain> reflectors = new List<ReflectorDomain>();
   final LibraryElement reflectableLibrary;
+  final ImportCollector importCollector = new ImportCollector();
 
   ReflectionWorld(this.reflectableLibrary);
 
@@ -38,11 +39,11 @@ class ReflectionWorld {
     });
   }
 
-  String generateCode() {
-    String result = reflectors.map((ReflectorDomain reflector) {
-      return "const ${reflector.reflector.name}(): ${reflector.generateCode()}";
-    }).join(",  ");
-    return "{$result}";
+  String generateCode(Resolver resolver) {
+    return formatAsMap(reflectors.map((ReflectorDomain reflector) {
+      return "${reflector.constConstructionCode(importCollector)}: "
+          "${reflector.generateCode(resolver, importCollector)}";
+    }));
   }
 }
 
@@ -98,10 +99,15 @@ class ReflectorDomain {
 
   /// Returns a string that evaluates to a closure invoking [constructor] with
   /// the given arguments.
-  /// For example for a constructor Foo(x, {y: 3}):
-  /// returns "(x, {y: 3}) => new Foo(x, y)".
+  /// [importCollector] is used to record all the imports needed to make the
+  /// constant.
   /// This is to provide something that can be called with [Function.apply].
-  String constructorCode(ConstructorElement constructor) {
+  ///
+  /// For example for a constructor Foo(x, {y: 3}):
+  /// returns "(x, {y: 3}) => new prefix1.Foo(x, y)", and records an import of
+  /// the library of `Foo` associated with prefix1 in [importCollector].
+  String constructorCode(
+      ConstructorElement constructor, ImportCollector importCollector) {
     FunctionType type = constructor.type;
 
     int requiredPositionalCount = type.normalParameterTypes.length;
@@ -159,12 +165,19 @@ class ReflectorDomain {
       argumentParts.add(namedArguments);
     }
 
+    String prefix = importCollector.getPrefix(constructor.library);
     return ('(${parameterParts.join(', ')}) => '
-        'new ${_nameOfDeclaration(constructor)}'
+        'new $prefix.${_nameOfDeclaration(constructor)}'
         '(${argumentParts.join(", ")})');
   }
 
-  String generateCode() {
+  /// The code of the const-construction of this reflector.
+  String constConstructionCode(ImportCollector importCollector) {
+    String prefix = importCollector.getPrefix(reflector.library);
+    return "const $prefix.${reflector.name}()";
+  }
+
+  String generateCode(Resolver resolver, ImportCollector importCollector) {
     Enumerator<ClassElement> classes = new Enumerator<ClassElement>();
     Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
     Enumerator<FieldElement> fields = new Enumerator<FieldElement>();
@@ -233,16 +246,27 @@ class ReflectorDomain {
 
     String staticGettingClosure(ClassElement classElement, String getterName) {
       String className = classElement.name;
+      String prefix = importCollector.getPrefix(classElement.library);
       // Operators cannot be static.
-      return '"${getterName}": () => $className.$getterName';
+      return '"${getterName}": () => $prefix.$className.$getterName';
     }
 
-    String settingClosure(String name) {
-      return '"$name": (dynamic instance, value) => instance.$name value';
+    String settingClosure(String setterName) {
+      assert(setterName.substring(setterName.length - 1) == "=");
+      // The [setterName] includes the "=", remove it.
+      String name = setterName.substring(0, setterName.length - 1);
+
+      return '"$setterName": (dynamic instance, value) => '
+          'instance.$name = value';
     }
-    String staticSettingClosure(ClassElement classElement, String name) {
+
+    String staticSettingClosure(ClassElement classElement, String setterName) {
+      assert(setterName.substring(setterName.length - 1) == "=");
+      // The [setterName] includes the "=", remove it.
+      String name = setterName.substring(0, setterName.length -1);
       String className = classElement.name;
-      return '"$name": (value) => $className.$name value';
+      String prefix = importCollector.getPrefix(classElement.library);
+      return '"$setterName": (value) => $prefix.$className.$name = value';
     }
 
     int classIndex = 0;
@@ -299,13 +323,15 @@ class ReflectorDomain {
       } else {
         constructorsCode = formatAsMap(classDomain.constructors
             .map((ConstructorElement constructor) {
-          return '"${constructor.name}": ${constructorCode(constructor)}';
+          String code = constructorCode(constructor, importCollector);
+          return '"${constructor.name}": $code';
         }));
       }
 
       String classMetadataCode;
       if (capabilities.supportsMetadata) {
-        classMetadataCode = extractMetadataCode(classDomain.classElement);
+        classMetadataCode = extractMetadataCode(
+            classDomain.classElement, resolver, importCollector);
       } else {
         classMetadataCode = "null";
       }
@@ -326,7 +352,7 @@ class ReflectorDomain {
                   classDomain.classElement, element.name)));
       String result = 'new r.ClassMirrorImpl("${classDomain.simpleName}", '
           '"${classDomain.qualifiedName}", $classIndex, '
-          'const ${reflector.name}(), '
+          '${constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $superclassIndex, '
           '$staticGettersCode, $staticSettersCode, $constructorsCode, '
           '$classMetadataCode)';
@@ -342,12 +368,13 @@ class ReflectorDomain {
       int ownerIndex = classes.indexOf(element.enclosingElement);
       String metadataCode;
       if (capabilities.supportsMetadata) {
-        metadataCode = extractMetadataCode(element);
+        metadataCode = extractMetadataCode(element, resolver, importCollector);
       } else {
         metadataCode = null;
       }
       return 'new r.MethodMirrorImpl("${element.name}", $descriptor, '
-          '$ownerIndex, const ${reflector.name}(), $metadataCode)';
+          '$ownerIndex, ${constConstructionCode(importCollector)}, '
+          '$metadataCode)';
     });
 
     List<String> fieldsList = fields.items.map((FieldElement element) {
@@ -355,12 +382,13 @@ class ReflectorDomain {
       int ownerIndex = classes.indexOf(element.enclosingElement);
       String metadataCode;
       if (capabilities.supportsMetadata) {
-        metadataCode = extractMetadataCode(element);
+        metadataCode = extractMetadataCode(element, resolver, importCollector);
       } else {
         metadataCode = null;
       }
       return 'new r.VariableMirrorImpl("${element.name}", $descriptor, '
-          '$ownerIndex, const ${reflector.name}(), $metadataCode)';
+          '$ownerIndex, ${constConstructionCode(importCollector)}, '
+          '$metadataCode)';
     });
 
     List<String> membersList = <String>[]
@@ -368,8 +396,11 @@ class ReflectorDomain {
       ..addAll(methodsList);
     String membersCode = formatAsList(membersList);
 
-    String typesCode = formatAsList(
-        classes.items.map((ClassElement classElement) => classElement.name));
+    String typesCode = formatAsList(classes.items
+        .map((ClassElement classElement) {
+      String prefix = importCollector.getPrefix(classElement.library);
+      return "$prefix.${classElement.name}";
+    }));
 
     return "new r.ReflectorData($classMirrors, $membersCode, $typesCode, "
         "$gettersCode, $settersCode)";
@@ -656,6 +687,35 @@ class Capabilities {
     return capabilities.any((ec.ReflectCapability capability) =>
         capability == ec.metadataCapability);
   }
+}
+
+/// Collects the libraries that needs to be imported, and gives each library
+/// a unique prefix.
+class ImportCollector {
+  Map<LibraryElement, String> _mapping = new Map<LibraryElement, String>();
+  int _count = 0;
+
+  /// Returns the prefix associated with [library].
+  String getPrefix(LibraryElement library) {
+    String prefix = _mapping[library];
+    if (prefix != null) return prefix;
+    prefix = "prefix$_count";
+    _count++;
+    _mapping[library] = prefix;
+    return prefix;
+  }
+
+  /// Adds [library] to the collected libraries and generate a prefix for it if
+  /// it has not been encountered before.
+  void addLibrary(LibraryElement library) {
+    String prefix = _mapping[library];
+    if (prefix != null) return;
+    prefix = "prefix$_count";
+    _count++;
+    _mapping[library] = prefix;
+  }
+
+  Iterable<LibraryElement> get libraries => _mapping.keys;
 }
 
 // TODO(eernst): Keep in mind, with reference to
@@ -997,9 +1057,11 @@ class TransformerImplementation {
       ReflectorDomain domain = domains.putIfAbsent(reflector, () {
         Capabilities capabilities =
             _capabilitiesOf(capabilityLibrary, reflector);
+        world.importCollector.addLibrary(reflector.library);
         return new ReflectorDomain(reflector, capabilities);
       });
       if (domain.classMap.containsKey(type)) return;
+      world.importCollector.addLibrary(type.library);
 
       List<FieldElement> declaredFieldsOfClass =
           declaredFields(type, domain.capabilities).toList();
@@ -1316,25 +1378,23 @@ class TransformerImplementation {
   /// Returns the source of the file containing the reflection data for [world].
   /// [id] is used to create relative import uris.
   String reflectionWorldSource(ReflectionWorld world, AssetId id) {
-    Set<String> imports = new Set<String>();
-    imports.addAll(world.reflectors.map((ReflectorDomain reflector) {
-      Uri uri = resolver.getImportUri(reflector.reflector.library, from: id);
-      return "import '$uri';";
-    }));
-    imports.addAll(world.reflectors
-        .expand((ReflectorDomain reflector) => reflector.annotatedClasses)
-        .map((ClassDomain classDomain) {
-      Uri uri =
-          resolver.getImportUri(classDomain.classElement.library, from: id);
-      return "import '$uri';";
-    }));
-    List<String> importsList = new List<String>.from(imports);
-    importsList.sort();
+    // Notice it is important to generate the code before printing the
+    // imports because generating the code can add further imports.
+    String code = world.generateCode(resolver);
+
+    List<String> imports = new List<String>();
+    world.importCollector.libraries.forEach((LibraryElement library) {
+      Uri uri = resolver.getImportUri(library, from: id);
+      String prefix = world.importCollector.getPrefix(library);
+      imports.add("import '$uri' as $prefix;");
+    });
+    imports.sort();
     return """
 library ${id.path.replaceAll("/", ".")};
 import "package:reflectable/src/mirrors_unimpl.dart" as r;
 import "package:reflectable/reflectable.dart" show isTransformed;
-${importsList.join('\n')}
+import "dart:core";
+${imports.join('\n')}
 
 initializeReflectable() {
   if (!isTransformed) {
@@ -1343,7 +1403,7 @@ initializeReflectable() {
         "reflectable package. Remember to set your package-root to "
         "'build/.../packages'.");
   }
-  r.data = ${world.generateCode()};
+  r.data = ${code};
 }
 """;
   }
@@ -1517,30 +1577,123 @@ String formatAsList(Iterable parts) => "[${parts.join(", ")}]";
 
 String formatAsMap(Iterable parts) => "{${parts.join(", ")}}";
 
+/// Returns code that will reproduce the given constant expression.
+String extractConstantCode(Expression expression,
+    LibraryElement originatingLibrary, Resolver resolver,
+    ImportCollector importCollector) {
+  if (expression is ListLiteral) {
+    List<String> elements = expression.elements.map((Expression subExpression) {
+      return extractConstantCode(
+          subExpression, originatingLibrary, resolver, importCollector);
+    });
+    // TODO(sigurdm): Type arguments.
+    return "const ${formatAsList(elements)}";
+  } else if (expression is MapLiteral) {
+    List<String> elements = expression.entries.map((MapLiteralEntry entry) {
+      String key = extractConstantCode(
+          entry.key, originatingLibrary, resolver, importCollector);
+      String value = extractConstantCode(
+          entry.value, originatingLibrary, resolver, importCollector);
+      return "$key: $value";
+    });
+    // TODO(sigurdm): Type arguments.
+    return "const ${formatAsMap(elements)}";
+  } else if (expression is InstanceCreationExpression) {
+    String constructor = expression.constructorName.toSource();
+    LibraryElement libraryOfConstructor = expression.staticElement.library;
+    importCollector.addLibrary(libraryOfConstructor);
+    String prefix = importCollector.getPrefix(expression.staticElement.library);
+    // TODO(sigurdm): Named arguments.
+    String arguments = expression.argumentList.arguments
+        .map((Expression argument) {
+      return extractConstantCode(
+          argument, originatingLibrary, resolver, importCollector);
+    }).join(", ");
+    // TODO(sigurdm): Type arguments.
+    return "const $prefix.$constructor($arguments)";
+  } else if (expression is Identifier) {
+    Element element = expression.staticElement;
+    importCollector.addLibrary(element.library);
+    String prefix = importCollector.getPrefix(element.library);
+    Element enclosingElement = element.enclosingElement;
+    if (enclosingElement is ClassElement) {
+      prefix += ".${enclosingElement.name}";
+    }
+    // TODO(sigurdm): Emit a warning/error if the element is not in the global
+    // public scope of the library.
+    return "$prefix.${element.name}";
+  } else if (expression is BinaryExpression) {
+    String a = extractConstantCode(
+        expression.leftOperand, originatingLibrary, resolver, importCollector);
+    String op = expression.operator.lexeme;
+    String b = extractConstantCode(
+        expression.rightOperand, originatingLibrary, resolver, importCollector);
+    return "$a $op $b";
+  } else if (expression is ConditionalExpression) {
+    String condition = extractConstantCode(
+        expression.condition, originatingLibrary, resolver, importCollector);
+    String a = extractConstantCode(expression.thenExpression,
+        originatingLibrary, resolver, importCollector);
+    String b = extractConstantCode(expression.elseExpression,
+        originatingLibrary, resolver, importCollector);
+    return "$condition ? $a : $b";
+  } else if (expression is ParenthesizedExpression) {
+    String nested = extractConstantCode(
+        expression.expression, originatingLibrary, resolver, importCollector);
+    return "($nested)";
+  } else if (expression is PropertyAccess) {
+    String target = extractConstantCode(
+        expression.target, originatingLibrary, resolver, importCollector);
+    String selector = expression.propertyName.token.lexeme;
+    return "$target.$selector";
+  } else if (expression is MethodInvocation) {
+    // We only handle "identical(a, b)".
+    assert(expression.target == null);
+    assert(expression.methodName.token.lexeme == "identical");
+    NodeList arguments = expression.argumentList.arguments;
+    assert(arguments.length == 2);
+    String a = extractConstantCode(
+        arguments[0], originatingLibrary, resolver, importCollector);
+    String b = extractConstantCode(
+        arguments[1], originatingLibrary, resolver, importCollector);
+    return "identical($a, $b)";
+  } else {
+    assert(expression is IntegerLiteral ||
+        expression is BooleanLiteral ||
+        expression is StringLiteral ||
+        expression is NullLiteral ||
+        expression is SymbolLiteral);
+    return expression.toSource();
+  }
+}
+
 /// Returns a String with the code used to build the metadata of [element].
-// TODO(sigurdm, 17307): Make this less fragile when the analyzer's
-// element-model exposes the metadata in a more friendly way.
-String extractMetadataCode(Element element) {
+String extractMetadataCode(
+    Element element, Resolver resolver, ImportCollector importCollector) {
   Iterable<ElementAnnotation> elementAnnotations = element.metadata;
   if (elementAnnotations == null) return "[]";
 
   List<String> metadataParts = new List<String>();
-  // Run through the two iterators in parallel.
-  Iterator<Annotation> nodeIterator =
-      (element.node as AnnotatedNode).metadata.iterator;
-  Iterator<ElementAnnotation> elementIterator = elementAnnotations.iterator;
-  while (nodeIterator.moveNext()) {
-    bool r = elementIterator.moveNext();
-    assert(r);
-    Annotation annotationNode = nodeIterator.current;
-    ElementAnnotation elementAnnotation = elementIterator.current;
-    // Remove the @-sign.
-    String source = annotationNode.toSource().substring(1);
-    if (elementAnnotation.element is ConstructorElement) {
-      // If this is a constructor call, add the otherwise implicit 'const'.
-      metadataParts.add("const $source");
+
+  for (Annotation annotationNode in (element.node as AnnotatedNode).metadata) {
+    // TODO(sigurdm): Emit a warning/error if the element is not in the global
+    // public scope of the library.
+    importCollector.addLibrary(annotationNode.element.library);
+    String prefix = importCollector.getPrefix(annotationNode.element.library);
+    if (annotationNode.arguments != null) {
+      // A const constructor.
+      String constructor = (annotationNode.constructorName == null)
+          ? annotationNode.name
+          : "${annotationNode.name}.${annotationNode.constructorName}";
+      String arguments = annotationNode.arguments.arguments
+          .map((Expression argument) {
+        return extractConstantCode(
+            argument, element.library, resolver, importCollector);
+      }).join(", ");
+      metadataParts.add("const $prefix.$constructor($arguments)");
     } else {
-      metadataParts.add(source);
+      // A field reference.
+      metadataParts.add("$prefix.${annotationNode.name}");
     }
   }
   return formatAsList(metadataParts);

@@ -8,10 +8,6 @@ build/test/invoke_capabilities_test: RuntimeError # Missing implementation
 [ $compiler == dart2js ]
 test/*_test: skip # Some needed mirror features not implemented by dart2js.
 
-[ $compiler == none || $compiler == dart2js || $compiler == dartanalyzer || $compiler == dart2analyzer]
-build/test/name_clash_test: Fail # Disambiguation is needed.
-build/test/metadata_name_clash_test: Fail # The printing of constants is broken.
-
 [ ($compiler == none && $runtime != dartium) || $compiler == dart2js || $compiler == dartanalyzer || $compiler == dart2analyzer]
 build/test/new_instance_default_values_test: CompileTimeError # Issue #8
 

@@ -26,9 +26,20 @@ const myReflectable2 = const MyReflectable2();
 
 const b = 13;
 const c = const [const Bar(const {"a": 14})];
+const d = true;
+
+class K {
+  static const p = 2;
+}
 
 @myReflectable
-@Bar(const {})
+@Bar(const {
+  b: deprecated,
+  c: const Deprecated("tomorrow"),
+  1 + 2: (d ? 3 : 4),
+  identical(1, 2): "s",
+  K.p: 6
+})
 @b
 @c
 class Foo {
@@ -52,13 +63,20 @@ class Foo2 {
 class Bar {
   final Map<String, int> m;
   const Bar(this.m);
+  toString() => "Bar($m)";
 }
 
 main() {
   test("metadata on class", () {
     expect(myReflectable.reflectType(Foo).metadata, [
       const MyReflectable(),
-      const Bar(const {}),
+      const Bar(const {
+        b: deprecated,
+        c: const Deprecated("tomorrow"),
+        3: 3,
+        false: "s",
+        2: 6
+      }),
       13,
       const [const Bar(const {"a": 14})]
     ]);
