@@ -20,6 +20,7 @@ library reflectable.src.element_capability;
 // performed in the corresponding manner here, and vice versa.
 
 import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer/src/generated/constant.dart';
 
 abstract class ReflectCapability {
   const ReflectCapability();

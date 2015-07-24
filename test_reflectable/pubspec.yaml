@@ -2,7 +2,6 @@ name: test_reflectable
 dependencies:
   reflectable:
     path: ../reflectable
-  path: '^1.3.0'
 dev_dependencies:
   unittest: '^0.11.0'
 transformers:

@@ -1,6 +1,6 @@
 {
   "pre_pub_upgrade_hooks" : {
       "Link reflectable package":
-        "$dart -p$project_root/packages $project_root/tool/link_reflectable.dart $project_root"
+        "$dart $project_root/tool/link_reflectable.dart $project_root"
   }
 }
