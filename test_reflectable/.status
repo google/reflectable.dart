@@ -16,4 +16,3 @@ test/invoker_operator_test: CompiletimeError # sdk issue #23880
 
 [ ($compiler == none && $runtime == dartium) ]
 build/test/new_instance_default_values_test: RuntimeError # Issue #8
-test/invoker_operator_test: RuntimeError # sdk issue #23880
