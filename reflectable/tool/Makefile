@@ -10,7 +10,7 @@ OPTIONS=--package-root=$(PACKAGE_ROOT)
 TEST_DIR=../test
 XFORM_DIR=../test/to_be_transformed
 
-all: get check build full_test
+all: get check build test
 
 g: get
 
@@ -19,8 +19,6 @@ c: check
 b: build
 
 t: test
-
-ft: full_test
 
 get:
 	( cd ..; pub get )
