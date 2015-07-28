@@ -20,7 +20,7 @@ reflectable **capability**. For a more detailed discussion about capabilities,
 please consult the [reflectable capability design document][1]. On this page we
 just use a couple of simple special cases.
 
-[1]: doc/TheDesignofReflectableCapabilities.pdf
+[1]: https://github.com/dart-lang/reflectable/blob/master/reflectable/doc/TheDesignofReflectableCapabilities.pdf
 
 The resource benefits obtained by using this package are established by
 transformation. That is, this package includes a [`pub` transformer][2]. The
