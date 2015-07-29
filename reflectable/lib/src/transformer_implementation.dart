@@ -620,7 +620,7 @@ class Capabilities {
 
   Iterable<DartObjectImpl> getEvaluatedMetadata(
       List<ElementAnnotation> metadata) {
-    return metadata.map((ElementAnnotation elementAnnotation) {
+    return metadata.map((ElementAnnotationImpl elementAnnotation) {
       EvaluationResultImpl evaluation = elementAnnotation.evaluationResult;
       assert(evaluation != null);
       return evaluation.value;
