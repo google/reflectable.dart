@@ -241,14 +241,14 @@ class ReflectorDomain {
       } else {
         closure = "(dynamic instance) => (x) => instance ${getterName} x";
       }
-      return '"${getterName}": $closure';
+      return 'r"${getterName}": $closure';
     }
 
     String staticGettingClosure(ClassElement classElement, String getterName) {
       String className = classElement.name;
       String prefix = importCollector.getPrefix(classElement.library);
       // Operators cannot be static.
-      return '"${getterName}": () => $prefix.$className.$getterName';
+      return 'r"${getterName}": () => $prefix.$className.$getterName';
     }
 
     String settingClosure(String setterName) {
@@ -256,7 +256,7 @@ class ReflectorDomain {
       // The [setterName] includes the "=", remove it.
       String name = setterName.substring(0, setterName.length - 1);
 
-      return '"$setterName": (dynamic instance, value) => '
+      return 'r"$setterName": (dynamic instance, value) => '
           'instance.$name = value';
     }
 
@@ -266,7 +266,7 @@ class ReflectorDomain {
       String name = setterName.substring(0, setterName.length -1);
       String className = classElement.name;
       String prefix = importCollector.getPrefix(classElement.library);
-      return '"$setterName": (value) => $prefix.$className.$name = value';
+      return 'r"$setterName": (value) => $prefix.$className.$name = value';
     }
 
     int classIndex = 0;
@@ -275,7 +275,7 @@ class ReflectorDomain {
 
       // Fields go first in [memberMirrors], so they will get the
       // same index as in [fields].
-      List<int> fieldsIndices = classDomain.declaredFields
+      Iterable<int> fieldsIndices = classDomain.declaredFields
           .map((FieldElement element) {
         return fields.indexOf(element);
       });
@@ -285,7 +285,7 @@ class ReflectorDomain {
       // All the elements in the behavioral interface go after the
       // fields in [memberMirrors], so they must get an offset of
       // `fields.length` on the index.
-      List<int> methodsIndices = classDomain.declarations
+      Iterable<int> methodsIndices = classDomain.declarations
           .where(_executableIsntImplicitGetterOrSetter)
           .map((ExecutableElement element) {
         return members.indexOf(element) + fieldsLength;
@@ -324,7 +324,7 @@ class ReflectorDomain {
         constructorsCode = formatAsMap(classDomain.constructors
             .map((ConstructorElement constructor) {
           String code = constructorCode(constructor, importCollector);
-          return '"${constructor.name}": $code';
+          return 'r"${constructor.name}": $code';
         }));
       }
 
@@ -350,8 +350,8 @@ class ReflectorDomain {
                   element.isStatic && element.isSetter)
               .map((PropertyAccessorElement element) => staticSettingClosure(
                   classDomain.classElement, element.name)));
-      String result = 'new r.ClassMirrorImpl("${classDomain.simpleName}", '
-          '"${classDomain.qualifiedName}", $classIndex, '
+      String result = 'new r.ClassMirrorImpl(r"${classDomain.simpleName}", '
+          'r"${classDomain.qualifiedName}", $classIndex, '
           '${constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $superclassIndex, '
           '$staticGettersCode, $staticSettersCode, $constructorsCode, '
@@ -363,7 +363,8 @@ class ReflectorDomain {
     String gettersCode = formatAsMap(instanceGetterNames.map(gettingClosure));
     String settersCode = formatAsMap(instanceSetterNames.map(settingClosure));
 
-    List<String> methodsList = members.items.map((ExecutableElement element) {
+    Iterable<String> methodsList =
+        members.items.map((ExecutableElement element) {
       int descriptor = _declarationDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
       String metadataCode;
@@ -372,12 +373,12 @@ class ReflectorDomain {
       } else {
         metadataCode = null;
       }
-      return 'new r.MethodMirrorImpl("${element.name}", $descriptor, '
+      return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, ${constConstructionCode(importCollector)}, '
           '$metadataCode)';
     });
 
-    List<String> fieldsList = fields.items.map((FieldElement element) {
+    Iterable<String> fieldsList = fields.items.map((FieldElement element) {
       int descriptor = _fieldDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
       String metadataCode;
@@ -553,7 +554,7 @@ class Capabilities {
   }
 
   bool _supportsInstanceInvoke(List<ec.ReflectCapability> capabilities,
-      String methodName, List<DartObjectImpl> metadata) {
+      String methodName, Iterable<DartObjectImpl> metadata) {
     bool supportsTarget(ec.ReflecteeQuantifyCapability capability) {
       // TODO(eernst): implement this correctly; will need something
       // like this, which will cover the case where we have applied
@@ -595,8 +596,8 @@ class Capabilities {
     return false;
   }
 
-  bool _supportsNewInstance(List<ec.ReflectCapability> capabilities,
-      String constructorName, List<DartObjectImpl> metadata) {
+  bool _supportsNewInstance(Iterable<ec.ReflectCapability> capabilities,
+      String constructorName, Iterable<DartObjectImpl> metadata) {
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
       if ((capability is ec.InvokingCapability ||
@@ -617,8 +618,8 @@ class Capabilities {
     return false;
   }
 
-  List<DartObjectImpl> getEvaluatedMetadata(
-      List<ElementAnnotationImpl> metadata) {
+  Iterable<DartObjectImpl> getEvaluatedMetadata(
+      List<ElementAnnotation> metadata) {
     return metadata.map((ElementAnnotationImpl elementAnnotation) {
       EvaluationResultImpl evaluation = elementAnnotation.evaluationResult;
       assert(evaluation != null);

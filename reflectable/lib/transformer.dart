@@ -25,7 +25,7 @@ class ReflectableTransformer extends AggregateTransformer
 
   /// Checks and interprets the given list of entry points,
   /// given via [_settings].
-  List<String> _findEntryPoints(Map<String, dynamic> entryPointSettings) {
+  List<String> _findEntryPoints(entryPointSettings) {
     List<String> entryPoints = <String>[];
     if (entryPointSettings == null) {
       // No entry points given: Every file with a top-level function named
