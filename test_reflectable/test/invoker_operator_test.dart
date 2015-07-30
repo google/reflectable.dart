@@ -22,7 +22,7 @@ class A {
   A(this.f);
   int operator +(x) => 42 + x + f;
   int operator [](x) => 42 + x + f;
-  void operator []=(x, v) => f = x + v + f;
+  void operator []=(x, v) { f = x + v + f; }
 }
 
 main() {

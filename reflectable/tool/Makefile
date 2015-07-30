@@ -6,7 +6,7 @@
 # on all platforms.
 
 PACKAGE_ROOT=../packages
-OPTIONS=--package-root=$(PACKAGE_ROOT)
+OPTIONS=--checked --package-root=$(PACKAGE_ROOT)
 TEST_DIR=../test
 XFORM_DIR=../test/to_be_transformed
 

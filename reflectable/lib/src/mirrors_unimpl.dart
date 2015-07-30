@@ -323,6 +323,11 @@ class ClassMirrorImpl implements ClassMirror {
           : new UnmodifiableListView(metadata);
 
   ClassMirror get superclass {
+    if (_superclassIndex == null) return null;
+    if (_superclassIndex == -1) {
+      throw new NoSuchCapabilityError(
+          "Requesting mirror on un-marked class, superclass of $simpleName");
+    }
     return _data.classMirrors[_superclassIndex];
   }
 
@@ -488,6 +493,8 @@ class ClassMirrorImpl implements ClassMirror {
     }
     return getter;
   }
+
+  String toString() => "ClassMirrorImpl($qualifiedName)";
 
   // Because we take care to only ever create one instance for each
   // type/reflector-combination we can rely on the default `hashCode` and `==`

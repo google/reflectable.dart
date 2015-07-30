@@ -87,7 +87,9 @@ class ReflectableTransformer extends AggregateTransformer
       AssetId id = ids.firstWhere((AssetId id) => id.path.endsWith(entryPoint),
           orElse: () => null);
       if (id == null) {
-        transform.logger.warning("Could not find entrypoint '$entryPoint'");
+        // There is no such entry point; however, we do not need to emit
+        // any diagnostic messages, this is done by `apply` in
+        // `TransformerImplementation`.
         return;
       }
       transform.declareOutput(id);

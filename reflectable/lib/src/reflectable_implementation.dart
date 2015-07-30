@@ -425,6 +425,7 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
   @override
   rm.TypeMirror get superclass {
     dm.ClassMirror sup = _classMirror.superclass;
+    if (sup == null) return null;  // For `Object`, do as `dm`.
     return wrapClassMirror(sup, _reflectable);
   }
 
