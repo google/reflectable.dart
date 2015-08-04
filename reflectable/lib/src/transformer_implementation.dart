@@ -580,7 +580,7 @@ class _Capabilities {
   }
 
   bool _supportsMeta(
-      ec.MetadataQuantifiedCapability capability, List<DartObject> metadata) {
+      ec.MetadataQuantifiedCapability capability, Iterable<DartObject> metadata) {
     if (metadata == null) return false;
     return metadata
         .map((DartObject o) => o.type.element)
@@ -678,7 +678,7 @@ class _Capabilities {
   }
 
   bool _supportsStaticInvoke(List<ec.ReflectCapability> capabilities,
-      String methodName, List<DartObject> metadata) {
+      String methodName, Iterable<DartObject> metadata) {
     bool supportsTarget(ec.ReflecteeQuantifyCapability capability) {
       // TODO(eernst): implement this correctly; will need something
       // like this, which will cover the case where we have applied
