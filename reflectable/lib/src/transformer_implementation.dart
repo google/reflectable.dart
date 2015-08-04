@@ -1671,11 +1671,24 @@ String _extractConstantCode(Expression expression,
 String _extractMetadataCode(
     Element element, Resolver resolver, _ImportCollector importCollector) {
   Iterable<ElementAnnotation> elementAnnotations = element.metadata;
+
   if (elementAnnotations == null) return "[]";
+
+  // Synthetic accessors do not have metadata. Only their associated fields.
+  if (element is PropertyAccessorElement && element.isSynthetic) return "[]";
 
   List<String> metadataParts = new List<String>();
 
-  for (Annotation annotationNode in (element.node as AnnotatedNode).metadata) {
+  AstNode node = element.node;
+
+  // The `element.node` of a field is the [VariableDeclaration] that is nested
+  // in a [VariableDeclarationList] that is nested in a [FieldDeclaration]. The
+  // metadata is stored on the [FieldDeclaration].
+  if (element is FieldElement) {
+    node = node.parent.parent;
+  }
+
+  for (Annotation annotationNode in (node as AnnotatedNode).metadata) {
     // TODO(sigurdm): Emit a warning/error if the element is not in the global
     // public scope of the library.
     importCollector._addLibrary(annotationNode.element.library);
@@ -1696,6 +1709,7 @@ String _extractMetadataCode(
       metadataParts.add("$prefix.${annotationNode.name}");
     }
   }
+
   return _formatAsList(metadataParts);
 }
 

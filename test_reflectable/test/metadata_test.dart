@@ -47,6 +47,9 @@ class Foo {
   @b
   @c
   foo() {}
+
+  @b
+  var x = 10;
 }
 
 @myReflectable2
@@ -80,15 +83,23 @@ main() {
       13,
       const [const Bar(const {"a": 14})]
     ]);
+
     expect(myReflectable.reflectType(Foo).declarations["foo"].metadata, [
       const Bar(const {}),
       13,
       const [const Bar(const {"a": 14})]
     ]);
+
+    expect(myReflectable.reflectType(Foo).declarations["x"].metadata, [b]);
+
+    // The synthetic accessors do not have metadata.
+    expect(myReflectable.reflectType(Foo).instanceMembers["x"].metadata, []);
+    expect(myReflectable.reflectType(Foo).instanceMembers["x="].metadata, []);
   });
   test("metadata without capability", () {
     expect(() => myReflectable2.reflectType(Foo2).metadata,
         throwsA(const isInstanceOf<NoSuchCapabilityError>()));
+
     expect(() => myReflectable2.reflectType(Foo2).declarations["foo"].metadata,
         throwsA(const isInstanceOf<NoSuchCapabilityError>()));
   });
