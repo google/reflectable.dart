@@ -11,8 +11,5 @@ test/*_test: skip # Some needed mirror features not implemented by dart2js.
 [ ($compiler == none && $runtime != dartium) || $compiler == dart2js || $compiler == dartanalyzer || $compiler == dart2analyzer]
 build/test/new_instance_default_values_test: CompileTimeError # Issue #8
 
-[ ($compiler == none && $runtime != dartium) ]
-test/invoker_operator_test: CompiletimeError # sdk issue #23880
-
 [ ($compiler == none && $runtime == dartium) ]
 build/test/new_instance_default_values_test: RuntimeError # Issue #8
