@@ -287,12 +287,12 @@ class _ReflectorDomain {
           InterfaceType workingSuperType = workingClass._classElement.supertype;
           if (workingSuperType != null) {
             ClassElement workingSuperClass = workingSuperType.element;
-            bool isNew = !includedClasses
-                .any((_ClassDomain classDomain) {
+            bool isNew = !includedClasses.any((_ClassDomain classDomain) {
               return classDomain._classElement == workingSuperClass;
             });
             if (isNew) {
-              additionalClasses.add(_createClassDomain(workingSuperClass, this));
+              additionalClasses
+                  .add(_createClassDomain(workingSuperClass, this));
             }
           }
         });
@@ -410,8 +410,8 @@ class _ReflectorDomain {
     String gettersCode = _formatAsMap(instanceGetterNames.map(gettingClosure));
     String settersCode = _formatAsMap(instanceSetterNames.map(settingClosure));
 
-    Iterable<String> methodsList =
-        members.items.map((ExecutableElement element) {
+    Iterable<String> methodsList = members.items
+        .map((ExecutableElement element) {
       int descriptor = _declarationDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
       String metadataCode;
@@ -579,8 +579,8 @@ class _Capabilities {
     return regexp.hasMatch(methodName);
   }
 
-  bool _supportsMeta(
-      ec.MetadataQuantifiedCapability capability, Iterable<DartObject> metadata) {
+  bool _supportsMeta(ec.MetadataQuantifiedCapability capability,
+      Iterable<DartObject> metadata) {
     if (metadata == null) return false;
     return metadata
         .map((DartObject o) => o.type.element)
@@ -982,8 +982,9 @@ class TransformerImplementation {
                       reflectableClass) {
                 String found =
                     reflector == null ? "" : " Found ${reflector.name}";
-                _warn("The reflector must be a direct subclass of Reflectable." +
-                    found, import);
+                _warn(
+                    "The reflector must be a direct subclass of Reflectable." +
+                        found, import);
                 continue;
               }
               globalPatterns
@@ -1012,8 +1013,9 @@ class TransformerImplementation {
                       reflectableClass) {
                 String found =
                     reflector == null ? "" : " Found ${reflector.name}";
-                _warn("The reflector must be a direct subclass of Reflectable." +
-                    found, import);
+                _warn(
+                    "The reflector must be a direct subclass of Reflectable." +
+                        found, import);
                 continue;
               }
               globalMetadata
@@ -1181,9 +1183,10 @@ class TransformerImplementation {
         index = exportElement.node.offset;
       } else {
         // No non-synthetic import nor export directives present.
-        LibraryDirective libraryDirective =
-            targetLibrary.definingCompilationUnit.node.directives.firstWhere(
-                (directive) => directive is LibraryDirective,
+        CompilationUnit compilationUnitNode =
+            targetLibrary.definingCompilationUnit.node;
+        LibraryDirective libraryDirective = compilationUnitNode.directives
+            .firstWhere((directive) => directive is LibraryDirective,
                 orElse: () => null);
         if (libraryDirective != null) {
           // Put the new import after the library name directive.
@@ -1336,8 +1339,10 @@ class TransformerImplementation {
     // constructor, such that this can be a mere assertion rather than
     // a user-oriented error report.
     assert(constructorElement.isDefaultConstructor);
+
+    ConstructorDeclaration constructorDeclarationNode = constructorElement.node;
     NodeList<ConstructorInitializer> initializers =
-        constructorElement.node.initializers;
+        constructorDeclarationNode.initializers;
 
     if (initializers.length == 0) {
       // Degenerate case: Without initializers, we will obtain a reflector
@@ -1462,8 +1467,7 @@ void main($args) {
           (Asset asset) => asset.id.path.endsWith(entryPoint),
           orElse: () => null);
       if (entryPointAsset == null) {
-        aggregateTransform.logger
-            .info("Missing entry point: $entryPoint");
+        aggregateTransform.logger.info("Missing entry point: $entryPoint");
         continue;
       }
       Transform wrappedTransform =
@@ -1602,7 +1606,8 @@ String _extractConstantCode(Expression expression,
     String constructor = expression.constructorName.toSource();
     LibraryElement libraryOfConstructor = expression.staticElement.library;
     importCollector._addLibrary(libraryOfConstructor);
-    String prefix = importCollector._getPrefix(expression.staticElement.library);
+    String prefix =
+        importCollector._getPrefix(expression.staticElement.library);
     // TODO(sigurdm): Named arguments.
     String arguments = expression.argumentList.arguments
         .map((Expression argument) {
