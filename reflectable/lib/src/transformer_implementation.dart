@@ -1688,7 +1688,8 @@ String _extractMetadataCode(
     node = node.parent.parent;
   }
 
-  for (Annotation annotationNode in (node as AnnotatedNode).metadata) {
+  AnnotatedNode annotatedNode = node;
+  for (Annotation annotationNode in annotatedNode.metadata) {
     // TODO(sigurdm): Emit a warning/error if the element is not in the global
     // public scope of the library.
     importCollector._addLibrary(annotationNode.element.library);
