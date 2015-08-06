@@ -227,7 +227,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
     if (!reflectableSupportsStaticInvoke(_reflectable, memberName,
-        _libraryMirror.declarations[memberName].metadata)) {
+        _libraryMirror.declarations[new Symbol(memberName)].metadata)) {
       throw new NoSuchInvokeCapabilityError(
           _receiver, memberName, positionalArguments, namedArguments);
     }
