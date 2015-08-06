@@ -39,10 +39,11 @@ class ReflectionWorld {
     });
   }
 
-  String generateCode(Resolver resolver) {
+  String generateCode(
+      Resolver resolver, TransformLogger logger, AssetId dataId) {
     return _formatAsMap(reflectors.map((_ReflectorDomain reflector) {
       return "${reflector._constConstructionCode(importCollector)}: "
-          "${reflector._generateCode(resolver, importCollector)}";
+          "${reflector._generateCode(resolver, importCollector, logger, dataId)}";
     }));
   }
 }
@@ -177,7 +178,8 @@ class _ReflectorDomain {
     return "const $prefix.${_reflector.name}()";
   }
 
-  String _generateCode(Resolver resolver, _ImportCollector importCollector) {
+  String _generateCode(Resolver resolver, _ImportCollector importCollector,
+      TransformLogger logger, AssetId dataId) {
     Enumerator<ClassElement> classes = new Enumerator<ClassElement>();
     Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
     Enumerator<FieldElement> fields = new Enumerator<FieldElement>();
@@ -377,8 +379,8 @@ class _ReflectorDomain {
 
       String classMetadataCode;
       if (_capabilities._supportsMetadata) {
-        classMetadataCode = _extractMetadataCode(
-            classDomain._classElement, resolver, importCollector);
+        classMetadataCode = _extractMetadataCode(classDomain._classElement,
+            resolver, importCollector, logger, dataId);
       } else {
         classMetadataCode = "null";
       }
@@ -416,7 +418,8 @@ class _ReflectorDomain {
       int ownerIndex = classes.indexOf(element.enclosingElement);
       String metadataCode;
       if (_capabilities._supportsMetadata) {
-        metadataCode = _extractMetadataCode(element, resolver, importCollector);
+        metadataCode = _extractMetadataCode(
+            element, resolver, importCollector, logger, dataId);
       } else {
         metadataCode = null;
       }
@@ -430,7 +433,8 @@ class _ReflectorDomain {
       int ownerIndex = classes.indexOf(element.enclosingElement);
       String metadataCode;
       if (_capabilities._supportsMetadata) {
-        metadataCode = _extractMetadataCode(element, resolver, importCollector);
+        metadataCode = _extractMetadataCode(
+            element, resolver, importCollector, logger, dataId);
       } else {
         metadataCode = null;
       }
@@ -1385,7 +1389,7 @@ class TransformerImplementation {
   String _reflectionWorldSource(ReflectionWorld world, AssetId id) {
     // Notice it is important to generate the code before printing the
     // imports because generating the code can add further imports.
-    String code = world.generateCode(_resolver);
+    String code = world.generateCode(_resolver, _logger, id);
 
     List<String> imports = new List<String>();
     world.importCollector._libraries.forEach((LibraryElement library) {
@@ -1672,9 +1676,33 @@ String _extractConstantCode(Expression expression,
   }
 }
 
+/// The names of the libraries that can be accessed with a 'dart:x' import uri.
+Set<String> sdkLibraryNames = new Set.from([
+  "async",
+  "collection",
+  "convert",
+  "core",
+  "developer",
+  "html",
+  "indexed_db",
+  "io",
+  "isolate",
+  "js",
+  "math",
+  "mirrors",
+  "profiler",
+  "svg",
+  "typed_data",
+  "web_audio",
+  "web_gl",
+  "web_sql"
+]);
+
 /// Returns a String with the code used to build the metadata of [element].
-String _extractMetadataCode(
-    Element element, Resolver resolver, _ImportCollector importCollector) {
+///
+/// Also adds any neccessary imports to [importCollector].
+String _extractMetadataCode(Element element, Resolver resolver,
+    _ImportCollector importCollector, TransformLogger logger, AssetId dataId) {
   Iterable<ElementAnnotation> elementAnnotations = element.metadata;
 
   if (elementAnnotations == null) return "[]";
@@ -1697,8 +1725,34 @@ String _extractMetadataCode(
   for (Annotation annotationNode in annotatedNode.metadata) {
     // TODO(sigurdm): Emit a warning/error if the element is not in the global
     // public scope of the library.
-    importCollector._addLibrary(annotationNode.element.library);
-    String prefix = importCollector._getPrefix(annotationNode.element.library);
+    if (annotationNode.element == null) {
+      // Some internal constants (mainly in dart:html) cannot be resolved by
+      // the analyzer. Ignore them.
+      // TODO(sigurdm) clarify: Investigate this, and see if these constants can
+      // somehow be included.
+      logger.fine("Ignoring unresolved metadata $annotationNode",
+          asset: resolver.getSourceAssetId(element),
+          span: resolver.getSourceSpan(element));
+      continue;
+    }
+
+    LibraryElement library = annotationNode.element.library;
+    Uri importUri = resolver.getImportUri(library, from: dataId);
+    if (annotationNode.element.isPrivate ||
+        (importUri.scheme == "dart" &&
+            !sdkLibraryNames.contains(importUri.path))) {
+      // Private constants, and constants made of classes in internal libraries
+      // cannot be represented.
+      // Skip them.
+      // TODO(sigurdm) clarify: Investigate this, and see if these constants can
+      // somehow be included.
+      logger.fine("Ignoring unrepresentable metadata $annotationNode",
+          asset: resolver.getSourceAssetId(element),
+          span: resolver.getSourceSpan(element));
+      continue;
+    }
+    importCollector._addLibrary(library);
+    String prefix = importCollector._getPrefix(library);
     if (annotationNode.arguments != null) {
       // A const constructor.
       String constructor = (annotationNode.constructorName == null)
