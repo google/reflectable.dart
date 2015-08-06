@@ -23,7 +23,7 @@ class ImportTransformer extends Transformer implements DeclaringTransformer {
   }
 
   Future apply(Transform transform) async {
-    // TODO(eernst, sigurdm): Add an option to disable the transformer
+    // TODO(eernst) future: Add an option to disable the transformer.
     // from the command-line.
     String content = await transform.primaryInput.readAsString();
     AssetId id = transform.primaryInput.id;

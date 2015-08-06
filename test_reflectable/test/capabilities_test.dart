@@ -9,8 +9,8 @@ import 'package:reflectable/reflectable.dart' as r;
 import 'package:reflectable/capability.dart' as c;
 
 // Tests that reflection is constrained according to capabilities.
-// TODO(sigurdm): Write tests that covers all the different capabilities.
-// TODO(sigurdm): Write tests that covers top-level invocations.
+// TODO(sigurdm) implement: Write tests that covers all capabilities.
+// TODO(sigurdm) implement: Write tests that covers top-level invocations.
 
 class MyReflectableStatic extends r.Reflectable {
   const MyReflectableStatic() : super(const c.StaticInvokeCapability("foo"),

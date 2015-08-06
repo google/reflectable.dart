@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 /// Tests that metadata is preserved when the metadataCapability is present.
-// TODO(sigurdm): Support for metadata-annotations of arguments.
+// TODO(sigurdm) implement: Support for metadata-annotations of arguments.
 
 library test_reflectable.test.metadata_test;
 

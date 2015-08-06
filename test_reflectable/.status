@@ -1,7 +1,7 @@
 
 [ $compiler == dart2js || $compiler == none ]
-# TODO Throw NoSuchMethod when the function doesn't exist, but the capability
-# does.
+# TODO(sigurdm) implement: Throw NoSuchMethod when the function doesn't exist,
+# but the capability does.
 build/test/no_such_capability_test: RuntimeError # Missing implementation
 build/test/invoke_capabilities_test: RuntimeError # Missing implementation
 

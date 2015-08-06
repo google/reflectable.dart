@@ -10,7 +10,7 @@ import 'package:reflectable/capability.dart' as c;
 
 // Tests that reflection is constrained according to different kinds of
 // capabilities.
-// TODO(eernst): Add test cases using metadata when that's supported.
+// TODO(eernst) implement: Add test cases using metadata when that's supported.
 
 const String methodRegExp = r'[Ff].*r=?$';
 
