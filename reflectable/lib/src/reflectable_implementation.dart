@@ -239,7 +239,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   @override
   Object invokeGetter(String getterName) {
     if (!reflectableSupportsStaticInvoke(_reflectable, getterName,
-        _libraryMirror.declarations[getterName].metadata)) {
+        _libraryMirror.declarations[new Symbol(getterName)].metadata)) {
       throw new NoSuchInvokeCapabilityError(_receiver, getterName, [], null);
     }
     Symbol getterNameSymbol = new Symbol(getterName);
@@ -249,7 +249,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   @override
   Object invokeSetter(String setterName, Object value) {
     if (!reflectableSupportsStaticInvoke(_reflectable, setterName,
-        _libraryMirror.declarations[setterName].metadata)) {
+        _libraryMirror.declarations[new Symbol(setterName)].metadata)) {
       throw new NoSuchInvokeCapabilityError(
           _receiver, setterName, [value], null);
     }

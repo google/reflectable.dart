@@ -42,5 +42,6 @@ transformers:
       - test/invoker_test.dart
       - test/invoker_operator_test.dart
       - test/type_relations_test.dart
+      - test/invoke_toplevel_test.dart
 - $dart2js:
     $include: []
