@@ -1435,9 +1435,9 @@ initializeReflectable() {
     sourceManager.insert(mainLibrary.entryPoint.nameOffset, "_");
     String args = (mainLibrary.entryPoint.parameters.length == 0) ? "" : "args";
     sourceManager.insert(source.length, """
-void main($args) {
+main($args) {
   initializeReflectable();
-  _main($args);
+  return _main($args);
 }""");
     return sourceManager.source;
   }
