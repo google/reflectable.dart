@@ -385,7 +385,6 @@ class ClassMirrorImpl implements ClassMirror {
 
   Object newInstance(String constructorName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
-    // TODO(sigurdm): Move the constructors-data to the ClassMirrors.
     return Function.apply(
         constructors["$constructorName"], positionalArguments, namedArguments);
   }
@@ -437,11 +436,11 @@ class ClassMirrorImpl implements ClassMirror {
     return setter(value);
   }
 
-  // TODO(eernst, sigurdm): Implement.
+  // TODO(eernst) feature: Implement `isAssignableTo`.
   @override
   bool isAssignableTo(TypeMirror other) => _unsupported();
 
-  // TODO(eernst, sigurdm): Implement if we choose to handle generics.
+  // TODO(eernst) feature: Implement `isOriginalDeclaration`.
   @override
   bool get isOriginalDeclaration => _unsupported();
 
@@ -449,7 +448,7 @@ class ClassMirrorImpl implements ClassMirror {
   @override
   bool get isPrivate => false;
 
-  // TODO(eernst, sigurdm): Implement isSubTypeOf.
+  // TODO(eernst) feature: Implement `isSubTypeOf`.
   @override
   bool isSubtypeOf(TypeMirror other) => _unsupported();
 
@@ -624,14 +623,14 @@ class MethodMirrorImpl implements MethodMirror {
     return _metadata;
   }
 
-  // TODO(sigurdm, eernst): implement parameters
+  // TODO(sigurdm) feature: support `parameters`.
   @override
   List<ParameterMirror> get parameters => throw new UnimplementedError();
 
   @override
   String get qualifiedName => "${owner.qualifiedName}.$_name";
 
-  // TODO(sigurdm, eernst): implement returnType
+  // TODO(sigurdm) feature: suport `returnType`.
   @override
   TypeMirror get returnType => throw new UnimplementedError();
 

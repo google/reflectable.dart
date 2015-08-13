@@ -39,10 +39,11 @@ class ReflectionWorld {
     });
   }
 
-  String generateCode(Resolver resolver) {
+  String generateCode(
+      Resolver resolver, TransformLogger logger, AssetId dataId) {
     return _formatAsMap(reflectors.map((_ReflectorDomain reflector) {
       return "${reflector._constConstructionCode(importCollector)}: "
-          "${reflector._generateCode(resolver, importCollector)}";
+          "${reflector._generateCode(resolver, importCollector, logger, dataId)}";
     }));
   }
 }
@@ -92,8 +93,8 @@ class _ReflectorDomain {
 
   _ReflectorDomain(this._reflector, this._capabilities) {}
 
-  // TODO(eernst, sigurdm): Perhaps reconsider what the best strategy for
-  // caching is.
+  // TODO(eernst) future: Perhaps reconsider what the best strategy
+  // for caching is.
   Map<ClassElement, Map<String, ExecutableElement>> _instanceMemberCache =
       new Map<ClassElement, Map<String, ExecutableElement>>();
 
@@ -134,9 +135,9 @@ class _ReflectorDomain {
 
     String namedWithDefaults = new Iterable.generate(NamedParameterNames.length,
         (int i) {
-      // TODO(eernst, sigurdm, #8): Recreate the default values faithfully.
-      // TODO(eernst, sigurdm, #8): Until that is done, recognize unhandled
-      // cases, and emit error/warning.
+      // TODO(#8) future: Recreate default values.
+      // TODO(#8) implement: Until that is done, recognize
+      // unhandled cases, and emit error/warning.
       String defaultValueCode =
           constructor.parameters[requiredPositionalCount + i].defaultValueCode;
       String defaultValueString =
@@ -177,7 +178,8 @@ class _ReflectorDomain {
     return "const $prefix.${_reflector.name}()";
   }
 
-  String _generateCode(Resolver resolver, _ImportCollector importCollector) {
+  String _generateCode(Resolver resolver, _ImportCollector importCollector,
+      TransformLogger logger, AssetId dataId) {
     Enumerator<ClassElement> classes = new Enumerator<ClassElement>();
     Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
     Enumerator<FieldElement> fields = new Enumerator<FieldElement>();
@@ -325,8 +327,8 @@ class _ReflectorDomain {
       Iterable<int> methodsIndices = classDomain._declarations
           .where(_executableIsntImplicitGetterOrSetter)
           .map((ExecutableElement element) {
-        // TODO(eernst): The "magic" default constructor in `Object` (the
-        // one that ultimately allocates the memory for _every_ new object)
+        // TODO(eernst) implement: The "magic" default constructor in `Object`
+        // (the one that ultimately allocates the memory for _every_ new object)
         // has no index, which creates the need to catch a `null` here.
         // Search for "magic" to find other occurrences of the same issue.
         // For now, we provide the index -1 for this declaration, because
@@ -344,7 +346,8 @@ class _ReflectorDomain {
       // also get an offset of `fields.length`.
       String instanceMembersCode = _formatAsList(classDomain._instanceMembers
           .map((ExecutableElement element) {
-        // TODO(eernst): The "magic" default constructor index: -1.
+        // TODO(eernst) implement: The "magic" default constructor has
+        // index: -1; adjust this when support for it has been implemented.
         int index = members.indexOf(element);
         return index == null ? -1 : index + fieldsLength;
       }));
@@ -377,8 +380,8 @@ class _ReflectorDomain {
 
       String classMetadataCode;
       if (_capabilities._supportsMetadata) {
-        classMetadataCode = _extractMetadataCode(
-            classDomain._classElement, resolver, importCollector);
+        classMetadataCode = _extractMetadataCode(classDomain._classElement,
+            resolver, importCollector, logger, dataId);
       } else {
         classMetadataCode = "null";
       }
@@ -416,7 +419,8 @@ class _ReflectorDomain {
       int ownerIndex = classes.indexOf(element.enclosingElement);
       String metadataCode;
       if (_capabilities._supportsMetadata) {
-        metadataCode = _extractMetadataCode(element, resolver, importCollector);
+        metadataCode = _extractMetadataCode(
+            element, resolver, importCollector, logger, dataId);
       } else {
         metadataCode = null;
       }
@@ -430,7 +434,8 @@ class _ReflectorDomain {
       int ownerIndex = classes.indexOf(element.enclosingElement);
       String metadataCode;
       if (_capabilities._supportsMetadata) {
-        metadataCode = _extractMetadataCode(element, resolver, importCollector);
+        metadataCode = _extractMetadataCode(
+            element, resolver, importCollector, logger, dataId);
       } else {
         metadataCode = null;
       }
@@ -501,7 +506,7 @@ class _ClassDomain {
   /// behavioral point of view on the class. Also note that this is not
   /// the same semantics as that of `declarations` in [ClassMirror].
   Iterable<ExecutableElement> get _declarations {
-    // TODO(sigurdm): Include type variables (if we decide to keep them).
+    // TODO(sigurdm) feature: Include type variables (if we keep them).
     return [
       _declaredMethods,
       _declaredAndImplicitAccessors,
@@ -590,7 +595,7 @@ class _Capabilities {
   bool _supportsInstanceInvoke(List<ec.ReflectCapability> capabilities,
       String methodName, Iterable<DartObjectImpl> metadata) {
     bool supportsTarget(ec.ReflecteeQuantifyCapability capability) {
-      // TODO(eernst): implement this correctly; will need something
+      // TODO(eernst) implement: correct this; will need something
       // like this, which will cover the case where we have applied
       // the trivial subtype:
       return _supportsInstanceInvoke(
@@ -616,7 +621,7 @@ class _Capabilities {
         return true;
       }
       // Handle globally quantified capabilities.
-      // TODO(eernst): We probably need to refactor a lot of stuff
+      // TODO(eernst) feature: We probably need to refactor a lot of stuff
       // to get this right, so the first approach will simply be to
       // discover the relevant capabilities, and indicate that they
       // are not yet supported.
@@ -645,7 +650,7 @@ class _Capabilities {
         return true;
       }
       // Handle reflectee based capabilities.
-      // TODO(eernst, sigurdm): implement.
+      // TODO(eernst) feature: Support reflectee based capabilities.
     }
 
     // All options exhausted, give up.
@@ -661,8 +666,8 @@ class _Capabilities {
     });
   }
 
-  // TODO(sigurdm): Find a way to cache these. Perhaps take an element instead
-  // of name+metadata.
+  // TODO(sigurdm) future: Find a way to cache these. Perhaps take an
+  // element instead of name+metadata.
   bool supportsInstanceInvoke(
       String methodName, List<ElementAnnotation> metadata) {
     var v = _supportsInstanceInvoke(
@@ -680,7 +685,7 @@ class _Capabilities {
   bool _supportsStaticInvoke(List<ec.ReflectCapability> capabilities,
       String methodName, Iterable<DartObject> metadata) {
     bool supportsTarget(ec.ReflecteeQuantifyCapability capability) {
-      // TODO(eernst): implement this correctly; will need something
+      // TODO(eernst) implement: Correct this; will need something
       // like this, which will cover the case where we have applied
       // the trivial subtype:
       return _supportsStaticInvoke(
@@ -706,7 +711,7 @@ class _Capabilities {
         return true;
       }
       // Handle globally quantified capabilities.
-      // TODO(eernst): We probably need to refactor a lot of stuff
+      // TODO(eernst) feature: We probably need to refactor a lot of stuff
       // to get this right, so the first approach will simply be to
       // discover the relevant capabilities, and indicate that they
       // are not yet supported.
@@ -770,7 +775,7 @@ class _ImportCollector {
   Iterable<LibraryElement> get _libraries => _mapping.keys;
 }
 
-// TODO(eernst): Keep in mind, with reference to
+// TODO(eernst) future: Keep in mind, with reference to
 // http://dartbug.com/21654 comment #5, that it would be very valuable
 // if this transformation can interact smoothly with incremental
 // compilation.  By nature, that is hard to achieve for a
@@ -865,7 +870,7 @@ class TransformerImplementation {
   ClassElement _getReflectableAnnotation(
       ElementAnnotation elementAnnotation, ClassElement focusClass) {
     if (elementAnnotation.element == null) {
-      // TODO(eernst): The documentation in
+      // TODO(eernst) clarify: The documentation in
       // analyzer/lib/src/generated/element.dart does not reveal whether
       // elementAnnotation.element can ever be null. The following action
       // is based on the assumption that it means "there is no annotation
@@ -895,7 +900,7 @@ class TransformerImplementation {
     }
 
     Element element = elementAnnotation.element;
-    // TODO(eernst): Currently we only handle constructor expressions
+    // TODO(eernst) future: Currently we only handle constructor expressions
     // and simple identifiers.  May be generalized later.
     if (element is ConstructorElement) {
       bool isOk =
@@ -920,9 +925,9 @@ class TransformerImplementation {
     }
     // Otherwise [element] is some other construct which is not supported.
     //
-    // TODO(eernst): We need to consider whether there could be some other
-    // syntactic constructs that are incorrectly assumed by programmers to
-    // be usable with Reflectable.  Currently, such constructs will silently
+    // TODO(eernst) clarify: We need to consider whether there could be some
+    // other syntactic constructs that are incorrectly assumed by programmers
+    // to be usable with Reflectable.  Currently, such constructs will silently
     // have no effect; it might be better to emit a diagnostic message (a
     // hint?) in order to notify the programmer that "it does not work".
     // The trade-off is that such constructs may have been written by
@@ -970,8 +975,8 @@ class TransformerImplementation {
               DartObjectImpl value = evaluation.value;
               String pattern = value.fields["classNamePattern"].stringValue;
               if (pattern == null) {
-                // TODO(sigurdm): Create a span for the annotation rather than
-                // the import.
+                // TODO(sigurdm) implement: Create a span for the annotation
+                // rather than the import.
                 _warn("The classNamePattern must be a string", import);
                 continue;
               }
@@ -1000,7 +1005,7 @@ class TransformerImplementation {
               Object metadataFieldValue = value.fields["metadataType"].value;
               if (metadataFieldValue == null ||
                   value.fields["metadataType"].type.element != typeClass) {
-                // TODO(sigurdm): Create a span for the annotation.
+                // TODO(sigurdm) implement: Create a span for the annotation.
                 _warn("The metadata must be a Type. "
                     "Found ${value.fields["metadataType"].type.element.name}",
                     import);
@@ -1031,11 +1036,6 @@ class TransformerImplementation {
 
   /// Returns a [ReflectionWorld] instantiated with all the reflectors seen by
   /// [resolver] and all classes annotated by them.
-  ///
-  /// TODO(eernst): Make sure it works also when other packages are being
-  /// used by the target program which have already been transformed by
-  /// this transformer (e.g., there would be a clash on the use of
-  /// reflectableClassId with values near 1000 for more than one class).
   ReflectionWorld _computeWorld(LibraryElement reflectableLibrary) {
     ReflectionWorld world = new ReflectionWorld(reflectableLibrary);
     Map<ClassElement, _ReflectorDomain> domains =
@@ -1242,7 +1242,7 @@ class TransformerImplementation {
           constant.fields["(super)"].fields["namePattern"] == null ||
           constant.fields["(super)"].fields["namePattern"].stringValue ==
               null) {
-        // TODO(sigurdm): Better error-message.
+        // TODO(sigurdm) diagnostic: Better error-message.
         _logger.warning("Could not extract namePattern.");
       }
       return constant.fields["(super)"].fields["namePattern"].stringValue;
@@ -1254,8 +1254,8 @@ class TransformerImplementation {
       if (constant.fields == null ||
           constant.fields["(super)"] == null ||
           constant.fields["(super)"].fields["metadataType"] == null) {
-        // TODO(sigurdm): Better error-message. We need a way to get a source
-        // location from a constant.
+        // TODO(sigurdm) diagnostic: Better error-message. We need a way
+        // to get a source location from a constant.
         _logger.warning("Could not extract the metadata field.");
         return null;
       }
@@ -1306,16 +1306,16 @@ class TransformerImplementation {
       case "TypingCapability":
         return new ec.TypingCapability(constant.fields["upperBound"].value);
       case "SubtypeQuantifyCapability":
-        // TODO(eernst)
+        // TODO(eernst) feature:
         throw new UnimplementedError("$classElement not yet supported!");
       case "AdmitSubtypeCapability":
-        // TODO(eernst)
+        // TODO(eernst) feature:
         throw new UnimplementedError("$classElement not yet supported!");
       case "GlobalQuantifyCapability":
-        // TODO(eernst)
+        // TODO(eernst) feature:
         throw new UnimplementedError("$classElement not yet supported!");
       case "GlobalQuantifyMetaCapability":
-        // TODO(eernst)
+        // TODO(eernst) feature:
         throw new UnimplementedError("$classElement not yet supported!");
       default:
         throw new UnimplementedError("Unexpected capability $classElement");
@@ -1334,9 +1334,9 @@ class TransformerImplementation {
     // used for metadata; it is a bug in the transformer if not.
     // It must also be a default constructor.
     assert(constructorElement.isConst);
-    // TODO(eernst): Ensure that some other location in this transformer
-    // checks that the reflector class constructor is indeed a default
-    // constructor, such that this can be a mere assertion rather than
+    // TODO(eernst) clarify: Ensure that some other location in this
+    // transformer checks that the reflector class constructor is indeed a
+    // default constructor, such that this can be a mere assertion rather than
     // a user-oriented error report.
     assert(constructorElement.isDefaultConstructor);
 
@@ -1352,7 +1352,7 @@ class TransformerImplementation {
       // it here.
       return new _Capabilities(<ec.ReflectCapability>[]);
     }
-    // TODO(eernst): Ensure again that this can be a mere assertion.
+    // TODO(eernst) clarify: Ensure again that this can be a mere assertion.
     assert(initializers.length == 1);
 
     // Main case: the initializer is exactly one element. We must
@@ -1385,7 +1385,7 @@ class TransformerImplementation {
   String _reflectionWorldSource(ReflectionWorld world, AssetId id) {
     // Notice it is important to generate the code before printing the
     // imports because generating the code can add further imports.
-    String code = world.generateCode(_resolver);
+    String code = world.generateCode(_resolver, _logger, id);
 
     List<String> imports = new List<String>();
     world.importCollector._libraries.forEach((LibraryElement library) {
@@ -1426,8 +1426,8 @@ initializeReflectable() {
     sourceManager.insert(_newImportIndex(mainLibrary),
         '\nimport "$reflectWorldUri" show initializeReflectable;');
 
-    // TODO(eernst, sigurdm): This won't work if main is not declared in
-    // `mainLibrary`.
+    // TODO(eernst) implement: This won't work if main is not declared
+    // in `mainLibrary`.
     if (mainLibrary.entryPoint == null) {
       _logger.warning("Could not find a main method in $entryPoint. Skipping.");
       return source;
@@ -1435,9 +1435,9 @@ initializeReflectable() {
     sourceManager.insert(mainLibrary.entryPoint.nameOffset, "_");
     String args = (mainLibrary.entryPoint.parameters.length == 0) ? "" : "args";
     sourceManager.insert(source.length, """
-void main($args) {
+main($args) {
   initializeReflectable();
-  _main($args);
+  return _main($args);
 }""");
     return sourceManager.source;
   }
@@ -1455,12 +1455,18 @@ void main($args) {
     List<Asset> assets = await aggregateTransform.primaryInputs.toList();
 
     if (assets.isEmpty) {
-      // It is a warning, not an error, to have nothing to transform.
-      _logger.warning("Warning: Nothing to transform");
+      // It is not an error to have nothing to transform.
+      _logger.info("Nothing to transform");
       // Terminate with a non-failing status code to the OS.
       exit(0);
     }
 
+    // TODO(eernst) algorithm: Build a mapping from entry points to assets by
+    // iterating over `assets` and doing a binary search on a sorted
+    // list of entry points: if A is the number of assets and E is the
+    // number of entry points (note: E < A, and E == 1 could be quite
+    // common), this would cost O(A*log(E)), whereas the current
+    // approach costs O(A*E). OK, it's log(E)+epsilon, not 0 when E == 1.
     for (String entryPoint in entryPoints) {
       // Find the asset corresponding to [entryPoint]
       Asset entryPointAsset = assets.firstWhere(
@@ -1502,7 +1508,7 @@ void main($args) {
 /// Wrapper of `AggregateTransform` of type `Transform`, allowing us to
 /// get a `Resolver` for a given `AggregateTransform` with a given
 /// selection of a primary entry point.
-/// TODO(eernst): We will just use this temporarily; code_transformers
+/// TODO(eernst) future: We will just use this temporarily; code_transformers
 /// may be enhanced to support a variant of Resolvers.get that takes an
 /// [AggregateTransform] and an [Asset] rather than a [Transform], in
 /// which case we can drop this class and use that method.
@@ -1590,7 +1596,7 @@ String _extractConstantCode(Expression expression,
       return _extractConstantCode(
           subExpression, originatingLibrary, resolver, importCollector);
     });
-    // TODO(sigurdm): Type arguments.
+    // TODO(sigurdm) feature: Type arguments.
     return "const ${_formatAsList(elements)}";
   } else if (expression is MapLiteral) {
     List<String> elements = expression.entries.map((MapLiteralEntry entry) {
@@ -1600,7 +1606,7 @@ String _extractConstantCode(Expression expression,
           entry.value, originatingLibrary, resolver, importCollector);
       return "$key: $value";
     });
-    // TODO(sigurdm): Type arguments.
+    // TODO(sigurdm) feature: Type arguments.
     return "const ${_formatAsMap(elements)}";
   } else if (expression is InstanceCreationExpression) {
     String constructor = expression.constructorName.toSource();
@@ -1608,13 +1614,13 @@ String _extractConstantCode(Expression expression,
     importCollector._addLibrary(libraryOfConstructor);
     String prefix =
         importCollector._getPrefix(expression.staticElement.library);
-    // TODO(sigurdm): Named arguments.
+    // TODO(sigurdm) implement: Named arguments.
     String arguments = expression.argumentList.arguments
         .map((Expression argument) {
       return _extractConstantCode(
           argument, originatingLibrary, resolver, importCollector);
     }).join(", ");
-    // TODO(sigurdm): Type arguments.
+    // TODO(sigurdm) feature: Type arguments.
     return "const $prefix.$constructor($arguments)";
   } else if (expression is Identifier) {
     Element element = expression.staticElement;
@@ -1624,8 +1630,8 @@ String _extractConstantCode(Expression expression,
     if (enclosingElement is ClassElement) {
       prefix += ".${enclosingElement.name}";
     }
-    // TODO(sigurdm): Emit a warning/error if the element is not in the global
-    // public scope of the library.
+    // TODO(sigurdm) diagnostic: Emit a warning/error if the element is not
+    // in the global public scope of the library.
     return "$prefix.${element.name}";
   } else if (expression is BinaryExpression) {
     String a = _extractConstantCode(
@@ -1672,9 +1678,33 @@ String _extractConstantCode(Expression expression,
   }
 }
 
+/// The names of the libraries that can be accessed with a 'dart:x' import uri.
+Set<String> sdkLibraryNames = new Set.from([
+  "async",
+  "collection",
+  "convert",
+  "core",
+  "developer",
+  "html",
+  "indexed_db",
+  "io",
+  "isolate",
+  "js",
+  "math",
+  "mirrors",
+  "profiler",
+  "svg",
+  "typed_data",
+  "web_audio",
+  "web_gl",
+  "web_sql"
+]);
+
 /// Returns a String with the code used to build the metadata of [element].
-String _extractMetadataCode(
-    Element element, Resolver resolver, _ImportCollector importCollector) {
+///
+/// Also adds any neccessary imports to [importCollector].
+String _extractMetadataCode(Element element, Resolver resolver,
+    _ImportCollector importCollector, TransformLogger logger, AssetId dataId) {
   Iterable<ElementAnnotation> elementAnnotations = element.metadata;
 
   if (elementAnnotations == null) return "[]";
@@ -1697,10 +1727,36 @@ String _extractMetadataCode(
 
   AnnotatedNode annotatedNode = node;
   for (Annotation annotationNode in annotatedNode.metadata) {
-    // TODO(sigurdm): Emit a warning/error if the element is not in the global
-    // public scope of the library.
-    importCollector._addLibrary(annotationNode.element.library);
-    String prefix = importCollector._getPrefix(annotationNode.element.library);
+    // TODO(sigurdm) diagnostic: Emit a warning/error if the element is not
+    // in the global public scope of the library.
+    if (annotationNode.element == null) {
+      // Some internal constants (mainly in dart:html) cannot be resolved by
+      // the analyzer. Ignore them.
+      // TODO(sigurdm) clarify: Investigate this, and see if these constants can
+      // somehow be included.
+      logger.fine("Ignoring unresolved metadata $annotationNode",
+          asset: resolver.getSourceAssetId(element),
+          span: resolver.getSourceSpan(element));
+      continue;
+    }
+
+    LibraryElement library = annotationNode.element.library;
+    Uri importUri = resolver.getImportUri(library, from: dataId);
+    if (annotationNode.element.isPrivate ||
+        (importUri.scheme == "dart" &&
+            !sdkLibraryNames.contains(importUri.path))) {
+      // Private constants, and constants made of classes in internal libraries
+      // cannot be represented.
+      // Skip them.
+      // TODO(sigurdm) clarify: Investigate this, and see if these constants can
+      // somehow be included.
+      logger.fine("Ignoring unrepresentable metadata $annotationNode",
+          asset: resolver.getSourceAssetId(element),
+          span: resolver.getSourceSpan(element));
+      continue;
+    }
+    importCollector._addLibrary(library);
+    String prefix = importCollector._getPrefix(library);
     if (annotationNode.arguments != null) {
       // A const constructor.
       String constructor = (annotationNode.constructorName == null)

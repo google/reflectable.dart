@@ -83,7 +83,7 @@ class TypeCapability implements ApiReflectCapability {
   const TypeCapability(this.upperBound);
 }
 
-// TODO(eernst): Obtain an Element representing the class Object.
+// TODO(eernst) implement: Obtain an Element representing the class Object.
 const typeCapability = const TypeCapability(null /* should ~ Object! */);
 
 const localTypeCapability = const TypeCapability(null);

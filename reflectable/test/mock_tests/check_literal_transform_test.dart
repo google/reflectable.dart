@@ -46,9 +46,9 @@ _main() {
   InstanceMirror instanceMirror = myReflectable.reflect(new A());
 }
 
-void main() {
+main() {
   initializeReflectable();
-  _main();
+  return _main();
 }""",
     "a|main_reflection_data.dart": """
 library main_reflection_data.dart;

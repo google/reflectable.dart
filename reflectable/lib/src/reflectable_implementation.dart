@@ -239,7 +239,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   @override
   Object invokeGetter(String getterName) {
     if (!reflectableSupportsStaticInvoke(_reflectable, getterName,
-        _libraryMirror.declarations[getterName].metadata)) {
+        _libraryMirror.declarations[new Symbol(getterName)].metadata)) {
       throw new NoSuchInvokeCapabilityError(_receiver, getterName, [], null);
     }
     Symbol getterNameSymbol = new Symbol(getterName);
@@ -249,7 +249,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   @override
   Object invokeSetter(String setterName, Object value) {
     if (!reflectableSupportsStaticInvoke(_reflectable, setterName,
-        _libraryMirror.declarations[setterName].metadata)) {
+        _libraryMirror.declarations[new Symbol(setterName)].metadata)) {
       throw new NoSuchInvokeCapabilityError(
           _receiver, setterName, [value], null);
     }
@@ -442,7 +442,7 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
 
   @override
   Map<String, rm.DeclarationMirror> get declarations {
-    // TODO(sigurdm): Possibly cache this.
+    // TODO(sigurdm) future: Possibly cache this.
     Map<String, rm.DeclarationMirror> result =
         new Map<String, rm.DeclarationMirror>();
     _classMirror.declarations
@@ -494,11 +494,12 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
           result[name] = wrapDeclarationMirror(declarationMirror, _reflectable);
         }
       } else {
-        // TODO(sigurdm): Consider capabilities for other declarations; the
-        // additional subtypes of DeclarationMirror are LibraryMirror (global),
-        // TypeMirror and the 4 subtypes thereof, and ParameterMirror (declared
-        // in a method, not class), so the only case that needs further
-        // clarification is TypeVariableMirror. For now we just let it through.
+        // TODO(sigurdm) implement: Consider capabilities for other
+        // declarations; the additional subtypes of DeclarationMirror are
+        // LibraryMirror (global), TypeMirror and the 4 subtypes thereof,
+        // and ParameterMirror (declared in a method, not class), so the
+        // only case that needs further clarification is TypeVariableMirror.
+        // For now we just let it through.
         result[name] = wrapDeclarationMirror(declarationMirror, _reflectable);
       }
     });
@@ -507,8 +508,8 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
 
   @override
   Map<String, rm.MethodMirror> get instanceMembers {
-    // TODO(sigurdm): Only expose members that are allowed by the capabilities
-    // of the reflectable.
+    // TODO(sigurdm) implement: Only expose members that are allowed
+    // by the capabilities of the reflectable.
     Map<Symbol, dm.MethodMirror> members = _classMirror.instanceMembers;
     return new Map<String, rm.MethodMirror>.fromIterable(members.keys,
         key: (k) => dm.MirrorSystem.getName(k),
@@ -517,8 +518,8 @@ class _ClassMirrorImpl extends _TypeMirrorImpl with _ObjectMirrorImplMixin
 
   @override
   Map<String, rm.MethodMirror> get staticMembers {
-    // TODO(sigurdm): Only expose members that are allowed by the capabilities
-    // of the reflectable.
+    // TODO(sigurdm) implement: Only expose members that are allowed by the
+    // capabilities of the reflectable.
     Map<Symbol, dm.MethodMirror> members = _classMirror.staticMembers;
     return new Map<String, rm.MethodMirror>.fromIterable(members.keys,
         key: (k) => dm.MirrorSystem.getName(k),
@@ -1082,7 +1083,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   }
 
   Set<dm.ClassMirror> get _supportedClasses {
-    // TODO(sigurdm): This cache will break with deferred loading.
+    // TODO(sigurdm) implement: This cache will break with deferred loading.
     return _supportedClassesCache.putIfAbsent(this, () {
       Set<dm.ClassMirror> result = new Set<dm.ClassMirror>();
       List<RegExp> globalPatterns = new List<RegExp>();

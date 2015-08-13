@@ -33,9 +33,6 @@ class A {
   static int namedArguments(int x, int y, {int z: 42}) => x + y - z;
 }
 
-@myReflectable
-myFunction() => "hello";
-
 main() {
   A instance = new A();
   InstanceMirror instanceMirror = myReflectable.reflect(instance);
@@ -92,11 +89,5 @@ main() {
   });
   test('static invoke with mandatory arguments, plus named ones', () {
     expect(classMirror.invoke("namedArguments", [21, 21], {#z: 0}), 42);
-  });
-
-  LibraryMirror lm = myReflectable.findLibrary('test_reflectable.test.invoke_test');
-  test('invoke function', () {
-    expect(lm.invoke('myFunction', []), equals('hello'));
-    expect(lm.invoke('myFunction', []), equals('hello'));
   });
 }

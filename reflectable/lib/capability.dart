@@ -34,7 +34,7 @@ import 'reflectable.dart';
 /// of [Reflectable], and then including an instance of `R` in the
 /// metadata associated with `C`. More details can be found in the
 /// design document about this library.
-/// TODO(eernst): Insert a link to the design document; if we change the
+/// TODO(eernst) doc: Insert a link to the design document; if we change the
 /// design document to markdown and store it in the reflectable repo it might
 /// be possible to use a markdown link here.
 abstract class ReflectCapability {
@@ -372,7 +372,7 @@ class SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
 ///
 /// For more information about this potentially dangerous device, please
 /// refer to the design document.
-/// TODO(eernst): Insert a link to the design document.
+/// TODO(eernst) doc: Insert a link to the design document.
 class AdmitSubtypeCapability extends ReflecteeQuantifyCapability {
   const AdmitSubtypeCapability([ApiReflectCapability cap0,
       ApiReflectCapability cap1, ApiReflectCapability cap2,

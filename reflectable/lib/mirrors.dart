@@ -43,7 +43,7 @@
 // resp. '// TYARG: <old-type-argument>' and the discrepancies are
 // mentioned in the relevant class dartdoc.
 //
-// TODO(eernst): The information given in the previous paragraph
+// TODO(eernst) doc: The information given in the previous paragraph
 // should be made part of the dartdoc comments on each of the relevant
 // methods; since those comments will now differ from the ones in
 // dart:mirrors, we should copy them all and add the discrepancies.
@@ -55,12 +55,12 @@
 // general concerned with types in a broad sense: [ClassMirror],
 // [TypeMirror], and [LibraryMirror].
 
-// TODO(eernst): The preceeding comment blocks should be made a dartdoc
+// TODO(eernst) doc: The preceeding comment blocks should be made a dartdoc
 // on the library when/if such dartdoc comments are supported.
-// TODO(eernst): Change the preceeding comment to use a more
+// TODO(eernst) doc: Change the preceeding comment to use a more
 // user-centric style.
 
-// TODO(eernst): This is a Meta-TODO, adding detail to several TODOs below
+// TODO(eernst) doc: This is a Meta-TODO, adding detail to several TODOs below
 // saying 'make this .. more user friendly' as well as the comment above
 // saying 'more user-centric'. All those "not-so-friendly" comments originate
 // in the `mirrors.dart` file that implements the `dart:mirrors` library, so
@@ -138,8 +138,8 @@ abstract class DeclarationMirror implements Mirror {
    * Note that the return type of the corresponding method in
    * dart:mirrors is List<InstanceMirror>.
    *
-   * TODO(eernst): Make this comment more user friendly.
-   * TODO(eernst): Include comments as `metadata`, remember to
+   * TODO(eernst) doc: Make this comment more user friendly.
+   * TODO(eernst) implement: Include comments as `metadata`, remember to
    * indicate which ones are doc comments (`isDocComment`),
    * cf. https://github.com/dart-lang/reflectable/issues/3.
    * Note that we may wish to represent a comment as an
@@ -186,8 +186,8 @@ abstract class ObjectMirror implements Mirror {
    * Note that the return type of the corresponding method in
    * dart:mirrors is InstanceMirror.
    *
-   * TODO(eernst): make this comment more user friendly.
-   * TODO(eernst): revise language on private members when semantics known.
+   * TODO(eernst) doc: make this comment more user friendly.
+   * TODO(eernst) doc: revise language on private members when semantics known.
    */
   Object invoke(String memberName,
                 List positionalArguments,
@@ -228,8 +228,8 @@ abstract class ObjectMirror implements Mirror {
    * Note that the return type of the corresponding method in
    * dart:mirrors is InstanceMirror.
    *
-   * TODO(eernst): make this comment more user friendly.
-   * TODO(eernst): revise language on private members when semantics known.
+   * TODO(eernst) doc: make this comment more user friendly.
+   * TODO(eernst) doc: revise language on private members when semantics known.
    */
   Object invokeGetter(String getterName);
 
@@ -258,8 +258,8 @@ abstract class ObjectMirror implements Mirror {
    * Note that the return type of the corresponding method in
    * dart:mirrors is InstanceMirror.
    *
-   * TODO(eernst): make this comment more user friendly.
-   * TODO(eernst): revise language on private members when semantics known.
+   * TODO(eernst) doc: make this comment more user friendly.
+   * TODO(eernst) doc: revise language on private members when semantics known.
    */
   Object invokeSetter(String setterName, Object value);
 }
@@ -369,8 +369,8 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
    * Note that the return type of the corresponding method in
    * dart:mirrors is InstanceMirror.
    *
-   * TODO(eernst): make this comment more user friendly.
-   * TODO(eernst): revise language on private members when semantics known.
+   * TODO(eernst) doc: make this comment more user friendly.
+   * TODO(eernst) doc: revise language on private members when semantics known.
    */
   Object newInstance(String constructorName,
                      List positionalArguments,
@@ -420,7 +420,7 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
    * a reflective operation for each new receiver (which is in practice
    * likely to mean a reflective operation for each invocation).
    *
-   * TODO(eernst): revise language on private members when semantics known.
+   * TODO(eernst) doc: revise language on private members when semantics known.
    */
   Function invoker(String memberName);
 }

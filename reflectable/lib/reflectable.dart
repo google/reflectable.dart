@@ -4,7 +4,7 @@
 
 // This is the main library in package reflectable.
 
-// TODO(eernst): Write "library dartdoc" for this library.
+// TODO(eernst) doc: Write "library dartdoc" for this library.
 
 library reflectable.reflectable;
 

@@ -11,7 +11,7 @@ class Reflector extends Reflectable {
   const Reflector() : super(instanceInvokeCapability, newInstanceCapability);
 }
 
-// TODO(sigurdm): Adapt this test when we support fields.
+// TODO(sigurdm) implement: Adapt this test when we support fields.
 
 @Reflector()
 abstract class A {

@@ -20,7 +20,7 @@ reflectable **capability**. For a more detailed discussion about capabilities,
 please consult the [reflectable capability design document][1]. On this page we
 just use a couple of simple special cases.
 
-[1]: https://github.com/dart-lang/reflectable/blob/master/reflectable/doc/TheDesignofReflectableCapabilities.pdf
+[1]: https://github.com/dart-lang/reflectable/blob/master/reflectable/doc/TheDesignOfReflectableCapabilities.md
 
 The resource benefits obtained by using this package are established by
 transformation. That is, this package includes a [`pub` transformer][2]. The
@@ -148,9 +148,8 @@ work.
 For a more advanced example implementing the base of a serialization framework,
 please look into [serialize_test.dart][3] test and its [library][4].
 
-[3]: https://github.com/dart-lang/reflectable/test_reflectable/test/serialize_test.dart
-[4]: https://github.com/dart-lang/reflectable/test_reflectable/lib/serialize.dart
-
+[3]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/serialize_test.dart
+[4]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/lib/serialize.dart
 
 ### Comparison with `dart:mirrors` with `MirrorsUsed` annotations
 

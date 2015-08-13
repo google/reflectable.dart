@@ -29,7 +29,7 @@ main() {
   test('non-existing superclass', () {
     expect(classObjectMirror.superclass, null);
   });
-  // TODO(eernst): add missing cases covered by `typeRelationsCapability`:
+  // TODO(eernst) implement: add missing cases for `typeRelationsCapability`:
   // typeVariables, typeArguments, originalDeclaration, isSubtypeOf,
   // isAssignableTo, superClass, superInterfaces, mixin, isSubclassOf,
   // upperBound, and referent.
