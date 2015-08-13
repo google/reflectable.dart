@@ -12,9 +12,13 @@ function run_dart {
   fi
 }
 
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+pub build --mode=debug test
+
 SUMMARY=""
-for n in ../test/*_test.dart; do run_dart ..; done
-for n in ../build/test/*_test.dart; do run_dart ../build; done
+for n in $DIR/../test/*_test.dart; do run_dart $DIR/..; done
+for n in $DIR/../build/test/*_test.dart; do run_dart $DIR/../build; done
 
 echo "---------- Failed tests:$SUMMARY"
 

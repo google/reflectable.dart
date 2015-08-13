@@ -74,6 +74,23 @@ class BImplementer implements B {
 Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
 Matcher isNoSuchCapabilityError = new isInstanceOf<c.NoSuchCapabilityError>();
 
+class MyReflectableWithMetaCap extends r.Reflectable {
+  const MyReflectableWithMetaCap() : super(c.metadataCapability, c.invokingCapability);
+}
+
+const myReflectableWithMetaCap = const MyReflectableWithMetaCap();
+
+class AnnotationClass {
+  const AnnotationClass();
+}
+
+@myReflectableWithMetaCap
+class AnnotatedWithoutConstructor {
+  @AnnotationClass()
+  String someField;
+}
+
+
 void testDynamic(B o, String description) {
   test("Dynamic invocation $description", () {
     expect(const MyReflectableInstance().canReflect(o), true);
@@ -148,5 +165,10 @@ void main() {
       expect(const MyReflectableInstance().canReflectType(Object), false);
       const MyReflectableInstance().reflect(new Object());
     }, throwsNoSuchCapabilityError);
+  });
+
+  test("Annotated Capability", () {
+    var awcMirror = myReflectableWithMetaCap.reflectType(AnnotatedWithoutConstructor);
+    expect(awcMirror.declarations['someField'].metadata, equals([const AnnotationClass()]));
   });
 }
