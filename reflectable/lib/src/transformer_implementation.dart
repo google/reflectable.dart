@@ -1686,6 +1686,8 @@ String _extractMetadataCode(
 
   AstNode node = element.node;
 
+  if(node == null) return "[]";
+
   // The `element.node` of a field is the [VariableDeclaration] that is nested
   // in a [VariableDeclarationList] that is nested in a [FieldDeclaration]. The
   // metadata is stored on the [FieldDeclaration].
