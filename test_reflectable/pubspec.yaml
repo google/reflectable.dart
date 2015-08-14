@@ -42,6 +42,7 @@ transformers:
       - test/invoker_test.dart
       - test/invoker_operator_test.dart
       - test/type_relations_test.dart
+      - test/exported_main_test.dart
       - test/invoke_toplevel_test.dart
       - test/parameter_mirrors_test.dart
 - $dart2js:

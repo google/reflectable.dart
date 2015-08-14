@@ -24,14 +24,12 @@ get:
 	( cd ..; pub get )
 
 check:
-	( cd ..; dartanalyzer {lib,test}/{,*/}*.dart )
+	( cd ..; dartanalyzer `find test lib -name \*.dart` )
 
 build:
 	( cd ..; pub build --mode=debug test )
 
 test:
-	@echo "-------------------- source_manager_test"
-	@dart $(OPTIONS) $(TEST_DIR)/source_manager_test.dart
 	@echo "-------------------- mock_tests"
 	@./run_mock_tests
 
