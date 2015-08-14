@@ -828,7 +828,12 @@ class _ParameterMirrorImpl extends _VariableMirrorImpl
   bool get hasDefaultValue => _parameterMirror.hasDefaultValue;
 
   @override
-  Object get defaultValue => _parameterMirror.defaultValue.reflectee;
+  Object get defaultValue {
+    if (_parameterMirror.hasDefaultValue) {
+      return _parameterMirror.defaultValue.reflectee;
+    }
+    return null;
+  }
 
   @override
   bool operator ==(other) => other is _ParameterMirrorImpl
