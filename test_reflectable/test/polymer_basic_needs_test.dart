@@ -49,8 +49,10 @@ ThinDeclarationMirror makeThin(DeclarationMirror declaration) {
 }
 
 class MyReflectable extends Reflectable {
-  const MyReflectable() : super(instanceInvokeCapability);
+  const MyReflectable()
+      : super(instanceInvokeCapability, declarationsCapability);
 }
+
 const myReflectable = const MyReflectable();
 
 List<DeclarationMirror> _query(Type dartType) {

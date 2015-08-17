@@ -11,8 +11,9 @@ import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 
 class MyReflectable extends Reflectable {
-  const MyReflectable() : super(
-          metadataCapability, instanceInvokeCapability, staticInvokeCapability);
+  const MyReflectable()
+      : super(metadataCapability, instanceInvokeCapability,
+            staticInvokeCapability, declarationsCapability);
 }
 
 const myReflectable = const MyReflectable();
@@ -25,7 +26,9 @@ class MyReflectable2 extends Reflectable {
 const myReflectable2 = const MyReflectable2();
 
 const b = 13;
-const c = const [const Bar(const {"a": 14})];
+const c = const [
+  const Bar(const {"a": 14})
+];
 const d = true;
 
 class K {
@@ -81,13 +84,17 @@ main() {
         2: 6
       }),
       13,
-      const [const Bar(const {"a": 14})]
+      const [
+        const Bar(const {"a": 14})
+      ]
     ]);
 
     expect(myReflectable.reflectType(Foo).declarations["foo"].metadata, [
       const Bar(const {}),
       13,
-      const [const Bar(const {"a": 14})]
+      const [
+        const Bar(const {"a": 14})
+      ]
     ]);
 
     expect(myReflectable.reflectType(Foo).declarations["x"].metadata, [b]);

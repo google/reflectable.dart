@@ -29,52 +29,17 @@ bool get isTransformed => true;
 
 _unsupported() => throw new UnimplementedError();
 
-abstract class DeclarationMirrorUnimpl implements DeclarationMirror {
-  String get simpleName => _unsupported();
-  String get qualifiedName => _unsupported();
-  DeclarationMirror get owner => _unsupported();
-  bool get isPrivate => _unsupported();
-  bool get isTopLevel => _unsupported();
-  SourceLocation get location => _unsupported();
-  List<Object> get metadata => _unsupported();
-}
-
-abstract class ObjectMirrorUnimpl implements ObjectMirror {
-  Object invoke(String memberName, List positionalArguments,
-      [Map<Symbol, dynamic> namedArguments]) => _unsupported();
-  Object invokeGetter(String getterName) => _unsupported();
-  Object invokeSetter(String setterName, Object value) => _unsupported();
-
-  Object getField(String name) {
-    throw new UnsupportedError("Use invokeGetter instead of getField");
-  }
-
-  void setField(String name, Object value) {
-    throw new UnsupportedError("Use invokeSetter instead of setField");
-  }
-}
-
-abstract class InstanceMirrorUnimpl extends ObjectMirrorUnimpl
-    implements InstanceMirror {
-  ClassMirror get type => _unsupported();
-  bool get hasReflectee => _unsupported();
-  get reflectee => _unsupported();
-  bool operator ==(other) => _unsupported();
-  int get hashCode => _unsupported();
-  delegate(Invocation invocation) => _unsupported();
-}
-
 /// Invokes a getter on an object.
-typedef Object InvokerOfGetter(Object instance);
+typedef Object _InvokerOfGetter(Object instance);
 
 /// Invokes a setter on an object.
-typedef Object InvokerOfSetter(Object instance, Object value);
+typedef Object _InvokerOfSetter(Object instance, Object value);
 
 /// Invokes a static getter.
-typedef Object StaticGetter();
+typedef Object _StaticGetter();
 
 /// Invokes a setter on an object.
-typedef Object StaticSetter(Object value);
+typedef Object _StaticSetter(Object value);
 
 /// The data backing a reflector.
 class ReflectorData {
@@ -84,7 +49,7 @@ class ReflectorData {
   final List<ClassMirror> classMirrors;
 
   /// Repository of method mirrors used (via indices into this list) by
-  /// the above class mirrors to describe the behavior of the mirrored
+  /// the [classMirrors] to describe the behavior of the mirrored
   /// class and its instances, and of variable mirrors used to describe
   /// their state. From the behavioral point of view there are no fields,
   /// but each of them gives rise to a getter and possibly a setter (whose
@@ -97,6 +62,10 @@ class ReflectorData {
   /// redundancy in the stored information.
   final List<DeclarationMirror> memberMirrors;
 
+  /// Repository of parameter mirrors used (via indices into this list) by
+  /// the [memberMirrors] to describe the parameters of methods
+  final List<ParameterMirror> parameterMirrors;
+
   /// List of [Type]s used to select class mirrors: If M is a class
   /// mirror in [classMirrors] at index `i`, the mirrored class (and
   /// hence the runtime type of the mirrored instances) is found in
@@ -105,17 +74,17 @@ class ReflectorData {
 
   /// Map from getter names to closures accepting an instance and returning
   /// the result of invoking the getter with that name on that instance.
-  final Map<String, InvokerOfGetter> getters;
+  final Map<String, _InvokerOfGetter> getters;
 
   /// Map from setter names to closures accepting an instance and a new value,
   /// invoking the setter of that name on that instance, and returning its
   /// return value.
-  final Map<String, InvokerOfSetter> setters;
+  final Map<String, _InvokerOfSetter> setters;
 
   Map<Type, ClassMirror> _typeToClassMirrorCache;
 
-  ReflectorData(this.classMirrors, this.memberMirrors, this.types, this.getters,
-      this.setters);
+  ReflectorData(this.classMirrors, this.memberMirrors, this.parameterMirrors,
+      this.types, this.getters, this.setters);
 
   /// Returns a class-mirror for the given [type].
   ///
@@ -130,25 +99,32 @@ class ReflectorData {
 
 /// This mapping contains the mirror-data for each reflector.
 /// It will be initialized in the generated code.
-Map<Reflectable, ReflectorData> data = throw new StateError(
-    "Reflectable has not been initialized. "
-    "Did you forget to add the main file to the "
-    "reflectable transformer's entry_points in pubspec.yaml?");
+Map<Reflectable, ReflectorData> data =
+    throw new StateError("Reflectable has not been initialized. "
+        "Did you forget to add the main file to the "
+        "reflectable transformer's entry_points in pubspec.yaml?");
 
-class InstanceMirrorImpl implements InstanceMirror {
+abstract class _DataCaching {
+  // TODO(eernst) clarify: When we have some substantial pieces of code using
+  // reflectable, perform some experiments to detect how useful it is to have
+  // this kind of caching.
+
   ReflectorData _dataCache;
+  ReflectableImpl get _reflector;
+
   ReflectorData get _data {
     if (_dataCache == null) {
-      _dataCache = data[_reflectable];
+      _dataCache = data[_reflector];
     }
     return _dataCache;
   }
+}
 
-  final ReflectableImpl _reflectable;
-
+class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
+  final ReflectableImpl _reflector;
   final Object reflectee;
 
-  InstanceMirrorImpl(this.reflectee, this._reflectable) {
+  _InstanceMirrorImpl(this.reflectee, this._reflector) {
     _type = _data.classMirrorForType(reflectee.runtimeType);
     if (_type == null) {
       throw new NoSuchCapabilityError(
@@ -174,12 +150,12 @@ class InstanceMirrorImpl implements InstanceMirror {
   bool get hasReflectee => true;
 
   bool operator ==(other) {
-    return other is InstanceMirrorImpl &&
-        other._reflectable == _reflectable &&
+    return other is _InstanceMirrorImpl &&
+        other._reflector == _reflector &&
         other.reflectee == reflectee;
   }
 
-  int get hashCode => reflectee.hashCode ^ _reflectable.hashCode;
+  int get hashCode => reflectee.hashCode ^ _reflector.hashCode;
 
   delegate(Invocation invocation) => _unsupported();
 
@@ -205,52 +181,6 @@ class InstanceMirrorImpl implements InstanceMirror {
   }
 }
 
-abstract class ClosureMirrorUnimpl extends InstanceMirrorUnimpl
-    implements ClosureMirror {
-  MethodMirror get function => _unsupported();
-  InstanceMirror apply(List positionalArguments,
-      [Map<Symbol, dynamic> namedArguments]) => _unsupported();
-}
-
-abstract class LibraryMirrorUnimpl extends DeclarationMirrorUnimpl
-    with ObjectMirrorUnimpl implements LibraryMirror {
-  Uri get uri => _unsupported();
-  Map<String, DeclarationMirror> get declarations => _unsupported();
-  bool operator ==(other) => _unsupported();
-  int get hashCode => _unsupported();
-  List<LibraryDependencyMirror> get libraryDependencies => _unsupported();
-}
-
-class LibraryDependencyMirrorUnimpl implements LibraryDependencyMirror {
-  bool get isImport => _unsupported();
-  bool get isExport => _unsupported();
-  bool get isDeferred => _unsupported();
-  LibraryMirror get sourceLibrary => _unsupported();
-  LibraryMirror get targetLibrary => _unsupported();
-  String get prefix => _unsupported();
-  List<CombinatorMirror> get combinators => _unsupported();
-  SourceLocation get location => _unsupported();
-  List<Object> get metadata => _unsupported();
-}
-
-abstract class CombinatorMirrorUnimpl implements CombinatorMirror {
-  List<String> get identifiers => _unsupported();
-  bool get isShow => _unsupported();
-  bool get isHide => _unsupported();
-}
-
-abstract class TypeMirrorUnimpl extends DeclarationMirrorUnimpl
-    implements TypeMirror {
-  bool get hasReflectedType => _unsupported();
-  Type get reflectedType => _unsupported();
-  List<TypeVariableMirror> get typeVariables => _unsupported();
-  List<TypeMirror> get typeArguments => _unsupported();
-  bool get isOriginalDeclaration => _unsupported();
-  TypeMirror get originalDeclaration => _unsupported();
-  bool isSubtypeOf(TypeMirror other) => _unsupported();
-  bool isAssignableTo(TypeMirror other) => _unsupported();
-}
-
 int _variableToImplicitAccessorAttributes(VariableMirror variableMirror) {
   int attributes = 0;
   if (variableMirror.isPrivate) attributes |= constants.privateAttribute;
@@ -262,29 +192,44 @@ int _variableToImplicitAccessorAttributes(VariableMirror variableMirror) {
 MethodMirror _variableToGetterMirror(VariableMirrorImpl variableMirror) {
   int descriptor = constants.getter;
   descriptor |= _variableToImplicitAccessorAttributes(variableMirror);
+  // TODO(eernst) clarify: Make sure it is the right `ownerIndex`: Write a test
+  // that compares owners in pre/post-transform code.
   return new MethodMirrorImpl(variableMirror.simpleName, descriptor,
-      variableMirror.ownerIndex, variableMirror.reflectable, []);
+      variableMirror._ownerIndex, [], variableMirror._reflector, []);
 }
 
+// TODO(eernst) implement: Make this method take an `index` parameter which
+// will be the index of the returned `MethodMirror`, such that the enclosed
+// parameter mirror can get the right ownerIndex.
 MethodMirror _variableToSetterMirror(VariableMirrorImpl variableMirror) {
-  int descriptor = constants.setter;
+  int descriptor = constants.setter | constants.syntheticAttribute;
   descriptor |= _variableToImplicitAccessorAttributes(variableMirror);
-  return new MethodMirrorImpl(variableMirror.simpleName + "=", descriptor,
-      variableMirror.ownerIndex, variableMirror.reflectable, []);
+  int parameterDescriptor = constants.parameter | constants.syntheticAttribute;
+  String name = variableMirror.simpleName + "=";
+  return new MethodMirrorImpl(
+      name,
+      descriptor,
+      variableMirror._ownerIndex,
+      [
+        // TODO(eernst) clarify: Make sure it is the right `ownerIndex`: Write a
+        // test that compares owners in pre/post-transform code.
+        new ParameterMirrorImpl(
+            name,
+            parameterDescriptor,
+            variableMirror._ownerIndex,
+            variableMirror._reflector,
+            variableMirror.metadata,
+            null,
+            -1)
+      ],
+      variableMirror._reflector,
+      []);
 }
 
-class ClassMirrorImpl implements ClassMirror {
-  ReflectorData _dataCache;
-  ReflectorData get _data {
-    if (_dataCache == null) {
-      _dataCache = data[_reflectable];
-    }
-    return _dataCache;
-  }
-
+class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   /// The reflector which represents the mirror system that this
   /// mirror belongs to.
-  final ReflectableImpl _reflectable;
+  final ReflectableImpl _reflector;
 
   /// The index of this mirror in the [ReflectorData.classMirrors] table.
   /// Also this is the index of the Type of the reflected class in
@@ -310,17 +255,24 @@ class ClassMirrorImpl implements ClassMirror {
   final String simpleName;
   final String qualifiedName;
   final List<Object> _metadata;
-  final Map<String, StaticGetter> getters;
-  final Map<String, StaticSetter> setters;
+  final Map<String, _StaticGetter> getters;
+  final Map<String, _StaticSetter> setters;
   final Map<String, Function> constructors;
 
-  ClassMirrorImpl(this.simpleName, this.qualifiedName, this._classIndex,
-      this._reflectable, this._declarationIndices, this._instanceMemberIndices,
-      this._superclassIndex, this.getters, this.setters, this.constructors,
+  ClassMirrorImpl(
+      this.simpleName,
+      this.qualifiedName,
+      this._classIndex,
+      this._reflector,
+      this._declarationIndices,
+      this._instanceMemberIndices,
+      this._superclassIndex,
+      this.getters,
+      this.setters,
+      this.constructors,
       metadata)
-      : _metadata = (metadata == null)
-          ? null
-          : new UnmodifiableListView(metadata);
+      : _metadata =
+            (metadata == null) ? null : new UnmodifiableListView(metadata);
 
   ClassMirror get superclass {
     if (_superclassIndex == null) return null;
@@ -408,7 +360,7 @@ class ClassMirrorImpl implements ClassMirror {
   @override
   Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
-    StaticGetter getter = getters[memberName];
+    _StaticGetter getter = getters[memberName];
     if (getter == null) {
       throw new NoSuchInvokeCapabilityError(
           reflectedType, memberName, positionalArguments, namedArguments);
@@ -419,7 +371,7 @@ class ClassMirrorImpl implements ClassMirror {
 
   @override
   Object invokeGetter(String getterName) {
-    StaticGetter getter = getters[getterName];
+    _StaticGetter getter = getters[getterName];
     if (getter == null) {
       throw new NoSuchInvokeCapabilityError(reflectedType, getterName, [], {});
     }
@@ -428,7 +380,7 @@ class ClassMirrorImpl implements ClassMirror {
 
   @override
   Object invokeSetter(String setterName, Object value) {
-    StaticSetter setter = setters[setterName];
+    _StaticSetter setter = setters[setterName];
     if (setter == null) {
       throw new NoSuchInvokeCapabilityError(
           reflectedType, setterName, [value], {});
@@ -500,42 +452,7 @@ class ClassMirrorImpl implements ClassMirror {
   // operations.
 }
 
-abstract class TypeVariableMirrorUnimpl extends TypeMirrorUnimpl
-    implements TypeVariableMirror {
-  TypeMirror get upperBound => _unsupported();
-  bool get isStatic => _unsupported();
-  bool operator ==(other) => _unsupported();
-  int get hashCode => _unsupported();
-}
-
-abstract class TypedefMirrorUnimpl extends TypeMirrorUnimpl
-    implements TypedefMirror {
-  FunctionTypeMirror get referent => _unsupported();
-}
-
-abstract class MethodMirrorUnimpl extends DeclarationMirrorUnimpl
-    implements MethodMirror {
-  TypeMirror get returnType => _unsupported();
-  String get source => _unsupported();
-  List<ParameterMirror> get parameters => _unsupported();
-  bool get isStatic => _unsupported();
-  bool get isAbstract => _unsupported();
-  bool get isSynthetic => _unsupported();
-  bool get isRegularMethod => _unsupported();
-  bool get isOperator => _unsupported();
-  bool get isGetter => _unsupported();
-  bool get isSetter => _unsupported();
-  bool get isConstructor => _unsupported();
-  String get constructorName => _unsupported();
-  bool get isConstConstructor => _unsupported();
-  bool get isGenerativeConstructor => _unsupported();
-  bool get isRedirectingConstructor => _unsupported();
-  bool get isFactoryConstructor => _unsupported();
-  bool operator ==(other) => _unsupported();
-  int get hashCode => _unsupported();
-}
-
-class MethodMirrorImpl implements MethodMirror {
+class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// An encoding of the attributes and kind of this mirror.
   final int _descriptor;
 
@@ -544,6 +461,10 @@ class MethodMirrorImpl implements MethodMirror {
 
   /// The index of the [ClassMirror] of the owner of this method,
   final int _ownerIndex;
+
+  /// The indices of the [ParameterMirror]s describing the formal parameters
+  /// of this method.
+  final List<int> _parameterIndices;
 
   /// The [Reflectable] associated with this mirror.
   final ReflectableImpl _reflector;
@@ -554,23 +475,22 @@ class MethodMirrorImpl implements MethodMirror {
   final List<Object> _metadata;
 
   MethodMirrorImpl(this._name, this._descriptor, this._ownerIndex,
-      this._reflector, List<Object> metadata)
-      : _metadata = (metadata == null)
-          ? null
-          : new UnmodifiableListView(metadata);
+      this._parameterIndices, this._reflector, List<Object> metadata)
+      : _metadata =
+            (metadata == null) ? null : new UnmodifiableListView(metadata);
 
   int get kind => constants.kindFromEncoding(_descriptor);
 
-  ClassMirror get owner => data[_reflector].classMirrors[_ownerIndex];
+  ClassMirror get owner => _data.classMirrors[_ownerIndex];
 
   @override
   String get constructorName => _name;
 
   @override
-  bool get isAbstract => 0 != _descriptor & constants.abstractAttribute;
+  bool get isAbstract => (_descriptor & constants.abstractAttribute != 0);
 
   @override
-  bool get isConstConstructor => 0 != _descriptor & constants.constAttribute;
+  bool get isConstConstructor => (_descriptor & constants.constAttribute != 0);
 
   @override
   bool get isConstructor => isFactoryConstructor || isGenerativeConstructor;
@@ -589,11 +509,11 @@ class MethodMirrorImpl implements MethodMirror {
       ["+", "-", "*", "/", "[", "<", ">", "=", "~", "%"].contains(_name[0]);
 
   @override
-  bool get isPrivate => 0 != _descriptor & constants.privateAttribute;
+  bool get isPrivate => (_descriptor & constants.privateAttribute != 0);
 
   @override
   bool get isRedirectingConstructor =>
-      0 != _descriptor & constants.redirectingConstructorAttribute;
+      (_descriptor & constants.redirectingConstructorAttribute != 0);
 
   @override
   bool get isRegularMethod => kind == constants.method;
@@ -602,17 +522,17 @@ class MethodMirrorImpl implements MethodMirror {
   bool get isSetter => kind == constants.setter;
 
   @override
-  bool get isStatic => 0 != _descriptor & constants.staticAttribute;
+  bool get isStatic => (_descriptor & constants.staticAttribute != 0);
 
   @override
-  bool get isSynthetic => 0 != _descriptor & constants.syntheticAttribute;
+  bool get isSynthetic => (_descriptor & constants.syntheticAttribute != 0);
 
   @override
   bool get isTopLevel => owner is LibraryMirror;
 
+  // It is allowed to return null.
   @override
-  SourceLocation get location =>
-      throw new UnsupportedError("Location not supported");
+  SourceLocation get location => null;
 
   @override
   List<Object> get metadata {
@@ -623,9 +543,12 @@ class MethodMirrorImpl implements MethodMirror {
     return _metadata;
   }
 
-  // TODO(sigurdm) feature: support `parameters`.
   @override
-  List<ParameterMirror> get parameters => throw new UnimplementedError();
+  List<ParameterMirror> get parameters {
+    return _parameterIndices
+        .map((int parameterIndex) => _data.parameterMirrors[parameterIndex])
+        .toList();
+  }
 
   @override
   String get qualifiedName => "${owner.qualifiedName}.$_name";
@@ -646,45 +569,33 @@ class MethodMirrorImpl implements MethodMirror {
   String toString() => "MethodMirror($_name)";
 }
 
-abstract class VariableMirrorUnimpl extends DeclarationMirrorUnimpl
+abstract class VariableMirrorBase extends _DataCaching
     implements VariableMirror {
-  TypeMirror get type => _unsupported();
-  bool get isStatic => _unsupported();
-  bool get isFinal => _unsupported();
-  bool get isConst => _unsupported();
-  bool operator ==(other) => _unsupported();
-  int get hashCode => _unsupported();
-}
-
-class VariableMirrorImpl implements VariableMirror {
-  final int descriptor;
-  final String name;
-  final int ownerIndex;
-  final ReflectableImpl reflectable;
+  final String _name;
+  final int _descriptor;
+  final int _ownerIndex;
+  final ReflectableImpl _reflector;
   final List<Object> _metadata;
 
-  VariableMirrorImpl(this.name, this.descriptor, this.ownerIndex,
-      this.reflectable, List<Object> metadata)
-      : _metadata = (metadata == null)
-          ? null
-          : new UnmodifiableListView(metadata);
+  VariableMirrorBase(this._name, this._descriptor, this._ownerIndex,
+      this._reflector, List<Object> metadata)
+      : _metadata =
+            (metadata == null) ? null : new UnmodifiableListView(metadata);
 
-  int get kind => constants.kindFromEncoding(descriptor);
-
-  ClassMirror get owner => data[reflectable].classMirrors[ownerIndex];
+  int get kind => constants.kindFromEncoding(_descriptor);
 
   @override
-  String get qualifiedName => "${owner.qualifiedName}.$name";
-
-  @override
-  bool get isPrivate => 0 != descriptor & constants.privateAttribute;
+  bool get isPrivate => (_descriptor & constants.privateAttribute != 0);
 
   @override
   bool get isTopLevel => owner is LibraryMirror;
 
   @override
-  SourceLocation get location =>
-      throw new UnsupportedError("Location not supported");
+  bool get isFinal => (_descriptor & constants.finalAttribute != 0);
+
+  // It is allowed to return null.
+  @override
+  SourceLocation get location => null;
 
   @override
   List<Object> get metadata {
@@ -696,52 +607,165 @@ class VariableMirrorImpl implements VariableMirror {
   }
 
   @override
-  TypeMirror get type => _unsupported();
-
-  @override
-  bool get isStatic => 0 != descriptor & constants.staticAttribute;
-
-  @override
-  bool get isFinal => 0 != descriptor & constants.finalAttribute;
-
-  @override
-  bool get isConst => 0 != descriptor & constants.constAttribute;
-
-  @override
   bool operator ==(other) => _unsupported();
 
   @override
   int get hashCode => _unsupported();
 
   @override
-  String get simpleName => name;
+  String get simpleName => _name;
 }
 
-abstract class ParameterMirrorUnimpl extends VariableMirrorUnimpl
-    implements ParameterMirror {
+class VariableMirrorImpl extends VariableMirrorBase {
+  @override
+  ClassMirror get owner => _data.classMirrors[_ownerIndex];
+
+  @override
+  String get qualifiedName => "${owner.qualifiedName}.$_name";
+
+  @override
   TypeMirror get type => _unsupported();
-  bool get isOptional => _unsupported();
-  bool get isNamed => _unsupported();
-  bool get hasDefaultValue => _unsupported();
-  Object get defaultValue => _unsupported();
+
+  @override
+  bool get isStatic => (_descriptor & constants.staticAttribute != 0);
+
+  @override
+  bool get isConst => (_descriptor & constants.constAttribute != 0);
+
+  VariableMirrorImpl(String name, int descriptor, int ownerIndex,
+      ReflectableImpl reflectable, List<Object> metadata)
+      : super(name, descriptor, ownerIndex, reflectable, metadata);
 }
 
-abstract class SourceLocationUnimpl {
-  int get line => _unsupported();
-  int get column => _unsupported();
-  Uri get sourceUri => _unsupported();
+class ParameterMirrorImpl extends VariableMirrorBase
+    implements ParameterMirror {
+  final _classMirrorIndex;
+
+  @override
+  final defaultValue;
+
+  @override
+  bool get isStatic => (_descriptor & constants.staticAttribute != 0);
+
+  @override
+  bool get isConst => (_descriptor & constants.constAttribute != 0);
+
+  @override
+  bool get hasDefaultValue =>
+      (_descriptor & constants.hasDefaultValueAttribute != 0);
+
+  @override
+  bool get isOptional => (_descriptor & constants.optionalAttribute != 0);
+
+  @override
+  bool get isNamed => (_descriptor & constants.namedAttribute != 0);
+
+  bool get _isDynamic => (_descriptor & constants.dynamicAttribute != 0);
+
+  bool get _isClassType => (_descriptor & constants.classTypeAttribute != 0);
+
+  // TODO(eernst) clarify: A parameter cannot be accessed using dot
+  // notation, and hence it has no qualified name. So is the following
+  // behavior correct?
+  @override
+  String get qualifiedName {
+    throw new NoSuchCapabilityError(
+        "Attempting to get the `qualifiedName` of the parameter $_name.");
+  }
+
+  @override
+  MethodMirror get owner => _data.memberMirrors[_ownerIndex];
+
+  @override
+  TypeMirror get type {
+    if (_isDynamic) return new DynamicMirrorImpl();
+    if (_isClassType) {
+      if (_classMirrorIndex == -1) {
+        throw new NoSuchCapabilityError(
+            "Attempt to get class mirror for un-marked class (type of $_name)");
+      }
+      return _data.classMirrors[_classMirrorIndex];
+    }
+    return _unsupported();
+  }
+
+  ParameterMirrorImpl(
+      String name,
+      int descriptor,
+      int ownerIndex,
+      ReflectableImpl reflectable,
+      List<Object> metadata,
+      this.defaultValue,
+      this._classMirrorIndex)
+      : super(name, descriptor, ownerIndex, reflectable, metadata);
+}
+
+class DynamicMirrorImpl implements TypeMirror {
+  @override
+  bool get isPrivate => false;
+
+  @override
+  bool get isTopLevel => true;
+
+  // TODO(eernst) implement: test what 'dart:mirrors' does, then do the same.
+  @override
+  bool get isOriginalDeclaration => true;
+
+  @override
+  bool get hasReflectedType => true;
+
+  @override
+  Type get reflectedType => dynamic;
+
+  @override
+  String get simpleName => "dynamic";
+
+  // TODO(eernst) implement: do as in 'dart:mirrors'.
+  @override
+  List<TypeVariableMirror> get typeVariables => <TypeVariableMirror>[];
+
+  @override
+  List<TypeMirror> get typeArguments => <TypeMirror>[];
+
+  // TODO(eernst) implement: do as in 'dart:mirrors'.
+  @override
+  TypeMirror get originalDeclaration => null;
+
+  // It is allowed to return null.
+  @override
+  SourceLocation get location => null;
+
+  @override
+  bool isSubtypeOf(TypeMirror other) => true;
+
+  @override
+  bool isAssignableTo(TypeMirror other) => true;
+
+  // TODO(eernst) implement: do as 'dart:mirrors' does.
+  @override
+  DeclarationMirror get owner => null;
+
+  @override
+  String get qualifiedName => simpleName;
+
+  @override
+  List<Object> get metadata => <Object>[];
 }
 
 abstract class ReflectableImpl extends ReflectableBase
     implements ReflectableInterface {
-
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
-  const ReflectableImpl([ReflectCapability cap0 = null,
-      ReflectCapability cap1 = null, ReflectCapability cap2 = null,
-      ReflectCapability cap3 = null, ReflectCapability cap4 = null,
-      ReflectCapability cap5 = null, ReflectCapability cap6 = null,
-      ReflectCapability cap7 = null, ReflectCapability cap8 = null,
+  const ReflectableImpl(
+      [ReflectCapability cap0 = null,
+      ReflectCapability cap1 = null,
+      ReflectCapability cap2 = null,
+      ReflectCapability cap3 = null,
+      ReflectCapability cap4 = null,
+      ReflectCapability cap5 = null,
+      ReflectCapability cap6 = null,
+      ReflectCapability cap7 = null,
+      ReflectCapability cap8 = null,
       ReflectCapability cap9 = null])
       : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
 
@@ -750,7 +774,7 @@ abstract class ReflectableImpl extends ReflectableBase
 
   @override
   InstanceMirror reflect(Object reflectee) {
-    return new InstanceMirrorImpl(reflectee, this);
+    return new _InstanceMirrorImpl(reflectee, this);
   }
 
   @override

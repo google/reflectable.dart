@@ -8,7 +8,9 @@ import "package:unittest/unittest.dart";
 import "package:reflectable/reflectable.dart";
 
 class Reflector extends Reflectable {
-  const Reflector() : super(instanceInvokeCapability, metadataCapability);
+  const Reflector()
+      : super(instanceInvokeCapability, metadataCapability,
+            declarationsCapability);
 }
 
 class C {
@@ -65,7 +67,7 @@ main() {
     expect(f3Parameters[1].owner, f3);
     expect(f3Parameters[1].simpleName, "b");
     expect(f3Parameters[1].qualifiedName,
-           "test_reflectable.test.parameter_mirrors_test.A.f3.b");
+        "test_reflectable.test.parameter_mirrors_test.A.f3.b");
     expect(f3Parameters[1].metadata, []);
 
     expect(f3Parameters[2].isNamed, false);
@@ -79,7 +81,7 @@ main() {
     expect(f3Parameters[2].owner, f3);
     expect(f3Parameters[2].simpleName, "c");
     expect(f3Parameters[2].qualifiedName,
-           "test_reflectable.test.parameter_mirrors_test.A.f3.c");
+        "test_reflectable.test.parameter_mirrors_test.A.f3.c");
     expect(f3Parameters[2].metadata, [const C()]);
 
     expect(f4Parameters.length, 3);
@@ -95,7 +97,7 @@ main() {
     expect(f4Parameters[1].owner, f4);
     expect(f4Parameters[1].simpleName, "b");
     expect(f4Parameters[1].qualifiedName,
-           "test_reflectable.test.parameter_mirrors_test.A.f4.b");
+        "test_reflectable.test.parameter_mirrors_test.A.f4.b");
     expect(f4Parameters[1].metadata, []);
 
     expect(f4Parameters[2].isNamed, true);
@@ -109,7 +111,7 @@ main() {
     expect(f4Parameters[2].owner, f4);
     expect(f4Parameters[2].simpleName, "c");
     expect(f4Parameters[2].qualifiedName,
-           "test_reflectable.test.parameter_mirrors_test.A.f4.c");
+        "test_reflectable.test.parameter_mirrors_test.A.f4.c");
     expect(f4Parameters[2].metadata, []);
   });
 }

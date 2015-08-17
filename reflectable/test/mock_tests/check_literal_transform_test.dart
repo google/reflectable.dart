@@ -70,12 +70,11 @@ _initializeReflectable() {
         "reflectable package. Remember to set your package-root to "
         "'build/.../packages'.");
   }
-  r.data = {const prefix0.MyReflectable(): new r.ReflectorData([new r.ClassMirrorImpl(r"A", r".A", 0, const prefix0.MyReflectable(), [0], [], -1, {}, {}, {r"": () => new prefix0.A()}, null)], [new r.MethodMirrorImpl(r"", 64, 0, const prefix0.MyReflectable(), null)], [prefix0.A], {}, {})};
+  r.data = {const prefix0.MyReflectable(): new r.ReflectorData([new r.ClassMirrorImpl(r"A", r".A", 0, const prefix0.MyReflectable(), [0], [], -1, {}, {}, {r"": () => new prefix0.A()}, null)], [new r.MethodMirrorImpl(r"", 64, 0, [], const prefix0.MyReflectable(), null)], [], [prefix0.A], {}, {})};
 }
 """
   }
 ];
-
 
 checkTransform(List maps) async {
   Map<String, String> inputs = maps[0];

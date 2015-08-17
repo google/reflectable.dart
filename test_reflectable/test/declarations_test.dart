@@ -8,7 +8,9 @@ import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
 
 class Reflector extends Reflectable {
-  const Reflector() : super(instanceInvokeCapability, newInstanceCapability);
+  const Reflector()
+      : super(instanceInvokeCapability, newInstanceCapability,
+            declarationsCapability);
 }
 
 // TODO(sigurdm) implement: Adapt this test when we support fields.
@@ -49,18 +51,20 @@ main() {
       reflector.reflectType(B).declarations;
 
   test("declarations", () {
-    expect(declarationsA.values.map((x) => x.simpleName), new Set.from([
-      "foo",
-      "getter1",
-      "getter2",
-      "setter1=",
-      "+",
-      "A",
-      "A.redirecting",
-      "A.factory",
-      "A.redirectingFactory",
-      "A.c"
-    ]));
+    expect(
+        declarationsA.values.map((x) => x.simpleName),
+        new Set.from([
+          "foo",
+          "getter1",
+          "getter2",
+          "setter1=",
+          "+",
+          "A",
+          "A.redirecting",
+          "A.factory",
+          "A.redirectingFactory",
+          "A.c"
+        ]));
 
     expect(declarationsB.values.map((x) => x.simpleName),
         new Set.from(["bar", "getter1", "getter2", "setter2=", "B"]));
@@ -162,32 +166,36 @@ main() {
   test("instanceMethods", () {
     Map<String, DeclarationMirror> instanceMembersA =
         reflector.reflectType(A).instanceMembers;
-    expect(instanceMembersA.values.map((x) => x.simpleName), new Set.from([
-      "toString",
-      "hashCode",
-      "==",
-      "noSuchMethod",
-    "runtimeType",
-      "foo",
-      "getter1",
-      "setter1=",
-      "+"
-    ]));
+    expect(
+        instanceMembersA.values.map((x) => x.simpleName),
+        new Set.from([
+          "toString",
+          "hashCode",
+          "==",
+          "noSuchMethod",
+          "runtimeType",
+          "foo",
+          "getter1",
+          "setter1=",
+          "+"
+        ]));
     Map<String, DeclarationMirror> instanceMembersB =
         reflector.reflectType(B).instanceMembers;
-    expect(instanceMembersB.values.map((x) => x.simpleName), new Set.from([
-      "toString",
-      "hashCode",
-      "==",
-      "noSuchMethod",
-      "runtimeType",
-      "foo",
-      "bar",
-      "getter1",
-      "getter2",
-      "setter1=",
-      "setter2=",
-      "+"
-    ]));
+    expect(
+        instanceMembersB.values.map((x) => x.simpleName),
+        new Set.from([
+          "toString",
+          "hashCode",
+          "==",
+          "noSuchMethod",
+          "runtimeType",
+          "foo",
+          "bar",
+          "getter1",
+          "getter2",
+          "setter1=",
+          "setter2=",
+          "+"
+        ]));
   });
 }

@@ -15,6 +15,7 @@ const method = 2;
 const getter = 3;
 const setter = 4;
 const field = 5;
+const parameter = 6;
 
 // Flags:
 const staticAttribute = 1 << (flagsBit);
@@ -24,5 +25,10 @@ const constAttribute = 1 << (flagsBit + 3);
 const redirectingConstructorAttribute = 1 << (flagsBit + 4);
 const abstractAttribute = 1 << (flagsBit + 5);
 const finalAttribute = 1 << (flagsBit + 6);
+const hasDefaultValueAttribute = 1 << (flagsBit + 7);
+const optionalAttribute = 1 << (flagsBit + 8);
+const namedAttribute = 1 << (flagsBit + 9);
+const dynamicAttribute = 1 << (flagsBit + 10);
+const classTypeAttribute = 1 << (flagsBit + 11);
 
 int kindFromEncoding(int encoding) => encoding & ((1 << flagsBit) - 1);

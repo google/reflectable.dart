@@ -25,7 +25,6 @@ main() {
   test('superclass targetting un-annotated class', () {
     expect(classObjectMirror.simpleName, "Object");
   });
-  print(classObjectMirror.superclass); // DEBUG
   test('non-existing superclass', () {
     expect(classObjectMirror.superclass, null);
   });
