@@ -218,9 +218,9 @@ MethodMirror _variableToSetterMirror(VariableMirrorImpl variableMirror) {
             parameterDescriptor,
             variableMirror._ownerIndex,
             variableMirror._reflector,
+            -1,
             variableMirror.metadata,
-            null,
-            -1)
+            null)
       ],
       variableMirror._reflector,
       []);
@@ -239,6 +239,10 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   /// A list of the indices in [ReflectorData.memberMirrors] of the
   /// declarations of the reflected class. This includes method mirrors
   /// and variable mirrors and it directly corresponds to `declarations`.
+  /// Exception: When the given `_reflector.capabilities` do not support
+  /// the operation `declarations`, this will be `<int>[-1]`. It is enough
+  /// to check that the list is non-empty and first element is -1 to
+  /// detect this situation, because -1 will otherwise never occur.
   final List<int> _declarationIndices;
 
   /// A list of the indices in [ReflectorData.memberMirrors] of the
@@ -294,6 +298,15 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
       Map<String, DeclarationMirror> result =
           new Map<String, DeclarationMirror>();
       for (int declarationIndex in _declarationIndices) {
+        // We encode a missing `declarations` capability as an index with
+        // the value -1. Note that `_declarations` will not be initialized
+        // and hence we will come here repeatedly if that is the case; however,
+        // performing operations for which there is no capability need not
+        // have stellar performance, it is almost always a bug to do that.
+        if (declarationIndex == -1) {
+          throw new NoSuchCapabilityError(
+              "Requesting declarations without capability");
+        }
         DeclarationMirror declarationMirror =
             _data.memberMirrors[declarationIndex];
         result[declarationMirror.simpleName] = declarationMirror;
@@ -575,10 +588,11 @@ abstract class VariableMirrorBase extends _DataCaching
   final int _descriptor;
   final int _ownerIndex;
   final ReflectableImpl _reflector;
+  final _classMirrorIndex;
   final List<Object> _metadata;
 
   VariableMirrorBase(this._name, this._descriptor, this._ownerIndex,
-      this._reflector, List<Object> metadata)
+      this._reflector, this._classMirrorIndex, List<Object> metadata)
       : _metadata =
             (metadata == null) ? null : new UnmodifiableListView(metadata);
 
@@ -592,6 +606,10 @@ abstract class VariableMirrorBase extends _DataCaching
 
   @override
   bool get isFinal => (_descriptor & constants.finalAttribute != 0);
+
+  bool get _isDynamic => (_descriptor & constants.dynamicAttribute != 0);
+
+  bool get _isClassType => (_descriptor & constants.classTypeAttribute != 0);
 
   // It is allowed to return null.
   @override
@@ -614,6 +632,19 @@ abstract class VariableMirrorBase extends _DataCaching
 
   @override
   String get simpleName => _name;
+
+  @override
+  TypeMirror get type {
+    if (_isDynamic) return new DynamicMirrorImpl();
+    if (_isClassType) {
+      if (_classMirrorIndex == -1) {
+        throw new NoSuchCapabilityError(
+            "Attempt to get class mirror for un-marked class (type of $_name)");
+      }
+      return _data.classMirrors[_classMirrorIndex];
+    }
+    return _unsupported();
+  }
 }
 
 class VariableMirrorImpl extends VariableMirrorBase {
@@ -624,23 +655,19 @@ class VariableMirrorImpl extends VariableMirrorBase {
   String get qualifiedName => "${owner.qualifiedName}.$_name";
 
   @override
-  TypeMirror get type => _unsupported();
-
-  @override
   bool get isStatic => (_descriptor & constants.staticAttribute != 0);
 
   @override
   bool get isConst => (_descriptor & constants.constAttribute != 0);
 
   VariableMirrorImpl(String name, int descriptor, int ownerIndex,
-      ReflectableImpl reflectable, List<Object> metadata)
-      : super(name, descriptor, ownerIndex, reflectable, metadata);
+      ReflectableImpl reflectable, int classMirrorIndex, List<Object> metadata)
+      : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
+            metadata);
 }
 
 class ParameterMirrorImpl extends VariableMirrorBase
     implements ParameterMirror {
-  final _classMirrorIndex;
-
   @override
   final defaultValue;
 
@@ -660,10 +687,6 @@ class ParameterMirrorImpl extends VariableMirrorBase
   @override
   bool get isNamed => (_descriptor & constants.namedAttribute != 0);
 
-  bool get _isDynamic => (_descriptor & constants.dynamicAttribute != 0);
-
-  bool get _isClassType => (_descriptor & constants.classTypeAttribute != 0);
-
   // TODO(eernst) clarify: A parameter cannot be accessed using dot
   // notation, and hence it has no qualified name. So is the following
   // behavior correct?
@@ -676,28 +699,16 @@ class ParameterMirrorImpl extends VariableMirrorBase
   @override
   MethodMirror get owner => _data.memberMirrors[_ownerIndex];
 
-  @override
-  TypeMirror get type {
-    if (_isDynamic) return new DynamicMirrorImpl();
-    if (_isClassType) {
-      if (_classMirrorIndex == -1) {
-        throw new NoSuchCapabilityError(
-            "Attempt to get class mirror for un-marked class (type of $_name)");
-      }
-      return _data.classMirrors[_classMirrorIndex];
-    }
-    return _unsupported();
-  }
-
   ParameterMirrorImpl(
       String name,
       int descriptor,
       int ownerIndex,
       ReflectableImpl reflectable,
+      classMirrorIndex,
       List<Object> metadata,
-      this.defaultValue,
-      this._classMirrorIndex)
-      : super(name, descriptor, ownerIndex, reflectable, metadata);
+      this.defaultValue)
+      : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
+            metadata);
 }
 
 class DynamicMirrorImpl implements TypeMirror {

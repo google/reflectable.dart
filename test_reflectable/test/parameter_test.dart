@@ -34,8 +34,7 @@ class MyClass {
   static int optionalArguments(MyClass x, double y,
           [MyReflectable z, dynamic w = 42]) =>
       null;
-  static int namedArguments(String x, List y, {String z: "4" + "2"}) =>
-      null;
+  static int namedArguments(String x, List y, {String z: "4" + "2"}) => null;
 }
 
 final throwsNoCapability = throwsA(const isInstanceOf<NoSuchCapabilityError>());

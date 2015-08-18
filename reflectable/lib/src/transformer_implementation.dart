@@ -295,6 +295,15 @@ class _ReflectorDomain {
         }
       });
     }
+    if (_capabilities._impliesFieldTypes) {
+      fields.items.forEach((FieldElement fieldElement) {
+        Element fieldType = fieldElement.type.element;
+        if (fieldType is ClassElement) {
+          includedClasses.add(_createClassDomain(fieldType, this));
+          classes.add(fieldType);
+        }
+      });
+    }
     if (_capabilities._impliesUpwardsClosure) {
       Set<_ClassDomain> workingSetOfClasses = includedClasses;
       while (true) {
@@ -354,10 +363,13 @@ class _ReflectorDomain {
         return index == null ? -1 : index + fieldsLength;
       });
 
-      List<int> declarationsIndices = <int>[]
-        ..addAll(fieldsIndices)
-        ..addAll(methodsIndices);
-      String declarationsCode = _formatAsList(declarationsIndices);
+      String declarationsCode = "<int>[-1]"; // Encodes no capability.
+      if (_capabilities._impliesDeclarations) {
+        List<int> declarationsIndices = <int>[]
+          ..addAll(fieldsIndices)
+          ..addAll(methodsIndices);
+        declarationsCode = _formatAsList(declarationsIndices);
+      }
 
       // All instance members belong to the behavioral interface, so they
       // also get an offset of `fields.length`.
@@ -434,7 +446,7 @@ class _ReflectorDomain {
         members.items.map((ExecutableElement element) {
       int descriptor = _declarationDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
-      List<int> parameterIndices =
+      Iterable<int> parameterIndices =
           element.parameters.map((ParameterElement parameterElement) {
         return parameters.indexOf(parameterElement);
       });
@@ -454,6 +466,9 @@ class _ReflectorDomain {
     Iterable<String> fieldsList = fields.items.map((FieldElement element) {
       int descriptor = _fieldDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
+      int classMirrorIndex = classes._contains(element.type.element)
+                             ? classes.indexOf(element.type.element)
+                             : -1;
       String metadataCode;
       if (_capabilities._supportsMetadata) {
         metadataCode = _extractMetadataCode(
@@ -461,9 +476,9 @@ class _ReflectorDomain {
       } else {
         metadataCode = null;
       }
-      return 'new r.VariableMirrorImpl("${element.name}", $descriptor, '
+      return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-          '$metadataCode)';
+          '$classMirrorIndex, $metadataCode)';
     });
 
     List<String> membersList = <String>[]
@@ -494,7 +509,7 @@ class _ReflectorDomain {
       // failing if ever executed).
       return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-          '$metadataCode, ${element.defaultValueCode}, $classMirrorIndex)';
+          '$classMirrorIndex, $metadataCode, ${element.defaultValueCode})';
     });
     String parameterMirrorsCode = _formatAsList(parametersList);
 
@@ -794,17 +809,20 @@ class _Capabilities {
         capability == ec.typeRelationsCapability);
   }
 
-  bool get _impliesParameterTypes {
-    bool haveDeclarations =
-        _capabilities.any((ec.ReflectCapability capability) {
+  bool get _impliesDeclarations {
+    return _capabilities.any((ec.ReflectCapability capability) {
       return capability == ec.declarationsCapability;
     });
-    if (!haveDeclarations) return false;
+  }
+
+  bool get _impliesParameterTypes {
+    if (!_impliesDeclarations) return false;
     return _capabilities.any((ec.ReflectCapability capability) {
-      return capability is ec.TypeCapability ||
-          capability is ec.TypingCapability;
+      return capability is ec.TypeCapability;
     });
   }
+
+  bool get _impliesFieldTypes => _impliesParameterTypes;
 }
 
 /// Collects the libraries that needs to be imported, and gives each library
@@ -977,6 +995,7 @@ class TransformerImplementation {
       // `isConst` as well.
       if (variable is ConstTopLevelVariableElementImpl) {
         EvaluationResultImpl result = variable.evaluationResult;
+        if (result.value == null) return null;  // Errors during evaluation.
         bool isOk = checkInheritance(result.value.type, focusClass.type);
         return isOk ? result.value.type.element : null;
       } else {
@@ -1541,9 +1560,23 @@ int _fieldDescriptor(FieldElement element) {
   int result = constants.field;
   if (element.isPrivate) result |= constants.privateAttribute;
   if (element.isSynthetic) result |= constants.syntheticAttribute;
-  if (element.isConst) result |= constants.constAttribute;
-  if (element.isFinal) result |= constants.finalAttribute;
+  if (element.isConst) {
+    result |= constants.constAttribute;
+    // We will get `false` from `element.isFinal` in this case, but with
+    // a mirror from 'dart:mirrors' it is considered to be "implicitly
+    // final", so we follow that and ignore `element.isFinal`.
+    result |= constants.finalAttribute;
+  } else {
+    if (element.isFinal) result |= constants.finalAttribute;
+  }
   if (element.isStatic) result |= constants.staticAttribute;
+  if (element.type.isDynamic) {
+    result |= constants.dynamicAttribute;
+  }
+  Element elementType = element.type.element;
+  if (elementType is ClassElement) {
+    result |= constants.classTypeAttribute;
+  }
   return result;
 }
 
@@ -1735,10 +1768,13 @@ String _extractMetadataCode(Element element, Resolver resolver,
     _ImportCollector importCollector, TransformLogger logger, AssetId dataId) {
   Iterable<ElementAnnotation> elementAnnotations = element.metadata;
 
-  if (elementAnnotations == null) return "[]";
+  if (elementAnnotations == null) return "<Object>[]";
 
   // Synthetic accessors do not have metadata. Only their associated fields.
-  if (element is PropertyAccessorElement && element.isSynthetic) return "[]";
+  if ((element is PropertyAccessorElement || element is ConstructorElement) &&
+      element.isSynthetic) {
+    return "<Object>[]";
+  }
 
   List<String> metadataParts = new List<String>();
 
