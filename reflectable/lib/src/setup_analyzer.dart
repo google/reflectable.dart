@@ -72,7 +72,7 @@ AnalyzerSetup setupAnalyzer(String sourcePath,
                              bool includeSdk: true}) {
   JavaFile sourceFile = new JavaFile(_normalizeSourcePath(sourcePath));
   Uri libraryUri = _getUri(sdk, sourceFile);
-  Source librarySource = new FileBasedSource.con2(libraryUri, sourceFile);
+  Source librarySource = new FileBasedSource(sourceFile, libraryUri);
   List<UriResolver> resolvers = _computeUriResolvers(sdk, packageRootPath);
   SourceFactory sourceFactory = new SourceFactory(resolvers);
   AnalysisContext context = AnalysisEngine.instance.createAnalysisContext();

@@ -1358,7 +1358,8 @@ class TransformerImplementation {
     // a user-oriented error report.
     assert(constructorElement.isDefaultConstructor);
 
-    ConstructorDeclaration constructorDeclarationNode = constructorElement.node;
+    ConstructorDeclaration constructorDeclarationNode =
+        constructorElement.computeNode();
     NodeList<ConstructorInitializer> initializers =
         constructorDeclarationNode.initializers;
 
@@ -1778,7 +1779,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
 
   List<String> metadataParts = new List<String>();
 
-  AstNode node = element.node;
+  AstNode node = element.computeNode();
 
   // The `element.node` of a field is the [VariableDeclaration] that is nested
   // in a [VariableDeclarationList] that is nested in a [FieldDeclaration]. The
