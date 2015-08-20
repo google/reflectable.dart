@@ -181,51 +181,6 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   }
 }
 
-int _variableToImplicitAccessorAttributes(VariableMirror variableMirror) {
-  int attributes = 0;
-  if (variableMirror.isPrivate) attributes |= constants.privateAttribute;
-  if (variableMirror.isStatic) attributes |= constants.staticAttribute;
-  attributes |= constants.syntheticAttribute;
-  return attributes;
-}
-
-MethodMirror _variableToGetterMirror(VariableMirrorImpl variableMirror) {
-  int descriptor = constants.getter;
-  descriptor |= _variableToImplicitAccessorAttributes(variableMirror);
-  // TODO(eernst) clarify: Make sure it is the right `ownerIndex`: Write a test
-  // that compares owners in pre/post-transform code.
-  return new MethodMirrorImpl(variableMirror.simpleName, descriptor,
-      variableMirror._ownerIndex, [], variableMirror._reflector, []);
-}
-
-// TODO(eernst) implement: Make this method take an `index` parameter which
-// will be the index of the returned `MethodMirror`, such that the enclosed
-// parameter mirror can get the right ownerIndex.
-MethodMirror _variableToSetterMirror(VariableMirrorImpl variableMirror) {
-  int descriptor = constants.setter | constants.syntheticAttribute;
-  descriptor |= _variableToImplicitAccessorAttributes(variableMirror);
-  int parameterDescriptor = constants.parameter | constants.syntheticAttribute;
-  String name = variableMirror.simpleName + "=";
-  return new MethodMirrorImpl(
-      name,
-      descriptor,
-      variableMirror._ownerIndex,
-      [
-        // TODO(eernst) clarify: Make sure it is the right `ownerIndex`: Write a
-        // test that compares owners in pre/post-transform code.
-        new ParameterMirrorImpl(
-            name,
-            parameterDescriptor,
-            variableMirror._ownerIndex,
-            variableMirror._reflector,
-            -1,
-            variableMirror.metadata,
-            null)
-      ],
-      variableMirror._reflector,
-      []);
-}
-
 class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   /// The reflector which represents the mirror system that this
   /// mirror belongs to.
@@ -252,6 +207,13 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   /// obtain the correct result for `instanceMembers`.
   final List<int> _instanceMemberIndices;
 
+  /// A list of the indices in [ReflectorData.memberMirrors] of the
+  /// static members of the reflected class, except that it includes
+  /// variable mirrors describing static fields nwhich must be converted
+  /// to implicit getters and possibly implicit setters in order to
+  /// obtain the correct result for `staticMembers`.
+  final List<int> _staticMemberIndices;
+
   /// The index of the mirror of the superclass in the
   /// [ReflectorData.classMirrors] table.
   final int _superclassIndex;
@@ -270,6 +232,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
       this._reflector,
       this._declarationIndices,
       this._instanceMemberIndices,
+      this._staticMemberIndices,
       this._superclassIndex,
       this.getters,
       this.setters,
@@ -325,26 +288,29 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
       for (int instanceMemberIndex in _instanceMemberIndices) {
         DeclarationMirror declarationMirror =
             _data.memberMirrors[instanceMemberIndex];
-        if (declarationMirror is MethodMirror) {
-          result[declarationMirror.simpleName] = declarationMirror;
-        } else {
-          assert(declarationMirror is VariableMirror);
-          // Need declaration because `assert` provides no type propagation.
-          VariableMirror variableMirror = declarationMirror;
-          result[variableMirror.simpleName] =
-              _variableToGetterMirror(variableMirror);
-          if (!variableMirror.isFinal) {
-            result[variableMirror.simpleName + "="] =
-                _variableToSetterMirror(variableMirror);
-          }
-        }
+        assert(declarationMirror is MethodMirror);
+        result[declarationMirror.simpleName] = declarationMirror;
       }
       _instanceMembers = new UnmodifiableMapView<String, MethodMirror>(result);
     }
     return _instanceMembers;
   }
 
-  Map<String, MethodMirror> get staticMembers => _unsupported();
+  Map<String, MethodMirror> _staticMembers;
+
+  Map<String, MethodMirror> get staticMembers {
+    if (_staticMembers == null) {
+      Map<String, MethodMirror> result = new Map<String, MethodMirror>();
+      for (int staticMemberIndex in _staticMemberIndices) {
+        DeclarationMirror declarationMirror =
+            _data.memberMirrors[staticMemberIndex];
+        assert(declarationMirror is MethodMirror);
+        result[declarationMirror.simpleName] = declarationMirror;
+      }
+      _staticMembers = new UnmodifiableMapView<String, MethodMirror>(result);
+    }
+    return _staticMembers;
+  }
 
   ClassMirror get mixin => _unsupported();
 
@@ -475,6 +441,9 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// The index of the [ClassMirror] of the owner of this method,
   final int _ownerIndex;
 
+  /// The index of the return type of this method.
+  final int _returnTypeIndex;
+
   /// The indices of the [ParameterMirror]s describing the formal parameters
   /// of this method.
   final List<int> _parameterIndices;
@@ -487,8 +456,14 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// [metadataCapability].
   final List<Object> _metadata;
 
-  MethodMirrorImpl(this._name, this._descriptor, this._ownerIndex,
-      this._parameterIndices, this._reflector, List<Object> metadata)
+  MethodMirrorImpl(
+      this._name,
+      this._descriptor,
+      this._ownerIndex,
+      this._returnTypeIndex,
+      this._parameterIndices,
+      this._reflector,
+      List<Object> metadata)
       : _metadata =
             (metadata == null) ? null : new UnmodifiableListView(metadata);
 
@@ -497,7 +472,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   ClassMirror get owner => _data.classMirrors[_ownerIndex];
 
   @override
-  String get constructorName => _name;
+  String get constructorName => isConstructor ? _name : "";
 
   @override
   bool get isAbstract => (_descriptor & constants.abstractAttribute != 0);
@@ -566,9 +541,13 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   @override
   String get qualifiedName => "${owner.qualifiedName}.$_name";
 
-  // TODO(sigurdm) feature: suport `returnType`.
   @override
-  TypeMirror get returnType => throw new UnimplementedError();
+  TypeMirror get returnType {
+    if (_returnTypeIndex == -1) {
+      _unsupported();
+    }
+    return _data.classMirrors[_returnTypeIndex];
+  }
 
   @override
   String get simpleName => isConstructor
@@ -579,7 +558,148 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   String get source => null;
 
   @override
-  String toString() => "MethodMirror($_name)";
+  String toString() => "MethodMirrorImpl($qualifiedName)";
+}
+
+abstract class ImplicitAccessorMirrorImpl extends _DataCaching
+    implements MethodMirror {
+  final ReflectableImpl _reflector;
+  final int _variableMirrorIndex;
+
+  /// Index of this [ImplicitAccessorMirrorImpl] in `_data.memberMirrors`.
+  final int _selfIndex;
+
+  VariableMirrorImpl get _variableMirror =>
+      _data.memberMirrors[_variableMirrorIndex];
+
+  ImplicitAccessorMirrorImpl(
+      this._reflector, this._variableMirrorIndex, this._selfIndex);
+
+  int get kind => constants.kindFromEncoding(_variableMirror._descriptor);
+
+  ClassMirror get owner => _variableMirror.owner;
+
+  @override
+  String get constructorName => "";
+
+  @override
+  bool get isAbstract => false;
+
+  @override
+  bool get isConstConstructor => false;
+
+  @override
+  bool get isConstructor => false;
+
+  @override
+  bool get isFactoryConstructor => false;
+
+  @override
+  bool get isGenerativeConstructor => false;
+
+  @override
+  bool get isOperator => false;
+
+  @override
+  bool get isPrivate => _variableMirror.isPrivate;
+
+  @override
+  bool get isRedirectingConstructor => false;
+
+  @override
+  bool get isRegularMethod => false;
+
+  @override
+  bool get isStatic => _variableMirror.isStatic;
+
+  @override
+  bool get isSynthetic => true;
+
+  @override
+  bool get isTopLevel => false;
+
+  // It is allowed to return null.
+  @override
+  SourceLocation get location => null;
+
+  @override
+  List<Object> get metadata => <Object>[];
+
+  @override
+  TypeMirror get returnType => _variableMirror.type;
+
+  @override
+  String get source => null;
+}
+
+class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
+  ImplicitGetterMirrorImpl(
+      ReflectableImpl reflector, int variableMirrorIndex, int selfIndex)
+      : super(reflector, variableMirrorIndex, selfIndex);
+
+  @override
+  bool get isGetter => true;
+
+  @override
+  bool get isSetter => false;
+
+  @override
+  List<ParameterMirror> get parameters => <ParameterMirror>[];
+
+  @override
+  String get qualifiedName => _variableMirror.qualifiedName;
+
+  @override
+  String get simpleName => _variableMirror.simpleName;
+
+  @override
+  String toString() => "ImplicitGetterMirrorImpl($qualifiedName)";
+}
+
+class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
+  ImplicitSetterMirrorImpl(
+      ReflectableImpl reflector, int variableMirrorIndex, int selfIndex)
+      : super(reflector, variableMirrorIndex, selfIndex);
+
+  @override
+  bool get isGetter => false;
+
+  @override
+  bool get isSetter => true;
+
+  int get _parameterDescriptor {
+    int descriptor = constants.parameter;
+    if (_variableMirror.isStatic) descriptor |= constants.staticAttribute;
+    if (_variableMirror.isPrivate) descriptor |= constants.privateAttribute;
+    descriptor |= constants.syntheticAttribute;
+    if (_variableMirror._isDynamic) descriptor |= constants.dynamicAttribute;
+    if (_variableMirror._isClassType) descriptor |=
+        constants.classTypeAttribute;
+    return descriptor;
+  }
+
+  @override
+  List<ParameterMirror> get parameters {
+    return <ParameterMirror>[
+      new ParameterMirrorImpl(
+          _variableMirror.simpleName,
+          _parameterDescriptor,
+          _selfIndex,
+          _variableMirror._reflector,
+          _variableMirror._classMirrorIndex,
+          <Object>[],
+          null)
+    ];
+  }
+
+  @override
+  String get qualifiedName => "${_variableMirror.qualifiedName}=";
+
+  @override
+  String get simpleName => "${_variableMirror.simpleName}=";
+
+  @override
+  String toString() => "ImplicitSetterMirrorImpl($qualifiedName)";
 }
 
 abstract class VariableMirrorBase extends _DataCaching

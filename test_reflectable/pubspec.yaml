@@ -47,5 +47,6 @@ transformers:
       - test/parameter_mirrors_test.dart
       - test/parameter_test.dart
       - test/field_test.dart
+      - test/implicit_getter_setter_test.dart
 - $dart2js:
     $include: []

@@ -10,9 +10,9 @@ test/*_test: skip # Some needed mirror features not implemented by dart2js.
 
 [ ($compiler == none && $runtime != dartium) || $compiler == dart2js || $compiler == dartanalyzer || $compiler == dart2analyzer]
 build/test/new_instance_default_values_test: CompileTimeError # Issue #8
-build/test/parameter_mirrors_test: CompileTimeError # Missing implementation
+build/test/parameter_mirrors_test: CompileTimeError # Issue #8
 
 [ ($compiler == none && $runtime == dartium) ]
 build/test/new_instance_default_values_test: RuntimeError # Issue #8
-build/test/parameter_mirrors_test: RuntimeError # Missing implementation
+build/test/parameter_mirrors_test: RuntimeError # Issue #8
 

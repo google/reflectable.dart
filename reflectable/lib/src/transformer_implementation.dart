@@ -101,6 +101,9 @@ class _ReflectorDomain {
   Map<ClassElement, Map<String, ExecutableElement>> _instanceMemberCache =
       new Map<ClassElement, Map<String, ExecutableElement>>();
 
+  Map<ClassElement, Map<String, ExecutableElement>> _staticMemberCache =
+      new Map<ClassElement, Map<String, ExecutableElement>>();
+
   /// Returns a string that evaluates to a closure invoking [constructor] with
   /// the given arguments.
   /// [importCollector] is used to record all the imports needed to make the
@@ -220,9 +223,10 @@ class _ReflectorDomain {
       // [ClassMirror].
       classDomain._declaredFields.forEach(fields.add);
 
-      // Gather all getters and setters based on [instanceMembers], including
-      // both explicitly declared ones, implicitly generated ones for fields,
-      // and the implicitly generated ones that correspond to method tear-offs.
+      // Gather all getter and setter names based on [instanceMembers],
+      // including both explicitly declared ones, implicitly generated ones
+      // for fields, and the implicitly generated ones that correspond to
+      // method tear-offs.
       classDomain._instanceMembers.forEach((ExecutableElement instanceMember) {
         if (instanceMember is PropertyAccessorElement) {
           // A getter or a setter, synthetic or declared.
@@ -345,8 +349,6 @@ class _ReflectorDomain {
         return fields.indexOf(element);
       });
 
-      int fieldsLength = fields.length;
-
       // All the elements in the behavioral interface go after the
       // fields in [memberMirrors], so they must get an offset of
       // `fields.length` on the index.
@@ -360,7 +362,7 @@ class _ReflectorDomain {
         // For now, we provide the index -1 for this declaration, because
         // it is not yet supported. Need to find the correct solution, though!
         int index = members.indexOf(element);
-        return index == null ? -1 : index + fieldsLength;
+        return index == null ? -1 : index + fields.length;
       });
 
       String declarationsCode = "<int>[-1]"; // Encodes no capability.
@@ -378,7 +380,15 @@ class _ReflectorDomain {
         // TODO(eernst) implement: The "magic" default constructor has
         // index: -1; adjust this when support for it has been implemented.
         int index = members.indexOf(element);
-        return index == null ? -1 : index + fieldsLength;
+        return index == null ? -1 : index + fields.length;
+      }));
+
+      // All static members belong to the behavioral interface, so they
+      // also get an offset of `fields.length`.
+      String staticMembersCode = _formatAsList(
+          classDomain._staticMembers.map((ExecutableElement element) {
+        int index = members.indexOf(element);
+        return index == null ? -1 : index + fields.length;
       }));
 
       InterfaceType superType = classDomain._classElement.supertype;
@@ -432,9 +442,9 @@ class _ReflectorDomain {
       String result = 'new r.ClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${classDomain._qualifiedName}", $classIndex, '
           '${_constConstructionCode(importCollector)}, '
-          '$declarationsCode, $instanceMembersCode, $superclassIndex, '
-          '$staticGettersCode, $staticSettersCode, $constructorsCode, '
-          '$classMetadataCode)';
+          '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
+          '$superclassIndex, $staticGettersCode, $staticSettersCode, '
+          '$constructorsCode, $classMetadataCode)';
       classIndex++;
       return result;
     }));
@@ -444,31 +454,48 @@ class _ReflectorDomain {
 
     Iterable<String> methodsList =
         members.items.map((ExecutableElement element) {
-      int descriptor = _declarationDescriptor(element);
-      int ownerIndex = classes.indexOf(element.enclosingElement);
-      Iterable<int> parameterIndices =
-          element.parameters.map((ParameterElement parameterElement) {
-        return parameters.indexOf(parameterElement);
-      });
-      String parameterIndicesCode = _formatAsList(parameterIndices);
-      String metadataCode;
-      if (_capabilities._supportsMetadata) {
-        metadataCode = _extractMetadataCode(
-            element, resolver, importCollector, logger, dataId);
+      if (element is PropertyAccessorElement && element.isSynthetic) {
+        // There is no type propagation, so we declare an `accessorElement`.
+        PropertyAccessorElement accessorElement = element;
+        int variableMirrorIndex = fields.indexOf(accessorElement.variable);
+        // The `indexOf` is non-null: `accessorElement` came from `members`.
+        int selfIndex = members.indexOf(accessorElement) + fields.length;
+        if (accessorElement.isGetter) {
+          return 'new r.ImplicitGetterMirrorImpl('
+              '${_constConstructionCode(importCollector)}, '
+              '$variableMirrorIndex, $selfIndex)';
+        } else {
+          assert(accessorElement.isSetter);
+          return 'new r.ImplicitSetterMirrorImpl('
+              '${_constConstructionCode(importCollector)}, '
+              '$variableMirrorIndex, $selfIndex)';
+        }
       } else {
-        metadataCode = null;
+        int descriptor = _declarationDescriptor(element);
+        int returnTypeIndex = classes._contains(element.returnType.element)
+            ? classes.indexOf(element.returnType.element)
+            : -1;
+        int ownerIndex = classes.indexOf(element.enclosingElement);
+        String parameterIndicesCode = _formatAsList(
+            element.parameters.map((ParameterElement parameterElement) {
+          return parameters.indexOf(parameterElement);
+        }));
+        String metadataCode = _capabilities._supportsMetadata
+            ? _extractMetadataCode(
+                element, resolver, importCollector, logger, dataId)
+            : null;
+        return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
+            '$ownerIndex, $returnTypeIndex, $parameterIndicesCode, '
+            '${_constConstructionCode(importCollector)}, $metadataCode)';
       }
-      return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
-          '$ownerIndex, $parameterIndicesCode, '
-          '${_constConstructionCode(importCollector)}, $metadataCode)';
     });
 
     Iterable<String> fieldsList = fields.items.map((FieldElement element) {
       int descriptor = _fieldDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
       int classMirrorIndex = classes._contains(element.type.element)
-                             ? classes.indexOf(element.type.element)
-                             : -1;
+          ? classes.indexOf(element.type.element)
+          : -1;
       String metadataCode;
       if (_capabilities._supportsMetadata) {
         metadataCode = _extractMetadataCode(
@@ -597,6 +624,7 @@ class _ClassDomain {
           result[member.name] = member;
         }
       }
+
       if (classElement.supertype != null) {
         helper(classElement.supertype.element)
             .forEach((String name, ExecutableElement member) {
@@ -618,6 +646,42 @@ class _ClassDomain {
       }
       return result;
     }
+
+    return helper(_classElement).values;
+  }
+
+  /// Finds all static members.
+  Iterable<ExecutableElement> get _staticMembers {
+    Map<String, ExecutableElement> helper(ClassElement classElement) {
+      if (_reflectorDomain._staticMemberCache[classElement] != null) {
+        return _reflectorDomain._staticMemberCache[classElement];
+      }
+      Map<String, ExecutableElement> result =
+          new Map<String, ExecutableElement>();
+
+      void addIfCapable(ExecutableElement member) {
+        if (member.isPrivate) return;
+        // If [member] is a synthetic accessor created from a field, search for
+        // the metadata on the original field.
+        List<ElementAnnotation> metadata = (member is PropertyAccessorElement &&
+            member.isSynthetic) ? member.variable.metadata : member.metadata;
+        if (_reflectorDomain._capabilities
+            .supportsInstanceInvoke(member.name, metadata)) {
+          result[member.name] = member;
+        }
+      }
+
+      for (MethodElement member in classElement.methods) {
+        if (member.isAbstract || !member.isStatic) continue;
+        addIfCapable(member);
+      }
+      for (PropertyAccessorElement member in classElement.accessors) {
+        if (member.isAbstract || !member.isStatic) continue;
+        addIfCapable(member);
+      }
+      return result;
+    }
+
     return helper(_classElement).values;
   }
 
@@ -995,7 +1059,7 @@ class TransformerImplementation {
       // `isConst` as well.
       if (variable is ConstTopLevelVariableElementImpl) {
         EvaluationResultImpl result = variable.evaluationResult;
-        if (result.value == null) return null;  // Errors during evaluation.
+        if (result.value == null) return null; // Errors during evaluation.
         bool isOk = checkInheritance(result.value.type, focusClass.type);
         return isOk ? result.value.type.element : null;
       } else {
@@ -1515,7 +1579,8 @@ _initializeReflectable() {
       // Generate a new file with the name of the entry-point, whose main
       // initializes the reflection data, and calls the main from
       // [originalEntryPointId].
-      aggregateTransform.addOutput(new Asset.fromString(entryPointAsset.id,
+      aggregateTransform.addOutput(new Asset.fromString(
+          entryPointAsset.id,
           _generateNewEntryPoint(world, entryPointAsset.id,
               originalEntryPointFilename, entryPointLibrary)));
       _resolver.release();
