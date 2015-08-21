@@ -1,5 +1,7 @@
 # Changelog
 
+* Transformer implements reflection on libraries.
+
 ## 0.1.2
 
 * Our tests started failing because of a version conflict introduced by an

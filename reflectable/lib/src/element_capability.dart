@@ -61,6 +61,15 @@ class StaticInvokeMetaCapability extends MetadataQuantifiedCapability {
       : super(metadataType);
 }
 
+class TopLevelInvokeCapability extends NamePatternCapability {
+  const TopLevelInvokeCapability(String namePattern) : super(namePattern);
+}
+
+class TopLevelInvokeMetaCapability extends MetadataQuantifiedCapability {
+  const TopLevelInvokeMetaCapability(ClassElement metadataType)
+  : super(metadataType);
+}
+
 class NewInstanceCapability extends NamePatternCapability {
   const NewInstanceCapability(String namePattern) : super(namePattern);
 }
@@ -90,7 +99,7 @@ const localTypeCapability = const TypeCapability(null);
 
 const typeRelationsCapability = const _TypeRelationsCapability();
 
-const ownerCapability = const _OwnerCapability();
+const libraryCapability = const _LibraryCapability();
 
 const declarationsCapability = const _DeclarationsCapability();
 
@@ -99,23 +108,32 @@ const uriCapability = const _UriCapability();
 const libraryDependenciesCapability = const _LibraryDependenciesCapability();
 
 class InvokingCapability extends NamePatternCapability
-    implements InstanceInvokeCapability, StaticInvokeCapability,
-    NewInstanceCapability {
+    implements
+        InstanceInvokeCapability,
+        StaticInvokeCapability,
+        NewInstanceCapability {
   const InvokingCapability(String namePattern) : super(namePattern);
 }
 
 const invokingCapability = const InvokingCapability("");
 
 class InvokingMetaCapability extends MetadataQuantifiedCapability
-    implements InstanceInvokeMetaCapability, StaticInvokeMetaCapability,
-    NewInstanceMetaCapability {
+    implements
+        InstanceInvokeMetaCapability,
+        StaticInvokeMetaCapability,
+        NewInstanceMetaCapability {
   const InvokingMetaCapability(ClassElement metadataType) : super(metadataType);
 }
 
 class TypingCapability extends TypeCapability
-    implements _NameCapability, _ClassifyCapability, _MetadataCapability,
-    _TypeRelationsCapability, _OwnerCapability, _DeclarationsCapability,
-    _UriCapability, _LibraryDependenciesCapability {
+    implements
+        _NameCapability,
+        _ClassifyCapability,
+        _MetadataCapability,
+        _TypeRelationsCapability,
+        _DeclarationsCapability,
+        _UriCapability,
+        _LibraryDependenciesCapability {
   const TypingCapability(Element upperBound) : super(upperBound);
 }
 
@@ -146,10 +164,17 @@ abstract class ReflecteeQuantifyCapability implements ReflectCapability {
     return result;
   }
 
-  const ReflecteeQuantifyCapability([this._cap0 = null, this._cap1 = null,
-      this._cap2 = null, this._cap3 = null, this._cap4 = null,
-      this._cap5 = null, this._cap6 = null, this._cap7 = null,
-      this._cap8 = null, this._cap9 = null])
+  const ReflecteeQuantifyCapability(
+      [this._cap0 = null,
+      this._cap1 = null,
+      this._cap2 = null,
+      this._cap3 = null,
+      this._cap4 = null,
+      this._cap5 = null,
+      this._cap6 = null,
+      this._cap7 = null,
+      this._cap8 = null,
+      this._cap9 = null])
       : _capabilitiesGivenAsList = false,
         _capabilities = null;
 
@@ -168,11 +193,16 @@ abstract class ReflecteeQuantifyCapability implements ReflectCapability {
 }
 
 class SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
-  const SubtypeQuantifyCapability([ApiReflectCapability cap0,
-      ApiReflectCapability cap1, ApiReflectCapability cap2,
-      ApiReflectCapability cap3, ApiReflectCapability cap4,
-      ApiReflectCapability cap5, ApiReflectCapability cap6,
-      ApiReflectCapability cap7, ApiReflectCapability cap8,
+  const SubtypeQuantifyCapability(
+      [ApiReflectCapability cap0,
+      ApiReflectCapability cap1,
+      ApiReflectCapability cap2,
+      ApiReflectCapability cap3,
+      ApiReflectCapability cap4,
+      ApiReflectCapability cap5,
+      ApiReflectCapability cap6,
+      ApiReflectCapability cap7,
+      ApiReflectCapability cap8,
       ApiReflectCapability cap9])
       : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
 
@@ -182,11 +212,16 @@ class SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
 }
 
 class AdmitSubtypeCapability extends ReflecteeQuantifyCapability {
-  const AdmitSubtypeCapability([ApiReflectCapability cap0,
-      ApiReflectCapability cap1, ApiReflectCapability cap2,
-      ApiReflectCapability cap3, ApiReflectCapability cap4,
-      ApiReflectCapability cap5, ApiReflectCapability cap6,
-      ApiReflectCapability cap7, ApiReflectCapability cap8,
+  const AdmitSubtypeCapability(
+      [ApiReflectCapability cap0,
+      ApiReflectCapability cap1,
+      ApiReflectCapability cap2,
+      ApiReflectCapability cap3,
+      ApiReflectCapability cap4,
+      ApiReflectCapability cap5,
+      ApiReflectCapability cap6,
+      ApiReflectCapability cap7,
+      ApiReflectCapability cap8,
       ApiReflectCapability cap9])
       : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
 
@@ -227,8 +262,8 @@ class _TypeRelationsCapability implements ApiReflectCapability {
   const _TypeRelationsCapability();
 }
 
-class _OwnerCapability implements ApiReflectCapability {
-  const _OwnerCapability();
+class _LibraryCapability implements ApiReflectCapability {
+  const _LibraryCapability();
 }
 
 class _DeclarationsCapability implements ApiReflectCapability {

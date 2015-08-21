@@ -2,6 +2,10 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
+// TODO(sigurdm) doc: Make NoSuchCapability messages streamlined (the same in
+// both `reflectable_implementation.dart` and `mirrors_unimpl.dart`, and
+// explaining as well as possible which capability is missing.)
+
 /// Implementation of the reflectable interface using dart mirrors.
 library reflectable.src.reflectable_implementation;
 
@@ -153,6 +157,23 @@ bool reflectableSupportsStaticInvoke(ReflectableImpl reflectable, String name,
   });
 }
 
+/// Returns true iff [reflectable] supports top-level invoke of [name].
+bool reflectableSupportsTopLevelInvoke(ReflectableImpl reflectable, String name,
+    List<dm.InstanceMirror> metadata) {
+  // We don't have to check for `libraryCapability` because this method is only
+  // ever called from the methods of a `LibraryMirrorImpl` and the existence of
+  // an instance of a `LibraryMirrorImpl` implies the `libraryMirrorCapability`.
+  return reflectable.capabilities.any((ReflectCapability capability) {
+    if (capability is TopLevelInvokeCapability) {
+      return new RegExp(capability.namePattern).hasMatch(name);
+    }
+    if (capability is TopLevelInvokeMetaCapability) {
+      return metadataSupported(metadata, capability);
+    }
+    return false;
+  });
+}
+
 /// Returns true iff [reflectable] supports invoke of [name].
 bool reflectableSupportsConstructorInvoke(
     ReflectableImpl reflectable, dm.ClassMirror classMirror, String name) {
@@ -243,7 +264,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   @override
   Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
-    if (!reflectableSupportsStaticInvoke(_reflectable, memberName,
+    if (!reflectableSupportsTopLevelInvoke(_reflectable, memberName,
         _libraryMirror.declarations[new Symbol(memberName)].metadata)) {
       throw new NoSuchInvokeCapabilityError(
           _receiver, memberName, positionalArguments, namedArguments);
@@ -256,7 +277,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
 
   @override
   Object invokeGetter(String getterName) {
-    if (!reflectableSupportsStaticInvoke(_reflectable, getterName,
+    if (!reflectableSupportsTopLevelInvoke(_reflectable, getterName,
         _libraryMirror.declarations[new Symbol(getterName)].metadata)) {
       throw new NoSuchInvokeCapabilityError(_receiver, getterName, [], null);
     }
@@ -266,14 +287,14 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
 
   @override
   Object invokeSetter(String setterName, Object value) {
-    if (!reflectableSupportsStaticInvoke(_reflectable, setterName,
+    if (!reflectableSupportsTopLevelInvoke(_reflectable, setterName,
         _libraryMirror.declarations[new Symbol(setterName)].metadata)) {
       throw new NoSuchInvokeCapabilityError(
           _receiver, setterName, [value], null);
     }
     String getterName = _setterToGetter(setterName);
     Symbol getterNameSymbol = new Symbol(getterName);
-    return _libraryMirror.setField(getterNameSymbol, value);
+    return _libraryMirror.setField(getterNameSymbol, value).reflectee;
   }
 
   @override
@@ -634,6 +655,14 @@ class ClassMirrorImpl extends _TypeMirrorImpl
       return memberMirror.reflectee;
     }
     return helper;
+  }
+
+  @override
+  rm.LibraryMirror get owner {
+    if (_reflectable._supportsLibraries) return super.owner;
+    throw new NoSuchCapabilityError(
+        "Trying to get owner of class $qualifiedName "
+        "without `libraryCapability`.");
   }
 }
 
@@ -1120,15 +1149,30 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
     return _supportedClasses.contains(mirror);
   }
 
+  bool get _supportsLibraries {
+    return capabilities
+        .any((ReflectCapability capability) => capability == libraryCapability);
+  }
+
   @override
-  rm.LibraryMirror findLibrary(String library) {
-    Symbol librarySymbol = new Symbol(library);
+  rm.LibraryMirror findLibrary(String libraryName) {
+    if (!_supportsLibraries) {
+      throw new NoSuchCapabilityError(
+          "Searching for library $libraryName. LibraryMirrors are not "
+          "supported by this reflector. Try adding 'libraryCapability'");
+    }
+    Symbol librarySymbol = new Symbol(libraryName);
     return new _LibraryMirrorImpl(
         dm.currentMirrorSystem().findLibrary(librarySymbol), this);
   }
 
   @override
   Map<Uri, rm.LibraryMirror> get libraries {
+    if (!_supportsLibraries) {
+      throw new NoSuchCapabilityError(
+          "Trying to obtain a library mirror without capability. Try adding "
+          "'libraryCapability'");
+    }
     Map<Uri, dm.LibraryMirror> libs = dm.currentMirrorSystem().libraries;
     return new Map<Uri, rm.LibraryMirror>.fromIterable(libs.keys,
         key: (k) => k, value: (k) => new _LibraryMirrorImpl(libs[k], this));

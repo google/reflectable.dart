@@ -80,7 +80,8 @@ class InstanceInvokeCapability extends NamePatternCapability {
   const InstanceInvokeCapability(String namePattern) : super(namePattern);
 }
 
-/// Short hand for the right hand side.
+/// Short hand for `InstanceInvokeCapability("")`, meaning the capability to
+/// reflect over all instance members.
 const instanceInvokeCapability = const InstanceInvokeCapability("");
 
 /// Capability class requesting support for reflective invocation
@@ -101,13 +102,36 @@ class StaticInvokeCapability extends NamePatternCapability {
   const StaticInvokeCapability(String namePattern) : super(namePattern);
 }
 
-/// Short hand for the right hand side.
+/// Short hand for `StaticInvokeCapability("")`, meaning the capability to
+/// reflect over all static members.
 const staticInvokeCapability = const StaticInvokeCapability("");
 
 /// Capability class requesting support for reflective invocation
-/// of static members (static methods, getters, and setters). The given
-/// [metadata] instance is searched within the metadata associated with
-/// each candidate member declaration, and that member declaration
+/// of top-level members(top-level methods, getters, and setters). The given
+/// [namePattern] is used as a regular expression, and the name of
+/// each candidate member is tested: the member receives reflection
+/// support iff its name matches [namePattern].
+class TopLevelInvokeCapability extends NamePatternCapability {
+  const TopLevelInvokeCapability(String namePattern) : super(namePattern);
+}
+
+/// Short hand for `TopLevelInvokeCapability("")`, meaning the capability to
+/// reflect over all top-level members.
+const topLevelInvokeCapability = const TopLevelInvokeCapability("");
+
+/// Capability class requesting support for reflective invocation
+/// of top-level members (top-level methods, getters, and setters).
+/// The metadata associated with each candidate member declaration, is searched
+/// for objects with the given type (exact match). And that member declaration
+/// receives reflection support iff the search succeeds.
+class TopLevelInvokeMetaCapability extends MetadataQuantifiedCapability {
+  const TopLevelInvokeMetaCapability(Type metadata) : super(metadata);
+}
+
+/// Capability class requesting support for reflective invocation
+/// of static members (static methods, getters, and setters).
+/// The metadata associated with each candidate member declaration, is searched
+/// for objects with the given type (exact match). And that member declaration
 /// receives reflection support iff the search succeeds.
 class StaticInvokeMetaCapability extends MetadataQuantifiedCapability {
   const StaticInvokeMetaCapability(Type metadata) : super(metadata);
@@ -123,19 +147,20 @@ class NewInstanceCapability extends NamePatternCapability {
   const NewInstanceCapability(String namePattern) : super(namePattern);
 }
 
-/// Short hand for the right hand side.
+/// Short hand for `NewInstanceCapability("")`, meaning the capability to
+/// reflect over all constructors.
 const newInstanceCapability = const NewInstanceCapability("");
 
 /// Capability class requesting support for reflective invocation
-/// of constructors (of all kinds). The given [metadata] instance
-/// is searched within the metadata associated with each candidate
-/// constructor declaration, and that constructor declaration
+/// of constructors (of all kinds).
+/// The metadata associated with each candidate member declaration, is searched
+/// for objects with the given type (exact match). And that member declaration
 /// receives reflection support iff the search succeeds.
 class NewInstanceMetaCapability extends MetadataQuantifiedCapability {
   const NewInstanceMetaCapability(Type metadataType) : super(metadataType);
 }
 
-/// Short hand for the right hand side.
+// TODO(eernst) doc: Document this.
 const nameCapability = const _NameCapability();
 
 /// Capability instance requesting support for classification
@@ -202,10 +227,11 @@ const localTypeCapability = const TypeCapability(null);
 /// as mentioned with [classifyCapability].
 const typeRelationsCapability = const _TypeRelationsCapability();
 
-/// Capability instance requesting reflective support for the mirror
-/// method `owner`. The corresponding class is private for the same
-/// reason as mentioned with [classifyCapability].
-const ownerCapability = const _OwnerCapability();
+/// Capability instance requesting reflective support for library-mirrors.
+/// This will cause support for reflecting for all libraries containing
+/// annotated classes (enabling support for [ClassMirror.owner]), and all
+/// annotated libraries.
+const libraryCapability = const _LibraryCapability();
 
 /// Capability instance requesting reflective support for the following
 /// mirror methods, coming from several mirror classes: `declarations`,
@@ -232,20 +258,25 @@ const libraryDependenciesCapability = const _LibraryDependenciesCapability();
 /// InstanceInvokeCapability, StaticInvokeCapability, and NewInstanceCapability,
 /// all holding the same [namePattern].
 class InvokingCapability extends NamePatternCapability
-    implements InstanceInvokeCapability, StaticInvokeCapability,
-    NewInstanceCapability {
+    implements
+        InstanceInvokeCapability,
+        StaticInvokeCapability,
+        NewInstanceCapability {
   const InvokingCapability(String namePattern) : super(namePattern);
 }
 
-/// Short hand for the right hand side.
+/// Short hand for `InvokingCapability("")`, meaning the capability to
+/// reflect over all top-level and static members.
 const invokingCapability = const InvokingCapability("");
 
 /// Grouping capability, used to request all the capabilities requested by
 /// InstanceInvokeMetaCapability, StaticInvokeMetaCapability, and
 /// NewInstanceMetaCapability, all holding the same [metadata].
 class InvokingMetaCapability extends MetadataQuantifiedCapability
-    implements InstanceInvokeMetaCapability, StaticInvokeMetaCapability,
-    NewInstanceMetaCapability {
+    implements
+        InstanceInvokeMetaCapability,
+        StaticInvokeMetaCapability,
+        NewInstanceMetaCapability {
   const InvokingMetaCapability(Type metadataType) : super(metadataType);
 }
 
@@ -254,9 +285,14 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
 /// metadataCapability, typeRelationsCapability, ownerCapability,
 /// declarationsCapability, uriCapability, and libraryDependenciesCapability.
 class TypingCapability extends TypeCapability
-    implements _NameCapability, _ClassifyCapability, _MetadataCapability,
-    _TypeRelationsCapability, _OwnerCapability, _DeclarationsCapability,
-    _UriCapability, _LibraryDependenciesCapability {
+    implements
+        _NameCapability,
+        _ClassifyCapability,
+        _MetadataCapability,
+        _TypeRelationsCapability,
+        _DeclarationsCapability,
+        _UriCapability,
+        _LibraryDependenciesCapability {
   const TypingCapability(Type upperBound) : super(upperBound);
 }
 
@@ -307,10 +343,17 @@ abstract class ReflecteeQuantifyCapability implements ReflectCapability {
 
   /// Const constructor, allowing for varargs style invocation with up
   /// to ten arguments.
-  const ReflecteeQuantifyCapability([this._cap0 = null, this._cap1 = null,
-      this._cap2 = null, this._cap3 = null, this._cap4 = null,
-      this._cap5 = null, this._cap6 = null, this._cap7 = null,
-      this._cap8 = null, this._cap9 = null])
+  const ReflecteeQuantifyCapability(
+      [this._cap0 = null,
+      this._cap1 = null,
+      this._cap2 = null,
+      this._cap3 = null,
+      this._cap4 = null,
+      this._cap5 = null,
+      this._cap6 = null,
+      this._cap7 = null,
+      this._cap8 = null,
+      this._cap9 = null])
       : _capabilitiesGivenAsList = false,
         _capabilities = null;
 
@@ -335,11 +378,16 @@ abstract class ReflecteeQuantifyCapability implements ReflectCapability {
 /// capability, but also all classes which are subtypes of the target
 /// class.
 class SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
-  const SubtypeQuantifyCapability([ApiReflectCapability cap0,
-      ApiReflectCapability cap1, ApiReflectCapability cap2,
-      ApiReflectCapability cap3, ApiReflectCapability cap4,
-      ApiReflectCapability cap5, ApiReflectCapability cap6,
-      ApiReflectCapability cap7, ApiReflectCapability cap8,
+  const SubtypeQuantifyCapability(
+      [ApiReflectCapability cap0,
+      ApiReflectCapability cap1,
+      ApiReflectCapability cap2,
+      ApiReflectCapability cap3,
+      ApiReflectCapability cap4,
+      ApiReflectCapability cap5,
+      ApiReflectCapability cap6,
+      ApiReflectCapability cap7,
+      ApiReflectCapability cap8,
       ApiReflectCapability cap9])
       : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
 
@@ -374,11 +422,16 @@ class SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
 /// refer to the design document.
 /// TODO(eernst) doc: Insert a link to the design document.
 class AdmitSubtypeCapability extends ReflecteeQuantifyCapability {
-  const AdmitSubtypeCapability([ApiReflectCapability cap0,
-      ApiReflectCapability cap1, ApiReflectCapability cap2,
-      ApiReflectCapability cap3, ApiReflectCapability cap4,
-      ApiReflectCapability cap5, ApiReflectCapability cap6,
-      ApiReflectCapability cap7, ApiReflectCapability cap8,
+  const AdmitSubtypeCapability(
+      [ApiReflectCapability cap0,
+      ApiReflectCapability cap1,
+      ApiReflectCapability cap2,
+      ApiReflectCapability cap3,
+      ApiReflectCapability cap4,
+      ApiReflectCapability cap5,
+      ApiReflectCapability cap6,
+      ApiReflectCapability cap7,
+      ApiReflectCapability cap8,
       ApiReflectCapability cap9])
       : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
 
@@ -437,8 +490,10 @@ class _TypeRelationsCapability implements ApiReflectCapability {
   const _TypeRelationsCapability();
 }
 
-class _OwnerCapability implements ApiReflectCapability {
-  const _OwnerCapability();
+// TODO(sigurdm): Split this into EnclosingLibraryCapability(),
+// LibraryCapabiliy(String regex) and LibraryMetaCapability(Type type).
+class _LibraryCapability implements ApiReflectCapability {
+  const _LibraryCapability();
 }
 
 class _DeclarationsCapability implements ApiReflectCapability {

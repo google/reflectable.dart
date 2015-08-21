@@ -3,7 +3,6 @@
 # but the capability does.
 build/test/no_such_capability_test: RuntimeError # Missing implementation
 build/test/invoke_capabilities_test: RuntimeError # Missing implementation
-build/test/invoke_toplevel_test: RuntimeError # Missing implementation
 
 [ $compiler == dart2js ]
 test/*_test: skip # Some needed mirror features not implemented by dart2js.

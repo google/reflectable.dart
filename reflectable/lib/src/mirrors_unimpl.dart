@@ -10,6 +10,7 @@ import '../capability.dart';
 import '../mirrors.dart';
 import '../reflectable.dart';
 import 'encoding_constants.dart' as constants;
+import 'encoding_constants.dart' show NO_CAPABILITY_INDEX;
 import 'reflectable_base.dart';
 
 bool get isTransformed => true;
@@ -48,6 +49,11 @@ class ReflectorData {
   /// by this [ReflectorData].
   final List<ClassMirror> classMirrors;
 
+  /// List of library mirrors, one library mirror for each library that is
+  /// supported by reflection as specified by the reflector backed up
+  /// by this [ReflectorData].
+  final List<LibraryMirror> libraryMirrors;
+
   /// Repository of method mirrors used (via indices into this list) by
   /// the [classMirrors] to describe the behavior of the mirrored
   /// class and its instances, and of variable mirrors used to describe
@@ -84,7 +90,7 @@ class ReflectorData {
   Map<Type, ClassMirror> _typeToClassMirrorCache;
 
   ReflectorData(this.classMirrors, this.memberMirrors, this.parameterMirrors,
-      this.types, this.getters, this.setters);
+      this.types, this.getters, this.setters, this.libraryMirrors);
 
   /// Returns a class-mirror for the given [type].
   ///
@@ -143,6 +149,10 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
       return Function.apply(
           methodTearer(reflectee), positionalArguments, namedArguments);
     }
+    // TODO(eernst) clarify: Do we want to invoke noSuchMethod here when
+    // we have a capability matching the name, but there really is no such
+    // method. And how will we construct the symbol for the Invoke instance
+    // we pass to `noSuchMethod`?
     throw new NoSuchInvokeCapabilityError(
         reflectee, methodName, positionalArguments, namedArguments);
   }
@@ -191,13 +201,18 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   /// [ReflectorData.types].
   final int _classIndex;
 
+  /// The index of the owner library in the [ReflectorData.libraryMirrors]
+  /// table.
+  final int _ownerIndex;
+
   /// A list of the indices in [ReflectorData.memberMirrors] of the
   /// declarations of the reflected class. This includes method mirrors
   /// and variable mirrors and it directly corresponds to `declarations`.
   /// Exception: When the given `_reflector.capabilities` do not support
-  /// the operation `declarations`, this will be `<int>[-1]`. It is enough
-  /// to check that the list is non-empty and first element is -1 to
-  /// detect this situation, because -1 will otherwise never occur.
+  /// the operation `declarations`, this will be `<int>[NO_CAPABILITY_INDEX]`.
+  /// It is enough to check that the list is non-empty and first element is
+  /// NO_CAPABILITY_INDEX to detect this situation, because
+  /// NO_CAPABILITY_INDEX` will otherwise never occur.
   final List<int> _declarationIndices;
 
   /// A list of the indices in [ReflectorData.memberMirrors] of the
@@ -237,13 +252,14 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
       this.getters,
       this.setters,
       this.constructors,
+      this._ownerIndex,
       metadata)
       : _metadata =
             (metadata == null) ? null : new UnmodifiableListView(metadata);
 
   ClassMirror get superclass {
     if (_superclassIndex == null) return null;
-    if (_superclassIndex == -1) {
+    if (_superclassIndex == NO_CAPABILITY_INDEX) {
       throw new NoSuchCapabilityError(
           "Requesting mirror on un-marked class, superclass of $simpleName");
     }
@@ -262,11 +278,12 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
           new Map<String, DeclarationMirror>();
       for (int declarationIndex in _declarationIndices) {
         // We encode a missing `declarations` capability as an index with
-        // the value -1. Note that `_declarations` will not be initialized
-        // and hence we will come here repeatedly if that is the case; however,
-        // performing operations for which there is no capability need not
-        // have stellar performance, it is almost always a bug to do that.
-        if (declarationIndex == -1) {
+        // the value NO_CAPABILITY_INDEX. Note that `_declarations` will not be
+        // initialized and hence we will come here repeatedly if that is the
+        // case; however, performing operations for which there is no capability
+        // need not have stellar performance, it is almost always a bug to do
+        // that.
+        if (declarationIndex == NO_CAPABILITY_INDEX) {
           throw new NoSuchCapabilityError(
               "Requesting declarations without capability");
         }
@@ -404,7 +421,14 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   TypeMirror get originalDeclaration => _unsupported();
 
   @override
-  DeclarationMirror get owner => _unsupported();
+  DeclarationMirror get owner {
+    if (_ownerIndex == NO_CAPABILITY_INDEX) {
+      throw new NoSuchCapabilityError(
+          "Trying to get owner of class $qualifiedName "
+          "without `LibraryCapability`.");
+    }
+    return _data.libraryMirrors[_ownerIndex];
+  }
 
   @override
   Type get reflectedType => _data.types[_classIndex];
@@ -429,6 +453,86 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   // Because we take care to only ever create one instance for each
   // type/reflector-combination we can rely on the default `hashCode` and `==`
   // operations.
+}
+
+class LibraryMirrorImpl implements LibraryMirror {
+  LibraryMirrorImpl(this.simpleName, this.uri, this.getters, this.setters,
+      List<Object> metadata)
+      : _metadata =
+            metadata == null ? null : new UnmodifiableListView(metadata);
+
+  final Uri uri;
+
+  Map<String, DeclarationMirror> get declarations => _unsupported();
+
+  @override
+  final String simpleName;
+
+  final Map<String, _StaticGetter> getters;
+  final Map<String, _StaticSetter> setters;
+
+  @override
+  Object invoke(String memberName, List positionalArguments,
+      [Map<Symbol, dynamic> namedArguments]) {
+    _StaticGetter getter = getters[memberName];
+    if (getter == null) {
+      throw new NoSuchInvokeCapabilityError(
+          null, memberName, positionalArguments, namedArguments);
+    }
+    return Function.apply(
+        getters[memberName](), positionalArguments, namedArguments);
+  }
+
+  @override
+  Object invokeGetter(String getterName) {
+    _StaticGetter getter = getters[getterName];
+    if (getter == null) {
+      throw new NoSuchInvokeCapabilityError(null, getterName, [], {});
+    }
+    return getter();
+  }
+
+  @override
+  Object invokeSetter(String setterName, Object value) {
+    _StaticSetter setter = setters[setterName];
+    if (setter == null) {
+      throw new NoSuchInvokeCapabilityError(null, setterName, [value], {});
+    }
+    return setter(value);
+  }
+
+  @override
+  bool get isPrivate => false;
+
+  @override
+  bool get isTopLevel => false;
+
+  @override
+  SourceLocation get location => null;
+
+  final List<Object> _metadata;
+
+  @override
+  List<Object> get metadata {
+    if (_metadata == null) {
+      throw new NoSuchCapabilityError(
+          "Requesting metadata of library $simpleName without capability");
+    }
+    return _metadata;
+  }
+
+  @override
+  DeclarationMirror get owner => null;
+
+  @override
+  String get qualifiedName => simpleName;
+
+  bool operator ==(other) => _unsupported();
+  int get hashCode => _unsupported();
+
+  // TODO(sigurdm) implement: Need to implement this. Probably only when a given
+  // capability is enabled.
+  List<LibraryDependencyMirror> get libraryDependencies => _unsupported();
 }
 
 class MethodMirrorImpl extends _DataCaching implements MethodMirror {
@@ -757,7 +861,7 @@ abstract class VariableMirrorBase extends _DataCaching
   TypeMirror get type {
     if (_isDynamic) return new DynamicMirrorImpl();
     if (_isClassType) {
-      if (_classMirrorIndex == -1) {
+      if (_classMirrorIndex == NO_CAPABILITY_INDEX) {
         throw new NoSuchCapabilityError(
             "Attempt to get class mirror for un-marked class (type of $_name)");
       }
@@ -929,7 +1033,15 @@ abstract class ReflectableImpl extends ReflectableBase
   }
 
   @override
-  LibraryMirror findLibrary(String library) => _unsupported();
+  LibraryMirror findLibrary(String libraryName) {
+    if (data[this].libraryMirrors == null) {
+      throw new NoSuchCapabilityError(
+          "Using `.findLibrary` without capability. "
+          "Try adding `libraryCapability`.");
+    }
+    return data[this].libraryMirrors.singleWhere(
+        (LibraryMirror mirror) => mirror.qualifiedName == libraryName);
+  }
 
   @override
   Map<Uri, LibraryMirror> get libraries => _unsupported();
