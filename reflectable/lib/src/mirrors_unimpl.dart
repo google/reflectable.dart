@@ -285,7 +285,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
         // that.
         if (declarationIndex == NO_CAPABILITY_INDEX) {
           throw new NoSuchCapabilityError(
-              "Requesting declarations without capability");
+              "Requesting `declarations` of $qualifiedName without capability");
         }
         DeclarationMirror declarationMirror =
             _data.memberMirrors[declarationIndex];
@@ -622,6 +622,12 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   @override
   bool get isTopLevel => owner is LibraryMirror;
 
+  bool get _hasDynamicReturnType =>
+      (_descriptor & constants.dynamicReturnTypeAttribute != 0);
+
+  bool get _hasClassReturnType =>
+      (_descriptor & constants.classReturnTypeAttribute != 0);
+
   // It is allowed to return null.
   @override
   SourceLocation get location => null;
@@ -647,10 +653,14 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
 
   @override
   TypeMirror get returnType {
-    if (_returnTypeIndex == -1) {
-      _unsupported();
+    if (_returnTypeIndex == NO_CAPABILITY_INDEX) {
+      throw new NoSuchCapabilityError(
+          "Requesting `returnType` of method $simpleName without capability");
     }
-    return _data.classMirrors[_returnTypeIndex];
+    if (_hasDynamicReturnType) return new DynamicMirrorImpl();
+    if (_hasClassReturnType) return _data.classMirrors[_returnTypeIndex];
+    // TODO(eernst) implement: Support remaining kinds of types.
+    return _unsupported();
   }
 
   @override
@@ -858,15 +868,17 @@ abstract class VariableMirrorBase extends _DataCaching
   String get simpleName => _name;
 
   @override
+  String get qualifiedName => "${owner.qualifiedName}.$_name";
+
+  @override
   TypeMirror get type {
-    if (_isDynamic) return new DynamicMirrorImpl();
-    if (_isClassType) {
-      if (_classMirrorIndex == NO_CAPABILITY_INDEX) {
-        throw new NoSuchCapabilityError(
-            "Attempt to get class mirror for un-marked class (type of $_name)");
-      }
-      return _data.classMirrors[_classMirrorIndex];
+    if (_classMirrorIndex == NO_CAPABILITY_INDEX) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get class mirror for un-marked class (type of $_name)");
     }
+    if (_isDynamic) return new DynamicMirrorImpl();
+    if (_isClassType) return _data.classMirrors[_classMirrorIndex];
+    // TODO(eernst) implement: Support remaining kinds of types.
     return _unsupported();
   }
 }
@@ -874,9 +886,6 @@ abstract class VariableMirrorBase extends _DataCaching
 class VariableMirrorImpl extends VariableMirrorBase {
   @override
   ClassMirror get owner => _data.classMirrors[_ownerIndex];
-
-  @override
-  String get qualifiedName => "${owner.qualifiedName}.$_name";
 
   @override
   bool get isStatic => (_descriptor & constants.staticAttribute != 0);
@@ -910,15 +919,6 @@ class ParameterMirrorImpl extends VariableMirrorBase
 
   @override
   bool get isNamed => (_descriptor & constants.namedAttribute != 0);
-
-  // TODO(eernst) clarify: A parameter cannot be accessed using dot
-  // notation, and hence it has no qualified name. So is the following
-  // behavior correct?
-  @override
-  String get qualifiedName {
-    throw new NoSuchCapabilityError(
-        "Attempting to get the `qualifiedName` of the parameter $_name.");
-  }
 
   @override
   MethodMirror get owner => _data.memberMirrors[_ownerIndex];

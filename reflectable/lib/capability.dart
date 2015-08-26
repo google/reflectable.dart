@@ -490,7 +490,7 @@ class _TypeRelationsCapability implements ApiReflectCapability {
   const _TypeRelationsCapability();
 }
 
-// TODO(sigurdm): Split this into EnclosingLibraryCapability(),
+// TODO(sigurdm) feature: Split this into EnclosingLibraryCapability(),
 // LibraryCapabiliy(String regex) and LibraryMetaCapability(Type type).
 class _LibraryCapability implements ApiReflectCapability {
   const _LibraryCapability();

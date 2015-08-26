@@ -123,37 +123,52 @@ class _ReflectorDomain {
         .map((ParameterElement parameter) => parameter.name)
         .toList();
 
-    List<String> NamedParameterNames = type.namedParameterTypes.keys.toList();
+    List<String> namedParameterNames = type.namedParameterTypes.keys.toList();
 
     String positionals = new Iterable.generate(
         requiredPositionalCount, (int i) => parameterNames[i]).join(", ");
 
     String optionalsWithDefaults =
         new Iterable.generate(optionalPositionalCount, (int i) {
-      String defaultValueCode =
-          constructor.parameters[requiredPositionalCount + i].defaultValueCode;
-      String defaultValueString =
-          defaultValueCode == null ? "" : " = $defaultValueCode";
-      return "${parameterNames[i + requiredPositionalCount]}"
-          "$defaultValueString";
+      ParameterElement parameterElement =
+          constructor.parameters[requiredPositionalCount + i];
+      FormalParameter parameterNode = parameterElement.computeNode();
+      String defaultValueCode = "";
+      if (parameterNode is DefaultFormalParameter &&
+          parameterNode.defaultValue != null) {
+        defaultValueCode = " = ${_extractConstantCode(
+            parameterNode.defaultValue,
+            parameterElement.library,
+            importCollector)}";
+      }
+      return "${parameterNames[requiredPositionalCount + i]}"
+          "$defaultValueCode";
     }).join(", ");
 
     String namedWithDefaults =
-        new Iterable.generate(NamedParameterNames.length, (int i) {
-      // TODO(#8) future: Recreate default values.
-      // TODO(#8) implement: Until that is done, recognize
-      // unhandled cases, and emit error/warning.
-      String defaultValueCode =
-          constructor.parameters[requiredPositionalCount + i].defaultValueCode;
-      String defaultValueString =
-          defaultValueCode == null ? "" : ": $defaultValueCode";
-      return "${NamedParameterNames[i]}$defaultValueString";
+        new Iterable.generate(namedParameterNames.length, (int i) {
+      // Note that the use of `requiredPositionalCount + i` below relies
+      // on a language design where no parameter list can include
+      // both optional positional and named parameters, so if there are
+      // any named parameters then all optional parameters are named.
+      ParameterElement parameterElement =
+          constructor.parameters[requiredPositionalCount + i];
+      FormalParameter parameterNode = parameterElement.computeNode();
+      String defaultValueCode = "";
+      if (parameterNode is DefaultFormalParameter &&
+          parameterNode.defaultValue != null) {
+        defaultValueCode = ": ${_extractConstantCode(
+            parameterNode.defaultValue,
+            parameterElement.library,
+            importCollector)}";
+      }
+      return "${namedParameterNames[i]}$defaultValueCode";
     }).join(", ");
 
     String optionalArguments = new Iterable.generate(optionalPositionalCount,
         (int i) => parameterNames[i + requiredPositionalCount]).join(", ");
     String namedArguments =
-        NamedParameterNames.map((String name) => "$name: $name").join(", ");
+        namedParameterNames.map((String name) => "$name: $name").join(", ");
 
     List<String> parameterParts = new List<String>();
     List<String> argumentParts = new List<String>();
@@ -166,7 +181,7 @@ class _ReflectorDomain {
       parameterParts.add("[$optionalsWithDefaults]");
       argumentParts.add(optionalArguments);
     }
-    if (NamedParameterNames.isNotEmpty) {
+    if (namedParameterNames.isNotEmpty) {
       parameterParts.add("{${namedWithDefaults}}");
       argumentParts.add(namedArguments);
     }
@@ -195,12 +210,13 @@ class _ReflectorDomain {
     Set<String> instanceGetterNames = new Set<String>();
     Set<String> instanceSetterNames = new Set<String>();
 
-    // Fill in [libraries], [classes], [members], [fields], [parameters],
-    // [instanceGetterNames], and [instanceSetterNames].
+    // Fill in [libraries].
     for (LibraryElement library in _libraries) {
       libraries.add(library);
     }
 
+    // Fill in [classes], [members], [fields], [parameters],
+    // [instanceGetterNames], and [instanceSetterNames].
     for (_ClassDomain classDomain in _annotatedClasses) {
       // Gather all annotated classes.
       classes.add(classDomain._classElement);
@@ -296,7 +312,7 @@ class _ReflectorDomain {
           'instance.$name = value';
     }
 
-    String _staticSettingClosure(ClassElement classElement, String setterName) {
+    String staticSettingClosure(ClassElement classElement, String setterName) {
       assert(setterName.substring(setterName.length - 1) == "=");
       // The [setterName] includes the "=", remove it.
       String name = setterName.substring(0, setterName.length - 1);
@@ -305,25 +321,62 @@ class _ReflectorDomain {
       return 'r"$setterName": (value) => $prefix.$className.$name = value';
     }
 
+    int computeTypeIndexBase(
+        Element typeElement, bool isDynamic, bool isClassType) {
+      if (_capabilities._impliesTypes) {
+        if (isDynamic) {
+          // The mirror will report 'dynamic' as its `returnType`
+          // and it will never use the index.
+          return null;
+        }
+        if (isClassType) {
+          // Normal encoding of a class type. That class has been added
+          // to `classes`, so the `indexOf` cannot return `null`.
+          assert(classes._contains(typeElement));
+          return classes.indexOf(typeElement);
+        }
+      }
+      return constants.NO_CAPABILITY_INDEX;
+    }
+
+    int computeFieldTypeIndex(FieldElement element, int descriptor) {
+      return computeTypeIndexBase(
+          element.type.element,
+          descriptor & constants.dynamicAttribute != 0,
+          descriptor & constants.classTypeAttribute != 0);
+    }
+
+    int computeReturnTypeIndex(ExecutableElement element, int descriptor) {
+      return computeTypeIndexBase(
+          element.returnType.element,
+          descriptor & constants.dynamicReturnTypeAttribute != 0,
+          descriptor & constants.classReturnTypeAttribute != 0);
+    }
+
     // Compute `includedClasses`, i.e., the set of classes which are
     // annotated, or the upwards-closed completion of that set.
     Set<_ClassDomain> includedClasses = new Set<_ClassDomain>();
     includedClasses.addAll(_annotatedClasses);
-    if (_capabilities._impliesParameterTypes) {
-      parameters.items.forEach((ParameterElement parameterElement) {
-        Element parameterType = parameterElement.type.element;
-        if (parameterType is ClassElement) {
-          includedClasses.add(_createClassDomain(parameterType, this));
-          classes.add(parameterType);
-        }
-      });
-    }
-    if (_capabilities._impliesFieldTypes) {
+    if (_capabilities._impliesTypes) {
       fields.items.forEach((FieldElement fieldElement) {
         Element fieldType = fieldElement.type.element;
         if (fieldType is ClassElement) {
           includedClasses.add(_createClassDomain(fieldType, this));
           classes.add(fieldType);
+        }
+      });
+      members.items.forEach((ExecutableElement executableElement) {
+        Element returnType = executableElement.type.element;
+        if (returnType is ClassElement) {
+          includedClasses.add(_createClassDomain(returnType, this));
+          classes.add(returnType);
+        }
+      });
+      parameters.items.forEach((ParameterElement parameterElement) {
+        Element parameterType = parameterElement.type.element;
+        if (parameterType is ClassElement) {
+          includedClasses.add(_createClassDomain(parameterType, this));
+          classes.add(parameterType);
         }
       });
     }
@@ -358,9 +411,9 @@ class _ReflectorDomain {
     }
 
     // Generate the class mirrors.
-    int classIndex = 0;
-    String classMirrorsCode =
-        _formatAsList(includedClasses.map((_ClassDomain classDomain) {
+    int classIndex = 0; // Index of each class mirror, stored in itself.
+    String classMirrorsCode = _formatAsList("m.ClassMirror",
+        includedClasses.map((_ClassDomain classDomain) {
       // Fields go first in [memberMirrors], so they will get the
       // same index as in [fields].
       Iterable<int> fieldsIndices =
@@ -392,12 +445,12 @@ class _ReflectorDomain {
         List<int> declarationsIndices = <int>[]
           ..addAll(fieldsIndices)
           ..addAll(methodsIndices);
-        declarationsCode = _formatAsList(declarationsIndices);
+        declarationsCode = _formatAsList("int", declarationsIndices);
       }
 
       // All instance members belong to the behavioral interface, so they
       // also get an offset of `fields.length`.
-      String instanceMembersCode = _formatAsList(
+      String instanceMembersCode = _formatAsList("int",
           classDomain._instanceMembers.map((ExecutableElement element) {
         // TODO(eernst) implement: The "magic" default constructor has
         // index: NO_CAPABILITY_INDEX; adjust this when support for it has been
@@ -410,33 +463,34 @@ class _ReflectorDomain {
 
       // All static members belong to the behavioral interface, so they
       // also get an offset of `fields.length`.
-      String staticMembersCode = _formatAsList(
+      String staticMembersCode = _formatAsList("int",
           classDomain._staticMembers.map((ExecutableElement element) {
         int index = members.indexOf(element);
-        return index == null ? -1 : index + fields.length;
+        return index == null
+            ? constants.NO_CAPABILITY_INDEX
+            : index + fields.length;
       }));
 
       InterfaceType superType = classDomain._classElement.supertype;
       ClassElement superclass = superType == null ? null : superType.element;
       String superclassIndex;
       if (superclass == null) {
+        // There is no superclass.
         superclassIndex = null;
       } else {
         int index = classes.indexOf(superclass);
-        if (index == null) {
-          index = constants.NO_CAPABILITY_INDEX;
-        }
+        if (index == null) index = constants.NO_CAPABILITY_INDEX;
         superclassIndex = "$index";
       }
 
       String constructorsCode;
-
       if (classDomain._classElement.isAbstract) {
         constructorsCode = '{}';
       } else {
         constructorsCode = _formatAsMap(
             classDomain._constructors.map((ConstructorElement constructor) {
-          String code = _constructorCode(constructor, importCollector);
+          String code =
+              _constructorCode(constructor, importCollector);
           return 'r"${constructor.name}": $code';
         }));
       }
@@ -462,7 +516,7 @@ class _ReflectorDomain {
           .where((PropertyAccessorElement element) =>
               element.isStatic && element.isSetter)
           .map((PropertyAccessorElement element) =>
-              _staticSettingClosure(classDomain._classElement, element.name)));
+              staticSettingClosure(classDomain._classElement, element.name)));
 
       int ownerIndex = _capabilities.supportsLibraries
           ? libraries.indexOf(classDomain._classElement.library)
@@ -501,11 +555,9 @@ class _ReflectorDomain {
         }
       } else {
         int descriptor = _declarationDescriptor(element);
-        int returnTypeIndex = classes._contains(element.returnType.element)
-            ? classes.indexOf(element.returnType.element)
-            : -1;
+        int returnTypeIndex = computeReturnTypeIndex(element, descriptor);
         int ownerIndex = classes.indexOf(element.enclosingElement);
-        String parameterIndicesCode = _formatAsList(
+        String parameterIndicesCode = _formatAsList("int",
             element.parameters.map((ParameterElement parameterElement) {
           return parameters.indexOf(parameterElement);
         }));
@@ -522,14 +574,14 @@ class _ReflectorDomain {
     Iterable<String> fieldsList = fields.items.map((FieldElement element) {
       int descriptor = _fieldDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
-      int classMirrorIndex = classes._contains(element.type.element)
-          ? classes.indexOf(element.type.element)
-          : constants.NO_CAPABILITY_INDEX;
+      int classMirrorIndex = computeFieldTypeIndex(element, descriptor);
       String metadataCode;
       if (_capabilities._supportsMetadata) {
         metadataCode = _extractMetadataCode(
             element, resolver, importCollector, logger, dataId);
       } else {
+        // We encode 'without capability' as `null` for metadata, because
+        // it is a `List<Object>`, which has no other natural encoding.
         metadataCode = null;
       }
       return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
@@ -540,10 +592,10 @@ class _ReflectorDomain {
     List<String> membersList = <String>[]
       ..addAll(fieldsList)
       ..addAll(methodsList);
-    String membersCode = _formatAsList(membersList);
+    String membersCode = _formatAsList("m.DeclarationMirror", membersList);
 
     String typesCode =
-        _formatAsList(classes.items.map((ClassElement classElement) {
+        _formatAsList("Type", classes.items.map((ClassElement classElement) {
       String prefix = importCollector._getPrefix(classElement.library);
       return "$prefix.${classElement.name}";
     }));
@@ -552,8 +604,8 @@ class _ReflectorDomain {
     if (!_capabilities.supportsLibraries) {
       librariesCode = "null";
     } else {
-      librariesCode =
-          _formatAsList(libraries.items.map((LibraryElement library) {
+      librariesCode = _formatAsList("m.LibraryMirror",
+          libraries.items.map((LibraryElement library) {
         String gettersCode = _formatAsMap(
             gettersOfLibrary(library).map((PropertyAccessorElement getter) {
           return _topLevelGettingClosure(library, getter.name);
@@ -585,22 +637,43 @@ class _ReflectorDomain {
         parameters.items.map((ParameterElement element) {
       int descriptor = _parameterDescriptor(element);
       int ownerIndex = members.indexOf(element.enclosingElement);
-      int classMirrorIndex = classes._contains(element.type.element)
-          ? classes.indexOf(element.type.element)
-          : constants.NO_CAPABILITY_INDEX;
-      String metadataCode;
-      metadataCode = _capabilities._supportsMetadata ? "<Object>[]" : "null";
-      // TODO(eernst) implement: Detect and, if possible, handle the case
-      // where it is incorrect to move element.defaultValueCode out of its
-      // original scope. If we cannot solve the problem we should issue
-      // a warning (it's worse than `new UndefinedClass()`, because it
-      // might "work" with a different semantics at runtime, rather than just
-      // failing if ever executed).
+      int classMirrorIndex;
+      if (_capabilities._impliesTypes) {
+        if (descriptor & constants.dynamicAttribute != 0) {
+          // This parameter will report its type as `dynamic`, and it
+          // will never use `classMirrorIndex`.
+          classMirrorIndex = null;
+        } else if (descriptor & constants.classTypeAttribute != 0) {
+          // Normal encoding of a class type. That class has been added
+          // to `classes`, so the `indexOf` cannot return `null`.
+          assert(classes._contains(element.type.element));
+          classMirrorIndex = classes.indexOf(element.type.element);
+        }
+      } else {
+        classMirrorIndex = constants.NO_CAPABILITY_INDEX;
+      }
+      String metadataCode = "null";
+      if (_capabilities._supportsMetadata) {
+        NodeList<Annotation> annotations = element.computeNode().metadata;
+        metadataCode =
+            _formatAsList("Object", annotations.map((Annotation annotation) {
+          return _extractAnnotationValue(
+              annotation, element.library, importCollector);
+        }));
+      }
+      FormalParameter parameterNode = element.computeNode();
+      String defaultValueCode = "null";
+      if (parameterNode is DefaultFormalParameter &&
+          parameterNode.defaultValue != null) {
+        defaultValueCode = _extractConstantCode(
+            parameterNode.defaultValue, element.library, importCollector);
+      }
       return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-          '$classMirrorIndex, $metadataCode, ${element.defaultValueCode})';
+          '$classMirrorIndex, $metadataCode, $defaultValueCode)';
     });
-    String parameterMirrorsCode = _formatAsList(parametersList);
+    String parameterMirrorsCode =
+        _formatAsList("m.ParameterMirror", parametersList);
 
     return "new r.ReflectorData($classMirrorsCode, $membersCode, "
         "$parameterMirrorsCode, $typesCode, $gettersCode, $settersCode, "
@@ -998,7 +1071,7 @@ class _Capabilities {
     });
   }
 
-  bool get _impliesParameterTypes {
+  bool get _impliesTypes {
     if (!_impliesDeclarations) return false;
     return _capabilities.any((ec.ReflectCapability capability) {
       return capability is ec.TypeCapability;
@@ -1009,8 +1082,6 @@ class _Capabilities {
     return _capabilities.any((ec.ReflectCapability capability) =>
         capability == ec.libraryCapability);
   }
-
-  bool get _impliesFieldTypes => _impliesParameterTypes;
 }
 
 /// Collects the libraries that needs to be imported, and gives each library
@@ -1643,6 +1714,7 @@ import "dart:core";
 import "$originalEntryPointFilename" as original show main;
 ${imports.join('\n')}
 
+import "package:reflectable/mirrors.dart" as m;
 import "package:reflectable/src/mirrors_unimpl.dart" as r;
 import "package:reflectable/reflectable.dart" show isTransformed;
 
@@ -1840,7 +1912,15 @@ int _declarationDescriptor(ExecutableElement element) {
       result |= constants.redirectingConstructorAttribute;
     }
   } else {
+    assert(element is MethodElement);
     result = constants.method;
+    if (element.type.isDynamic) {
+      result |= constants.dynamicReturnTypeAttribute;
+    }
+    Element elementReturnType = element.returnType.element;
+    if (elementReturnType is ClassElement) {
+      result |= constants.classReturnTypeAttribute;
+    }
   }
   if (element.isPrivate) result |= constants.privateAttribute;
   if (element.isStatic) result |= constants.staticAttribute;
@@ -1858,29 +1938,31 @@ String _nameOfDeclaration(ExecutableElement element) {
   return element.name;
 }
 
-String _formatAsList(Iterable parts) => "[${parts.join(", ")}]";
+String _formatAsList(String typeName, Iterable parts) =>
+    "<$typeName>[${parts.join(", ")}]";
+
+String _formatAsDynamicList(Iterable parts) => "[${parts.join(", ")}]";
 
 String _formatAsMap(Iterable parts) => "{${parts.join(", ")}}";
 
-/// Returns code that will reproduce the given constant expression.
-String _extractConstantCode(
-    Expression expression,
-    LibraryElement originatingLibrary,
-    Resolver resolver,
-    _ImportCollector importCollector) {
+/// Returns a [String] containing code that will evaluate to the same
+/// value when evaluated in the generated file as the given [expression]
+/// would evaluate to in [originatingLibrary].
+String _extractConstantCode(Expression expression,
+    LibraryElement originatingLibrary, _ImportCollector importCollector) {
   if (expression is ListLiteral) {
     List<String> elements = expression.elements.map((Expression subExpression) {
       return _extractConstantCode(
-          subExpression, originatingLibrary, resolver, importCollector);
+          subExpression, originatingLibrary, importCollector);
     });
     // TODO(sigurdm) feature: Type arguments.
-    return "const ${_formatAsList(elements)}";
+    return "const ${_formatAsDynamicList(elements)}";
   } else if (expression is MapLiteral) {
     List<String> elements = expression.entries.map((MapLiteralEntry entry) {
-      String key = _extractConstantCode(
-          entry.key, originatingLibrary, resolver, importCollector);
+      String key =
+          _extractConstantCode(entry.key, originatingLibrary, importCollector);
       String value = _extractConstantCode(
-          entry.value, originatingLibrary, resolver, importCollector);
+          entry.value, originatingLibrary, importCollector);
       return "$key: $value";
     });
     // TODO(sigurdm) feature: Type arguments.
@@ -1895,7 +1977,7 @@ String _extractConstantCode(
     String arguments =
         expression.argumentList.arguments.map((Expression argument) {
       return _extractConstantCode(
-          argument, originatingLibrary, resolver, importCollector);
+          argument, originatingLibrary, importCollector);
     }).join(", ");
     // TODO(sigurdm) feature: Type arguments.
     return "const $prefix.$constructor($arguments)";
@@ -1907,31 +1989,29 @@ String _extractConstantCode(
     if (enclosingElement is ClassElement) {
       prefix += ".${enclosingElement.name}";
     }
-    // TODO(sigurdm) diagnostic: Emit a warning/error if the element is not
-    // in the global public scope of the library.
     return "$prefix.${element.name}";
   } else if (expression is BinaryExpression) {
     String a = _extractConstantCode(
-        expression.leftOperand, originatingLibrary, resolver, importCollector);
+        expression.leftOperand, originatingLibrary, importCollector);
     String op = expression.operator.lexeme;
     String b = _extractConstantCode(
-        expression.rightOperand, originatingLibrary, resolver, importCollector);
+        expression.rightOperand, originatingLibrary, importCollector);
     return "$a $op $b";
   } else if (expression is ConditionalExpression) {
     String condition = _extractConstantCode(
-        expression.condition, originatingLibrary, resolver, importCollector);
-    String a = _extractConstantCode(expression.thenExpression,
-        originatingLibrary, resolver, importCollector);
-    String b = _extractConstantCode(expression.elseExpression,
-        originatingLibrary, resolver, importCollector);
+        expression.condition, originatingLibrary, importCollector);
+    String a = _extractConstantCode(
+        expression.thenExpression, originatingLibrary, importCollector);
+    String b = _extractConstantCode(
+        expression.elseExpression, originatingLibrary, importCollector);
     return "$condition ? $a : $b";
   } else if (expression is ParenthesizedExpression) {
     String nested = _extractConstantCode(
-        expression.expression, originatingLibrary, resolver, importCollector);
+        expression.expression, originatingLibrary, importCollector);
     return "($nested)";
   } else if (expression is PropertyAccess) {
     String target = _extractConstantCode(
-        expression.target, originatingLibrary, resolver, importCollector);
+        expression.target, originatingLibrary, importCollector);
     String selector = expression.propertyName.token.lexeme;
     return "$target.$selector";
   } else if (expression is MethodInvocation) {
@@ -1940,19 +2020,41 @@ String _extractConstantCode(
     assert(expression.methodName.token.lexeme == "identical");
     NodeList arguments = expression.argumentList.arguments;
     assert(arguments.length == 2);
-    String a = _extractConstantCode(
-        arguments[0], originatingLibrary, resolver, importCollector);
-    String b = _extractConstantCode(
-        arguments[1], originatingLibrary, resolver, importCollector);
+    String a =
+        _extractConstantCode(arguments[0], originatingLibrary, importCollector);
+    String b =
+        _extractConstantCode(arguments[1], originatingLibrary, importCollector);
     return "identical($a, $b)";
   } else {
     assert(expression is IntegerLiteral ||
         expression is BooleanLiteral ||
         expression is StringLiteral ||
         expression is NullLiteral ||
-        expression is SymbolLiteral);
+        expression is SymbolLiteral ||
+        expression is DoubleLiteral ||
+        expression is TypedLiteral);
     return expression.toSource();
   }
+}
+
+/// Returns a [String] containing code that will evaluate to the same
+/// value when evaluated as an expression in the generated file as the
+/// given [annotation] when attached as metadata to a declaration in
+/// the given [library].
+String _extractAnnotationValue(Annotation annotation, LibraryElement library,
+    _ImportCollector importCollector) {
+  String keywordCode = annotation.arguments != null ? "const " : "";
+  Identifier name = annotation.name;
+  String _nullIsEmpty(Object object) => object == null ? "" : "$object";
+  if (name is SimpleIdentifier) {
+    return "$keywordCode"
+        "${importCollector._getPrefix(library)}.$name"
+        "${_nullIsEmpty(annotation.period)}"
+        "${_nullIsEmpty(annotation.constructorName)}"
+        "${_nullIsEmpty(annotation.arguments)}";
+  }
+  throw new UnimplementedError(
+      "Cannot move this annotation: $annotation, from library $library");
 }
 
 /// The names of the libraries that can be accessed with a 'dart:x' import uri.
@@ -2042,8 +2144,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
           : "${annotationNode.name}.${annotationNode.constructorName}";
       String arguments =
           annotationNode.arguments.arguments.map((Expression argument) {
-        return _extractConstantCode(
-            argument, element.library, resolver, importCollector);
+        return _extractConstantCode(argument, element.library, importCollector);
       }).join(", ");
       metadataParts.add("const $prefix.$constructor($arguments)");
     } else {
@@ -2052,7 +2153,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
     }
   }
 
-  return _formatAsList(metadataParts);
+  return _formatAsList("Object", metadataParts);
 }
 
 Iterable<FieldElement> _extractDeclaredFields(

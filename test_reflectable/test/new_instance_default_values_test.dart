@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 // File being transformed by the reflectable transformer.
-// Uses `invoke`.
+// Uses default values on optional arguments.
 
 library test_reflectable.test.new_instance_default_values_test;
 
@@ -16,16 +16,22 @@ class MyReflectable extends Reflectable {
 
 const myReflectable = const MyReflectable();
 
+const String globalConstant = "20";
+
 @myReflectable
 class A {
   static const localConstant = 10;
-  A.optional([int z = localConstant]) : f = z;
+  A.optional([int x = localConstant, String y = globalConstant]) : f = x, g = y;
   int f = 0;
+  String g;
 }
 
 main() {
   ClassMirror classMirror = myReflectable.reflectType(A);
   test('newInstance named arguments default argument, local constant', () {
     expect((classMirror.newInstance("optional", [], {}) as A).f, 10);
+  });
+  test('newInstance named arguments default argument, global constant', () {
+    expect((classMirror.newInstance("optional", [], {}) as A).g, "20");
   });
 }

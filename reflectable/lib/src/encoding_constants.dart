@@ -30,6 +30,8 @@ const optionalAttribute = 1 << (flagsBit + 8);
 const namedAttribute = 1 << (flagsBit + 9);
 const dynamicAttribute = 1 << (flagsBit + 10);
 const classTypeAttribute = 1 << (flagsBit + 11);
+const dynamicReturnTypeAttribute = 1 << (flagsBit + 12);
+const classReturnTypeAttribute = 1 << (flagsBit + 13);
 
 int kindFromEncoding(int encoding) => encoding & ((1 << flagsBit) - 1);
 
