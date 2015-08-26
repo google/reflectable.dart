@@ -422,8 +422,10 @@ class _ReflectorDomain {
       if (superclass == null) {
         superclassIndex = null;
       } else {
-        int index =
-            classes.indexOf(superclass) ?? constants.NO_CAPABILITY_INDEX;
+        int index = classes.indexOf(superclass);
+        if (index == null) {
+          index = constants.NO_CAPABILITY_INDEX;
+        }
         superclassIndex = "$index";
       }
 
@@ -1422,20 +1424,6 @@ class TransformerImplementation {
 
     world.reflectors.addAll(domains.values.toList());
     return world;
-  }
-
-  /// Finds all the libraries of classes annotated by the `domain.reflector`,
-  /// thus specifying which `import` directives we
-  /// need to add during code transformation.
-  /// These are added to `domain.missingImports`.
-  void _collectMissingImports(_ReflectorDomain domain) {
-    LibraryElement metadataLibrary = domain._reflector.library;
-    for (_ClassDomain classData in domain._annotatedClasses) {
-      LibraryElement annotatedLibrary = classData._classElement.library;
-      if (metadataLibrary != annotatedLibrary) {
-        domain._missingImports.add(annotatedLibrary);
-      }
-    }
   }
 
   /// Returns the [ReflectCapability] denoted by the given [initializer].
