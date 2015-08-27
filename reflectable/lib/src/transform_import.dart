@@ -28,8 +28,8 @@ class ImportTransformer extends Transformer implements DeclaringTransformer {
     String content = await transform.primaryInput.readAsString();
     AssetId id = transform.primaryInput.id;
     String newContent = content.replaceAll(
-        "'src/reflectable_implementation.dart'",
-        "'src/mirrors_unimpl.dart'");
+        "'src/reflectable_mirror_based.dart'",
+        "'src/reflectable_transformer_based.dart'");
     transform.addOutput(new Asset.fromString(id, newContent));
   }
 

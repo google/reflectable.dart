@@ -1715,7 +1715,7 @@ import "$originalEntryPointFilename" as original show main;
 ${imports.join('\n')}
 
 import "package:reflectable/mirrors.dart" as m;
-import "package:reflectable/src/mirrors_unimpl.dart" as r;
+import "package:reflectable/src/reflectable_transformer_based.dart" as r;
 import "package:reflectable/reflectable.dart" show isTransformed;
 
 export "$originalEntryPointFilename" hide main;

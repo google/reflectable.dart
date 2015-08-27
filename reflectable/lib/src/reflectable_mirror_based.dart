@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 // TODO(sigurdm) doc: Make NoSuchCapability messages streamlined (the same in
-// both `reflectable_implementation.dart` and `mirrors_unimpl.dart`, and
+// both `reflectable_mirror_based.dart` and `reflectable_transformer_based.dart`, and
 // explaining as well as possible which capability is missing.)
 
 /// Implementation of the reflectable interface using dart mirrors.

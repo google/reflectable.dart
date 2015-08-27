@@ -54,7 +54,7 @@ import "main_reflectable_original_main.dart" as original show main;
 import 'main.dart' as prefix0;
 
 import "package:reflectable/mirrors.dart" as m;
-import "package:reflectable/src/mirrors_unimpl.dart" as r;
+import "package:reflectable/src/reflectable_transformer_based.dart" as r;
 import "package:reflectable/reflectable.dart" show isTransformed;
 
 export "main_reflectable_original_main.dart" hide main;
