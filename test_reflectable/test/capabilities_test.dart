@@ -77,7 +77,7 @@ Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
 Matcher isNoSuchCapabilityError = new isInstanceOf<c.NoSuchCapabilityError>();
 
 class MyReflectableWithMetaCap extends r.Reflectable {
-  const MyReflectableWithMetaCap() : super(c.metadataCapability, c.invokingCapability);
+  const MyReflectableWithMetaCap() : super(c.metadataCapability, c.invokingCapability, c.declarationsCapability);
 }
 
 const myReflectableWithMetaCap = const MyReflectableWithMetaCap();
