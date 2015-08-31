@@ -2098,8 +2098,6 @@ String _extractMetadataCode(Element element, Resolver resolver,
 
   AstNode node = element.computeNode();
 
-  if(node == null) return "[]";
-
   // The `element.node` of a field is the [VariableDeclaration] that is nested
   // in a [VariableDeclarationList] that is nested in a [FieldDeclaration]. The
   // metadata is stored on the [FieldDeclaration].
