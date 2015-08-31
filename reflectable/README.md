@@ -138,12 +138,13 @@ transformers:
 ```
 
 And then run `pub build --mode=debug web` (you can omit `web` because that
-is the default). This will create a new file
-`build/web/main_reflection_data.dart` containing the static data needed for
-reflection, and a modified `build/web/main.dart` that will initialize the
-reflection framework before running `main`. When you run this file, it is
-important that the package-root is set to `build/web/packages` for everything to
-work.
+is the default). This will rename the file `web/main.dart` and generate a new
+file `build/web/main.dart` containing the data needed for
+reflection, and a main function that will initialize the
+reflection framework before running the original `main`. When you run this file,
+it is important that the package-root is set to `build/web/packages`,
+because the reflectable package itself is transformed to a
+version that uses the generated data, instead of using `dart:mirrors`.
 
 For a more advanced example implementing the base of a serialization framework,
 please look into [serialize_test.dart][3] test and its [library][4].

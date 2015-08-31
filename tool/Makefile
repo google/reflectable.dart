@@ -49,4 +49,3 @@ bot_test:
 full_test: test bot_test
 
 .PHONY: all_except_bottest all c b t ft check build test bot_test full_test
-

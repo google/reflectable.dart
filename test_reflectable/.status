@@ -1,16 +1,9 @@
-
 [ $compiler == dart2js || $compiler == none ]
 # TODO(sigurdm) implement: Throw NoSuchMethod when the function doesn't exist,
 # but the capability does.
 build/test/no_such_capability_test: RuntimeError # Missing implementation
 build/test/invoke_capabilities_test: RuntimeError # Missing implementation
-build/test/invoke_toplevel_test: RuntimeError # Missing implementation
 
 [ $compiler == dart2js ]
 test/*_test: skip # Some needed mirror features not implemented by dart2js.
 
-[ ($compiler == none && $runtime != dartium) || $compiler == dart2js || $compiler == dartanalyzer || $compiler == dart2analyzer]
-build/test/new_instance_default_values_test: CompileTimeError # Issue #8
-
-[ ($compiler == none && $runtime == dartium) ]
-build/test/new_instance_default_values_test: RuntimeError # Issue #8

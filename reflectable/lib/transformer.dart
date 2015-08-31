@@ -91,7 +91,7 @@ class ReflectableTransformer extends AggregateTransformer
         return;
       }
       transform.declareOutput(id);
-      AssetId dataId = id.changeExtension("_reflection_data.dart");
+      AssetId dataId = id.changeExtension("_reflectable_original_main.dart");
       transform.declareOutput(dataId);
     });
   }

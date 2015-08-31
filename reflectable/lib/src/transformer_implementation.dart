@@ -10,12 +10,13 @@ import 'dart:io';
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer/src/generated/utilities_dart.dart';
 import 'package:barback/barback.dart';
 import 'package:code_transformers/resolver.dart';
+import 'package:path/path.dart' as path;
 import 'element_capability.dart' as ec;
 import 'encoding_constants.dart' as constants;
 import "reflectable_class_constants.dart" as reflectable_class_constants;
-import 'source_manager.dart';
 import 'transformer_errors.dart' as errors;
 
 class ReflectionWorld {
@@ -54,12 +55,14 @@ class Enumerator<T> {
   final Map<T, int> _map = new Map<T, int>();
   int _count = 0;
 
+  bool _contains(T t) => _map.containsKey(t);
+
   get length => _count;
 
   /// Tries to insert [t]. If it was already there return false, else insert it
   /// and return true.
   bool add(T t) {
-    if (_map.containsKey(t)) return false;
+    if (_contains(t)) return false;
     _map[t] = _count;
     ++_count;
     return true;
@@ -83,19 +86,21 @@ class _ReflectorDomain {
 
   Iterable<_ClassDomain> get _annotatedClasses => _classMap.values;
 
+  Set<LibraryElement> _libraries = new Set<LibraryElement>();
+
   final Map<ClassElement, _ClassDomain> _classMap =
       new Map<ClassElement, _ClassDomain>();
 
   final _Capabilities _capabilities;
-
-  /// Libraries that must be imported to `reflector.library`.
-  final Set<LibraryElement> _missingImports = new Set<LibraryElement>();
 
   _ReflectorDomain(this._reflector, this._capabilities) {}
 
   // TODO(eernst) future: Perhaps reconsider what the best strategy
   // for caching is.
   Map<ClassElement, Map<String, ExecutableElement>> _instanceMemberCache =
+      new Map<ClassElement, Map<String, ExecutableElement>>();
+
+  Map<ClassElement, Map<String, ExecutableElement>> _staticMemberCache =
       new Map<ClassElement, Map<String, ExecutableElement>>();
 
   /// Returns a string that evaluates to a closure invoking [constructor] with
@@ -118,37 +123,52 @@ class _ReflectorDomain {
         .map((ParameterElement parameter) => parameter.name)
         .toList();
 
-    List<String> NamedParameterNames = type.namedParameterTypes.keys.toList();
+    List<String> namedParameterNames = type.namedParameterTypes.keys.toList();
 
     String positionals = new Iterable.generate(
         requiredPositionalCount, (int i) => parameterNames[i]).join(", ");
 
-    String optionalsWithDefaults = new Iterable.generate(
-        optionalPositionalCount, (int i) {
-      String defaultValueCode =
-          constructor.parameters[requiredPositionalCount + i].defaultValueCode;
-      String defaultValueString =
-          defaultValueCode == null ? "" : " = $defaultValueCode";
-      return "${parameterNames[i + requiredPositionalCount]}"
-          "$defaultValueString";
+    String optionalsWithDefaults =
+        new Iterable.generate(optionalPositionalCount, (int i) {
+      ParameterElement parameterElement =
+          constructor.parameters[requiredPositionalCount + i];
+      FormalParameter parameterNode = parameterElement.computeNode();
+      String defaultValueCode = "";
+      if (parameterNode is DefaultFormalParameter &&
+          parameterNode.defaultValue != null) {
+        defaultValueCode = " = ${_extractConstantCode(
+            parameterNode.defaultValue,
+            parameterElement.library,
+            importCollector)}";
+      }
+      return "${parameterNames[requiredPositionalCount + i]}"
+          "$defaultValueCode";
     }).join(", ");
 
-    String namedWithDefaults = new Iterable.generate(NamedParameterNames.length,
-        (int i) {
-      // TODO(#8) future: Recreate default values.
-      // TODO(#8) implement: Until that is done, recognize
-      // unhandled cases, and emit error/warning.
-      String defaultValueCode =
-          constructor.parameters[requiredPositionalCount + i].defaultValueCode;
-      String defaultValueString =
-          defaultValueCode == null ? "" : ": $defaultValueCode";
-      return "${NamedParameterNames[i]}$defaultValueString";
+    String namedWithDefaults =
+        new Iterable.generate(namedParameterNames.length, (int i) {
+      // Note that the use of `requiredPositionalCount + i` below relies
+      // on a language design where no parameter list can include
+      // both optional positional and named parameters, so if there are
+      // any named parameters then all optional parameters are named.
+      ParameterElement parameterElement =
+          constructor.parameters[requiredPositionalCount + i];
+      FormalParameter parameterNode = parameterElement.computeNode();
+      String defaultValueCode = "";
+      if (parameterNode is DefaultFormalParameter &&
+          parameterNode.defaultValue != null) {
+        defaultValueCode = ": ${_extractConstantCode(
+            parameterNode.defaultValue,
+            parameterElement.library,
+            importCollector)}";
+      }
+      return "${namedParameterNames[i]}$defaultValueCode";
     }).join(", ");
 
     String optionalArguments = new Iterable.generate(optionalPositionalCount,
         (int i) => parameterNames[i + requiredPositionalCount]).join(", ");
     String namedArguments =
-        NamedParameterNames.map((String name) => "$name: $name").join(", ");
+        namedParameterNames.map((String name) => "$name: $name").join(", ");
 
     List<String> parameterParts = new List<String>();
     List<String> argumentParts = new List<String>();
@@ -161,7 +181,7 @@ class _ReflectorDomain {
       parameterParts.add("[$optionalsWithDefaults]");
       argumentParts.add(optionalArguments);
     }
-    if (NamedParameterNames.isNotEmpty) {
+    if (namedParameterNames.isNotEmpty) {
       parameterParts.add("{${namedWithDefaults}}");
       argumentParts.add(namedArguments);
     }
@@ -183,11 +203,20 @@ class _ReflectorDomain {
     Enumerator<ClassElement> classes = new Enumerator<ClassElement>();
     Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
     Enumerator<FieldElement> fields = new Enumerator<FieldElement>();
+    Enumerator<ParameterElement> parameters =
+        new Enumerator<ParameterElement>();
+    Enumerator<LibraryElement> libraries = new Enumerator<LibraryElement>();
+
     Set<String> instanceGetterNames = new Set<String>();
     Set<String> instanceSetterNames = new Set<String>();
 
-    // Fill in [classes], [members], [fields], [instanceGetterNames],
-    // and [instanceSetterNames].
+    // Fill in [libraries].
+    for (LibraryElement library in _libraries) {
+      libraries.add(library);
+    }
+
+    // Fill in [classes], [members], [fields], [parameters],
+    // [instanceGetterNames], and [instanceSetterNames].
     for (_ClassDomain classDomain in _annotatedClasses) {
       // Gather all annotated classes.
       classes.add(classDomain._classElement);
@@ -205,15 +234,20 @@ class _ReflectorDomain {
       // target class (omitting those from its superclasses).
       classDomain._instanceMembers.forEach(members.add);
 
+      // Add all the formal parameters (as a single, global set) which
+      // are declared by any of the methods in `classDomain._declarations`.
+      classDomain._declaredParameters.forEach(parameters.add);
+
       // Gather the fields declared in the target class (not inherited
       // ones) in [fields], i.e., the elements missing from [members]
       // at this point, in order to support `declarations` in a
       // [ClassMirror].
       classDomain._declaredFields.forEach(fields.add);
 
-      // Gather all getters and setters based on [instanceMembers], including
-      // both explicitly declared ones, implicitly generated ones for fields,
-      // and the implicitly generated ones that correspond to method tear-offs.
+      // Gather all getter and setter names based on [instanceMembers],
+      // including both explicitly declared ones, implicitly generated ones
+      // for fields, and the implicitly generated ones that correspond to
+      // method tear-offs.
       classDomain._instanceMembers.forEach((ExecutableElement instanceMember) {
         if (instanceMember is PropertyAccessorElement) {
           // A getter or a setter, synthetic or declared.
@@ -248,6 +282,20 @@ class _ReflectorDomain {
       return 'r"${getterName}": $closure';
     }
 
+    String _topLevelGettingClosure(LibraryElement library, String getterName) {
+      String prefix = importCollector._getPrefix(library);
+      // Operators cannot be top-level.
+      return 'r"${getterName}": () => $prefix.$getterName';
+    }
+
+    String _topLevelSettingClosure(LibraryElement library, String setterName) {
+      assert(setterName.substring(setterName.length - 1) == "=");
+      // The [setterName] includes the "=", remove it.
+      String name = setterName.substring(0, setterName.length - 1);
+      String prefix = importCollector._getPrefix(library);
+      return 'r"$setterName": (value) => $prefix.$name = value';
+    }
+
     String staticGettingClosure(ClassElement classElement, String getterName) {
       String className = classElement.name;
       String prefix = importCollector._getPrefix(classElement.library);
@@ -264,7 +312,7 @@ class _ReflectorDomain {
           'instance.$name = value';
     }
 
-    String _staticSettingClosure(ClassElement classElement, String setterName) {
+    String staticSettingClosure(ClassElement classElement, String setterName) {
       assert(setterName.substring(setterName.length - 1) == "=");
       // The [setterName] includes the "=", remove it.
       String name = setterName.substring(0, setterName.length - 1);
@@ -273,10 +321,65 @@ class _ReflectorDomain {
       return 'r"$setterName": (value) => $prefix.$className.$name = value';
     }
 
+    int computeTypeIndexBase(
+        Element typeElement, bool isDynamic, bool isClassType) {
+      if (_capabilities._impliesTypes) {
+        if (isDynamic) {
+          // The mirror will report 'dynamic' as its `returnType`
+          // and it will never use the index.
+          return null;
+        }
+        if (isClassType) {
+          // Normal encoding of a class type. That class has been added
+          // to `classes`, so the `indexOf` cannot return `null`.
+          assert(classes._contains(typeElement));
+          return classes.indexOf(typeElement);
+        }
+      }
+      return constants.NO_CAPABILITY_INDEX;
+    }
+
+    int computeFieldTypeIndex(FieldElement element, int descriptor) {
+      return computeTypeIndexBase(
+          element.type.element,
+          descriptor & constants.dynamicAttribute != 0,
+          descriptor & constants.classTypeAttribute != 0);
+    }
+
+    int computeReturnTypeIndex(ExecutableElement element, int descriptor) {
+      return computeTypeIndexBase(
+          element.returnType.element,
+          descriptor & constants.dynamicReturnTypeAttribute != 0,
+          descriptor & constants.classReturnTypeAttribute != 0);
+    }
+
     // Compute `includedClasses`, i.e., the set of classes which are
     // annotated, or the upwards-closed completion of that set.
     Set<_ClassDomain> includedClasses = new Set<_ClassDomain>();
     includedClasses.addAll(_annotatedClasses);
+    if (_capabilities._impliesTypes) {
+      fields.items.forEach((FieldElement fieldElement) {
+        Element fieldType = fieldElement.type.element;
+        if (fieldType is ClassElement) {
+          includedClasses.add(_createClassDomain(fieldType, this));
+          classes.add(fieldType);
+        }
+      });
+      members.items.forEach((ExecutableElement executableElement) {
+        Element returnType = executableElement.type.element;
+        if (returnType is ClassElement) {
+          includedClasses.add(_createClassDomain(returnType, this));
+          classes.add(returnType);
+        }
+      });
+      parameters.items.forEach((ParameterElement parameterElement) {
+        Element parameterType = parameterElement.type.element;
+        if (parameterType is ClassElement) {
+          includedClasses.add(_createClassDomain(parameterType, this));
+          classes.add(parameterType);
+        }
+      });
+    }
     if (_capabilities._impliesUpwardsClosure) {
       Set<_ClassDomain> workingSetOfClasses = includedClasses;
       while (true) {
@@ -308,18 +411,15 @@ class _ReflectorDomain {
     }
 
     // Generate the class mirrors.
-    int classIndex = 0;
-    String classMirrorsCode = _formatAsList(includedClasses
-        .map((_ClassDomain classDomain) {
-
+    int classIndex = 0; // Index of each class mirror, stored in itself.
+    String classMirrorsCode = _formatAsList("m.ClassMirror",
+        includedClasses.map((_ClassDomain classDomain) {
       // Fields go first in [memberMirrors], so they will get the
       // same index as in [fields].
-      Iterable<int> fieldsIndices = classDomain._declaredFields
-          .map((FieldElement element) {
+      Iterable<int> fieldsIndices =
+          classDomain._declaredFields.map((FieldElement element) {
         return fields.indexOf(element);
       });
-
-      int fieldsLength = fields.length;
 
       // All the elements in the behavioral interface go after the
       // fields in [memberMirrors], so they must get an offset of
@@ -331,49 +431,66 @@ class _ReflectorDomain {
         // (the one that ultimately allocates the memory for _every_ new object)
         // has no index, which creates the need to catch a `null` here.
         // Search for "magic" to find other occurrences of the same issue.
-        // For now, we provide the index -1 for this declaration, because
-        // it is not yet supported. Need to find the correct solution, though!
+        // For now, we provide the index [constants.NO_CAPABILITY_INDEX]
+        // for this declaration, because it is not yet supported.
+        // Need to find the correct solution, though!
         int index = members.indexOf(element);
-        return index == null ? -1 : index + fieldsLength;
+        return index == null
+            ? constants.NO_CAPABILITY_INDEX
+            : index + fields.length;
       });
 
-      List<int> declarationsIndices = <int>[]
-        ..addAll(fieldsIndices)
-        ..addAll(methodsIndices);
-      String declarationsCode = _formatAsList(declarationsIndices);
+      String declarationsCode = "<int>[${constants.NO_CAPABILITY_INDEX}]";
+      if (_capabilities._impliesDeclarations) {
+        List<int> declarationsIndices = <int>[]
+          ..addAll(fieldsIndices)
+          ..addAll(methodsIndices);
+        declarationsCode = _formatAsList("int", declarationsIndices);
+      }
 
       // All instance members belong to the behavioral interface, so they
       // also get an offset of `fields.length`.
-      String instanceMembersCode = _formatAsList(classDomain._instanceMembers
-          .map((ExecutableElement element) {
+      String instanceMembersCode = _formatAsList("int",
+          classDomain._instanceMembers.map((ExecutableElement element) {
         // TODO(eernst) implement: The "magic" default constructor has
-        // index: -1; adjust this when support for it has been implemented.
+        // index: NO_CAPABILITY_INDEX; adjust this when support for it has been
+        // implemented.
         int index = members.indexOf(element);
-        return index == null ? -1 : index + fieldsLength;
+        return index == null
+            ? constants.NO_CAPABILITY_INDEX
+            : index + fields.length;
+      }));
+
+      // All static members belong to the behavioral interface, so they
+      // also get an offset of `fields.length`.
+      String staticMembersCode = _formatAsList("int",
+          classDomain._staticMembers.map((ExecutableElement element) {
+        int index = members.indexOf(element);
+        return index == null
+            ? constants.NO_CAPABILITY_INDEX
+            : index + fields.length;
       }));
 
       InterfaceType superType = classDomain._classElement.supertype;
       ClassElement superclass = superType == null ? null : superType.element;
       String superclassIndex;
       if (superclass == null) {
+        // There is no superclass.
         superclassIndex = null;
       } else {
         int index = classes.indexOf(superclass);
-        if (index == null) {
-          // There is a superclass, but we have no capability for it.
-          index = -1;
-        }
+        if (index == null) index = constants.NO_CAPABILITY_INDEX;
         superclassIndex = "$index";
       }
 
       String constructorsCode;
-
       if (classDomain._classElement.isAbstract) {
         constructorsCode = '{}';
       } else {
-        constructorsCode = _formatAsMap(classDomain._constructors
-            .map((ConstructorElement constructor) {
-          String code = _constructorCode(constructor, importCollector);
+        constructorsCode = _formatAsMap(
+            classDomain._constructors.map((ConstructorElement constructor) {
+          String code =
+              _constructorCode(constructor, importCollector);
           return 'r"${constructor.name}": $code';
         }));
       }
@@ -394,18 +511,23 @@ class _ReflectorDomain {
                 element.isStatic && element.isGetter)
       ].expand((x) => x).map((ExecutableElement element) =>
           staticGettingClosure(classDomain._classElement, element.name)));
-      String staticSettersCode = _formatAsMap(
-          classDomain._declaredAndImplicitAccessors
-              .where((PropertyAccessorElement element) =>
-                  element.isStatic && element.isSetter)
-              .map((PropertyAccessorElement element) => _staticSettingClosure(
-                  classDomain._classElement, element.name)));
+      String staticSettersCode = _formatAsMap(classDomain
+          ._declaredAndImplicitAccessors
+          .where((PropertyAccessorElement element) =>
+              element.isStatic && element.isSetter)
+          .map((PropertyAccessorElement element) =>
+              staticSettingClosure(classDomain._classElement, element.name)));
+
+      int ownerIndex = _capabilities.supportsLibraries
+          ? libraries.indexOf(classDomain._classElement.library)
+          : constants.NO_CAPABILITY_INDEX;
+
       String result = 'new r.ClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${classDomain._qualifiedName}", $classIndex, '
           '${_constConstructionCode(importCollector)}, '
-          '$declarationsCode, $instanceMembersCode, $superclassIndex, '
-          '$staticGettersCode, $staticSettersCode, $constructorsCode, '
-          '$classMetadataCode)';
+          '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
+          '$superclassIndex, $staticGettersCode, $staticSettersCode, '
+          '$constructorsCode, $ownerIndex, $classMetadataCode)';
       classIndex++;
       return result;
     }));
@@ -413,50 +535,175 @@ class _ReflectorDomain {
     String gettersCode = _formatAsMap(instanceGetterNames.map(gettingClosure));
     String settersCode = _formatAsMap(instanceSetterNames.map(settingClosure));
 
-    Iterable<String> methodsList = members.items
-        .map((ExecutableElement element) {
-      int descriptor = _declarationDescriptor(element);
-      int ownerIndex = classes.indexOf(element.enclosingElement);
-      String metadataCode;
-      if (_capabilities._supportsMetadata) {
-        metadataCode = _extractMetadataCode(
-            element, resolver, importCollector, logger, dataId);
+    Iterable<String> methodsList =
+        members.items.map((ExecutableElement element) {
+      if (element is PropertyAccessorElement && element.isSynthetic) {
+        // There is no type propagation, so we declare an `accessorElement`.
+        PropertyAccessorElement accessorElement = element;
+        int variableMirrorIndex = fields.indexOf(accessorElement.variable);
+        // The `indexOf` is non-null: `accessorElement` came from `members`.
+        int selfIndex = members.indexOf(accessorElement) + fields.length;
+        if (accessorElement.isGetter) {
+          return 'new r.ImplicitGetterMirrorImpl('
+              '${_constConstructionCode(importCollector)}, '
+              '$variableMirrorIndex, $selfIndex)';
+        } else {
+          assert(accessorElement.isSetter);
+          return 'new r.ImplicitSetterMirrorImpl('
+              '${_constConstructionCode(importCollector)}, '
+              '$variableMirrorIndex, $selfIndex)';
+        }
       } else {
-        metadataCode = null;
+        int descriptor = _declarationDescriptor(element);
+        int returnTypeIndex = computeReturnTypeIndex(element, descriptor);
+        int ownerIndex = classes.indexOf(element.enclosingElement);
+        String parameterIndicesCode = _formatAsList("int",
+            element.parameters.map((ParameterElement parameterElement) {
+          return parameters.indexOf(parameterElement);
+        }));
+        String metadataCode = _capabilities._supportsMetadata
+            ? _extractMetadataCode(
+                element, resolver, importCollector, logger, dataId)
+            : null;
+        return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
+            '$ownerIndex, $returnTypeIndex, $parameterIndicesCode, '
+            '${_constConstructionCode(importCollector)}, $metadataCode)';
       }
-      return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
-          '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-          '$metadataCode)';
     });
 
     Iterable<String> fieldsList = fields.items.map((FieldElement element) {
       int descriptor = _fieldDescriptor(element);
       int ownerIndex = classes.indexOf(element.enclosingElement);
+      int classMirrorIndex = computeFieldTypeIndex(element, descriptor);
       String metadataCode;
       if (_capabilities._supportsMetadata) {
         metadataCode = _extractMetadataCode(
             element, resolver, importCollector, logger, dataId);
       } else {
+        // We encode 'without capability' as `null` for metadata, because
+        // it is a `List<Object>`, which has no other natural encoding.
         metadataCode = null;
       }
-      return 'new r.VariableMirrorImpl("${element.name}", $descriptor, '
+      return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-          '$metadataCode)';
+          '$classMirrorIndex, $metadataCode)';
     });
 
     List<String> membersList = <String>[]
       ..addAll(fieldsList)
       ..addAll(methodsList);
-    String membersCode = _formatAsList(membersList);
+    String membersCode = _formatAsList("m.DeclarationMirror", membersList);
 
-    String typesCode = _formatAsList(classes.items
-        .map((ClassElement classElement) {
+    String typesCode =
+        _formatAsList("Type", classes.items.map((ClassElement classElement) {
       String prefix = importCollector._getPrefix(classElement.library);
       return "$prefix.${classElement.name}";
     }));
 
-    return "new r.ReflectorData($classMirrorsCode, $membersCode, $typesCode, "
-        "$gettersCode, $settersCode)";
+    String librariesCode;
+    if (!_capabilities.supportsLibraries) {
+      librariesCode = "null";
+    } else {
+      librariesCode = _formatAsList("m.LibraryMirror",
+          libraries.items.map((LibraryElement library) {
+        String gettersCode = _formatAsMap(
+            gettersOfLibrary(library).map((PropertyAccessorElement getter) {
+          return _topLevelGettingClosure(library, getter.name);
+        }));
+        String settersCode = _formatAsMap(
+            settersOfLibrary(library).map((PropertyAccessorElement setter) {
+          return _topLevelSettingClosure(library, setter.name);
+        }));
+
+        // TODO(sigurdm) clarify: Find out how to get good uri's in a
+        // transformer.
+        // TODO(sigurdm) implement: Check for `uriCapability`.
+        String uriCode = "null";
+
+        String metadataCode;
+        if (_capabilities._supportsMetadata) {
+          metadataCode = _extractMetadataCode(
+              library, resolver, importCollector, logger, dataId);
+        } else {
+          metadataCode = "null";
+        }
+
+        return 'new r.LibraryMirrorImpl(r"${library.name}", $uriCode, '
+            '$gettersCode, $settersCode, $metadataCode)';
+      }));
+    }
+
+    Iterable<String> parametersList =
+        parameters.items.map((ParameterElement element) {
+      int descriptor = _parameterDescriptor(element);
+      int ownerIndex = members.indexOf(element.enclosingElement);
+      int classMirrorIndex;
+      if (_capabilities._impliesTypes) {
+        if (descriptor & constants.dynamicAttribute != 0) {
+          // This parameter will report its type as `dynamic`, and it
+          // will never use `classMirrorIndex`.
+          classMirrorIndex = null;
+        } else if (descriptor & constants.classTypeAttribute != 0) {
+          // Normal encoding of a class type. That class has been added
+          // to `classes`, so the `indexOf` cannot return `null`.
+          assert(classes._contains(element.type.element));
+          classMirrorIndex = classes.indexOf(element.type.element);
+        }
+      } else {
+        classMirrorIndex = constants.NO_CAPABILITY_INDEX;
+      }
+      String metadataCode = "null";
+      if (_capabilities._supportsMetadata) {
+        NodeList<Annotation> annotations = element.computeNode().metadata;
+        metadataCode =
+            _formatAsList("Object", annotations.map((Annotation annotation) {
+          return _extractAnnotationValue(
+              annotation, element.library, importCollector);
+        }));
+      }
+      FormalParameter parameterNode = element.computeNode();
+      String defaultValueCode = "null";
+      if (parameterNode is DefaultFormalParameter &&
+          parameterNode.defaultValue != null) {
+        defaultValueCode = _extractConstantCode(
+            parameterNode.defaultValue, element.library, importCollector);
+      }
+      return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
+          '$ownerIndex, ${_constConstructionCode(importCollector)}, '
+          '$classMirrorIndex, $metadataCode, $defaultValueCode)';
+    });
+    String parameterMirrorsCode =
+        _formatAsList("m.ParameterMirror", parametersList);
+
+    return "new r.ReflectorData($classMirrorsCode, $membersCode, "
+        "$parameterMirrorsCode, $typesCode, $gettersCode, $settersCode, "
+        "$librariesCode)";
+  }
+
+  Iterable<PropertyAccessorElement> gettersOfLibrary(LibraryElement library) {
+    return library.units.map((CompilationUnitElement part) {
+      Iterable<Element> getters = <Iterable<Element>>[
+        part.accessors
+            .where((PropertyAccessorElement accessor) => accessor.isGetter),
+        part.functions,
+        part.topLevelVariables
+      ].expand((Iterable<Element> elements) => elements);
+      return getters.where((Element getter) =>
+          _capabilities.supportsTopLevelInvoke(getter.name, getter.metadata));
+    }).expand((Iterable<Element> x) => x);
+  }
+
+  Iterable<PropertyAccessorElement> settersOfLibrary(LibraryElement library) {
+    return library.units.map((CompilationUnitElement part) {
+      Iterable setters = <Iterable<Element>>[
+        part.accessors
+            .where((PropertyAccessorElement accessor) => accessor.isSetter),
+        part.topLevelVariables
+            .where((TopLevelVariableElement variable) => !variable.isFinal)
+      ].expand((Iterable<Element> elements) => elements);
+      return setters.where((Element setter) =>
+          _capabilities.supportsTopLevelInvoke(setter.name, setter.metadata));
+    }).expand((Iterable<Element> x) => x);
   }
 }
 
@@ -475,6 +722,9 @@ class _ClassDomain {
   /// [reflectorDomain]; obtained by filtering `classElement.methods`.
   final Iterable<MethodElement> _declaredMethods;
 
+  /// Formal parameters declared by one of the [_declaredMethods].
+  final Iterable<ParameterElement> _declaredParameters;
+
   /// Getters and setters possessed by [classElement] and included for
   /// reflection support, according to the reflector described by
   /// [reflectorDomain]; obtained by filtering `classElement.accessors`.
@@ -491,8 +741,13 @@ class _ClassDomain {
   /// class domains.
   final _ReflectorDomain _reflectorDomain;
 
-  _ClassDomain(this._classElement, this._declaredFields, this._declaredMethods,
-      this._declaredAndImplicitAccessors, this._constructors,
+  _ClassDomain(
+      this._classElement,
+      this._declaredFields,
+      this._declaredMethods,
+      this._declaredParameters,
+      this._declaredAndImplicitAccessors,
+      this._constructors,
       this._reflectorDomain);
 
   String get _simpleName => _classElement.name;
@@ -501,17 +756,14 @@ class _ClassDomain {
   }
 
   /// Returns the declared methods, accessors and constructors in
-  /// [classElement]. Note that this includes synthetic getters and
+  /// [_classElement]. Note that this includes synthetic getters and
   /// setters, and omits fields; in other words, it provides the
   /// behavioral point of view on the class. Also note that this is not
   /// the same semantics as that of `declarations` in [ClassMirror].
   Iterable<ExecutableElement> get _declarations {
     // TODO(sigurdm) feature: Include type variables (if we keep them).
-    return [
-      _declaredMethods,
-      _declaredAndImplicitAccessors,
-      _constructors
-    ].expand((x) => x);
+    return [_declaredMethods, _declaredAndImplicitAccessors, _constructors]
+        .expand((x) => x);
   }
 
   /// Finds all instance members by going through the class hierarchy.
@@ -524,15 +776,17 @@ class _ClassDomain {
           new Map<String, ExecutableElement>();
 
       void addIfCapable(ExecutableElement member) {
+        if (member.isPrivate) return;
         // If [member] is a synthetic accessor created from a field, search for
         // the metadata on the original field.
         List<ElementAnnotation> metadata = (member is PropertyAccessorElement &&
             member.isSynthetic) ? member.variable.metadata : member.metadata;
-        if (_reflectorDomain._capabilities.supportsInstanceInvoke(
-            member.name, metadata)) {
+        if (_reflectorDomain._capabilities
+            .supportsInstanceInvoke(member.name, metadata)) {
           result[member.name] = member;
         }
       }
+
       if (classElement.supertype != null) {
         helper(classElement.supertype.element)
             .forEach((String name, ExecutableElement member) {
@@ -554,6 +808,42 @@ class _ClassDomain {
       }
       return result;
     }
+
+    return helper(_classElement).values;
+  }
+
+  /// Finds all static members.
+  Iterable<ExecutableElement> get _staticMembers {
+    Map<String, ExecutableElement> helper(ClassElement classElement) {
+      if (_reflectorDomain._staticMemberCache[classElement] != null) {
+        return _reflectorDomain._staticMemberCache[classElement];
+      }
+      Map<String, ExecutableElement> result =
+          new Map<String, ExecutableElement>();
+
+      void addIfCapable(ExecutableElement member) {
+        if (member.isPrivate) return;
+        // If [member] is a synthetic accessor created from a field, search for
+        // the metadata on the original field.
+        List<ElementAnnotation> metadata = (member is PropertyAccessorElement &&
+            member.isSynthetic) ? member.variable.metadata : member.metadata;
+        if (_reflectorDomain._capabilities
+            .supportsInstanceInvoke(member.name, metadata)) {
+          result[member.name] = member;
+        }
+      }
+
+      for (MethodElement member in classElement.methods) {
+        if (member.isAbstract || !member.isStatic) continue;
+        addIfCapable(member);
+      }
+      for (PropertyAccessorElement member in classElement.accessors) {
+        if (member.isAbstract || !member.isStatic) continue;
+        addIfCapable(member);
+      }
+      return result;
+    }
+
     return helper(_classElement).values;
   }
 
@@ -604,13 +894,11 @@ class _Capabilities {
 
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
-      if ((capability is ec.InvokingCapability ||
-              capability is ec.InstanceInvokeCapability) &&
+      if (capability is ec.InstanceInvokeCapability &&
           _supportsName(capability, methodName)) {
         return true;
       }
-      if ((capability is ec.InvokingMetaCapability ||
-              capability is ec.InstanceInvokeMetaCapability) &&
+      if (capability is ec.InstanceInvokeMetaCapability &&
           _supportsMeta(capability, metadata)) {
         return true;
       }
@@ -682,6 +970,34 @@ class _Capabilities {
     return result;
   }
 
+  bool _supportsTopLevelInvoke(List<ec.ReflectCapability> capabilities,
+      String methodName, Iterable<DartObject> metadata) {
+    for (ec.ReflectCapability capability in capabilities) {
+      // Handle API based capabilities.
+      if ((capability is ec.TopLevelInvokeCapability) &&
+          _supportsName(capability, methodName)) {
+        return true;
+      }
+      if ((capability is ec.TopLevelInvokeMetaCapability) &&
+          _supportsMeta(capability, metadata)) {
+        return true;
+      }
+
+      // Handle globally quantified capabilities.
+      // TODO(eernst) feature: We probably need to refactor a lot of stuff
+      // to get this right, so the first approach will simply be to
+      // discover the relevant capabilities, and indicate that they
+      // are not yet supported.
+      if (capability is ec.GlobalQuantifyCapability ||
+          capability is ec.GlobalQuantifyMetaCapability) {
+        throw new UnimplementedError("Global quantification not yet supported");
+      }
+    }
+
+    // All options exhausted, give up.
+    return false;
+  }
+
   bool _supportsStaticInvoke(List<ec.ReflectCapability> capabilities,
       String methodName, Iterable<DartObject> metadata) {
     bool supportsTarget(ec.ReflecteeQuantifyCapability capability) {
@@ -694,13 +1010,11 @@ class _Capabilities {
 
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
-      if ((capability is ec.InvokingCapability ||
-              capability is ec.StaticInvokeCapability) &&
+      if (capability is ec.StaticInvokeCapability &&
           _supportsName(capability, methodName)) {
         return true;
       }
-      if ((capability is ec.InvokingMetaCapability ||
-              capability is ec.StaticInvokeMetaCapability) &&
+      if (capability is ec.StaticInvokeMetaCapability &&
           _supportsMeta(capability, metadata)) {
         return true;
       }
@@ -725,6 +1039,12 @@ class _Capabilities {
     return false;
   }
 
+  bool supportsTopLevelInvoke(
+      String methodName, List<ElementAnnotation> metadata) {
+    return _supportsTopLevelInvoke(
+        _capabilities, methodName, _getEvaluatedMetadata(metadata));
+  }
+
   bool supportsStaticInvoke(
       String methodName, List<ElementAnnotation> metadata) {
     return _supportsStaticInvoke(
@@ -743,6 +1063,24 @@ class _Capabilities {
   bool get _impliesUpwardsClosure {
     return _capabilities.any((ec.ReflectCapability capability) =>
         capability == ec.typeRelationsCapability);
+  }
+
+  bool get _impliesDeclarations {
+    return _capabilities.any((ec.ReflectCapability capability) {
+      return capability == ec.declarationsCapability;
+    });
+  }
+
+  bool get _impliesTypes {
+    if (!_impliesDeclarations) return false;
+    return _capabilities.any((ec.ReflectCapability capability) {
+      return capability is ec.TypeCapability;
+    });
+  }
+
+  bool get supportsLibraries {
+    return _capabilities.any((ec.ReflectCapability capability) =>
+        capability == ec.libraryCapability);
   }
 }
 
@@ -916,6 +1254,7 @@ class TransformerImplementation {
       // `isConst` as well.
       if (variable is ConstTopLevelVariableElementImpl) {
         EvaluationResultImpl result = variable.evaluationResult;
+        if (result.value == null) return null; // Errors during evaluation.
         bool isOk = checkInheritance(result.value.type, focusClass.type);
         return isOk ? result.value.type.element : null;
       } else {
@@ -989,7 +1328,8 @@ class TransformerImplementation {
                     reflector == null ? "" : " Found ${reflector.name}";
                 _warn(
                     "The reflector must be a direct subclass of Reflectable." +
-                        found, import);
+                        found,
+                    import);
                 continue;
               }
               globalPatterns
@@ -1006,7 +1346,8 @@ class TransformerImplementation {
               if (metadataFieldValue == null ||
                   value.fields["metadataType"].type.element != typeClass) {
                 // TODO(sigurdm) implement: Create a span for the annotation.
-                _warn("The metadata must be a Type. "
+                _warn(
+                    "The metadata must be a Type. "
                     "Found ${value.fields["metadataType"].type.element.name}",
                     import);
                 continue;
@@ -1020,7 +1361,8 @@ class TransformerImplementation {
                     reflector == null ? "" : " Found ${reflector.name}";
                 _warn(
                     "The reflector must be a direct subclass of Reflectable." +
-                        found, import);
+                        found,
+                    import);
                 continue;
               }
               globalMetadata
@@ -1060,143 +1402,99 @@ class TransformerImplementation {
     // This call populates [globalPatterns] and [globalMetadata].
     _findGlobalQuantifyAnnotations(globalPatterns, globalMetadata);
 
-    void addClassDomain(ClassElement type, ClassElement reflector) {
-      _ReflectorDomain domain = domains.putIfAbsent(reflector, () {
+    /// Get the [ReflectorDomain] associated with [reflector], or create it if
+    /// none exists.
+    _ReflectorDomain getReflectorDomain(ClassElement reflector) {
+      return domains.putIfAbsent(reflector, () {
         _Capabilities capabilities =
             _capabilitiesOf(capabilityLibrary, reflector);
         world.importCollector._addLibrary(reflector.library);
         return new _ReflectorDomain(reflector, capabilities);
       });
+    }
+
+    /// Add [library] to the supported libraries of [reflector].
+    void addLibrary(LibraryElement library, ClassElement reflector) {
+      _ReflectorDomain domain = getReflectorDomain(reflector);
+      if (domain._capabilities.supportsLibraries) {
+        world.importCollector._addLibrary(library);
+        domain._libraries.add(library);
+      }
+    }
+
+    /// Add [ClassDomain] representing [type] to the supported classes of
+    /// [reflector].
+    void addClassDomain(ClassElement type, ClassElement reflector) {
+      _ReflectorDomain domain = getReflectorDomain(reflector);
       if (domain._classMap.containsKey(type)) return;
       world.importCollector._addLibrary(type.library);
       domain._classMap[type] = _createClassDomain(type, domain);
+      addLibrary(type.library, reflector);
+    }
+
+    /// Runs through a list of metadata, and finds any Reflectors, and
+    /// objects that are associated with reflectors via
+    /// GlobalQuantifyMetaCapability and GlobalQuantifyCabability.
+    /// [qualifiedName] is the name of the library or class annotated by
+    /// metadata.
+    Iterable<ClassElement> getReflectors(
+        String qualifiedName, List<ElementAnnotation> metadata) {
+      List<ClassElement> result = new List<ClassElement>();
+
+      for (ElementAnnotationImpl metadatum in metadata) {
+        EvaluationResultImpl evaluation = metadatum.evaluationResult;
+        DartObject value = evaluation.value;
+
+        // Test if the type of this metadata is associated with any reflectors
+        // via GlobalQuantifyMetaCapability.
+        if (value != null) {
+          List<ClassElement> reflectors = globalMetadata[value.type.element];
+          if (reflectors != null) {
+            for (ClassElement reflector in reflectors) {
+              result.add(reflector);
+            }
+          }
+        }
+
+        // Test if the annotation is a reflector.
+        ClassElement reflector =
+            _getReflectableAnnotation(metadatum, focusClass);
+        if (reflector != null) {
+          result.add(reflector);
+        }
+      }
+
+      // Add All reflectors associated with a
+      // pattern, via GlobalQuantifyCapability, that matches the qualified
+      // name of the class or library.
+      globalPatterns.forEach((RegExp pattern, List<ClassElement> reflectors) {
+        if (pattern.hasMatch(qualifiedName)) {
+          for (ClassElement reflector in reflectors) {
+            result.add(reflector);
+          }
+        }
+      });
+      return result;
     }
 
     for (LibraryElement library in _resolver.libraries) {
+      for (ClassElement reflector
+          in getReflectors(library.name, library.metadata)) {
+        addLibrary(library, reflector);
+      }
+
       for (CompilationUnitElement unit in library.units) {
         for (ClassElement type in unit.types) {
-          for (ElementAnnotationImpl metadatum in type.metadata) {
-            EvaluationResultImpl evaluation = metadatum.evaluationResult;
-            DartObject value = evaluation.value;
-            // Add the class to the domain of all reflectors associated with
-            // the type of this metadata via GlobalQuantifyMetaCapability
-            // (if any).
-            if (value != null) {
-              List<ClassElement> reflectors =
-                  globalMetadata[value.type.element];
-              if (reflectors != null) {
-                for (ClassElement reflector in reflectors) {
-                  addClassDomain(type, reflector);
-                }
-              }
-            }
-
-            // Add the class if it is annotated by a reflector.
-            ClassElement reflector =
-                _getReflectableAnnotation(metadatum, focusClass);
-            if (reflector != null) {
-              addClassDomain(type, reflector);
-            }
+          for (ClassElement reflector in getReflectors(
+              "${type.library.name}.${type.name}", type.metadata)) {
+            addClassDomain(type, reflector);
           }
-          // Add the class to the domain of all reflectors associated with a
-          // pattern, via GlobalQuantifyCapability, that matches the qualified
-          // name of the class.
-          globalPatterns
-              .forEach((RegExp pattern, List<ClassElement> reflectors) {
-            String qualifiedName = "${type.library.name}.${type.name}";
-            if (pattern.hasMatch(qualifiedName)) {
-              for (ClassElement reflector in reflectors) {
-                addClassDomain(type, reflector);
-              }
-            }
-          });
         }
       }
     }
-    domains.values.forEach(_collectMissingImports);
 
     world.reflectors.addAll(domains.values.toList());
     return world;
-  }
-
-  /// Finds all the libraries of classes annotated by the `domain.reflector`,
-  /// thus specifying which `import` directives we
-  /// need to add during code transformation.
-  /// These are added to `domain.missingImports`.
-  void _collectMissingImports(_ReflectorDomain domain) {
-    LibraryElement metadataLibrary = domain._reflector.library;
-    for (_ClassDomain classData in domain._annotatedClasses) {
-      LibraryElement annotatedLibrary = classData._classElement.library;
-      if (metadataLibrary != annotatedLibrary) {
-        domain._missingImports.add(annotatedLibrary);
-      }
-    }
-  }
-
-  ImportElement _findLastImport(LibraryElement library) {
-    if (library.imports.isNotEmpty) {
-      ImportElement importElement = library.imports.lastWhere(
-          (importElement) => importElement.node != null, orElse: () => null);
-      if (importElement != null) {
-        // Found an import element with a node (i.e., a non-synthetic one).
-        return importElement;
-      } else {
-        // No non-synthetic imports.
-        return null;
-      }
-    }
-    // library.imports.isEmpty
-    return null;
-  }
-
-  ExportElement _findFirstExport(LibraryElement library) {
-    if (library.exports.isNotEmpty) {
-      ExportElement exportElement = library.exports.firstWhere(
-          (exportElement) => exportElement.node != null, orElse: () => null);
-      if (exportElement != null) {
-        // Found an export element with a node (i.e., a non-synthetic one)
-        return exportElement;
-      } else {
-        // No non-synthetic exports.
-        return null;
-      }
-    }
-    // library.exports.isEmpty
-    return null;
-  }
-
-  /// Find a suitable index for insertion of additional import directives
-  /// into [targetLibrary].
-  int _newImportIndex(LibraryElement targetLibrary) {
-    // Index in [source] where the new import directive is inserted, we
-    // use 0 as the default placement (at the front of the file), but
-    // make a heroic attempt to find a better placement first.
-    int index = 0;
-    ImportElement importElement = _findLastImport(targetLibrary);
-    if (importElement != null) {
-      index = importElement.node.end;
-    } else {
-      // No non-synthetic import directives present.
-      ExportElement exportElement = _findFirstExport(targetLibrary);
-      if (exportElement != null) {
-        // Put the new import before the exports
-        index = exportElement.node.offset;
-      } else {
-        // No non-synthetic import nor export directives present.
-        CompilationUnit compilationUnitNode =
-            targetLibrary.definingCompilationUnit.node;
-        LibraryDirective libraryDirective = compilationUnitNode.directives
-            .firstWhere((directive) => directive is LibraryDirective,
-                orElse: () => null);
-        if (libraryDirective != null) {
-          // Put the new import after the library name directive.
-          index = libraryDirective.end;
-        } else {
-          // No library directive either, keep index == 0.
-        }
-      }
-    }
-    return index;
   }
 
   /// Returns the [ReflectCapability] denoted by the given [initializer].
@@ -1218,9 +1516,10 @@ class TransformerImplementation {
     // users cannot write their own capability classes).
     if (dartType.element is! ClassElement) {
       if (dartType.element.source != null) {
-        _logger.error(errors.applyTemplate(errors.SUPER_ARGUMENT_NON_CLASS, {
-          "type": dartType.displayName
-        }), span: _resolver.getSourceSpan(dartType.element));
+        _logger.error(
+            errors.applyTemplate(errors.SUPER_ARGUMENT_NON_CLASS,
+                {"type": dartType.displayName}),
+            span: _resolver.getSourceSpan(dartType.element));
       } else {
         _logger.error(errors.applyTemplate(
             errors.SUPER_ARGUMENT_NON_CLASS, {"type": dartType.displayName}));
@@ -1228,10 +1527,10 @@ class TransformerImplementation {
     }
     ClassElement classElement = dartType.element;
     if (classElement.library != capabilityLibrary) {
-      _logger.error(errors.applyTemplate(errors.SUPER_ARGUMENT_WRONG_LIBRARY, {
-        "library": capabilityLibrary,
-        "element": classElement
-      }), span: _resolver.getSourceSpan(classElement));
+      _logger.error(
+          errors.applyTemplate(errors.SUPER_ARGUMENT_WRONG_LIBRARY,
+              {"library": capabilityLibrary, "element": classElement}),
+          span: _resolver.getSourceSpan(classElement));
     }
 
     /// Extracts the namePattern String from an instance of a subclass of
@@ -1277,8 +1576,8 @@ class TransformerImplementation {
         return ec.metadataCapability;
       case "_TypeRelationsCapability":
         return ec.typeRelationsCapability;
-      case "_OwnerCapability":
-        return ec.ownerCapability;
+      case "_LibraryCapability":
+        return ec.libraryCapability;
       case "_DeclarationsCapability":
         return ec.declarationsCapability;
       case "_UriCapability":
@@ -1293,6 +1592,10 @@ class TransformerImplementation {
         return new ec.StaticInvokeCapability(extractNamePattern(constant));
       case "StaticInvokeMetaCapability":
         return new ec.StaticInvokeMetaCapability(extractMetaData(constant));
+      case "TopLevelInvokeCapability":
+        return new ec.TopLevelInvokeCapability(extractNamePattern(constant));
+      case "TopLevelInvokeMetaCapability":
+        return new ec.TopLevelInvokeMetaCapability(extractMetaData(constant));
       case "NewInstanceCapability":
         return new ec.NewInstanceCapability(extractNamePattern(constant));
       case "NewInstanceMetaCapability":
@@ -1340,7 +1643,8 @@ class TransformerImplementation {
     // a user-oriented error report.
     assert(constructorElement.isDefaultConstructor);
 
-    ConstructorDeclaration constructorDeclarationNode = constructorElement.node;
+    ConstructorDeclaration constructorDeclarationNode =
+        constructorElement.computeNode();
     NodeList<ConstructorInitializer> initializers =
         constructorDeclarationNode.initializers;
 
@@ -1380,28 +1684,48 @@ class TransformerImplementation {
     return new _Capabilities(expressions.map(capabilityOfExpression).toList());
   }
 
-  /// Returns the source of the file containing the reflection data for [world].
-  /// [id] is used to create relative import uris.
-  String _reflectionWorldSource(ReflectionWorld world, AssetId id) {
+  /// Generates code for a new entry-point file that will initialize the
+  /// reflection data according to [world], and invoke the main of
+  /// [entrypointLibrary] located at [originalEntryPointFilename]. The code is
+  /// generated to be located at [generatedId].
+  String _generateNewEntryPoint(ReflectionWorld world, AssetId generatedId,
+      String originalEntryPointFilename, LibraryElement entryPointLibrary) {
     // Notice it is important to generate the code before printing the
     // imports because generating the code can add further imports.
-    String code = world.generateCode(_resolver, _logger, id);
+    String code = world.generateCode(_resolver, _logger, generatedId);
 
     List<String> imports = new List<String>();
     world.importCollector._libraries.forEach((LibraryElement library) {
-      Uri uri = _resolver.getImportUri(library, from: id);
+      Uri uri = _resolver.getImportUri(library, from: generatedId);
       String prefix = world.importCollector._getPrefix(library);
       imports.add("import '$uri' as $prefix;");
     });
     imports.sort();
+
+    String args =
+        (entryPointLibrary.entryPoint.parameters.length == 0) ? "" : "args";
     return """
-library ${id.path.replaceAll("/", ".")};
-import "package:reflectable/src/mirrors_unimpl.dart" as r;
-import "package:reflectable/reflectable.dart" show isTransformed;
+// This file has been generated by the reflectable package.
+// https://github.com/dart-lang/reflectable.
+
+library reflectable_generated_main_library;
+
 import "dart:core";
+import "$originalEntryPointFilename" as original show main;
 ${imports.join('\n')}
 
-initializeReflectable() {
+import "package:reflectable/mirrors.dart" as m;
+import "package:reflectable/src/reflectable_transformer_based.dart" as r;
+import "package:reflectable/reflectable.dart" show isTransformed;
+
+export "$originalEntryPointFilename" hide main;
+
+main($args) {
+  _initializeReflectable();
+  return original.main($args);
+}
+
+_initializeReflectable() {
   if (!isTransformed) {
     throw new UnsupportedError(
         "The transformed code is running with the untransformed "
@@ -1411,35 +1735,6 @@ initializeReflectable() {
   r.data = ${code};
 }
 """;
-  }
-
-  _resetUsedNames() {}
-
-  String _transformMain(
-      Asset entryPoint, String source, String reflectWorldUri) {
-    // Used to manage replacements of code snippets by other code snippets
-    // in [source].
-    SourceManager sourceManager = new SourceManager(source);
-    sourceManager.insert(
-        0, "// This file has been transformed by reflectable.\n");
-    LibraryElement mainLibrary = _resolver.getLibrary(entryPoint.id);
-    sourceManager.insert(_newImportIndex(mainLibrary),
-        '\nimport "$reflectWorldUri" show initializeReflectable;');
-
-    // TODO(eernst) implement: This won't work if main is not declared
-    // in `mainLibrary`.
-    if (mainLibrary.entryPoint == null) {
-      _logger.warning("Could not find a main method in $entryPoint. Skipping.");
-      return source;
-    }
-    sourceManager.insert(mainLibrary.entryPoint.nameOffset, "_");
-    String args = (mainLibrary.entryPoint.parameters.length == 0) ? "" : "args";
-    sourceManager.insert(source.length, """
-main($args) {
-  initializeReflectable();
-  return _main($args);
-}""");
-    return sourceManager.source;
   }
 
   /// Performs the transformation which eliminates all imports of
@@ -1478,7 +1773,6 @@ main($args) {
       }
       Transform wrappedTransform =
           new _AggregateTransformWrapper(aggregateTransform, entryPointAsset);
-      _resetUsedNames(); // Each entry point has a closed world.
 
       _resolver = await resolvers.get(wrappedTransform);
       LibraryElement reflectableLibrary =
@@ -1492,14 +1786,25 @@ main($args) {
       if (world == null) continue;
 
       String source = await entryPointAsset.readAsString();
-      AssetId dataId =
-          entryPointAsset.id.changeExtension("_reflection_data.dart");
-      aggregateTransform.addOutput(
-          new Asset.fromString(dataId, _reflectionWorldSource(world, dataId)));
+      AssetId originalEntryPointId =
+          entryPointAsset.id.changeExtension("_reflectable_original_main.dart");
+      // Rename the original entry-point.
+      aggregateTransform
+          .addOutput(new Asset.fromString(originalEntryPointId, source));
 
-      String dataFileName = dataId.path.split('/').last;
-      aggregateTransform.addOutput(new Asset.fromString(entryPointAsset.id,
-          _transformMain(entryPointAsset, source, dataFileName)));
+      String originalEntryPointFilename =
+          path.basename(originalEntryPointId.path);
+
+      LibraryElement entryPointLibrary =
+          _resolver.getLibrary(entryPointAsset.id);
+
+      // Generate a new file with the name of the entry-point, whose main
+      // initializes the reflection data, and calls the main from
+      // [originalEntryPointId].
+      aggregateTransform.addOutput(new Asset.fromString(
+          entryPointAsset.id,
+          _generateNewEntryPoint(world, entryPointAsset.id,
+              originalEntryPointFilename, entryPointLibrary)));
       _resolver.release();
     }
   }
@@ -1521,6 +1826,7 @@ class _AggregateTransformWrapper implements Transform {
   Future<String> readInputAsString(AssetId id, {Encoding encoding}) {
     return _aggregateTransform.readInputAsString(id, encoding: encoding);
   }
+
   Stream<List<int>> readInput(AssetId id) => _aggregateTransform.readInput(id);
   Future<bool> hasInput(AssetId id) => _aggregateTransform.hasInput(id);
   void addOutput(Asset output) => _aggregateTransform.addOutput(output);
@@ -1542,9 +1848,50 @@ int _fieldDescriptor(FieldElement element) {
   int result = constants.field;
   if (element.isPrivate) result |= constants.privateAttribute;
   if (element.isSynthetic) result |= constants.syntheticAttribute;
+  if (element.isConst) {
+    result |= constants.constAttribute;
+    // We will get `false` from `element.isFinal` in this case, but with
+    // a mirror from 'dart:mirrors' it is considered to be "implicitly
+    // final", so we follow that and ignore `element.isFinal`.
+    result |= constants.finalAttribute;
+  } else {
+    if (element.isFinal) result |= constants.finalAttribute;
+  }
+  if (element.isStatic) result |= constants.staticAttribute;
+  if (element.type.isDynamic) {
+    result |= constants.dynamicAttribute;
+  }
+  Element elementType = element.type.element;
+  if (elementType is ClassElement) {
+    result |= constants.classTypeAttribute;
+  }
+  return result;
+}
+
+/// Returns an integer encoding of the kind and attributes of the given
+/// parameter.
+int _parameterDescriptor(ParameterElement element) {
+  int result = constants.parameter;
+  if (element.isPrivate) result |= constants.privateAttribute;
+  if (element.isSynthetic) result |= constants.syntheticAttribute;
   if (element.isConst) result |= constants.constAttribute;
   if (element.isFinal) result |= constants.finalAttribute;
-  if (element.isStatic) result |= constants.staticAttribute;
+  if (element.defaultValueCode != null) {
+    result |= constants.hasDefaultValueAttribute;
+  }
+  if (element.parameterKind.isOptional) {
+    result |= constants.optionalAttribute;
+  }
+  if (element.parameterKind == ParameterKind.NAMED) {
+    result |= constants.namedAttribute;
+  }
+  if (element.type.isDynamic) {
+    result |= constants.dynamicAttribute;
+  }
+  Element elementType = element.type.element;
+  if (elementType is ClassElement) {
+    result |= constants.classTypeAttribute;
+  }
   return result;
 }
 
@@ -1565,7 +1912,15 @@ int _declarationDescriptor(ExecutableElement element) {
       result |= constants.redirectingConstructorAttribute;
     }
   } else {
+    assert(element is MethodElement);
     result = constants.method;
+    if (element.type.isDynamic) {
+      result |= constants.dynamicReturnTypeAttribute;
+    }
+    Element elementReturnType = element.returnType.element;
+    if (elementReturnType is ClassElement) {
+      result |= constants.classReturnTypeAttribute;
+    }
   }
   if (element.isPrivate) result |= constants.privateAttribute;
   if (element.isStatic) result |= constants.staticAttribute;
@@ -1583,27 +1938,31 @@ String _nameOfDeclaration(ExecutableElement element) {
   return element.name;
 }
 
-String _formatAsList(Iterable parts) => "[${parts.join(", ")}]";
+String _formatAsList(String typeName, Iterable parts) =>
+    "<$typeName>[${parts.join(", ")}]";
+
+String _formatAsDynamicList(Iterable parts) => "[${parts.join(", ")}]";
 
 String _formatAsMap(Iterable parts) => "{${parts.join(", ")}}";
 
-/// Returns code that will reproduce the given constant expression.
+/// Returns a [String] containing code that will evaluate to the same
+/// value when evaluated in the generated file as the given [expression]
+/// would evaluate to in [originatingLibrary].
 String _extractConstantCode(Expression expression,
-    LibraryElement originatingLibrary, Resolver resolver,
-    _ImportCollector importCollector) {
+    LibraryElement originatingLibrary, _ImportCollector importCollector) {
   if (expression is ListLiteral) {
     List<String> elements = expression.elements.map((Expression subExpression) {
       return _extractConstantCode(
-          subExpression, originatingLibrary, resolver, importCollector);
+          subExpression, originatingLibrary, importCollector);
     });
     // TODO(sigurdm) feature: Type arguments.
-    return "const ${_formatAsList(elements)}";
+    return "const ${_formatAsDynamicList(elements)}";
   } else if (expression is MapLiteral) {
     List<String> elements = expression.entries.map((MapLiteralEntry entry) {
-      String key = _extractConstantCode(
-          entry.key, originatingLibrary, resolver, importCollector);
+      String key =
+          _extractConstantCode(entry.key, originatingLibrary, importCollector);
       String value = _extractConstantCode(
-          entry.value, originatingLibrary, resolver, importCollector);
+          entry.value, originatingLibrary, importCollector);
       return "$key: $value";
     });
     // TODO(sigurdm) feature: Type arguments.
@@ -1615,10 +1974,10 @@ String _extractConstantCode(Expression expression,
     String prefix =
         importCollector._getPrefix(expression.staticElement.library);
     // TODO(sigurdm) implement: Named arguments.
-    String arguments = expression.argumentList.arguments
-        .map((Expression argument) {
+    String arguments =
+        expression.argumentList.arguments.map((Expression argument) {
       return _extractConstantCode(
-          argument, originatingLibrary, resolver, importCollector);
+          argument, originatingLibrary, importCollector);
     }).join(", ");
     // TODO(sigurdm) feature: Type arguments.
     return "const $prefix.$constructor($arguments)";
@@ -1630,31 +1989,29 @@ String _extractConstantCode(Expression expression,
     if (enclosingElement is ClassElement) {
       prefix += ".${enclosingElement.name}";
     }
-    // TODO(sigurdm) diagnostic: Emit a warning/error if the element is not
-    // in the global public scope of the library.
     return "$prefix.${element.name}";
   } else if (expression is BinaryExpression) {
     String a = _extractConstantCode(
-        expression.leftOperand, originatingLibrary, resolver, importCollector);
+        expression.leftOperand, originatingLibrary, importCollector);
     String op = expression.operator.lexeme;
     String b = _extractConstantCode(
-        expression.rightOperand, originatingLibrary, resolver, importCollector);
+        expression.rightOperand, originatingLibrary, importCollector);
     return "$a $op $b";
   } else if (expression is ConditionalExpression) {
     String condition = _extractConstantCode(
-        expression.condition, originatingLibrary, resolver, importCollector);
-    String a = _extractConstantCode(expression.thenExpression,
-        originatingLibrary, resolver, importCollector);
-    String b = _extractConstantCode(expression.elseExpression,
-        originatingLibrary, resolver, importCollector);
+        expression.condition, originatingLibrary, importCollector);
+    String a = _extractConstantCode(
+        expression.thenExpression, originatingLibrary, importCollector);
+    String b = _extractConstantCode(
+        expression.elseExpression, originatingLibrary, importCollector);
     return "$condition ? $a : $b";
   } else if (expression is ParenthesizedExpression) {
     String nested = _extractConstantCode(
-        expression.expression, originatingLibrary, resolver, importCollector);
+        expression.expression, originatingLibrary, importCollector);
     return "($nested)";
   } else if (expression is PropertyAccess) {
     String target = _extractConstantCode(
-        expression.target, originatingLibrary, resolver, importCollector);
+        expression.target, originatingLibrary, importCollector);
     String selector = expression.propertyName.token.lexeme;
     return "$target.$selector";
   } else if (expression is MethodInvocation) {
@@ -1663,19 +2020,41 @@ String _extractConstantCode(Expression expression,
     assert(expression.methodName.token.lexeme == "identical");
     NodeList arguments = expression.argumentList.arguments;
     assert(arguments.length == 2);
-    String a = _extractConstantCode(
-        arguments[0], originatingLibrary, resolver, importCollector);
-    String b = _extractConstantCode(
-        arguments[1], originatingLibrary, resolver, importCollector);
+    String a =
+        _extractConstantCode(arguments[0], originatingLibrary, importCollector);
+    String b =
+        _extractConstantCode(arguments[1], originatingLibrary, importCollector);
     return "identical($a, $b)";
   } else {
     assert(expression is IntegerLiteral ||
         expression is BooleanLiteral ||
         expression is StringLiteral ||
         expression is NullLiteral ||
-        expression is SymbolLiteral);
+        expression is SymbolLiteral ||
+        expression is DoubleLiteral ||
+        expression is TypedLiteral);
     return expression.toSource();
   }
+}
+
+/// Returns a [String] containing code that will evaluate to the same
+/// value when evaluated as an expression in the generated file as the
+/// given [annotation] when attached as metadata to a declaration in
+/// the given [library].
+String _extractAnnotationValue(Annotation annotation, LibraryElement library,
+    _ImportCollector importCollector) {
+  String keywordCode = annotation.arguments != null ? "const " : "";
+  Identifier name = annotation.name;
+  String _nullIsEmpty(Object object) => object == null ? "" : "$object";
+  if (name is SimpleIdentifier) {
+    return "$keywordCode"
+        "${importCollector._getPrefix(library)}.$name"
+        "${_nullIsEmpty(annotation.period)}"
+        "${_nullIsEmpty(annotation.constructorName)}"
+        "${_nullIsEmpty(annotation.arguments)}";
+  }
+  throw new UnimplementedError(
+      "Cannot move this annotation: $annotation, from library $library");
 }
 
 /// The names of the libraries that can be accessed with a 'dart:x' import uri.
@@ -1707,14 +2086,17 @@ String _extractMetadataCode(Element element, Resolver resolver,
     _ImportCollector importCollector, TransformLogger logger, AssetId dataId) {
   Iterable<ElementAnnotation> elementAnnotations = element.metadata;
 
-  if (elementAnnotations == null) return "[]";
+  if (elementAnnotations == null) return "<Object>[]";
 
   // Synthetic accessors do not have metadata. Only their associated fields.
-  if (element is PropertyAccessorElement && element.isSynthetic) return "[]";
+  if ((element is PropertyAccessorElement || element is ConstructorElement) &&
+      element.isSynthetic) {
+    return "<Object>[]";
+  }
 
   List<String> metadataParts = new List<String>();
 
-  AstNode node = element.node;
+  AstNode node = element.computeNode();
 
   if(node == null) return "[]";
 
@@ -1762,10 +2144,9 @@ String _extractMetadataCode(Element element, Resolver resolver,
       String constructor = (annotationNode.constructorName == null)
           ? annotationNode.name
           : "${annotationNode.name}.${annotationNode.constructorName}";
-      String arguments = annotationNode.arguments.arguments
-          .map((Expression argument) {
-        return _extractConstantCode(
-            argument, element.library, resolver, importCollector);
+      String arguments =
+          annotationNode.arguments.arguments.map((Expression argument) {
+        return _extractConstantCode(argument, element.library, importCollector);
       }).join(", ");
       metadataParts.add("const $prefix.$constructor($arguments)");
     } else {
@@ -1774,12 +2155,13 @@ String _extractMetadataCode(Element element, Resolver resolver,
     }
   }
 
-  return _formatAsList(metadataParts);
+  return _formatAsList("Object", metadataParts);
 }
 
-Iterable<FieldElement> _declaredFields(
+Iterable<FieldElement> _extractDeclaredFields(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.fields.where((FieldElement field) {
+    if (field.isPrivate) return false;
     Function capabilityChecker = field.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
@@ -1787,14 +2169,24 @@ Iterable<FieldElement> _declaredFields(
   });
 }
 
-Iterable<MethodElement> _declaredMethods(
+Iterable<MethodElement> _extractDeclaredMethods(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.methods.where((MethodElement method) {
+    if (method.isPrivate) return false;
     Function capabilityChecker = method.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
     return capabilityChecker(method.name, method.metadata);
   });
+}
+
+Iterable<ParameterElement> _extractDeclaredParameters(
+    Iterable<MethodElement> declaredMethods) {
+  List<ParameterElement> result = <ParameterElement>[];
+  for (MethodElement declaredMethod in declaredMethods) {
+    result.addAll(declaredMethod.parameters);
+  }
+  return result;
 }
 
 /// Returns the [PropertyAccessorElement]s which are the accessors
@@ -1808,6 +2200,7 @@ Iterable<MethodElement> _declaredMethods(
 Iterable<PropertyAccessorElement> _declaredAndImplicitAccessors(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.accessors.where((PropertyAccessorElement accessor) {
+    if (accessor.isPrivate) return false;
     Function capabilityChecker = accessor.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
@@ -1818,6 +2211,7 @@ Iterable<PropertyAccessorElement> _declaredAndImplicitAccessors(
 Iterable<ConstructorElement> _declaredConstructors(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.constructors.where((ConstructorElement constructor) {
+    if (constructor.isPrivate) return false;
     return capabilities.supportsNewInstance(
         constructor.name, constructor.metadata);
   });
@@ -1825,13 +2219,21 @@ Iterable<ConstructorElement> _declaredConstructors(
 
 _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
   List<FieldElement> declaredFieldsOfClass =
-      _declaredFields(type, domain._capabilities).toList();
+      _extractDeclaredFields(type, domain._capabilities).toList();
   List<MethodElement> declaredMethodsOfClass =
-      _declaredMethods(type, domain._capabilities).toList();
+      _extractDeclaredMethods(type, domain._capabilities).toList();
+  List<ParameterElement> declaredParametersOfClass =
+      _extractDeclaredParameters(declaredMethodsOfClass);
   List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
       _declaredAndImplicitAccessors(type, domain._capabilities).toList();
   List<ConstructorElement> declaredConstructorsOfClass =
       _declaredConstructors(type, domain._capabilities).toList();
-  return new _ClassDomain(type, declaredFieldsOfClass, declaredMethodsOfClass,
-      declaredAndImplicitAccessorsOfClass, declaredConstructorsOfClass, domain);
+  return new _ClassDomain(
+      type,
+      declaredFieldsOfClass,
+      declaredMethodsOfClass,
+      declaredParametersOfClass,
+      declaredAndImplicitAccessorsOfClass,
+      declaredConstructorsOfClass,
+      domain);
 }

@@ -12,7 +12,7 @@ import 'package:unittest/unittest.dart';
 
 class ProxyReflectable extends Reflectable {
   const ProxyReflectable()
-      : super(instanceInvokeCapability, typeCapability);
+      : super(instanceInvokeCapability, declarationsCapability);
 }
 const proxyReflectable = const ProxyReflectable();
 

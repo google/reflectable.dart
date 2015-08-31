@@ -12,7 +12,8 @@ import 'package:reflectable/capability.dart';
 
 class MyReflectable extends r.Reflectable {
   const MyReflectable()
-      : super(instanceInvokeCapability, newInstanceCapability);
+      : super(instanceInvokeCapability, newInstanceCapability,
+            declarationsCapability);
 }
 
 @MyReflectable()
@@ -23,6 +24,7 @@ class A {
   set accessor(x) {
     accessorBackingStorageA = x;
   }
+
   aMethod() => 'aMethod';
 }
 
@@ -34,6 +36,7 @@ class B extends A {
   set accessor(x) {
     accessorBackingStorageB = x;
   }
+
   bMethod() => 'bMethod';
 }
 
@@ -42,11 +45,13 @@ class C extends B {
   set foo(x) {
     fooBackingStorageC = x;
   }
+
   instanceMethod(x) => 'C:instanceMethod($x)';
   get accessor => 'C:get accessor';
   set accessor(x) {
     accessorBackingStorageC = x;
   }
+
   cMethod() => 'cMethod';
 }
 
@@ -81,8 +86,8 @@ List<r.MethodMirror> settersOf(r.ClassMirror cm) {
 }
 
 List<r.MethodMirror> methodsOf(r.ClassMirror cm) {
-  return filteredDeclarationsOf(cm,
-      (v) => v is r.MethodMirror && v.isRegularMethod);
+  return filteredDeclarationsOf(
+      cm, (v) => v is r.MethodMirror && v.isRegularMethod);
 }
 
 Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
@@ -178,10 +183,8 @@ main() {
     expect(gettersOf(bClass).map((x) => x.simpleName),
         ["accessor", "foo"].toSet());
     expect(gettersOf(cClass).map((x) => x.simpleName), ["accessor"]);
-    expect(settersOf(aClass).map((x) => x.simpleName),
-        ["accessor="]);
-    expect(settersOf(bClass).map((x) => x.simpleName),
-        ["accessor="].toSet());
+    expect(settersOf(aClass).map((x) => x.simpleName), ["accessor="]);
+    expect(settersOf(bClass).map((x) => x.simpleName), ["accessor="].toSet());
     expect(settersOf(cClass).map((x) => x.simpleName),
         ["accessor=", "foo="].toSet());
     expect(methodsOf(aClass).map((x) => x.simpleName),

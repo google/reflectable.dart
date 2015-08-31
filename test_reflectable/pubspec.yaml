@@ -2,7 +2,7 @@ name: test_reflectable
 description: >
   This package contains tests which depend on package reflectable
   and which are transformed by the transformer in that package.
-version: 0.1.0
+version: 0.1.2
 author: The Dart Team <dart@google.com>
 homepage: https://www.github.com/dart-lang/reflectable/test_reflectable
 dependencies:
@@ -42,6 +42,12 @@ transformers:
       - test/invoker_test.dart
       - test/invoker_operator_test.dart
       - test/type_relations_test.dart
-      - test/invoke_toplevel_test.dart
+      - test/exported_main_test.dart
+      - test/libraries_test.dart
+      - test/parameter_mirrors_test.dart
+      - test/parameter_test.dart
+      - test/field_test.dart
+      - test/implicit_getter_setter_test.dart
+      - test/default_values_test.dart
 - $dart2js:
     $include: []
