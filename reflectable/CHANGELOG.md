@@ -1,6 +1,12 @@
 # Changelog
 
+## 0.1.3
+
+* Non-transformed code supports `subTypeQuantifyCapability`
+* Transformer implements `.superinterfaces`
+* Transformer implements `.mixin`
 * Transformer implements reflection on libraries.
+* Better support for default values in transformed code.
 
 ## 0.1.2
 
