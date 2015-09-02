@@ -52,6 +52,7 @@ transformers:
       - test/mixin_application_static_member_test.dart
       - test/mixin_application_static_invoke_test.dart
       - test/default_values_test.dart
+      - test/superinterfaces_test.dart
       # Delay until transformation is implemented:
       # - test/subtype_quantify_test.dart
 - $dart2js:

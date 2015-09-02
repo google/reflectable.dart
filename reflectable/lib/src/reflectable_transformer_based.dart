@@ -192,7 +192,6 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
 }
 
 class ClassMirrorImpl extends _DataCaching implements ClassMirror {
-
   /// The reflector which represents the mirror system that this
   /// mirror belongs to.
   final ReflectableImpl _reflector;
@@ -218,7 +217,9 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   final int _mixinIndex;
 
   // TODO(sigurdm) implement: Implement superInterfaces.
-  List<ClassMirror> get superinterfaces => _unsupported();
+  List<ClassMirror> get superinterfaces {
+    return _superinterfaceIndices.map((int i) => _data.classMirrors[i]).toList();
+  }
 
   // TODO(sigurdm) implement: Implement typeArguments.
   @override
@@ -252,6 +253,10 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   /// obtain the correct result for `staticMembers`.
   final List<int> _staticMemberIndices;
 
+  /// A list of the indices in [ReflectorData.classMirrors] of the
+  /// superinterfaces of the reflected class.
+  final List<int> _superinterfaceIndices;
+
   final String simpleName;
   final String qualifiedName;
   final List<Object> _metadata;
@@ -273,8 +278,9 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
       this._constructors,
       this._ownerIndex,
       this._mixinIndex,
-      List<Object> metadata) :
-        _metadata =
+      this._superinterfaceIndices,
+      List<Object> metadata)
+      : _metadata =
             (metadata == null) ? null : new UnmodifiableListView(metadata);
 
   bool get isAbstract => _unsupported();
@@ -443,7 +449,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
     if (_ownerIndex == NO_CAPABILITY_INDEX) {
       throw new NoSuchCapabilityError(
           "Trying to get owner of class $qualifiedName "
-              "without `LibraryCapability`.");
+          "without `LibraryCapability`.");
     }
     return _data.libraryMirrors[_ownerIndex];
   }

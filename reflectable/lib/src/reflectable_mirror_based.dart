@@ -511,10 +511,13 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   }
 
   @override
-  List<rm.TypeMirror> get superinterfaces {
-    List<dm.TypeMirror> superinterfaces = _classMirror.superinterfaces;
-    return superinterfaces.map((dm.TypeMirror superInterface) {
-      return wrapTypeMirror(superInterface, _reflectable);
+  List<rm.ClassMirror> get superinterfaces {
+    List<dm.ClassMirror> superinterfaces = _classMirror.superinterfaces;
+    return superinterfaces
+        .where((dm.ClassMirror superinterface) =>
+            (_reflectable._supportedClasses.contains(superinterface)))
+        .map((dm.TypeMirror superinterface) {
+      return wrapTypeMirror(superinterface, _reflectable);
     }).toList();
   }
 

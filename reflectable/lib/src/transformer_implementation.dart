@@ -570,6 +570,13 @@ class _ReflectorDomain {
           ? libraries.indexOf(classElement.library)
           : constants.NO_CAPABILITY_INDEX;
 
+      String superinterfaceIndices = _formatAsList(
+          'int',
+          classElement.interfaces
+              .map((InterfaceType type) => type.element)
+              .where(classes._contains)
+              .map(classes.indexOf));
+
       String classMetadataCode;
       if (_capabilities._supportsMetadata) {
         classMetadataCode = _extractMetadataCode(classDomain._classElement,
@@ -585,7 +592,8 @@ class _ReflectorDomain {
           '${_constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
-          '$constructorsCode, $ownerIndex, $mixinIndex, $classMetadataCode)';
+          '$constructorsCode, $ownerIndex, $mixinIndex, '
+          '$superinterfaceIndices, $classMetadataCode)';
       return result;
     }));
 
@@ -2357,6 +2365,9 @@ class MixinApplication implements ClassElement {
   String get name => "${superclass.library.name}.${superclass.name} with "
       "${mixin.library.name}.${mixin.name}";
 
+  @override
+  List<InterfaceType> get interfaces => <InterfaceType>[];
+
   _unImplemented() => throw new UnimplementedError();
 
   @override
@@ -2379,9 +2390,6 @@ class MixinApplication implements ClassElement {
 
   @override
   bool get hasStaticMember => _unImplemented();
-
-  @override
-  List<InterfaceType> get interfaces => _unImplemented();
 
   @override
   bool get isAbstract => _unImplemented();
