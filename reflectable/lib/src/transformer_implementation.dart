@@ -88,6 +88,9 @@ class _ReflectorDomain {
 
   Set<LibraryElement> _libraries = new Set<LibraryElement>();
 
+  /// A mapping giving the connection between a [ClassElement] and the
+  /// [_ClassDomain] that describes the members that are available under
+  /// reflection with [_reflector].
   final Map<ClassElement, _ClassDomain> _classMap =
       new Map<ClassElement, _ClassDomain>();
 
@@ -210,17 +213,121 @@ class _ReflectorDomain {
     Set<String> instanceGetterNames = new Set<String>();
     Set<String> instanceSetterNames = new Set<String>();
 
-    // Fill in [libraries].
-    for (LibraryElement library in _libraries) {
-      libraries.add(library);
+    _annotatedClasses
+        .forEach((_ClassDomain domain) => classes.add(domain._classElement));
+
+    // Because the analyzer doesn't model MixinApplications as classes we
+    // do our own modelling, and keep record of the superclass hierarchy.
+    // The superclass of a class with a mixin is the
+    // mixin-application. The superclass of any other class is the same as the
+    // `ClassElement.supertype.element`.
+    Map<ClassElement, ClassElement> superclasses =
+        new Map<ClassElement, ClassElement>();
+
+    // Compute `classes`, i.e., the transitive closure of _annotated_classes
+    // with classes implied by different capabilities.
+    Set<ClassElement> workingSetOfClasses =
+        new Set<ClassElement>.from(classes.items);
+
+    while (workingSetOfClasses.isNotEmpty) {
+      // Compute additional classes that are included due to different
+      // capabilities, and the synthetic mixin-applications.
+      Set<ClassElement> additionalClasses = new Set<ClassElement>();
+
+      void addClass(ClassElement classElement) {
+        if (!classes._contains(classElement)) {
+          additionalClasses.add(classElement);
+        }
+      }
+
+      for (ClassElement classElement in workingSetOfClasses) {
+        _ClassDomain classDomain = _createClassDomain(classElement, this);
+        _classMap[classElement] = classDomain;
+        // Because a mixin-application does not add further methods and fields
+        // we skip them here.
+        if (classElement is MixinApplication) continue;
+
+        if (_capabilities._impliesTypes) {
+          classDomain._declaredFields.forEach((FieldElement fieldElement) {
+            Element fieldType = fieldElement.type.element;
+            if (fieldType is ClassElement) {
+              addClass(fieldType);
+            }
+          });
+          classDomain._declaredParameters
+              .forEach((ParameterElement parameterElement) {
+            Element parameterType = parameterElement.type.element;
+            if (parameterType is ClassElement) {
+              addClass(parameterType);
+            }
+          });
+        }
+      }
+
+      if (_capabilities._impliesUpwardsClosure) {
+        workingSetOfClasses.forEach((ClassElement classElement) {
+          if (classElement is MixinApplication) return;
+          InterfaceType workingSuperType = classElement.supertype;
+          if (workingSuperType == null) return;
+
+          ClassElement workingSuperClass = workingSuperType.element;
+          if (!classes._contains(workingSuperClass)) {
+            addClass(workingSuperClass);
+          }
+
+          // Create the chain of mixin applications between the class and the
+          // class it extends.
+          ClassElement superclass = workingSuperType.element;
+          classElement.mixins.forEach((InterfaceType mixin) {
+            ClassElement mixinClass = mixin.element;
+            ClassElement mixinApplication = new MixinApplication(
+                superclass, mixinClass, classElement.library);
+            addClass(mixinClass);
+            addClass(mixinApplication);
+            superclasses[mixinApplication] = superclass;
+            superclass = mixinApplication;
+          });
+          superclasses[classElement] = superclass;
+        });
+      } else {
+        // No upwards-closure. For each class set its superclass, and create
+        // mixin applications for each mixin available.
+        workingSetOfClasses.forEach((ClassElement classElement) {
+          // Mixin-applications are handled when they are created, so we
+          // skip them here.
+          if (classElement is MixinApplication) return;
+          InterfaceType supertype = classElement.supertype;
+          // Object is the only class with no supertype, it has no mixins, so
+          // we skip it here.
+          if (supertype == null) return;
+          ClassElement superclass = supertype.element;
+          classElement.mixins.forEach((InterfaceType mixin) {
+            ClassElement mixinClass = mixin.element;
+            if (classes._contains(mixinClass)) {
+              ClassElement mixinApplication = new MixinApplication(
+                  superclass, mixinClass, classElement.library);
+              addClass(mixinApplication);
+              superclasses[mixinApplication] = superclass;
+              superclass = mixinApplication;
+            } else {
+              superclass = null;
+            }
+          });
+          superclasses[classElement] = superclass;
+        });
+      }
+
+      additionalClasses.forEach(classes.add);
+      workingSetOfClasses = additionalClasses;
     }
 
-    // Fill in [classes], [members], [fields], [parameters],
+    // Fill in [libraries], [classes], [members], [fields], [parameters],
     // [instanceGetterNames], and [instanceSetterNames].
-    for (_ClassDomain classDomain in _annotatedClasses) {
-      // Gather all annotated classes.
-      classes.add(classDomain._classElement);
 
+    // We run through _classMap.values rather than `annotatedClasses` because
+    // we need to include the classes added by taking closures related to
+    // different capabilities in the work-list loop above.
+    for (_ClassDomain classDomain in _classMap.values) {
       // Gather the behavioral interface into [members]. Note that
       // this includes implicitly generated getters and setters, but
       // omits fields. Also note that this does not match the
@@ -265,6 +372,10 @@ class _ReflectorDomain {
           // instanceGetterNames, so we do nothing here.
         }
       });
+    }
+
+    for (LibraryElement library in _libraries) {
+      libraries.add(library);
     }
 
     String gettingClosure(String getterName) {
@@ -353,67 +464,11 @@ class _ReflectorDomain {
           descriptor & constants.classReturnTypeAttribute != 0);
     }
 
-    // Compute `includedClasses`, i.e., the set of classes which are
-    // annotated, or the upwards-closed completion of that set.
-    Set<_ClassDomain> includedClasses = new Set<_ClassDomain>();
-    includedClasses.addAll(_annotatedClasses);
-    if (_capabilities._impliesTypes) {
-      fields.items.forEach((FieldElement fieldElement) {
-        Element fieldType = fieldElement.type.element;
-        if (fieldType is ClassElement) {
-          includedClasses.add(_createClassDomain(fieldType, this));
-          classes.add(fieldType);
-        }
-      });
-      members.items.forEach((ExecutableElement executableElement) {
-        Element returnType = executableElement.type.element;
-        if (returnType is ClassElement) {
-          includedClasses.add(_createClassDomain(returnType, this));
-          classes.add(returnType);
-        }
-      });
-      parameters.items.forEach((ParameterElement parameterElement) {
-        Element parameterType = parameterElement.type.element;
-        if (parameterType is ClassElement) {
-          includedClasses.add(_createClassDomain(parameterType, this));
-          classes.add(parameterType);
-        }
-      });
-    }
-    if (_capabilities._impliesUpwardsClosure) {
-      Set<_ClassDomain> workingSetOfClasses = includedClasses;
-      while (true) {
-        // Invariant for `workingSetOfClasses`: Every class from
-        // `includedClasses` for which it is possible that its superclass
-        // is not yet in `includedClasses` must be a member of
-        // `workingSetOfClasses`.
-        Set<_ClassDomain> additionalClasses = new Set<_ClassDomain>();
-        workingSetOfClasses.forEach((_ClassDomain workingClass) {
-          InterfaceType workingSuperType = workingClass._classElement.supertype;
-          if (workingSuperType != null) {
-            ClassElement workingSuperClass = workingSuperType.element;
-            bool isNew = !includedClasses.any((_ClassDomain classDomain) {
-              return classDomain._classElement == workingSuperClass;
-            });
-            if (isNew) {
-              additionalClasses
-                  .add(_createClassDomain(workingSuperClass, this));
-            }
-          }
-        });
-        if (additionalClasses.isEmpty) break;
-        includedClasses.addAll(additionalClasses);
-        additionalClasses.forEach((_ClassDomain classDomain) {
-          classes.add(classDomain._classElement);
-        });
-        workingSetOfClasses = additionalClasses;
-      }
-    }
-
     // Generate the class mirrors.
-    int classIndex = 0; // Index of each class mirror, stored in itself.
     String classMirrorsCode = _formatAsList("m.ClassMirror",
-        includedClasses.map((_ClassDomain classDomain) {
+        classes.items.map((ClassElement classElement) {
+      _ClassDomain classDomain = _classMap[classElement];
+
       // Fields go first in [memberMirrors], so they will get the
       // same index as in [fields].
       Iterable<int> fieldsIndices =
@@ -471,36 +526,25 @@ class _ReflectorDomain {
             : index + fields.length;
       }));
 
-      InterfaceType superType = classDomain._classElement.supertype;
-      ClassElement superclass = superType == null ? null : superType.element;
-      String superclassIndex;
-      if (superclass == null) {
-        // There is no superclass.
-        superclassIndex = null;
-      } else {
-        int index = classes.indexOf(superclass);
-        if (index == null) index = constants.NO_CAPABILITY_INDEX;
-        superclassIndex = "$index";
-      }
+      ClassElement superclass = superclasses[classElement];
+      // [Object]'s superclass is reported as `null`.
+      String superclassIndex = (classElement ==
+              resolver.getType('dart.core.Object'))
+          ? "null"
+          : (classes._contains(superclass))
+              ? "${classes.indexOf(superclass)}"
+              : "${constants.NO_CAPABILITY_INDEX}";
 
       String constructorsCode;
-      if (classDomain._classElement.isAbstract) {
+      if (classElement is MixinApplication ||
+          classDomain._classElement.isAbstract) {
         constructorsCode = '{}';
       } else {
         constructorsCode = _formatAsMap(
             classDomain._constructors.map((ConstructorElement constructor) {
-          String code =
-              _constructorCode(constructor, importCollector);
+          String code = _constructorCode(constructor, importCollector);
           return 'r"${constructor.name}": $code';
         }));
-      }
-
-      String classMetadataCode;
-      if (_capabilities._supportsMetadata) {
-        classMetadataCode = _extractMetadataCode(classDomain._classElement,
-            resolver, importCollector, logger, dataId);
-      } else {
-        classMetadataCode = "null";
       }
 
       String staticGettersCode = _formatAsMap([
@@ -518,17 +562,30 @@ class _ReflectorDomain {
           .map((PropertyAccessorElement element) =>
               staticSettingClosure(classDomain._classElement, element.name)));
 
+      int mixinIndex = (classElement is MixinApplication)
+          ? classes.indexOf(classElement.mixin)
+          : classes.indexOf(classElement);
+
       int ownerIndex = _capabilities.supportsLibraries
-          ? libraries.indexOf(classDomain._classElement.library)
+          ? libraries.indexOf(classElement.library)
           : constants.NO_CAPABILITY_INDEX;
+
+      String classMetadataCode;
+      if (_capabilities._supportsMetadata) {
+        classMetadataCode = _extractMetadataCode(classDomain._classElement,
+            resolver, importCollector, logger, dataId);
+      } else {
+        classMetadataCode = "null";
+      }
+
+      int classIndex = classes.indexOf(classElement);
 
       String result = 'new r.ClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${classDomain._qualifiedName}", $classIndex, '
           '${_constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
-          '$constructorsCode, $ownerIndex, $classMetadataCode)';
-      classIndex++;
+          '$constructorsCode, $ownerIndex, $mixinIndex, $classMetadataCode)';
       return result;
     }));
 
@@ -596,6 +653,9 @@ class _ReflectorDomain {
 
     String typesCode =
         _formatAsList("Type", classes.items.map((ClassElement classElement) {
+      if (classElement is MixinApplication) {
+        return 'new r.FakeType(r"${classElement.name}")';
+      }
       String prefix = importCollector._getPrefix(classElement.library);
       return "$prefix.${classElement.name}";
     }));
@@ -787,9 +847,23 @@ class _ClassDomain {
         }
       }
 
-      if (classElement.supertype != null) {
-        helper(classElement.supertype.element)
+      if (classElement is MixinApplication) {
+        helper(classElement.superclass)
             .forEach((String name, ExecutableElement member) {
+          addIfCapable(member);
+        });
+        helper(classElement.mixin)
+            .forEach((String name, ExecutableElement member) {
+          addIfCapable(member);
+        });
+        return result;
+      }
+
+      ClassElement superclass = (classElement.supertype != null)
+          ? classElement.supertype.element
+          : null;
+      if (superclass != null) {
+        helper(superclass).forEach((String name, ExecutableElement member) {
           addIfCapable(member);
         });
       }
@@ -818,6 +892,10 @@ class _ClassDomain {
       if (_reflectorDomain._staticMemberCache[classElement] != null) {
         return _reflectorDomain._staticMemberCache[classElement];
       }
+      if (classElement is MixinApplication) {
+        return new Map<String, ExecutableElement>();
+      }
+
       Map<String, ExecutableElement> result =
           new Map<String, ExecutableElement>();
 
@@ -2216,6 +2294,33 @@ Iterable<ConstructorElement> _declaredConstructors(
 }
 
 _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
+  if (type is MixinApplication) {
+    List<FieldElement> declaredFieldsOfClass =
+        _extractDeclaredFields(type.mixin, domain._capabilities)
+            .where((FieldElement e) => !e.isStatic)
+            .toList();
+    List<MethodElement> declaredMethodsOfClass =
+        _extractDeclaredMethods(type.mixin, domain._capabilities)
+            .where((MethodElement e) => !e.isStatic)
+            .toList();
+    List<ParameterElement> declaredParametersOfClass =
+        _extractDeclaredParameters(declaredMethodsOfClass);
+    List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
+        _declaredAndImplicitAccessors(type.mixin, domain._capabilities)
+            .toList();
+    List<ConstructorElement> declaredConstructorsOfClass =
+        new List<ConstructorElement>();
+
+    return new _ClassDomain(
+        type,
+        declaredFieldsOfClass,
+        declaredMethodsOfClass,
+        declaredParametersOfClass,
+        declaredAndImplicitAccessorsOfClass,
+        declaredConstructorsOfClass,
+        domain);
+  }
+
   List<FieldElement> declaredFieldsOfClass =
       _extractDeclaredFields(type, domain._capabilities).toList();
   List<MethodElement> declaredMethodsOfClass =
@@ -2234,4 +2339,222 @@ _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
       declaredAndImplicitAccessorsOfClass,
       declaredConstructorsOfClass,
       domain);
+}
+
+/// Modelling a MixinApplication as a ClassElement.
+///
+/// This class is only used to mark the synthetic mixin application classes.
+/// So most of the class is left unimplemented.
+class MixinApplication implements ClassElement {
+  final ClassElement superclass;
+
+  final ClassElement mixin;
+
+  final LibraryElement library;
+
+  MixinApplication(this.superclass, this.mixin, this.library);
+
+  String get name => "${superclass.library.name}.${superclass.name} with "
+      "${mixin.library.name}.${mixin.name}";
+
+  _unImplemented() => throw new UnimplementedError();
+
+  @override
+  List<PropertyAccessorElement> get accessors => _unImplemented();
+
+  @override
+  List<InterfaceType> get allSupertypes => _unImplemented();
+
+  @override
+  List<ConstructorElement> get constructors => _unImplemented();
+
+  @override
+  List<FieldElement> get fields => _unImplemented();
+
+  @override
+  bool get hasNonFinalField => _unImplemented();
+
+  @override
+  bool get hasReferenceToSuper => _unImplemented();
+
+  @override
+  bool get hasStaticMember => _unImplemented();
+
+  @override
+  List<InterfaceType> get interfaces => _unImplemented();
+
+  @override
+  bool get isAbstract => _unImplemented();
+
+  @override
+  bool get isEnum => _unImplemented();
+
+  @override
+  bool get isMixinApplication => _unImplemented();
+
+  @override
+  bool get isOrInheritsProxy => _unImplemented();
+
+  @override
+  bool get isProxy => _unImplemented();
+
+  @override
+  bool get isTypedef => _unImplemented();
+
+  @override
+  bool get isValidMixin => _unImplemented();
+
+  @override
+  List<MethodElement> get methods => _unImplemented();
+
+  @override
+  List<InterfaceType> get mixins => _unImplemented();
+
+  @override
+  InterfaceType get supertype => _unImplemented();
+
+  @override
+  InterfaceType get type => _unImplemented();
+
+  @override
+  List<TypeParameterElement> get typeParameters => _unImplemented();
+
+  @override
+  ConstructorElement get unnamedConstructor => _unImplemented();
+
+  @override
+  NamedCompilationUnitMember computeNode() => _unImplemented();
+
+  @override
+  FieldElement getField(String name) => _unImplemented();
+
+  @override
+  PropertyAccessorElement getGetter(String name) => _unImplemented();
+
+  @override
+  MethodElement getMethod(String name) => _unImplemented();
+
+  @override
+  ConstructorElement getNamedConstructor(String name) => _unImplemented();
+
+  @override
+  PropertyAccessorElement getSetter(String name) => _unImplemented();
+
+  @override
+  bool isSuperConstructorAccessible(ConstructorElement constructor) {
+    return _unImplemented();
+  }
+
+  @override
+  MethodElement lookUpConcreteMethod(
+      String methodName, LibraryElement library) {
+    return _unImplemented();
+  }
+
+  @override
+  PropertyAccessorElement lookUpGetter(
+      String getterName, LibraryElement library) {
+    return _unImplemented();
+  }
+
+  @override
+  PropertyAccessorElement lookUpInheritedConcreteGetter(
+      String getterName, LibraryElement library) {
+    return _unImplemented();
+  }
+
+  @override
+  MethodElement lookUpInheritedConcreteMethod(
+      String methodName, LibraryElement library) {
+    return _unImplemented();
+  }
+
+  @override
+  PropertyAccessorElement lookUpInheritedConcreteSetter(
+      String setterName, LibraryElement library) {
+    return _unImplemented();
+  }
+
+  @override
+  MethodElement lookUpInheritedMethod(
+      String methodName, LibraryElement library) {
+    return _unImplemented();
+  }
+
+  @override
+  MethodElement lookUpMethod(String methodName, LibraryElement library) {
+    return _unImplemented();
+  }
+
+  @override
+  PropertyAccessorElement lookUpSetter(
+      String setterName, LibraryElement library) {
+    return _unImplemented();
+  }
+
+  @override
+  get context => _unImplemented();
+
+  @override
+  String get displayName => _unImplemented();
+
+  @override
+  Element get enclosingElement => _unImplemented();
+
+  @override
+  int get id => _unImplemented();
+
+  @override
+  bool get isDeprecated => _unImplemented();
+
+  @override
+  bool get isOverride => _unImplemented();
+
+  @override
+  bool get isPrivate => _unImplemented();
+
+  @override
+  bool get isPublic => _unImplemented();
+
+  @override
+  bool get isSynthetic => _unImplemented();
+
+  @override
+  ElementKind get kind => _unImplemented();
+
+  @override
+  ElementLocation get location => _unImplemented();
+
+  @override
+  List<ElementAnnotation> get metadata => _unImplemented();
+
+  @override
+  int get nameOffset => _unImplemented();
+
+  @override
+  AstNode get node => _unImplemented();
+
+  @override
+  get source => _unImplemented();
+
+  @override
+  CompilationUnit get unit => _unImplemented();
+
+  @override
+  accept(ElementVisitor visitor) => _unImplemented();
+
+  @override
+  String computeDocumentationComment() => _unImplemented();
+
+  @override
+  Element getAncestor(predicate) => _unImplemented();
+
+  @override
+  String getExtendedDisplayName(String shortName) => _unImplemented();
+
+  @override
+  bool isAccessibleIn(LibraryElement library) => _unImplemented();
+
+  @override
+  void visitChildren(ElementVisitor visitor) => _unImplemented();
 }

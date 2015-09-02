@@ -48,6 +48,9 @@ transformers:
       - test/parameter_test.dart
       - test/field_test.dart
       - test/implicit_getter_setter_test.dart
+      - test/mixin_test.dart
+      - test/mixin_application_static_member_test.dart
+      - test/mixin_application_static_invoke_test.dart
       - test/default_values_test.dart
       # Delay until transformation is implemented:
       # - test/subtype_quantify_test.dart

@@ -20,12 +20,19 @@ bool get isTransformed => false;
 /// The name of the reflectable library.
 const Symbol reflectableLibrarySymbol = #reflectable.reflectable;
 
-rm.ClassMirror wrapClassMirror(
+rm.ClassMirror wrapClassMirrorIfSupported(
     dm.ClassMirror classMirror, ReflectableImpl reflectable) {
   if (classMirror is dm.FunctionTypeMirror) {
+    // TODO(sigurdm) clarify: Exactly what capabilities will allow reflecting on
+    // a function is still not clear.
     return new _FunctionTypeMirrorImpl(classMirror, reflectable);
   } else {
     assert(classMirror is dm.ClassMirror);
+    if (!reflectable._supportedClasses.contains(classMirror)) {
+      throw new NoSuchCapabilityError(
+          "Reflecting on entity: $classMirror, without sufficient "
+          "capabilities");
+    }
     return new ClassMirrorImpl(classMirror, reflectable);
   }
 }
@@ -44,7 +51,7 @@ rm.DeclarationMirror wrapDeclarationMirror(
     return new _TypedefMirrorImpl(declarationMirror, reflectable);
   } else if (declarationMirror is dm.ClassMirror) {
     // Covers FunctionTypeMirror and ClassMirror.
-    return wrapClassMirror(declarationMirror, reflectable);
+    return wrapClassMirrorIfSupported(declarationMirror, reflectable);
   } else {
     assert(declarationMirror is dm.LibraryMirror);
     return new _LibraryMirrorImpl(declarationMirror, reflectable);
@@ -69,7 +76,7 @@ rm.ObjectMirror wrapObjectMirror(
     return wrapInstanceMirror(m, reflectable);
   } else {
     assert(m is dm.ClassMirror);
-    return wrapClassMirror(m, reflectable);
+    return wrapClassMirrorIfSupported(m, reflectable);
   }
 }
 
@@ -83,7 +90,7 @@ rm.TypeMirror wrapTypeMirror(
     return new _SpecialTypeMirrorImpl(typeMirror, reflectable);
   } else {
     assert(typeMirror is dm.ClassMirror);
-    return wrapClassMirror(typeMirror, reflectable);
+    return wrapClassMirrorIfSupported(typeMirror, reflectable);
   }
 }
 
@@ -115,6 +122,21 @@ bool metadataSupported(
   return metadata
       .map((dm.InstanceMirror x) => x.reflectee.runtimeType)
       .contains(capability.metadataType);
+}
+
+bool impliesUpwardsClosure(List<ReflectCapability> capabilities) {
+  return capabilities.contains(typeRelationsCapability);
+}
+
+bool impliesDeclarations(List<ReflectCapability> capabilities) {
+  return capabilities.contains(declarationsCapability);
+}
+
+bool impliesTypes(List<ReflectCapability> capabilities) {
+  if (!impliesDeclarations(capabilities)) return false;
+  return capabilities.any((ReflectCapability capability) {
+    return capability is TypeCapability;
+  });
 }
 
 /// Returns true if [classMirror] supports reflective invoke of the
@@ -485,7 +507,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   rm.ClassMirror get superclass {
     dm.ClassMirror sup = _classMirror.superclass;
     if (sup == null) return null; // For `Object`, do as `dm`.
-    return wrapClassMirror(sup, _reflectable);
+    return wrapClassMirrorIfSupported(sup, _reflectable);
   }
 
   @override
@@ -512,6 +534,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
         .forEach((Symbol nameSymbol, dm.DeclarationMirror declarationMirror) {
       String name = dm.MirrorSystem.getName(nameSymbol);
       if (declarationMirror is dm.MethodMirror) {
+        if (_isMixin && declarationMirror.isStatic) return;
         bool included = false;
         if (declarationMirror.isConstructor) {
           // Factory constructors are static, others not, so this decision
@@ -537,6 +560,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
           result[name] = wrapDeclarationMirror(declarationMirror, _reflectable);
         }
       } else if (declarationMirror is dm.VariableMirror) {
+        if (_isMixin && declarationMirror.isStatic) return;
         // For variableMirrors we test both for support of the name and the
         // derived setter name.
         bool included = false;
@@ -590,7 +614,9 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   }
 
   @override
-  rm.TypeMirror get mixin => wrapTypeMirror(_classMirror.mixin, _reflectable);
+  rm.ClassMirror get mixin {
+    return wrapClassMirrorIfSupported(_classMirror.mixin, _reflectable);
+  }
 
   @override
   Object newInstance(String constructorName, List positionalArguments,
@@ -682,6 +708,8 @@ class ClassMirrorImpl extends _TypeMirrorImpl
         "Trying to get owner of class $qualifiedName "
         "without `libraryCapability`.");
   }
+
+  bool get _isMixin => _classMirror.mixin != _classMirror;
 }
 
 class _FunctionTypeMirrorImpl extends ClassMirrorImpl
@@ -1150,17 +1178,15 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
       return _canReflectType(mirror);
     } else {
       throw new UnimplementedError("Checking reflection support on a "
-          "currently unsupported kind of type: $mirror");
+                                       "currently unsupported kind of type: $mirror");
     }
   }
 
   @override
   rm.ClassMirror reflectType(Type type) {
-    dm.TypeMirror mirror = dm.reflectType(type);
-    if (_canReflectType(mirror)) return wrapClassMirror(mirror, this);
-    throw new NoSuchCapabilityError(
-        "Reflecting on currently unsupported kind of entity: $mirror");
-  }
+    dm.TypeMirror typeMirror = dm.reflectType(type);
+    return wrapClassMirrorIfSupported(typeMirror, this);
+ }
 
   bool get _supportsLibraries {
     return capabilities
@@ -1193,8 +1219,9 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
 
   @override
   Iterable<rm.ClassMirror> get annotatedClasses {
-    return _supportedClasses.map(
-        (dm.ClassMirror classMirror) => wrapClassMirror(classMirror, this));
+    return _supportedClasses.map((dm.ClassMirror classMirror) {
+      return wrapClassMirrorIfSupported(classMirror, this);
+    });
   }
 
   /// Returns the set of [dm.ClassMirror]s corresponding to the classes
@@ -1274,9 +1301,9 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
         // include all subtypes of the supported types.
         Set<dm.ClassMirror> subtypes = new Set<dm.ClassMirror>();
         for (dm.LibraryMirror library
-            in dm.currentMirrorSystem().libraries.values) {
+        in dm.currentMirrorSystem().libraries.values) {
           for (dm.DeclarationMirror declaration
-              in library.declarations.values) {
+          in library.declarations.values) {
             if (declaration is dm.ClassMirror) {
               if (result.contains(declaration)) continue;
               for (dm.ClassMirror classMirror in result) {
@@ -1289,6 +1316,66 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
           }
         }
         result.addAll(subtypes);
+      }
+
+      Set<dm.ClassMirror> workingSet = new Set<dm.ClassMirror>.from(result);
+      while (workingSet.isNotEmpty) {
+        Set<dm.ClassMirror> additionalClasses = new Set<dm.ClassMirror>();
+
+        void addClass(dm.ClassMirror c) {
+          if (!result.contains(c)) {
+            additionalClasses.add(c);
+          }
+        }
+
+        for (dm.ClassMirror workingClass in workingSet) {
+          if (impliesTypes(capabilities)) {
+            for (dm.DeclarationMirror declaration
+            in workingClass.declarations.values) {
+              if (declaration is dm.VariableMirror &&
+                  declaration.type is dm.ClassMirror) {
+                addClass(declaration.type);
+              }
+              for (dm.DeclarationMirror declaration
+              in workingClass.declarations.values) {
+                if (declaration is dm.MethodMirror) {
+                  for (dm.ParameterMirror parameter in declaration.parameters) {
+                    dm.TypeMirror type = parameter.type;
+                    if (type is dm.ClassMirror) {
+                      addClass(type);
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          if (impliesUpwardsClosure(capabilities)) {
+            // Add all superclasses and mixins.
+            if (workingClass.superclass != null) {
+              addClass(workingClass.superclass);
+            }
+            if (workingClass.mixin != workingClass) {
+              addClass(workingClass.mixin);
+            }
+          } else {
+            // Add mixin-applications if the extended class and all the mixins
+            // are annotated.
+            outer: for (dm.ClassMirror classMirror in result) {
+              dm.ClassMirror superclass = classMirror.superclass;
+              // Go up the superclass chain until meeting a
+              // non-mixin-application.
+              while (superclass != null && superclass.mixin != superclass) {
+                if (result.contains(superclass.mixin)) {
+                  addClass(superclass);
+                }
+                superclass = superclass.superclass;
+              }
+            }
+          }
+          result.addAll(additionalClasses);
+          workingSet = additionalClasses;
+        }
       }
 
       return result;
