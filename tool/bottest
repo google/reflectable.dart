@@ -51,6 +51,52 @@ function run_annotated_steps {
   echo Log is in $tmpfile
 }
 
+## Runs a smaller set of tests than `run_annotated_steps`.
+##
+## In particular skips
+## running tests with dartj2s compilation, and in browsers.
+function run_quick_steps {
+  show_section run quick
+
+  tmpfile=$BOTTEST_DART_REPO/testlog.log
+  cd $BOTTEST_DART_REPO/dart/third_party/pkg/reflectable/reflectable
+  pub get
+  cd $BOTTEST_DART_REPO/dart/third_party/pkg/reflectable/test_reflectable
+  pub get
+
+  cd $BOTTEST_DART_REPO/dart
+
+  echo "Running the tests in reflectable/test on the vm."
+  tools/test.py -mrelease --use-sdk \
+      --suite-dir=third_party/pkg/reflectable/reflectable \
+      --package-root=third_party/pkg/reflectable/reflectable/packages \
+      reflectable/test/
+
+  echo "Running tests of test_reflectable package untransformed on the vm."
+  tools/test.py -mrelease --use-sdk \
+      --suite-dir=third_party/pkg/reflectable/test_reflectable \
+      --package-root=third_party/pkg/reflectable/test_reflectable/test/packages \
+      test_reflectable/test_reflectable/test/
+
+  echo "Transforming the tests."
+  cd third_party/pkg/reflectable/test_reflectable
+  pub build --mode=debug test
+
+  cd $BOTTEST_DART_REPO/dart
+
+  echo "Running the transformed tests through the analyzer."
+  tools/test.py -mrelease --use-sdk -cdart2analyzer -rnone \
+      --suite-dir=third_party/pkg/reflectable/test_reflectable \
+      --package-root=third_party/pkg/reflectable/test_reflectable/build/test/packages \
+      test_reflectable/test_reflectable/build/test/
+
+  echo "Running the transformed tests on the vm."
+  tools/test.py -mrelease --use-sdk \
+      --suite-dir=third_party/pkg/reflectable/test_reflectable \
+      --package-root=third_party/pkg/reflectable/test_reflectable/build/test/packages \
+      test_reflectable/test_reflectable/build/test/
+}
+
 # Sets up the following
 # BOTTEST_DART_REPO: path to location where tests are performed.
 # BOTTEST_LOCAL_PKG: path to root of local copy of package.
@@ -68,7 +114,13 @@ function parse_args {
   while [ -n "$1" ]; do
     case $1 in
       (--use-existing-bottest) useExisting="true" ; shift ;;
-      (--help) echo "Usage: $0 [--help] [--use-existing-bottest]"; exit 0;;
+      (--quick) quick="true" ; useExisting="true" ; shift ;;
+      (--help) echo "Usage: $0 [--help] [--use-existing-bottest] [--quick]";
+        echo ""
+        echo "  --use-existing-bottest: Will avoid refreshing the sdk and the package-bots."
+        echo "  --quick: Will run a hand-picked subset of the tests (avoiding dart2js compilation)."
+        echo "           This implies --use-existing-bottest"
+        exit 0;;
       (*) echo "$0: Argument '$1' not understood. Exiting."; exit -1;;
     esac
   done
@@ -92,7 +144,11 @@ function main {
     setup
   fi
 
-  run_annotated_steps
+  if [ -n "$quick" ]; then
+    run_quick_steps
+  else
+    run_annotated_steps
+  fi
 }
 
 main $@

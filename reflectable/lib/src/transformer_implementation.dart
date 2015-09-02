@@ -465,7 +465,7 @@ class _ReflectorDomain {
     }
 
     // Generate the class mirrors.
-    String classMirrorsCode = _formatAsList("m.ClassMirror",
+    String classMirrorsCode = _formatAsList(m.ClassMirror",
         classes.items.map((ClassElement classElement) {
       _ClassDomain classDomain = _classMap[classElement];
 
