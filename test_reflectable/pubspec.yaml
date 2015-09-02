@@ -49,5 +49,7 @@ transformers:
       - test/field_test.dart
       - test/implicit_getter_setter_test.dart
       - test/default_values_test.dart
+      # Delay until transformation is implemented:
+      # - test/subtype_quantify_test.dart
 - $dart2js:
     $include: []

@@ -108,8 +108,8 @@ dm.TypeMirror unwrapTypeMirror(rm.TypeMirror TypeMirror) {
   }
 }
 
-// Returns true iff an element of the [metadata] is supported by the
-// [capability].
+/// Returns true iff an element of the [metadata] is supported by the
+/// [capability].
 bool metadataSupported(
     List<dm.InstanceMirror> metadata, MetadataQuantifiedCapability capability) {
   return metadata
@@ -123,7 +123,8 @@ bool metadataSupported(
 bool reflectableSupportsInstanceInvoke(
     ReflectableImpl reflectable, String name, dm.ClassMirror classMirror) {
   Symbol nameSymbol = new Symbol(name);
-  return reflectable.capabilities.any((ReflectCapability capability) {
+
+  bool predicate(ApiReflectCapability capability) {
     if (capability == invokingCapability ||
         capability == instanceInvokeCapability) {
       return true;
@@ -133,6 +134,10 @@ bool reflectableSupportsInstanceInvoke(
       // We have to use 'declarations' here instead of instanceMembers, because
       // the synthetic field mirrors generated from fields do not have metadata
       // attached.
+      // TODO(eernst) clarify: If we use `declarations` in a context where
+      // `instanceMembers` is expected, we must iterate over all superclasses
+      // "manually". Check whether there is a bug here, alternatively update
+      // the above comment.
       dm.DeclarationMirror declarationMirror =
           classMirror.declarations[nameSymbol];
       return declarationMirror != null &&
@@ -140,21 +145,27 @@ bool reflectableSupportsInstanceInvoke(
     } else {
       return false;
     }
-  });
+  }
+
+  return reflectable.hasCapability(predicate);
 }
 
 /// Returns true iff [reflectable] supports static invoke of [name].
 bool reflectableSupportsStaticInvoke(ReflectableImpl reflectable, String name,
     List<dm.InstanceMirror> metadata) {
-  return reflectable.capabilities.any((ReflectCapability capability) {
-    if (capability is StaticInvokeCapability) {
+  bool predicate(ApiReflectCapability capability) {
+    if (capability == staticInvokeCapability) {
+      return true;
+    } else if (capability is StaticInvokeCapability) {
       return new RegExp(capability.namePattern).hasMatch(name);
     }
     if (capability is StaticInvokeMetaCapability) {
       return metadataSupported(metadata, capability);
     }
     return false;
-  });
+  }
+
+  return reflectable.hasCapability(predicate);
 }
 
 /// Returns true iff [reflectable] supports top-level invoke of [name].
@@ -163,8 +174,12 @@ bool reflectableSupportsTopLevelInvoke(ReflectableImpl reflectable, String name,
   // We don't have to check for `libraryCapability` because this method is only
   // ever called from the methods of a `LibraryMirrorImpl` and the existence of
   // an instance of a `LibraryMirrorImpl` implies the `libraryMirrorCapability`.
-  return reflectable.capabilities.any((ReflectCapability capability) {
-    if (capability is TopLevelInvokeCapability) {
+  // Finally, we do not have to check for the capability as given to a subtype,
+  // because a library is never a subtype of anything.
+  return reflectable.hasCapability((ApiReflectCapability capability) {
+    if (capability == topLevelInvokeCapability) {
+      return true;
+    } else if (capability is TopLevelInvokeCapability) {
       return new RegExp(capability.namePattern).hasMatch(name);
     }
     if (capability is TopLevelInvokeMetaCapability) {
@@ -177,7 +192,7 @@ bool reflectableSupportsTopLevelInvoke(ReflectableImpl reflectable, String name,
 /// Returns true iff [reflectable] supports invoke of [name].
 bool reflectableSupportsConstructorInvoke(
     ReflectableImpl reflectable, dm.ClassMirror classMirror, String name) {
-  return reflectable.capabilities.any((ReflectCapability capability) {
+  bool predicate(ApiReflectCapability capability) {
     if (capability == newInstanceCapability) {
       return true;
     } else if (capability is NewInstanceCapability) {
@@ -195,12 +210,15 @@ bool reflectableSupportsConstructorInvoke(
       return metadataSupported(constructorMirror.metadata, metadataCapability);
     }
     return false;
-  });
+  }
+
+  return reflectable.hasCapability(predicate);
 }
 
 bool reflectableSupportsDeclarations(Reflectable reflectable) {
-  return reflectable.capabilities.any(
-      (ReflectCapability capability) => capability == declarationsCapability);
+  bool predicate(ApiReflectCapability capability) =>
+      capability == declarationsCapability;
+  return reflectable.hasCapability(predicate);
 }
 
 /// Returns [setterName] with final "=" removed.
@@ -448,8 +466,8 @@ class ClassMirrorImpl extends _TypeMirrorImpl
     implements rm.ClassMirror {
   dm.ClassMirror get _classMirror => _declarationMirror;
 
-  ClassMirrorImpl(dm.ClassMirror cm, ReflectableImpl reflectable)
-      : super(cm, reflectable) {}
+  ClassMirrorImpl(dm.ClassMirror classMirror, ReflectableImpl reflectable)
+      : super(classMirror, reflectable) {}
 
   @override
   List<rm.TypeVariableMirror> get typeVariables {
@@ -1088,14 +1106,6 @@ class _SourceLocationImpl implements rm.SourceLocation {
 
 /// An implementation of [ReflectableInterface] based on dart:mirrors.
 class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
-  // Fields holding capabilities; we use discrete fields rather than a list
-  // of fields because this allows us to use a syntax similar to a varargs
-  // invocation as the superinitializer (omitting `<ReflectCapability>[]` and
-  // directly giving the elements of that list as constructor arguments).
-  // This will only work up to a fixed number of arguments (we have chosen
-  // to support at most 10 arguments), and with a larger number of arguments
-  // the fromList constructor must be used.
-
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
   const ReflectableImpl(
@@ -1114,39 +1124,42 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   const ReflectableImpl.fromList(List<ReflectCapability> capabilities)
       : super.fromList(capabilities);
 
+  bool _canReflect(dm.InstanceMirror mirror) =>
+      _supportedClasses.contains(mirror.type);
+
+  /// Determines whether reflection is supported for the given [o].
+  @override
+  bool canReflect(Object o) => _canReflect(dm.reflect(o));
+
   /// Returns a mirror of the given object [reflectee]
   @override
   rm.InstanceMirror reflect(Object o) {
     dm.InstanceMirror mirror = dm.reflect(o);
-    if (!_supportedClasses.contains(mirror.type)) {
-      throw new NoSuchCapabilityError(
-          "Reflecting on object of unannotated class ${o.runtimeType}.");
-    }
-    return wrapInstanceMirror(mirror, this);
+    if (_canReflect(mirror)) return wrapInstanceMirror(mirror, this);
+    throw new NoSuchCapabilityError(
+        "Reflecting on object of unannotated class ${o.runtimeType}.");
   }
 
-  @override
-  bool canReflect(Object o) {
-    dm.InstanceMirror mirror = dm.reflect(o);
-    return _supportedClasses.contains(mirror.type);
-  }
-
-  @override
-  rm.ClassMirror reflectType(Type type) {
-    dm.TypeMirror typeMirror = dm.reflectType(type);
-    if (typeMirror is dm.ClassMirror &&
-        _supportedClasses.contains(typeMirror)) {
-      return wrapClassMirror(typeMirror, this);
-    } else {
-      throw new NoSuchCapabilityError(
-          "Reflecting on currently unsupported kind of entity: $typeMirror");
-    }
-  }
+  bool _canReflectType(dm.ClassMirror mirror) =>
+      _supportedClasses.contains(mirror);
 
   @override
   bool canReflectType(Type type) {
     dm.TypeMirror mirror = dm.reflectType(type);
-    return _supportedClasses.contains(mirror);
+    if (mirror is dm.ClassMirror) {
+      return _canReflectType(mirror);
+    } else {
+      throw new UnimplementedError("Checking reflection support on a "
+          "currently unsupported kind of type: $mirror");
+    }
+  }
+
+  @override
+  rm.ClassMirror reflectType(Type type) {
+    dm.TypeMirror mirror = dm.reflectType(type);
+    if (_canReflectType(mirror)) return wrapClassMirror(mirror, this);
+    throw new NoSuchCapabilityError(
+        "Reflecting on currently unsupported kind of entity: $mirror");
   }
 
   bool get _supportsLibraries {
@@ -1184,6 +1197,18 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
         (dm.ClassMirror classMirror) => wrapClassMirror(classMirror, this));
   }
 
+  /// Returns the set of [dm.ClassMirror]s corresponding to the classes
+  /// (and associated instances thereof) which must receive the reflection
+  /// support that this [ReflectableImpl] specifies. It includes the
+  /// classes which carry an instance of this [ReflectableImpl] as metadata
+  /// directly, plus the classes which are included because they matched a
+  /// [GlobalQuantifyCapability] or a [GlobalQuantifyMetaCapability] carrying
+  /// this [ReflectableImpl]. Finally, this set of classes is downward-closed
+  /// (every subtype of each member of the set is added) if there is a
+  /// `subtypeQuantifyCapability` in `capabilities`. In short, a given class
+  /// C is supported by this [ReflectableImpl] iff
+  /// `this._supportedClasses.contains(m)`, where `m` is a [dm.ClassMirror]
+  /// on C.
   Set<dm.ClassMirror> get _supportedClasses {
     // TODO(sigurdm) implement: This cache will break with deferred loading.
     return _supportedClassesCache.putIfAbsent(this, () {
@@ -1214,6 +1239,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
           }
         }
       }
+
       // Iterate all classes to find those that are annotated, or match a
       // global quantification.
       for (dm.LibraryMirror library
@@ -1240,10 +1266,45 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
           }
         }
       }
+
+      // Check whether subtype quantification has been requested.
+      if (capabilities
+          .any((capability) => capability == subtypeQuantifyCapability)) {
+        // At least one [SubtypeQuantifyCapability] occurs, so we must
+        // include all subtypes of the supported types.
+        Set<dm.ClassMirror> subtypes = new Set<dm.ClassMirror>();
+        for (dm.LibraryMirror library
+            in dm.currentMirrorSystem().libraries.values) {
+          for (dm.DeclarationMirror declaration
+              in library.declarations.values) {
+            if (declaration is dm.ClassMirror) {
+              if (result.contains(declaration)) continue;
+              for (dm.ClassMirror classMirror in result) {
+                if (declaration.isSubtypeOf(classMirror)) {
+                  subtypes.add(declaration);
+                  break;
+                }
+              }
+            }
+          }
+        }
+        result.addAll(subtypes);
+      }
+
       return result;
     });
   }
 
   static Map<ReflectableImpl, Set<dm.ClassMirror>> _supportedClassesCache =
       new Map<ReflectableImpl, Set<dm.ClassMirror>>();
+
+  /// Returns `true` iff this [ReflectableImpl] contains an
+  /// [ApiReflectCapability] which satisfies the given [predicate], i.e.,
+  /// if the corresponding capability to do something has been granted
+  /// for a class that carries this [ReflectableImpl] as metadata, and to
+  /// the instances of such a class.
+  bool hasCapability(bool predicate(ApiReflectCapability capability)) {
+    return capabilities.any((ReflectCapability capability) =>
+        capability is ApiReflectCapability && predicate(capability));
+  }
 }

@@ -160,7 +160,10 @@ class NewInstanceMetaCapability extends MetadataQuantifiedCapability {
   const NewInstanceMetaCapability(Type metadataType) : super(metadataType);
 }
 
-// TODO(eernst) doc: Document this.
+/// Capability instance requesting support for retrieving the names of
+/// named declarations, corresponding to the methods `simpleName`,
+/// `qualifiedName` and `constructorName` on `DeclarationMirror` and
+/// `MethodMirror`.
 const nameCapability = const _NameCapability();
 
 /// Capability instance requesting support for classification
@@ -305,106 +308,26 @@ class TypingCapability extends TypeCapability
 /// rather than enclosing them in `<ApiReflectCapability>[]`). When even more
 /// than ten arguments are needed, the `fromList` constructor should be used.
 abstract class ReflecteeQuantifyCapability implements ReflectCapability {
-  // Fields holding capabilities; we use discrete fields rather than a list
-  // of fields because this allows us to use a syntax similar to a varargs
-  // invocation as the superinitializer (omitting `<ReflectCapability>[]` and
-  // directly giving the elements of that list as constructor arguments).
-  // This will only work up to a fixed number of arguments (we have chosen
-  // to support at most 10 arguments), and with a larger number of arguments
-  // the fromList constructor must be used.
-
-  final bool _capabilitiesGivenAsList;
-
-  final ApiReflectCapability _cap0, _cap1, _cap2, _cap3, _cap4;
-  final ApiReflectCapability _cap5, _cap6, _cap7, _cap8, _cap9;
-
-  final List<ApiReflectCapability> _capabilities;
-
-  List<ApiReflectCapability> get capabilities {
-    if (_capabilitiesGivenAsList) return _capabilities;
-    List<ApiReflectCapability> result = <ApiReflectCapability>[];
-
-    void add(ApiReflectCapability cap) {
-      if (cap != null) result.add(cap);
-    }
-
-    add(_cap0);
-    add(_cap1);
-    add(_cap2);
-    add(_cap3);
-    add(_cap4);
-    add(_cap5);
-    add(_cap6);
-    add(_cap7);
-    add(_cap8);
-    add(_cap9);
-    return result;
-  }
-
-  /// Const constructor, allowing for varargs style invocation with up
-  /// to ten arguments.
-  const ReflecteeQuantifyCapability(
-      [this._cap0 = null,
-      this._cap1 = null,
-      this._cap2 = null,
-      this._cap3 = null,
-      this._cap4 = null,
-      this._cap5 = null,
-      this._cap6 = null,
-      this._cap7 = null,
-      this._cap8 = null,
-      this._cap9 = null])
-      : _capabilitiesGivenAsList = false,
-        _capabilities = null;
-
-  /// Const constructor, allowing for arbitrary length list.
-  const ReflecteeQuantifyCapability.fromList(this._capabilities)
-      : _capabilitiesGivenAsList = true,
-        _cap0 = null,
-        _cap1 = null,
-        _cap2 = null,
-        _cap3 = null,
-        _cap4 = null,
-        _cap5 = null,
-        _cap6 = null,
-        _cap7 = null,
-        _cap8 = null,
-        _cap9 = null;
+  const ReflecteeQuantifyCapability();
 }
 
-/// Second order capability class specifying that the reflection support
-/// requested by the given list of [ApiReflectCapability] instances should
-/// be provided not just for the target class whose metadata includes this
-/// capability, but also all classes which are subtypes of the target
-/// class.
-class SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
-  const SubtypeQuantifyCapability(
-      [ApiReflectCapability cap0,
-      ApiReflectCapability cap1,
-      ApiReflectCapability cap2,
-      ApiReflectCapability cap3,
-      ApiReflectCapability cap4,
-      ApiReflectCapability cap5,
-      ApiReflectCapability cap6,
-      ApiReflectCapability cap7,
-      ApiReflectCapability cap8,
-      ApiReflectCapability cap9])
-      : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
+/// Quantifying capability instance specifying that the reflection support
+/// requested by the [ApiReflectCapability] instances held by the same
+/// [Reflectable] which also holds this capability should be provided
+/// for all subtypes of the classes which carry that [Reflectable] as
+/// metadata.
+const subtypeQuantifyCapability = const _SubtypeQuantifyCapability();
 
-  const SubtypeQuantifyCapability.fromList(
-      List<ApiReflectCapability> capabilities)
-      : super.fromList(capabilities);
-}
-
-/// Second order capability class specifying that the reflection support
-/// requested by the given list of [ApiReflectCapability] instances should
-/// be provided for instances of the target class whose metadata includes
-/// this capability, but also that it should be possible to request
-/// reflection support for instances of subtypes of the target class
-/// as if they had been instances of the target class. In other words,
-/// this capability makes it possible to obtain a mirror which is
-/// intended to mirror an instance of a target class `C`, but it is actually
-/// mirroring a reflectee of a proper subtype `D` of `C`.
+/// Quantifying capability instance specifying that the reflection support
+/// requested by the [ApiReflectCapability] instances held by the same
+/// [Reflectable] which also holds this capability should be provided for
+/// instances of the target class whose metadata includes this capability,
+/// but also that it should be possible to request reflection support for
+/// instances of subtypes of the target class as if they had been instances
+/// of the target class. In other words, this capability makes it possible
+/// to obtain a mirror which is intended to mirror an instance of a target
+/// class `C`, but it is actually mirroring a reflectee of a proper subtype
+/// `D` of `C`.
 ///
 /// Please note that this is a subtle situation that may easily cause
 /// confusing and unintended results. It is only intended for usage in
@@ -421,23 +344,7 @@ class SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
 /// For more information about this potentially dangerous device, please
 /// refer to the design document.
 /// TODO(eernst) doc: Insert a link to the design document.
-class AdmitSubtypeCapability extends ReflecteeQuantifyCapability {
-  const AdmitSubtypeCapability(
-      [ApiReflectCapability cap0,
-      ApiReflectCapability cap1,
-      ApiReflectCapability cap2,
-      ApiReflectCapability cap3,
-      ApiReflectCapability cap4,
-      ApiReflectCapability cap5,
-      ApiReflectCapability cap6,
-      ApiReflectCapability cap7,
-      ApiReflectCapability cap8,
-      ApiReflectCapability cap9])
-      : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
-
-  const AdmitSubtypeCapability.fromList(List<ApiReflectCapability> capabilities)
-      : super.fromList(capabilities);
-}
+const admitSubtypeCapability = const _AdmitSubtypeCapability();
 
 /// Abstract superclass for all capabilities which are used to specify
 /// that a given reflector must be considered to be applied as metadata
@@ -506,6 +413,14 @@ class _UriCapability implements ApiReflectCapability {
 
 class _LibraryDependenciesCapability implements ApiReflectCapability {
   const _LibraryDependenciesCapability();
+}
+
+class _SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
+  const _SubtypeQuantifyCapability();
+}
+
+class _AdmitSubtypeCapability extends ReflecteeQuantifyCapability {
+  const _AdmitSubtypeCapability();
 }
 
 // ---------- Exception handling.
