@@ -5,6 +5,7 @@
 /// Tests that metadata is preserved when the metadataCapability is present.
 // TODO(sigurdm) implement: Support for metadata-annotations of arguments.
 
+@c
 library test_reflectable.test.metadata_test;
 
 import 'package:reflectable/reflectable.dart';
@@ -13,7 +14,7 @@ import 'package:unittest/unittest.dart';
 class MyReflectable extends Reflectable {
   const MyReflectable()
       : super(metadataCapability, instanceInvokeCapability,
-            staticInvokeCapability, declarationsCapability);
+            staticInvokeCapability, declarationsCapability, libraryCapability);
 }
 
 const myReflectable = const MyReflectable();
@@ -102,6 +103,9 @@ main() {
     // The synthetic accessors do not have metadata.
     expect(myReflectable.reflectType(Foo).instanceMembers["x"].metadata, []);
     expect(myReflectable.reflectType(Foo).instanceMembers["x="].metadata, []);
+
+    // Test metadata on libraries
+    expect(myReflectable.reflectType(Foo).owner.metadata, [c]);
   });
   test("metadata without capability", () {
     expect(() => myReflectable2.reflectType(Foo2).metadata,

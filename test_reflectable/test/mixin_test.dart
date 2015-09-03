@@ -14,7 +14,8 @@ class Reflector extends Reflectable {
 
 // Note the class `A` is not annotated by this.
 class Reflector2 extends Reflectable {
-  const Reflector2() : super(invokingCapability, libraryCapability);
+  const Reflector2()
+      : super(invokingCapability, libraryCapability, metadataCapability);
 }
 
 class ReflectorUpwardsClosed extends Reflectable {
@@ -25,10 +26,15 @@ class ReflectorUpwardsClosed extends Reflectable {
 
 @Reflector()
 @Reflector2()
+@P()
 class M1 {
   foo() {}
   var field;
   static staticFoo(x) {}
+}
+
+class P {
+  const P();
 }
 
 @Reflector()
@@ -104,9 +110,14 @@ main() {
     expect(bMirror.mixin, bMirror);
     expect(cMirror.mixin, cMirror);
     expect(m1Mirror.mixin, m1Mirror);
+    // Test that metadata is preserved.
+    expect(m1Mirror.metadata, contains(const P()));
     expect(m2Mirror.mixin, m2Mirror);
     expect(m3Mirror.mixin, m3Mirror);
     expect(bMirror.superclass.mixin, m1Mirror);
+    // Test that the mixin-application does not inherit the metadata from its
+    // mixin.
+    expect(bMirror.superclass.metadata, isEmpty);
     expect(
         () => bMirror.superclass.superclass, throwsANoSuchCapabilityException);
     expect(cMirror.superclass.superclass.mixin, m2Mirror);
@@ -114,3 +125,4 @@ main() {
     expect(cMirror.superclass.superclass.superclass, bMirror);
   });
 }
+

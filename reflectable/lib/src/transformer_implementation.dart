@@ -2151,7 +2151,9 @@ String _extractMetadataCode(Element element, Resolver resolver,
   if (elementAnnotations == null) return "<Object>[]";
 
   // Synthetic accessors do not have metadata. Only their associated fields.
-  if ((element is PropertyAccessorElement || element is ConstructorElement) &&
+  if ((element is PropertyAccessorElement ||
+          element is ConstructorElement ||
+          element is MixinApplication) &&
       element.isSynthetic) {
     return "<Object>[]";
   }
@@ -2163,7 +2165,11 @@ String _extractMetadataCode(Element element, Resolver resolver,
   // The `element.node` of a field is the [VariableDeclaration] that is nested
   // in a [VariableDeclarationList] that is nested in a [FieldDeclaration]. The
   // metadata is stored on the [FieldDeclaration].
-  if (element is FieldElement) {
+  //
+  // Similarly the `element.node` of a libraryElement is the identifier that
+  // forms its name. The parent's parent is the actual Library declaration that
+  // contains the metadata.
+  if (element is FieldElement || element is LibraryElement) {
     node = node.parent.parent;
   }
 
@@ -2344,6 +2350,12 @@ class MixinApplication implements ClassElement {
   @override
   List<InterfaceType> get interfaces => <InterfaceType>[];
 
+  @override
+  List<ElementAnnotation> get metadata => <ElementAnnotation>[];
+
+  @override
+  bool get isSynthetic => true;
+
   _unImplemented() => throw new UnimplementedError();
 
   @override
@@ -2501,16 +2513,10 @@ class MixinApplication implements ClassElement {
   bool get isPublic => _unImplemented();
 
   @override
-  bool get isSynthetic => _unImplemented();
-
-  @override
   ElementKind get kind => _unImplemented();
 
   @override
   ElementLocation get location => _unImplemented();
-
-  @override
-  List<ElementAnnotation> get metadata => _unImplemented();
 
   @override
   int get nameOffset => _unImplemented();
