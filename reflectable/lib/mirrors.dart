@@ -336,6 +336,7 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   Map<String, DeclarationMirror> get declarations;
   Map<String, MethodMirror> get instanceMembers;
   Map<String, MethodMirror> get staticMembers;
+
   ClassMirror get mixin;
 
   /**
