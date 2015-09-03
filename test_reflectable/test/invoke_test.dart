@@ -25,6 +25,8 @@ class A {
   int operator +(x) => 42 + x;
   int operator [](x) => 42 + x;
   void operator []=(x, v) { f = x + v; }
+  int operator -() => -f;
+
   int f = 0;
 
   static int noArguments() => 42;
@@ -66,6 +68,9 @@ main() {
   test('invoke operator []=', () {
     instanceMirror.invoke("[]=", [1, 2]);
     expect(instance.f, 3);
+  });
+  test('invoke operator unary-', () {
+    expect(instanceMirror.invoke("unary-", []), -3);
   });
 
   ClassMirror classMirror = myReflectable.reflectType(A);

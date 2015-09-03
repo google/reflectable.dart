@@ -380,13 +380,15 @@ class _ReflectorDomain {
 
     String gettingClosure(String getterName) {
       String closure;
-      if (getterName.startsWith(new RegExp(r"[A-Za-z$_]"))) {
+      if (new RegExp(r"^[A-Za-z$_][A-Za-z$_0-9]*$").hasMatch(getterName)) {
         // Starts with letter, not an operator.
         closure = "(dynamic instance) => instance.${getterName}";
       } else if (getterName == "[]=") {
         closure = "(dynamic instance) => (x, v) => instance[x] = v";
       } else if (getterName == "[]") {
         closure = "(dynamic instance) => (x) => instance[x]";
+      } else if (getterName == "unary-") {
+        closure = "(dynamic instance) => () => -instance";
       } else {
         closure = "(dynamic instance) => (x) => instance ${getterName} x";
       }
