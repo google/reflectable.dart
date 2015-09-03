@@ -138,96 +138,12 @@ class TypingCapability extends TypeCapability
 }
 
 abstract class ReflecteeQuantifyCapability implements ReflectCapability {
-  final bool _capabilitiesGivenAsList;
-  final ApiReflectCapability _cap0, _cap1, _cap2, _cap3, _cap4;
-  final ApiReflectCapability _cap5, _cap6, _cap7, _cap8, _cap9;
-  final List<ApiReflectCapability> _capabilities;
-
-  List<ApiReflectCapability> get capabilities {
-    if (_capabilitiesGivenAsList) return _capabilities;
-    List<ApiReflectCapability> result = <ApiReflectCapability>[];
-
-    void add(ApiReflectCapability cap) {
-      if (cap != null) result.add(cap);
-    }
-
-    add(_cap0);
-    add(_cap1);
-    add(_cap2);
-    add(_cap3);
-    add(_cap4);
-    add(_cap5);
-    add(_cap6);
-    add(_cap7);
-    add(_cap8);
-    add(_cap9);
-    return result;
-  }
-
-  const ReflecteeQuantifyCapability(
-      [this._cap0 = null,
-      this._cap1 = null,
-      this._cap2 = null,
-      this._cap3 = null,
-      this._cap4 = null,
-      this._cap5 = null,
-      this._cap6 = null,
-      this._cap7 = null,
-      this._cap8 = null,
-      this._cap9 = null])
-      : _capabilitiesGivenAsList = false,
-        _capabilities = null;
-
-  const ReflecteeQuantifyCapability.fromList(this._capabilities)
-      : _capabilitiesGivenAsList = true,
-        _cap0 = null,
-        _cap1 = null,
-        _cap2 = null,
-        _cap3 = null,
-        _cap4 = null,
-        _cap5 = null,
-        _cap6 = null,
-        _cap7 = null,
-        _cap8 = null,
-        _cap9 = null;
+  const ReflecteeQuantifyCapability();
 }
 
-class SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
-  const SubtypeQuantifyCapability(
-      [ApiReflectCapability cap0,
-      ApiReflectCapability cap1,
-      ApiReflectCapability cap2,
-      ApiReflectCapability cap3,
-      ApiReflectCapability cap4,
-      ApiReflectCapability cap5,
-      ApiReflectCapability cap6,
-      ApiReflectCapability cap7,
-      ApiReflectCapability cap8,
-      ApiReflectCapability cap9])
-      : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
+const subtypeQuantifyCapability = const _SubtypeQuantifyCapability();
 
-  const SubtypeQuantifyCapability.fromList(
-      List<ApiReflectCapability> capabilities)
-      : super.fromList(capabilities);
-}
-
-class AdmitSubtypeCapability extends ReflecteeQuantifyCapability {
-  const AdmitSubtypeCapability(
-      [ApiReflectCapability cap0,
-      ApiReflectCapability cap1,
-      ApiReflectCapability cap2,
-      ApiReflectCapability cap3,
-      ApiReflectCapability cap4,
-      ApiReflectCapability cap5,
-      ApiReflectCapability cap6,
-      ApiReflectCapability cap7,
-      ApiReflectCapability cap8,
-      ApiReflectCapability cap9])
-      : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
-
-  const AdmitSubtypeCapability.fromList(List<ApiReflectCapability> capabilities)
-      : super.fromList(capabilities);
-}
+const admitSubtypeCapability = const _AdmitSubtypeCapability();
 
 class ImportAttachedCapability {
   final Element reflector;
@@ -276,4 +192,12 @@ class _UriCapability implements ApiReflectCapability {
 
 class _LibraryDependenciesCapability implements ApiReflectCapability {
   const _LibraryDependenciesCapability();
+}
+
+class _SubtypeQuantifyCapability implements ReflecteeQuantifyCapability {
+  const _SubtypeQuantifyCapability();
+}
+
+class _AdmitSubtypeCapability implements ReflecteeQuantifyCapability {
+  const _AdmitSubtypeCapability();
 }

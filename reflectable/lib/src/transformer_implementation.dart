@@ -224,6 +224,36 @@ class _ReflectorDomain {
     Map<ClassElement, ClassElement> superclasses =
         new Map<ClassElement, ClassElement>();
 
+    // Perform the downward closure if requested. Note that we will add
+    // subtypes of classes which are already included because they carry
+    // `_reflector` as metadata or they match a global quantifier for
+    // `_reflector`, but we will not add subtypes of types included otherwise,
+    // e.g., classes added because of a superclass quantifier.
+    if (_capabilities._capabilities.any((ec.ReflectCapability capability) =>
+        capability == ec.subtypeQuantifyCapability)) {
+      Set<ClassElement> subtypes = new Set<ClassElement>();
+      for (LibraryElement library in resolver.libraries) {
+        for (CompilationUnitElement unit in library.units) {
+          // TODO(eernst) algorithm: Create a data structure representing
+          // the inverse of the subtype relation (linking any class C to every
+          // class that extends C, implements C, or applies C as a mixins),
+          // and then use a working set iteration in order to find all
+          // transitively reachable classes from `classes.items`.
+          for (ClassElement type in unit.types) {
+            if (classes._contains(type)) continue;
+            for (ClassElement potentialSuperType in classes.items) {
+              if (type.type.isSubtypeOf(potentialSuperType.type)) {
+                subtypes.add(type);
+                break;
+              }
+            }
+          }
+        }
+      }
+      subtypes.forEach((ClassElement classElement) =>
+          classes.add(classElement));
+    }
+
     // Compute `classes`, i.e., the transitive closure of _annotated_classes
     // with classes implied by different capabilities.
     Set<ClassElement> workingSetOfClasses =
@@ -706,7 +736,8 @@ class _ReflectorDomain {
     Iterable<String> parametersList =
         parameters.items.map((ParameterElement element) {
       int descriptor = _parameterDescriptor(element);
-      int ownerIndex = members.indexOf(element.enclosingElement);
+      int ownerIndex = members.indexOf(element.enclosingElement) +
+          fields.length;
       int classMirrorIndex;
       if (_capabilities._impliesTypes) {
         if (descriptor & constants.dynamicAttribute != 0) {
@@ -972,14 +1003,6 @@ class _Capabilities {
 
   bool _supportsInstanceInvoke(List<ec.ReflectCapability> capabilities,
       String methodName, Iterable<DartObjectImpl> metadata) {
-    bool supportsTarget(ec.ReflecteeQuantifyCapability capability) {
-      // TODO(eernst) implement: correct this; will need something
-      // like this, which will cover the case where we have applied
-      // the trivial subtype:
-      return _supportsInstanceInvoke(
-          capability.capabilities, methodName, metadata);
-    }
-
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
       if (capability is ec.InstanceInvokeCapability &&
@@ -990,21 +1013,9 @@ class _Capabilities {
           _supportsMeta(capability, metadata)) {
         return true;
       }
-      // Handle reflectee based capabilities.
-      if ((capability is ec.AdmitSubtypeCapability ||
-              capability is ec.SubtypeQuantifyCapability) &&
-          supportsTarget(capability)) {
-        return true;
-      }
-      // Handle globally quantified capabilities.
-      // TODO(eernst) feature: We probably need to refactor a lot of stuff
-      // to get this right, so the first approach will simply be to
-      // discover the relevant capabilities, and indicate that they
-      // are not yet supported.
-      if (capability is ec.GlobalQuantifyCapability ||
-          capability is ec.GlobalQuantifyMetaCapability) {
-        throw new UnimplementedError("Global quantification not yet supported");
-      }
+      // Quantifying capabilities have no effect on the availability of
+      // specific mirror features, their semantics has already been unfolded
+      // fully when the set of supported classes was computed.
     }
 
     // All options exhausted, give up.
@@ -1025,8 +1036,9 @@ class _Capabilities {
           _supportsMeta(capability, metadata)) {
         return true;
       }
-      // Handle reflectee based capabilities.
-      // TODO(eernst) feature: Support reflectee based capabilities.
+      // Quantifying capabilities have no effect on the availability of
+      // specific mirror features, their semantics has already been unfolded
+      // fully when the set of supported classes was computed.
     }
 
     // All options exhausted, give up.
@@ -1070,16 +1082,8 @@ class _Capabilities {
           _supportsMeta(capability, metadata)) {
         return true;
       }
-
-      // Handle globally quantified capabilities.
-      // TODO(eernst) feature: We probably need to refactor a lot of stuff
-      // to get this right, so the first approach will simply be to
-      // discover the relevant capabilities, and indicate that they
-      // are not yet supported.
-      if (capability is ec.GlobalQuantifyCapability ||
-          capability is ec.GlobalQuantifyMetaCapability) {
-        throw new UnimplementedError("Global quantification not yet supported");
-      }
+      // Quantifying capabilities do not influence the availability
+      // of reflection support for top level invocation.
     }
 
     // All options exhausted, give up.
@@ -1088,14 +1092,6 @@ class _Capabilities {
 
   bool _supportsStaticInvoke(List<ec.ReflectCapability> capabilities,
       String methodName, Iterable<DartObject> metadata) {
-    bool supportsTarget(ec.ReflecteeQuantifyCapability capability) {
-      // TODO(eernst) implement: Correct this; will need something
-      // like this, which will cover the case where we have applied
-      // the trivial subtype:
-      return _supportsStaticInvoke(
-          capability.capabilities, methodName, metadata);
-    }
-
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
       if (capability is ec.StaticInvokeCapability &&
@@ -1106,21 +1102,9 @@ class _Capabilities {
           _supportsMeta(capability, metadata)) {
         return true;
       }
-      // Handle reflectee based capabilities.
-      if ((capability is ec.AdmitSubtypeCapability ||
-              capability is ec.SubtypeQuantifyCapability) &&
-          supportsTarget(capability)) {
-        return true;
-      }
-      // Handle globally quantified capabilities.
-      // TODO(eernst) feature: We probably need to refactor a lot of stuff
-      // to get this right, so the first approach will simply be to
-      // discover the relevant capabilities, and indicate that they
-      // are not yet supported.
-      if (capability is ec.GlobalQuantifyCapability ||
-          capability is ec.GlobalQuantifyMetaCapability) {
-        throw new UnimplementedError("Global quantification not yet supported");
-      }
+      // Quantifying capabilities have no effect on the availability of
+      // specific mirror features, their semantics has already been unfolded
+      // fully when the set of supported classes was computed.
     }
 
     // All options exhausted, give up.
@@ -1296,11 +1280,8 @@ class TransformerImplementation {
   ClassElement _getReflectableAnnotation(
       ElementAnnotation elementAnnotation, ClassElement focusClass) {
     if (elementAnnotation.element == null) {
-      // TODO(eernst) clarify: The documentation in
-      // analyzer/lib/src/generated/element.dart does not reveal whether
-      // elementAnnotation.element can ever be null. The following action
-      // is based on the assumption that it means "there is no annotation
-      // here anyway".
+      // This behavior is based on the assumption that a `null` element means
+      // "there is no annotation here".
       return null;
     }
 
@@ -1696,16 +1677,9 @@ class TransformerImplementation {
         return new ec.NewInstanceMetaCapability(extractMetaData(constant));
       case "TypingCapability":
         return new ec.TypingCapability(constant.fields["upperBound"].value);
-      case "SubtypeQuantifyCapability":
-        // TODO(eernst) feature:
-        throw new UnimplementedError("$classElement not yet supported!");
+      case "_SubtypeQuantifyCapability":
+        return ec.subtypeQuantifyCapability;
       case "AdmitSubtypeCapability":
-        // TODO(eernst) feature:
-        throw new UnimplementedError("$classElement not yet supported!");
-      case "GlobalQuantifyCapability":
-        // TODO(eernst) feature:
-        throw new UnimplementedError("$classElement not yet supported!");
-      case "GlobalQuantifyMetaCapability":
         // TODO(eernst) feature:
         throw new UnimplementedError("$classElement not yet supported!");
       default:

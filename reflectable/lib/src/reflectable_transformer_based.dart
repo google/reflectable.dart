@@ -896,7 +896,6 @@ abstract class VariableMirrorBase extends _DataCaching
     }
     if (_isDynamic) return new DynamicMirrorImpl();
     if (_isClassType) {
-      print("${_data.classMirrors} $_classMirrorIndex");
       return _data.classMirrors[_classMirrorIndex];
     }
     // TODO(eernst) implement: Support remaining kinds of types.

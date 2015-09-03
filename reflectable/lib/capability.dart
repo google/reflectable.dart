@@ -415,11 +415,11 @@ class _LibraryDependenciesCapability implements ApiReflectCapability {
   const _LibraryDependenciesCapability();
 }
 
-class _SubtypeQuantifyCapability extends ReflecteeQuantifyCapability {
+class _SubtypeQuantifyCapability implements ReflecteeQuantifyCapability {
   const _SubtypeQuantifyCapability();
 }
 
-class _AdmitSubtypeCapability extends ReflecteeQuantifyCapability {
+class _AdmitSubtypeCapability implements ReflecteeQuantifyCapability {
   const _AdmitSubtypeCapability();
 }
 
