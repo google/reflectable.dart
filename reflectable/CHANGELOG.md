@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+* Support for subtype quantification in transformed code.
+* Code generation bugs fixed; metadata/library related bugs fixed.
+* Faster version of test procedure.
+
 ## 0.1.3
 
 * Non-transformed code supports `subTypeQuantifyCapability`
