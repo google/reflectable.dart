@@ -250,8 +250,8 @@ class _ReflectorDomain {
           }
         }
       }
-      subtypes.forEach((ClassElement classElement) =>
-          classes.add(classElement));
+      subtypes
+          .forEach((ClassElement classElement) => classes.add(classElement));
     }
 
     // Compute `classes`, i.e., the transitive closure of _annotated_classes
@@ -265,7 +265,8 @@ class _ReflectorDomain {
       Set<ClassElement> additionalClasses = new Set<ClassElement>();
 
       void addClass(ClassElement classElement) {
-        if (!classes._contains(classElement)) {
+        if (_isImportable(classElement, dataId, resolver) &&
+            !classes._contains(classElement)) {
           additionalClasses.add(classElement);
         }
       }
@@ -736,8 +737,8 @@ class _ReflectorDomain {
     Iterable<String> parametersList =
         parameters.items.map((ParameterElement element) {
       int descriptor = _parameterDescriptor(element);
-      int ownerIndex = members.indexOf(element.enclosingElement) +
-          fields.length;
+      int ownerIndex =
+          members.indexOf(element.enclosingElement) + fields.length;
       int classMirrorIndex;
       if (_capabilities._impliesTypes) {
         if (descriptor & constants.dynamicAttribute != 0) {
@@ -1447,7 +1448,8 @@ class TransformerImplementation {
 
   /// Returns a [ReflectionWorld] instantiated with all the reflectors seen by
   /// [resolver] and all classes annotated by them.
-  ReflectionWorld _computeWorld(LibraryElement reflectableLibrary) {
+  ReflectionWorld _computeWorld(
+      LibraryElement reflectableLibrary, AssetId dataId) {
     ReflectionWorld world = new ReflectionWorld(reflectableLibrary);
     Map<ClassElement, _ReflectorDomain> domains =
         new Map<ClassElement, _ReflectorDomain>();
@@ -1494,11 +1496,17 @@ class TransformerImplementation {
     /// Add [ClassDomain] representing [type] to the supported classes of
     /// [reflector].
     void addClassDomain(ClassElement type, ClassElement reflector) {
-      _ReflectorDomain domain = getReflectorDomain(reflector);
-      if (domain._classMap.containsKey(type)) return;
-      world.importCollector._addLibrary(type.library);
-      domain._classMap[type] = _createClassDomain(type, domain);
-      addLibrary(type.library, reflector);
+      if (!_isImportable(type, dataId, _resolver)) {
+        _logger.fine("Ignoring unrepresentable class ${type.name}",
+            asset: _resolver.getSourceAssetId(type),
+            span: _resolver.getSourceSpan(type));
+      } else {
+        _ReflectorDomain domain = getReflectorDomain(reflector);
+        if (domain._classMap.containsKey(type)) return;
+        world.importCollector._addLibrary(type.library);
+        domain._classMap[type] = _createClassDomain(type, domain);
+        addLibrary(type.library, reflector);
+      }
     }
 
     /// Runs through a list of metadata, and finds any Reflectors, and
@@ -1844,7 +1852,8 @@ _initializeReflectable() {
         // pass through without changes.
         continue;
       }
-      ReflectionWorld world = _computeWorld(reflectableLibrary);
+      ReflectionWorld world =
+          _computeWorld(reflectableLibrary, entryPointAsset.id);
       if (world == null) continue;
 
       String source = await entryPointAsset.readAsString();
@@ -2190,9 +2199,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
 
     LibraryElement library = annotationNode.element.library;
     Uri importUri = resolver.getImportUri(library, from: dataId);
-    if (annotationNode.element.isPrivate ||
-        (importUri.scheme == "dart" &&
-            !sdkLibraryNames.contains(importUri.path))) {
+    if (!_isImportable(annotationNode.element, dataId, resolver)) {
       // Private constants, and constants made of classes in internal libraries
       // cannot be represented.
       // Skip them.
@@ -2329,6 +2336,16 @@ _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
       declaredAndImplicitAccessorsOfClass,
       declaredConstructorsOfClass,
       domain);
+}
+
+/// Answers true iff this [element] can be imported into [dataId].
+// TODO(sigurdm) implement: Make a test that tries to reflect on native/private
+// classes.
+bool _isImportable(Element element, AssetId dataId, Resolver resolver) {
+  Uri importUri = resolver.getImportUri(element.library, from: dataId);
+  return !(element.isPrivate ||
+      (importUri.scheme == "dart" &&
+          !sdkLibraryNames.contains(importUri.path)));
 }
 
 /// Modelling a MixinApplication as a ClassElement.
@@ -2488,6 +2505,10 @@ class MixinApplication implements ClassElement {
     return _unImplemented();
   }
 
+  // This seems to be the defined behaviour according to dart:mirrors.
+  @override
+  bool get isPrivate => false;
+
   @override
   get context => _unImplemented();
 
@@ -2505,9 +2526,6 @@ class MixinApplication implements ClassElement {
 
   @override
   bool get isOverride => _unImplemented();
-
-  @override
-  bool get isPrivate => _unImplemented();
 
   @override
   bool get isPublic => _unImplemented();
