@@ -420,6 +420,8 @@ class _ReflectorDomain {
         closure = "(dynamic instance) => (x) => instance[x]";
       } else if (getterName == "unary-") {
         closure = "(dynamic instance) => () => -instance";
+      } else if (getterName == "~") {
+        closure = "(dynamic instance) => () => ~instance";
       } else {
         closure = "(dynamic instance) => (x) => instance ${getterName} x";
       }
