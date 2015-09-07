@@ -1869,6 +1869,12 @@ _initializeReflectable() {
       LibraryElement entryPointLibrary =
           _resolver.getLibrary(entryPointAsset.id);
 
+      if (entryPointLibrary.entryPoint == null) {
+        aggregateTransform.logger.info(
+            "Entry point: $entryPoint has no member called `main`. Skipping.");
+        continue;
+      }
+
       // Generate a new file with the name of the entry-point, whose main
       // initializes the reflection data, and calls the main from
       // [originalEntryPointId].
