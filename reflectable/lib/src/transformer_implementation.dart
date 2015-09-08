@@ -285,13 +285,22 @@ class _ReflectorDomain {
               addClass(fieldType);
             }
           });
-          classDomain._declaredParameters
-              .forEach((ParameterElement parameterElement) {
+          void addParameter(ParameterElement parameterElement) {
             Element parameterType = parameterElement.type.element;
             if (parameterType is ClassElement) {
               addClass(parameterType);
             }
-          });
+          }
+          classDomain._declaredParameters.forEach(addParameter);
+          classDomain._instanceParameters.forEach(addParameter);
+          void addReturnType(ExecutableElement executableElement) {
+            Element returnType = executableElement.returnType.element;
+            if (returnType is ClassElement) {
+              addClass(returnType);
+            }
+          }
+          classDomain._declaredMethods.forEach(addReturnType);
+          classDomain._instanceMembers.forEach(addReturnType);
         }
       }
 
@@ -387,16 +396,19 @@ class _ReflectorDomain {
       // semantics of the `declarations` method in a [ClassMirror].
       classDomain._declarations.forEach(members.add);
 
-      // Add the behavioral interface from this class (redundantly) and
-      // all superclasses (which matters) to [members], such that it
-      // contains both the behavioral parts for the target class and its
-      // superclasses, and the program structure oriented parts for the
-      // target class (omitting those from its superclasses).
+      // Add the behavioral interface from this class (redundantly, for
+      // non-static members) and all superclasses (which matters) to
+      // [members], such that it contains both the behavioral parts for
+      // the target class and its superclasses, and the program structure
+      // oriented parts for the target class (omitting those from its
+      // superclasses).
       classDomain._instanceMembers.forEach(members.add);
 
       // Add all the formal parameters (as a single, global set) which
-      // are declared by any of the methods in `classDomain._declarations`.
+      // are declared by any of the methods in `classDomain._declarations`
+      // as well as in `classDomain._instanceMembers`.
       classDomain._declaredParameters.forEach(parameters.add);
+      classDomain._instanceParameters.forEach(parameters.add);
 
       // Gather the fields declared in the target class (not inherited
       // ones) in [fields], i.e., the elements missing from [members]
@@ -490,10 +502,10 @@ class _ReflectorDomain {
     }
 
     int computeTypeIndexBase(
-        Element typeElement, bool isDynamic, bool isClassType) {
+        Element typeElement, bool isVoid, bool isDynamic, bool isClassType) {
       if (_capabilities._impliesTypes) {
-        if (isDynamic) {
-          // The mirror will report 'dynamic' as its `returnType`
+        if (isDynamic || isVoid) {
+          // The mirror will report 'dynamic' or 'void' as its `returnType`
           // and it will never use the index.
           return null;
         }
@@ -510,15 +522,18 @@ class _ReflectorDomain {
     int computeFieldTypeIndex(FieldElement element, int descriptor) {
       return computeTypeIndexBase(
           element.type.element,
+          false, // No field has type `void`.
           descriptor & constants.dynamicAttribute != 0,
           descriptor & constants.classTypeAttribute != 0);
     }
 
     int computeReturnTypeIndex(ExecutableElement element, int descriptor) {
-      return computeTypeIndexBase(
+      int result = computeTypeIndexBase(
           element.returnType.element,
+          descriptor & constants.voidReturnTypeAttribute != 0,
           descriptor & constants.dynamicReturnTypeAttribute != 0,
           descriptor & constants.classReturnTypeAttribute != 0);
+      return result;
     }
 
     // Generate the class mirrors.
@@ -780,12 +795,17 @@ class _ReflectorDomain {
       }
       String metadataCode = "null";
       if (_capabilities._supportsMetadata) {
-        NodeList<Annotation> annotations = element.computeNode().metadata;
-        metadataCode =
-            _formatAsList("Object", annotations.map((Annotation annotation) {
-          return _extractAnnotationValue(
-              annotation, element.library, importCollector);
-        }));
+        FormalParameter node = element.computeNode();
+        if (node == null) {
+          metadataCode = "<Object>[]";
+        } else {
+          NodeList<Annotation> annotations = node.metadata;
+          metadataCode =
+              _formatAsList("Object", annotations.map((Annotation annotation) {
+            return _extractAnnotationValue(
+                annotation, element.library, importCollector);
+          }));
+        }
       }
       FormalParameter parameterNode = element.computeNode();
       String defaultValueCode = "null";
@@ -900,7 +920,6 @@ class _ClassDomain {
       }
       Map<String, ExecutableElement> result =
           new Map<String, ExecutableElement>();
-
       void addIfCapable(ExecutableElement member) {
         if (member.isPrivate) return;
         // If [member] is a synthetic accessor created from a field, search for
@@ -950,6 +969,17 @@ class _ClassDomain {
     }
 
     return helper(_classElement).values;
+  }
+
+  /// Finds all parameters of instance members.
+  Iterable<ParameterElement> get _instanceParameters {
+    List<ParameterElement> result = <ParameterElement>[];
+    if (_reflectorDomain._capabilities._impliesDeclarations) {
+      for (ExecutableElement executableElement in _instanceMembers) {
+        result.addAll(executableElement.parameters);
+      }
+    }
+    return result;
   }
 
   /// Finds all static members.
@@ -2018,8 +2048,23 @@ int _parameterDescriptor(ParameterElement element) {
 /// method/constructor/getter/setter.
 int _declarationDescriptor(ExecutableElement element) {
   int result;
+
+  void handleReturnType(ExecutableElement element) {
+    if (element.returnType.isDynamic) {
+      result |= constants.dynamicReturnTypeAttribute;
+    }
+    if (element.returnType.isVoid) {
+      result |= constants.voidReturnTypeAttribute;
+    }
+    Element elementReturnType = element.returnType.element;
+    if (elementReturnType is ClassElement) {
+      result |= constants.classReturnTypeAttribute;
+    }
+  }
+
   if (element is PropertyAccessorElement) {
     result = element.isGetter ? constants.getter : constants.setter;
+    handleReturnType(element);
   } else if (element is ConstructorElement) {
     if (element.isFactory) {
       result = constants.factoryConstructor;
@@ -2033,13 +2078,7 @@ int _declarationDescriptor(ExecutableElement element) {
   } else {
     assert(element is MethodElement);
     result = constants.method;
-    if (element.type.isDynamic) {
-      result |= constants.dynamicReturnTypeAttribute;
-    }
-    Element elementReturnType = element.returnType.element;
-    if (elementReturnType is ClassElement) {
-      result |= constants.classReturnTypeAttribute;
-    }
+    handleReturnType(element);
   }
   if (element.isPrivate) result |= constants.privateAttribute;
   if (element.isStatic) result |= constants.staticAttribute;
@@ -2301,10 +2340,20 @@ Iterable<MethodElement> _extractDeclaredMethods(
 }
 
 Iterable<ParameterElement> _extractDeclaredParameters(
-    Iterable<MethodElement> declaredMethods) {
+    Iterable<MethodElement> declaredMethods,
+    Iterable<ConstructorElement> declaredConstructors,
+    Iterable<PropertyAccessorElement> accessors) {
   List<ParameterElement> result = <ParameterElement>[];
   for (MethodElement declaredMethod in declaredMethods) {
     result.addAll(declaredMethod.parameters);
+  }
+  for (ConstructorElement declaredConstructor in declaredConstructors) {
+    result.addAll(declaredConstructor.parameters);
+  }
+  for (PropertyAccessorElement accessor in accessors) {
+    if (accessor.isSetter) {
+      result.addAll(accessor.parameters);
+    }
   }
   return result;
 }
@@ -2347,13 +2396,14 @@ _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
         _extractDeclaredMethods(type.mixin, domain._capabilities)
             .where((MethodElement e) => !e.isStatic)
             .toList();
-    List<ParameterElement> declaredParametersOfClass =
-        _extractDeclaredParameters(declaredMethodsOfClass);
     List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
         _declaredAndImplicitAccessors(type.mixin, domain._capabilities)
             .toList();
     List<ConstructorElement> declaredConstructorsOfClass =
         new List<ConstructorElement>();
+    List<ParameterElement> declaredParametersOfClass =
+        _extractDeclaredParameters(declaredMethodsOfClass,
+            declaredConstructorsOfClass, declaredAndImplicitAccessorsOfClass);
 
     return new _ClassDomain(
         type,
@@ -2369,12 +2419,14 @@ _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
       _extractDeclaredFields(type, domain._capabilities).toList();
   List<MethodElement> declaredMethodsOfClass =
       _extractDeclaredMethods(type, domain._capabilities).toList();
-  List<ParameterElement> declaredParametersOfClass =
-      _extractDeclaredParameters(declaredMethodsOfClass);
   List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
       _declaredAndImplicitAccessors(type, domain._capabilities).toList();
   List<ConstructorElement> declaredConstructorsOfClass =
       _declaredConstructors(type, domain._capabilities).toList();
+  List<ParameterElement> declaredParametersOfClass = _extractDeclaredParameters(
+      declaredMethodsOfClass,
+      declaredConstructorsOfClass,
+      declaredAndImplicitAccessorsOfClass);
   return new _ClassDomain(
       type,
       declaredFieldsOfClass,

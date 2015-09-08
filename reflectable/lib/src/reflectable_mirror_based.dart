@@ -30,8 +30,7 @@ rm.ClassMirror wrapClassMirrorIfSupported(
     assert(classMirror is dm.ClassMirror);
     if (!reflectable._supportedClasses.contains(classMirror)) {
       throw new NoSuchCapabilityError(
-          "Reflecting on entity: $classMirror, without sufficient "
-          "capabilities");
+          "Reflecting on class '$classMirror' without capability");
     }
     return new ClassMirrorImpl(classMirror, reflectable);
   }
@@ -726,8 +725,8 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   rm.LibraryMirror get owner {
     if (_reflectable._supportsLibraries) return super.owner;
     throw new NoSuchCapabilityError(
-        "Trying to get owner of class $qualifiedName "
-        "without `libraryCapability`.");
+        "Trying to get owner of class '$qualifiedName' "
+        "without 'libraryCapability'");
   }
 
   bool get _isMixin => _classMirror.mixin != _classMirror;
@@ -756,6 +755,11 @@ class _FunctionTypeMirrorImpl extends ClassMirrorImpl
 
   @override
   rm.TypeMirror get returnType {
+    // TODO(eernst) clarify: Is it really true that we cannot detect the
+    // type void other than looking at its name?
+    if (_functionTypeMirror.returnType.simpleName == "void") {
+      return new _VoidMirrorImpl();
+    }
     return wrapTypeMirror(_functionTypeMirror.returnType, _reflectable);
   }
 }
@@ -790,7 +794,8 @@ abstract class _DeclarationMirrorImpl implements rm.DeclarationMirror {
     if (_reflectable.capabilities.contains(metadataCapability)) {
       return _declarationMirror.metadata.map((m) => m.reflectee).toList();
     }
-    throw new NoSuchCapabilityError('.metadata witout metadataCapability');
+    throw new NoSuchCapabilityError(
+        "Attempt to get metadata witout 'metadataCapability'");
   }
 
   @override
@@ -812,8 +817,14 @@ class MethodMirrorImpl extends _DeclarationMirrorImpl
       : super(mm, reflectable);
 
   @override
-  rm.TypeMirror get returnType =>
-      wrapTypeMirror(_methodMirror.returnType, _reflectable);
+  rm.TypeMirror get returnType {
+    // TODO(eernst) clarify: Is there really no other way to detect
+    // the `void` type than looking at its name?
+    if (_methodMirror.returnType.simpleName == const Symbol("void")) {
+      return new _VoidMirrorImpl();
+    }
+    return wrapTypeMirror(_methodMirror.returnType, _reflectable);
+  }
 
   @override
   String get source => _methodMirror.source;
@@ -914,7 +925,7 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
     if (_supportsType(_reflectable.capabilities)) {
       return wrapTypeMirror(_variableMirror.type, _reflectable);
     }
-    throw new NoSuchCapabilityError("Attempt to get a type without capability");
+    throw new NoSuchCapabilityError("Attempt to get type without capability");
   }
 
   @override
@@ -1125,6 +1136,58 @@ class _CombinatorMirrorImpl implements rm.CombinatorMirror {
   }
 }
 
+class _VoidMirrorImpl implements rm.TypeMirror {
+  @override
+  bool get hasReflectedType => false;
+
+  @override
+  Type get reflectedType => throw new NoSuchCapabilityError(
+      "Attempt to get the reflected type of 'void'");
+
+  @override
+  List<TypeVariableMirror> get typeVariables => [];
+
+  @override
+  List<TypeMirror> get typeArguments => [];
+
+  @override
+  bool get isOriginalDeclaration => true;
+
+  @override
+  TypeMirror get originalDeclaration => this;
+
+  @override
+  bool isSubtypeOf(TypeMirror other) =>
+      other.hasReflectedType && other.reflectedType == dynamic;
+
+  @override
+  bool isAssignableTo(TypeMirror other) => isSubtypeOf(other);
+
+  @override
+  String get simpleName => "void";
+
+  // TODO(eernst) implement: do as 'dart:mirrors' does.
+  @override
+  get owner => null;
+
+  // TODO(eernst) implement: do as 'dart:mirrors' does.
+  @override
+  List<Object> get metadata => <Object>[];
+
+  @override
+  String get qualifiedName => simpleName;
+
+  @override
+  bool get isPrivate => false;
+
+  // It is allowed to return null.
+  @override
+  get location => null;
+
+  @override
+  bool get isTopLevel => true;
+}
+
 class _SourceLocationImpl implements rm.SourceLocation {
   dm.SourceLocation _sourceLocation;
 
@@ -1186,7 +1249,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
     dm.InstanceMirror mirror = dm.reflect(o);
     if (_canReflect(mirror)) return wrapInstanceMirror(mirror, this);
     throw new NoSuchCapabilityError(
-        "Reflecting on object of unannotated class ${o.runtimeType}.");
+        "Attempt to reflect on class '${o.runtimeType}' without capability");
   }
 
   bool _canReflectType(dm.ClassMirror mirror) =>
@@ -1218,7 +1281,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   rm.LibraryMirror findLibrary(String libraryName) {
     if (!_supportsLibraries) {
       throw new NoSuchCapabilityError(
-          "Searching for library $libraryName. LibraryMirrors are not "
+          "Searching for library '$libraryName'. LibraryMirrors are not "
           "supported by this reflector. Try adding 'libraryCapability'");
     }
     Symbol librarySymbol = new Symbol(libraryName);
@@ -1369,6 +1432,9 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
                     if (type is dm.ClassMirror) {
                       addClass(type);
                     }
+                  }
+                  if (declaration.returnType is dm.ClassMirror) {
+                    addClass(declaration.returnType);
                   }
                 }
               }

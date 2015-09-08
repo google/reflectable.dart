@@ -4,7 +4,8 @@
 
 // File being transformed by the reflectable transformer.
 // Accesses method parameters and their properties, such as
-// existence, being optional, type annotations.
+// existence, being optional, type annotations; includes checks
+// concerning method return types.
 
 library test_reflectable.test.parameter_test;
 
@@ -32,12 +33,18 @@ class MyClass {
   int operator [](int x) => null;
   void operator []=(int x, v) {}
 
+  String get getset => "42";
+  void set getset(String string) {}
+
   static int noArguments() => null;
   static int oneArgument(String x) => null;
   static int optionalArguments(MyClass x, double y,
           [MyReflectable z, dynamic w = 42]) =>
       null;
   static int namedArguments(String x, List y, {String z: "4" + "2"}) => null;
+
+  static List get staticGetset => ["42"];
+  static void set staticGetset(List list) {}
 }
 
 final throwsNoCapability = throwsA(const isInstanceOf<NoSuchCapabilityError>());
@@ -53,10 +60,14 @@ main() {
   MethodMirror opPlusMirror = declarations["+"];
   MethodMirror opBracketMirror = declarations["[]"];
   MethodMirror opBracketEqualsMirror = declarations["[]="];
+  MethodMirror getsetMirror = declarations["getset"];
+  MethodMirror getsetEqualsMirror = declarations["getset="];
   MethodMirror noArgumentsMirror = declarations["noArguments"];
   MethodMirror oneArgumentMirror = declarations["oneArgument"];
   MethodMirror optionalArgumentsMirror = declarations["optionalArguments"];
   MethodMirror namedArgumentsMirror = declarations["namedArguments"];
+  MethodMirror staticGetsetMirror = declarations["staticGetset"];
+  MethodMirror staticGetsetEqualsMirror = declarations["staticGetset="];
 
   test('parameter list properties, instance methods', () {
     expect(arg0Mirror.parameters.length, 0);
@@ -124,6 +135,14 @@ main() {
     expect(opBracketEqualsParameter1.type.reflectedType, dynamic);
   });
 
+  test('parameter list properties, getters and setters', () {
+    expect(getsetMirror.parameters.length, 0);
+    expect(getsetEqualsMirror.parameters.length, 1);
+    ParameterMirror getsetEqualsParameter0 = getsetEqualsMirror.parameters[0];
+    expect(getsetEqualsParameter0.isOptional, false);
+    expect(getsetEqualsParameter0.type.reflectedType, String);
+  });
+
   test('parameter list properties, static methods', () {
     expect(noArgumentsMirror.parameters.length, 0);
 
@@ -168,5 +187,34 @@ main() {
     expect(namedArgumentsParameter2.type.reflectedType, String);
     expect(namedArgumentsParameter2.hasDefaultValue, true);
     expect(namedArgumentsParameter2.defaultValue, "42");
+  });
+
+  test('parameter list properties, getters and setters', () {
+    expect(staticGetsetMirror.parameters.length, 0);
+    expect(staticGetsetEqualsMirror.parameters.length, 1);
+    ParameterMirror staticGetsetEqualsParameter0 =
+        staticGetsetEqualsMirror.parameters[0];
+    expect(staticGetsetEqualsParameter0.isOptional, false);
+    expect(staticGetsetEqualsParameter0.type.reflectedType, List);
+  });
+
+  test("method return types", () {
+    expect(arg0Mirror.returnType.reflectedType, int);
+    expect(arg1Mirror.returnType.reflectedType, int);
+    expect(arg2to4Mirror.returnType.reflectedType, int);
+    expect(argNamedMirror.returnType.reflectedType, int);
+    expect(opPlusMirror.returnType.reflectedType, int);
+    expect(opBracketMirror.returnType.reflectedType, int);
+    // TODO(eernst) implement: Find a better way to test for the `void`
+    // type other than looking at its name!
+    expect(opBracketEqualsMirror.returnType.simpleName, "void");
+    expect(getsetMirror.returnType.reflectedType, String);
+    expect(getsetEqualsMirror.returnType.simpleName, "void");
+    expect(noArgumentsMirror.returnType.reflectedType, int);
+    expect(oneArgumentMirror.returnType.reflectedType, int);
+    expect(optionalArgumentsMirror.returnType.reflectedType, int);
+    expect(namedArgumentsMirror.returnType.reflectedType, int);
+    expect(staticGetsetMirror.returnType.reflectedType, List);
+    expect(staticGetsetEqualsMirror.returnType.simpleName, "void");
   });
 }

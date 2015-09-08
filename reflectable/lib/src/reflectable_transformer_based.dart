@@ -134,7 +134,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
     _type = _data.classMirrorForType(reflectee.runtimeType);
     if (_type == null) {
       throw new NoSuchCapabilityError(
-          "Reflecting on un-marked type ${reflectee.runtimeType}");
+          "Reflecting on un-marked type '${reflectee.runtimeType}'");
     }
   }
 
@@ -300,7 +300,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
         // that.
         if (declarationIndex == NO_CAPABILITY_INDEX) {
           throw new NoSuchCapabilityError(
-              "Requesting `declarations` of $qualifiedName without capability");
+              "Requesting declarations of '$qualifiedName' without capability");
         }
         DeclarationMirror declarationMirror =
             _data.memberMirrors[declarationIndex];
@@ -409,7 +409,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   List<Object> get metadata {
     if (_metadata == null) {
       throw new NoSuchCapabilityError(
-          "Requesting metadata of $reflectedType without capability");
+          "Requesting metadata of '$reflectedType' without capability");
     }
     return _metadata;
   }
@@ -454,8 +454,8 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   DeclarationMirror get owner {
     if (_ownerIndex == NO_CAPABILITY_INDEX) {
       throw new NoSuchCapabilityError(
-          "Trying to get owner of class $qualifiedName "
-          "without `LibraryCapability`.");
+          "Trying to get owner of class '$qualifiedName' "
+          "without 'LibraryCapability'");
     }
     return _data.libraryMirrors[_ownerIndex];
   }
@@ -467,7 +467,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
     if (_superclassIndex == null) return null;
     if (_superclassIndex == NO_CAPABILITY_INDEX) {
       throw new NoSuchCapabilityError(
-          "Requesting mirror on un-marked class, superclass of $simpleName");
+          "Requesting mirror on un-marked class, superclass of '$simpleName'");
     }
     return _data.classMirrors[_superclassIndex];
   }
@@ -540,7 +540,7 @@ class LibraryMirrorImpl implements LibraryMirror {
   List<Object> get metadata {
     if (_metadata == null) {
       throw new NoSuchCapabilityError(
-          "Requesting metadata of library $simpleName without capability");
+          "Requesting metadata of library '$simpleName' without capability");
     }
     return _metadata;
   }
@@ -652,6 +652,9 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   bool get _hasClassReturnType =>
       (_descriptor & constants.classReturnTypeAttribute != 0);
 
+  bool get _hasVoidReturnType =>
+      (_descriptor & constants.voidReturnTypeAttribute != 0);
+
   // It is allowed to return null.
   @override
   SourceLocation get location => null;
@@ -660,7 +663,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   List<Object> get metadata {
     if (_metadata == null) {
       throw new NoSuchCapabilityError(
-          "Requesting metadata of method $simpleName without capability");
+          "Requesting metadata of method '$simpleName' without capability");
     }
     return _metadata;
   }
@@ -679,9 +682,10 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   TypeMirror get returnType {
     if (_returnTypeIndex == NO_CAPABILITY_INDEX) {
       throw new NoSuchCapabilityError(
-          "Requesting `returnType` of method $simpleName without capability");
+          "Requesting returnType of method '$simpleName' without capability");
     }
     if (_hasDynamicReturnType) return new DynamicMirrorImpl();
+    if (_hasVoidReturnType) return new VoidMirrorImpl();
     if (_hasClassReturnType) return _data.classMirrors[_returnTypeIndex];
     // TODO(eernst) implement: Support remaining kinds of types.
     return _unsupported();
@@ -877,7 +881,7 @@ abstract class VariableMirrorBase extends _DataCaching
   List<Object> get metadata {
     if (_metadata == null) {
       throw new NoSuchCapabilityError(
-          "Requesting metadata of field $simpleName without capability");
+          "Requesting metadata of field '$simpleName' without capability");
     }
     return _metadata;
   }
@@ -898,7 +902,7 @@ abstract class VariableMirrorBase extends _DataCaching
   TypeMirror get type {
     if (_classMirrorIndex == NO_CAPABILITY_INDEX) {
       throw new NoSuchCapabilityError(
-          "Attempt to get class mirror for un-marked class (type of $_name)");
+          "Attempt to get class mirror for un-marked class (type of '$_name')");
     }
     if (_isDynamic) return new DynamicMirrorImpl();
     if (_isClassType) {
@@ -1013,6 +1017,61 @@ class DynamicMirrorImpl implements TypeMirror {
   List<Object> get metadata => <Object>[];
 }
 
+class VoidMirrorImpl implements TypeMirror {
+  @override
+  bool get isPrivate => false;
+
+  @override
+  bool get isTopLevel => true;
+
+  // TODO(eernst) implement: test what 'dart:mirrors' does, then do the same.
+  @override
+  bool get isOriginalDeclaration => true;
+
+  @override
+  bool get hasReflectedType => false;
+
+  @override
+  Type get reflectedType => throw new NoSuchCapabilityError(
+      "Attempt to get the reflected type of 'void'");
+
+  @override
+  String get simpleName => "void";
+
+  // TODO(eernst) implement: do as in 'dart:mirrors'.
+  @override
+  List<TypeVariableMirror> get typeVariables => <TypeVariableMirror>[];
+
+  @override
+  List<TypeMirror> get typeArguments => <TypeMirror>[];
+
+  // TODO(eernst) implement: do as in 'dart:mirrors'.
+  @override
+  TypeMirror get originalDeclaration => null;
+
+  // It is allowed to return null.
+  @override
+  SourceLocation get location => null;
+
+  // TODO(eernst) clarify: check the spec!
+  @override
+  bool isSubtypeOf(TypeMirror other) => other is DynamicMirrorImpl;
+
+  // TODO(eernst) clarify: check the spec!
+  @override
+  bool isAssignableTo(TypeMirror other) => other is DynamicMirrorImpl;
+
+  // TODO(eernst) implement: do as 'dart:mirrors' does.
+  @override
+  DeclarationMirror get owner => null;
+
+  @override
+  String get qualifiedName => simpleName;
+
+  @override
+  List<Object> get metadata => <Object>[];
+}
+
 abstract class ReflectableImpl extends ReflectableBase
     implements ReflectableInterface {
   /// Const constructor, to enable usage as metadata, allowing for varargs
@@ -1048,7 +1107,7 @@ abstract class ReflectableImpl extends ReflectableBase
     ClassMirror result = data[this].classMirrorForType(type);
     if (result == null) {
       throw new NoSuchCapabilityError(
-          "Reflecting on type $type that is not reflector-marked.");
+          "Reflecting on type '$type' without capability");
     }
     return result;
   }
@@ -1062,8 +1121,8 @@ abstract class ReflectableImpl extends ReflectableBase
   LibraryMirror findLibrary(String libraryName) {
     if (data[this].libraryMirrors == null) {
       throw new NoSuchCapabilityError(
-          "Using `.findLibrary` without capability. "
-          "Try adding `libraryCapability`.");
+          "Using 'findLibrary' without capability. "
+          "Try adding 'libraryCapability'.");
     }
     return data[this].libraryMirrors.singleWhere(
         (LibraryMirror mirror) => mirror.qualifiedName == libraryName);
