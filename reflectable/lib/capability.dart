@@ -321,6 +321,26 @@ const subtypeQuantifyCapability = const _SubtypeQuantifyCapability();
 /// Quantifying capability instance specifying that the reflection support
 /// requested by the [ApiReflectCapability] instances held by the same
 /// [Reflectable] which also holds this capability should be provided for
+/// each class which is (1) a superclasses, directly or indirectly, of a
+/// class which carries that [Reflectable] as metadata or is matched by
+/// a global quantifier for that [Reflectable], and which is also (2) a
+/// subclass of the given [upperbound].
+class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
+  final Type upperBound;
+  const SuperclassQuantifyCapability(this.upperBound);
+}
+
+/// Quantifying capability class specifying that the reflection support
+/// requested by the [ApiReflectCapability] instances held by the same
+/// [Reflectable] which also holds this capability should be provided
+/// for all superclasses of the classes which carry that [Reflectable]
+/// as metadata.
+const superclassQuantifyCapability =
+    const SuperclassQuantifyCapability(Object);
+
+/// Quantifying capability instance specifying that the reflection support
+/// requested by the [ApiReflectCapability] instances held by the same
+/// [Reflectable] which also holds this capability should be provided for
 /// instances of the target class whose metadata includes this capability,
 /// but also that it should be possible to request reflection support for
 /// instances of subtypes of the target class as if they had been instances

@@ -20,8 +20,14 @@ class Reflector2 extends Reflectable {
 
 class ReflectorUpwardsClosed extends Reflectable {
   const ReflectorUpwardsClosed()
-      : super(invokingCapability, typeRelationsCapability,
-            declarationsCapability, libraryCapability);
+      : super(superclassQuantifyCapability, invokingCapability,
+            declarationsCapability);
+}
+
+class ReflectorUpwardsClosedToA extends Reflectable {
+  const ReflectorUpwardsClosedToA()
+      : super(const SuperclassQuantifyCapability(A), invokingCapability,
+            declarationsCapability);
 }
 
 @Reflector()
@@ -60,10 +66,11 @@ class B extends A with M1 {}
 @Reflector()
 @Reflector2()
 @ReflectorUpwardsClosed()
+@ReflectorUpwardsClosedToA()
 class C extends B with M2, M3 {}
 
 testReflector(Reflectable reflector, String desc) {
-  test("Mixins, $desc", () {
+  test("Mixin, $desc", () {
     ClassMirror aMirror = reflector.reflectType(A);
     ClassMirror bMirror = reflector.reflectType(B);
     ClassMirror cMirror = reflector.reflectType(C);
@@ -98,9 +105,9 @@ Matcher throwsANoSuchCapabilityException =
     throwsA(const isInstanceOf<NoSuchCapabilityError>());
 
 main() {
-  testReflector(const Reflector(), "Each is annotated");
-  testReflector(const ReflectorUpwardsClosed(), "Upwards closed");
-  test("Mixin, Superclass not supported", () {
+  testReflector(const Reflector(), "each is annotated");
+  testReflector(const ReflectorUpwardsClosed(), "upwards closed");
+  test("Mixin, superclass not supported", () {
     var reflector2 = const Reflector2();
     ClassMirror bMirror = reflector2.reflectType(B);
     ClassMirror cMirror = reflector2.reflectType(C);
@@ -122,6 +129,21 @@ main() {
         () => bMirror.superclass.superclass, throwsANoSuchCapabilityException);
     expect(cMirror.superclass.superclass.mixin, m2Mirror);
     expect(cMirror.superclass.mixin, m3Mirror);
+    expect(cMirror.superclass.superclass.superclass, bMirror);
+  });
+  test("Mixin, superclass supported with bound", () {
+    var reflector = const ReflectorUpwardsClosedToA();
+    ClassMirror aMirror = reflector.reflectType(A);
+    ClassMirror bMirror = reflector.reflectType(B);
+    ClassMirror cMirror = reflector.reflectType(C);
+    expect(() => reflector.reflectType(M1), throwsANoSuchCapabilityException);
+    expect(() => reflector.reflectType(M2), throwsANoSuchCapabilityException);
+    expect(() => reflector.reflectType(M3), throwsANoSuchCapabilityException);
+    expect(() => bMirror.superclass.mixin, throwsANoSuchCapabilityException);
+    expect(bMirror.superclass.superclass, aMirror);
+    expect(() => cMirror.superclass.mixin, throwsANoSuchCapabilityException);
+    expect(() => cMirror.superclass.superclass.mixin,
+        throwsANoSuchCapabilityException);
     expect(cMirror.superclass.superclass.superclass, bMirror);
   });
 }

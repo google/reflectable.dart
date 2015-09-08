@@ -344,7 +344,13 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
     return _staticMembers;
   }
 
-  ClassMirror get mixin => _data.classMirrors[_mixinIndex];
+  ClassMirror get mixin {
+    if (_mixinIndex == NO_CAPABILITY_INDEX) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get mixin from '$simpleName' without capability");
+    }
+    return _data.classMirrors[_mixinIndex];
+  }
 
   Object newInstance(String constructorName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {

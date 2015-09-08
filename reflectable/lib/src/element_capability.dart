@@ -92,10 +92,8 @@ class TypeCapability implements ApiReflectCapability {
   const TypeCapability(this.upperBound);
 }
 
-// TODO(eernst) implement: Obtain an Element representing the class Object.
-const typeCapability = const TypeCapability(null /* should ~ Object! */);
-
-const localTypeCapability = const TypeCapability(null);
+// Note that `null` represents the [ClassElement] for `Object`.
+const typeCapability = const TypeCapability(null);
 
 const typeRelationsCapability = const _TypeRelationsCapability();
 
@@ -142,6 +140,15 @@ abstract class ReflecteeQuantifyCapability implements ReflectCapability {
 }
 
 const subtypeQuantifyCapability = const _SubtypeQuantifyCapability();
+
+class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
+  final Element upperBound;
+  const SuperclassQuantifyCapability(this.upperBound);
+}
+
+// Note that `null` represents the [ClassElement] for `Object`.
+const superclassQuantifyCapability =
+    const SuperclassQuantifyCapability(null);
 
 const admitSubtypeCapability = const _AdmitSubtypeCapability();
 

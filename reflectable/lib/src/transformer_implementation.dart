@@ -296,24 +296,46 @@ class _ReflectorDomain {
       }
 
       if (_capabilities._impliesUpwardsClosure) {
+        List<Element> upperBounds = _capabilities._upwardsClosureBounds;
+
+        bool isSubclassOfBounds(ClassElement classElement) {
+          bool isSuperclassOfClassElement(ClassElement bound) {
+            if (classElement == bound) return true;
+            if (classElement.supertype == null) return false;
+            return isSubclassOfBounds(classElement.supertype.element);
+          }
+          return upperBounds.isEmpty ||
+              upperBounds.any(isSuperclassOfClassElement);
+        }
+
         workingSetOfClasses.forEach((ClassElement classElement) {
+          // Mixin applications are handled by their subclasses.
           if (classElement is MixinApplication) return;
+
           InterfaceType workingSuperType = classElement.supertype;
           if (workingSuperType == null) return;
+          ClassElement workingSuperclass = workingSuperType.element;
 
-          ClassElement workingSuperClass = workingSuperType.element;
-          if (!classes._contains(workingSuperClass)) {
-            addClass(workingSuperClass);
+          if (!isSubclassOfBounds(classElement)) return;
+          if (!classes._contains(workingSuperclass)) {
+            addClass(workingSuperclass);
           }
 
           // Create the chain of mixin applications between the class and the
           // class it extends.
-          ClassElement superclass = workingSuperType.element;
+          ClassElement superclass = workingSuperclass;
           classElement.mixins.forEach((InterfaceType mixin) {
             ClassElement mixinClass = mixin.element;
+            if (isSubclassOfBounds(mixinClass)) addClass(mixinClass);
             ClassElement mixinApplication = new MixinApplication(
                 superclass, mixinClass, classElement.library);
-            addClass(mixinClass);
+            // We have already ensured that `workingSuperclass` is a
+            // subclass of a bound (if any); the value of `superclass` is
+            // either `workingSuperclass` or one of its superclasses created
+            // by mixin application. Since there is no way to denote these
+            // mixin applications directly, they must also be subclasses
+            // of a bound, so these mixin applications must be added
+            // unconditionally.
             addClass(mixinApplication);
             superclasses[mixinApplication] = superclass;
             superclass = mixinApplication;
@@ -598,7 +620,7 @@ class _ReflectorDomain {
               staticSettingClosure(classDomain._classElement, element.name)));
 
       int mixinIndex = (classElement is MixinApplication)
-          ? classes.indexOf(classElement.mixin)
+          ? classes.indexOf(classElement.mixin) ?? constants.NO_CAPABILITY_INDEX
           : classes.indexOf(classElement);
 
       int ownerIndex = _capabilities.supportsLibraries
@@ -1137,7 +1159,22 @@ class _Capabilities {
   // because we must support operations like `superclass`.
   bool get _impliesUpwardsClosure {
     return _capabilities.any((ec.ReflectCapability capability) =>
-        capability == ec.typeRelationsCapability);
+        capability is ec.SuperclassQuantifyCapability);
+  }
+
+  List<Element> get _upwardsClosureBounds {
+     List<Element> result = <Element>[];
+    _capabilities.forEach((ec.ReflectCapability capability) {
+      if (capability is ec.SuperclassQuantifyCapability) {
+        // Note that `null` represents the [ClassElement] for `Object`,
+        // which does not need to be included because it represents the
+        // constraint which is always satisfied.
+        if (capability.upperBound != null) {
+          result.add(capability.upperBound);
+        }
+      }
+    });
+    return result;
   }
 
   bool get _impliesDeclarations {
@@ -1689,6 +1726,9 @@ class TransformerImplementation {
         return new ec.TypingCapability(constant.fields["upperBound"].value);
       case "_SubtypeQuantifyCapability":
         return ec.subtypeQuantifyCapability;
+      case "SuperclassQuantifyCapability":
+        return new ec.SuperclassQuantifyCapability(
+            constant.fields["upperBound"].value);
       case "AdmitSubtypeCapability":
         // TODO(eernst) feature:
         throw new UnimplementedError("$classElement not yet supported!");
@@ -2206,7 +2246,6 @@ String _extractMetadataCode(Element element, Resolver resolver,
     }
 
     LibraryElement library = annotationNode.element.library;
-    Uri importUri = resolver.getImportUri(library, from: dataId);
     if (!_isImportable(annotationNode.element, dataId, resolver)) {
       // Private constants, and constants made of classes in internal libraries
       // cannot be represented.
@@ -2381,6 +2420,12 @@ class MixinApplication implements ClassElement {
   @override
   bool get isSynthetic => true;
 
+  @override
+  InterfaceType get supertype => superclass.type;
+
+  @override
+  InterfaceType get type => mixin.type;
+
   _unImplemented() => throw new UnimplementedError();
 
   @override
@@ -2430,12 +2475,6 @@ class MixinApplication implements ClassElement {
 
   @override
   List<InterfaceType> get mixins => _unImplemented();
-
-  @override
-  InterfaceType get supertype => _unImplemented();
-
-  @override
-  InterfaceType get type => _unImplemented();
 
   @override
   List<TypeParameterElement> get typeParameters => _unImplemented();

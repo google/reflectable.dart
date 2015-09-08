@@ -125,7 +125,25 @@ bool metadataSupported(
 }
 
 bool impliesUpwardsClosure(List<ReflectCapability> capabilities) {
-  return capabilities.contains(typeRelationsCapability);
+  return capabilities.any((ReflectCapability capability) =>
+      capability is SuperclassQuantifyCapability);
+}
+
+List<dm.ClassMirror> extractUpwardsClosureBounds(
+    List<ReflectCapability> capabilities) {
+  List<dm.ClassMirror> result = <dm.ClassMirror>[];
+  capabilities.forEach((ReflectCapability capability) {
+    if (capability is SuperclassQuantifyCapability) {
+      dm.TypeMirror typeMirror = dm.reflectType(capability.upperBound);
+      if (typeMirror is dm.ClassMirror) {
+        result.add(typeMirror);
+      } else {
+        throw new ArgumentError("Unexpected kind of upper bound specified "
+            "for a `SuperclassQuantifyCapability`: $typeMirror.");
+      }
+    }
+  });
+  return result;
 }
 
 bool impliesDeclarations(List<ReflectCapability> capabilities) {
@@ -1181,7 +1199,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
       return _canReflectType(mirror);
     } else {
       throw new UnimplementedError("Checking reflection support on a "
-                                       "currently unsupported kind of type: $mirror");
+          "currently unsupported kind of type: $mirror");
     }
   }
 
@@ -1189,7 +1207,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   rm.ClassMirror reflectType(Type type) {
     dm.TypeMirror typeMirror = dm.reflectType(type);
     return wrapClassMirrorIfSupported(typeMirror, this);
- }
+  }
 
   bool get _supportsLibraries {
     return capabilities
@@ -1304,9 +1322,9 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
         // include all subtypes of the supported types.
         Set<dm.ClassMirror> subtypes = new Set<dm.ClassMirror>();
         for (dm.LibraryMirror library
-        in dm.currentMirrorSystem().libraries.values) {
+            in dm.currentMirrorSystem().libraries.values) {
           for (dm.DeclarationMirror declaration
-          in library.declarations.values) {
+              in library.declarations.values) {
             if (declaration is dm.ClassMirror) {
               if (result.contains(declaration)) continue;
               for (dm.ClassMirror classMirror in result) {
@@ -1321,6 +1339,10 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
         result.addAll(subtypes);
       }
 
+      bool upwardsClosureRequested = impliesUpwardsClosure(capabilities);
+      List<dm.ClassMirror> upwardsClosureBounds =
+          extractUpwardsClosureBounds(capabilities);
+
       Set<dm.ClassMirror> workingSet = new Set<dm.ClassMirror>.from(result);
       while (workingSet.isNotEmpty) {
         Set<dm.ClassMirror> additionalClasses = new Set<dm.ClassMirror>();
@@ -1334,13 +1356,13 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
         for (dm.ClassMirror workingClass in workingSet) {
           if (impliesTypes(capabilities)) {
             for (dm.DeclarationMirror declaration
-            in workingClass.declarations.values) {
+                in workingClass.declarations.values) {
               if (declaration is dm.VariableMirror &&
                   declaration.type is dm.ClassMirror) {
                 addClass(declaration.type);
               }
               for (dm.DeclarationMirror declaration
-              in workingClass.declarations.values) {
+                  in workingClass.declarations.values) {
                 if (declaration is dm.MethodMirror) {
                   for (dm.ParameterMirror parameter in declaration.parameters) {
                     dm.TypeMirror type = parameter.type;
@@ -1353,18 +1375,24 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
             }
           }
 
-          if (impliesUpwardsClosure(capabilities)) {
-            // Add all superclasses and mixins.
+          if (upwardsClosureRequested) {
+            // Add superclasses and mixins.
             if (workingClass.superclass != null) {
-              addClass(workingClass.superclass);
+              if (upwardsClosureBounds.any((dm.ClassMirror bound) =>
+                  workingClass.superclass.isSubclassOf(bound))) {
+                addClass(workingClass.superclass);
+              }
             }
             if (workingClass.mixin != workingClass) {
-              addClass(workingClass.mixin);
+              if (upwardsClosureBounds.any((dm.ClassMirror bound) =>
+                  workingClass.mixin.isSubclassOf(bound))) {
+                addClass(workingClass.mixin);
+              }
             }
           } else {
             // Add mixin-applications if the extended class and all the mixins
             // are annotated.
-            outer: for (dm.ClassMirror classMirror in result) {
+            for (dm.ClassMirror classMirror in result) {
               dm.ClassMirror superclass = classMirror.superclass;
               // Go up the superclass chain until meeting a
               // non-mixin-application.
