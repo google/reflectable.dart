@@ -57,10 +57,6 @@ class ReflectableTransformer extends AggregateTransformer
     _entryPoints = _findEntryPoints(_settings.configuration['entry_points']);
   }
 
-  /// Declares by 'file extension' which files may be
-  /// transformed by this transformer.
-  String get allowedExtensions => ".dart";
-
   /// Return a [String] or [Future<String>] valued key for each
   /// primary asset that this transformer wishes to process, and
   /// null for assets that it wishes to ignore.  Primary assets
@@ -68,14 +64,16 @@ class ReflectableTransformer extends AggregateTransformer
   /// this transformer we handle the grouping later, so everything
   /// is in the same group.
   String classifyPrimary(AssetId id) {
-    if (!id.path.endsWith('.dart')) return null;
-    return "ReflectableTransformed";
+    return _entryPoints.any((entryPoint) => id.path.endsWith(entryPoint))
+        ? "ReflectableTransformed"
+        : null;
   }
 
   /// Performs the transformation.
+  @override
   Future apply(AggregateTransform transform) {
-    return new implementation.TransformerImplementation().apply(
-        transform, _entryPoints);
+    return new implementation.TransformerImplementation()
+        .apply(transform, _entryPoints);
   }
 
   @override
