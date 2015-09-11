@@ -218,7 +218,9 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
 
   // TODO(sigurdm) implement: Implement superInterfaces.
   List<ClassMirror> get superinterfaces {
-    return _superinterfaceIndices.map((int i) => _data.classMirrors[i]).toList();
+    return _superinterfaceIndices
+        .map((int i) => _data.classMirrors[i])
+        .toList();
   }
 
   // TODO(sigurdm) implement: Implement typeArguments.
@@ -1120,8 +1122,7 @@ abstract class ReflectableImpl extends ReflectableBase
   @override
   LibraryMirror findLibrary(String libraryName) {
     if (data[this].libraryMirrors == null) {
-      throw new NoSuchCapabilityError(
-          "Using 'findLibrary' without capability. "
+      throw new NoSuchCapabilityError("Using 'findLibrary' without capability. "
           "Try adding 'libraryCapability'.");
     }
     return data[this].libraryMirrors.singleWhere(

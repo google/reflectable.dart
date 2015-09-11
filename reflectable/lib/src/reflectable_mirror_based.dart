@@ -28,7 +28,8 @@ rm.ClassMirror wrapClassMirrorIfSupported(
     return new _FunctionTypeMirrorImpl(classMirror, reflectable);
   } else {
     assert(classMirror is dm.ClassMirror);
-    if (!reflectable._supportedClasses.contains(classMirror)) {
+    if (!reflectable._supportedClasses
+        .contains(classMirror.originalDeclaration)) {
       throw new NoSuchCapabilityError(
           "Reflecting on class '$classMirror' without capability");
     }
@@ -531,8 +532,8 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   List<rm.ClassMirror> get superinterfaces {
     List<dm.ClassMirror> superinterfaces = _classMirror.superinterfaces;
     return superinterfaces
-        .where((dm.ClassMirror superinterface) =>
-            (_reflectable._supportedClasses.contains(superinterface)))
+        .where((dm.ClassMirror superinterface) => (_reflectable
+            ._supportedClasses.contains(superinterface.originalDeclaration)))
         .map((dm.TypeMirror superinterface) {
       return wrapTypeMirror(superinterface, _reflectable);
     }).toList();
@@ -1237,7 +1238,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
       : super.fromList(capabilities);
 
   bool _canReflect(dm.InstanceMirror mirror) =>
-      _supportedClasses.contains(mirror.type);
+      _supportedClasses.contains(mirror.type.originalDeclaration);
 
   /// Determines whether reflection is supported for the given [o].
   @override
@@ -1253,7 +1254,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   }
 
   bool _canReflectType(dm.ClassMirror mirror) =>
-      _supportedClasses.contains(mirror);
+      _supportedClasses.contains(mirror.originalDeclaration);
 
   @override
   bool canReflectType(Type type) {
@@ -1318,8 +1319,8 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   /// (every subtype of each member of the set is added) if there is a
   /// `subtypeQuantifyCapability` in `capabilities`. In short, a given class
   /// C is supported by this [ReflectableImpl] iff
-  /// `this._supportedClasses.contains(m)`, where `m` is a [dm.ClassMirror]
-  /// on C.
+  /// `this._supportedClasses.contains(m.originalDeclaration)`, where `m`
+  /// is a [dm.ClassMirror] on C.
   Set<dm.ClassMirror> get _supportedClasses {
     // TODO(sigurdm) implement: This cache will break with deferred loading.
     return _supportedClassesCache.putIfAbsent(this, () {
@@ -1327,7 +1328,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
       List<RegExp> globalPatterns = new List<RegExp>();
       Set<Type> globalMetadataClasses = new Set<Type>();
 
-      // First gather all global quantifications that are annotations of
+      // Gather all global quantifications that are annotations of
       // imports of 'reflectable.reflectable'.
       for (dm.LibraryMirror library
           in dm.currentMirrorSystem().libraries.values) {
@@ -1351,8 +1352,8 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
         }
       }
 
-      // Iterate all classes to find those that are annotated, or match a
-      // global quantification.
+      // Find all classes that are annotated, as well as the ones that match
+      // a global quantification.
       for (dm.LibraryMirror library
           in dm.currentMirrorSystem().libraries.values) {
         declarationLoop: for (dm.DeclarationMirror declaration
@@ -1362,7 +1363,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
               if (metadatum.reflectee == this ||
                   globalMetadataClasses
                       .contains(metadatum.reflectee.runtimeType)) {
-                result.add(declaration);
+                result.add(declaration.originalDeclaration);
                 continue declarationLoop;
               }
             }
@@ -1370,7 +1371,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
                 dm.MirrorSystem.getName(declaration.qualifiedName);
             for (RegExp pattern in globalPatterns) {
               if (pattern.hasMatch(qualifiedName)) {
-                result.add(declaration);
+                result.add(declaration.originalDeclaration);
                 continue declarationLoop;
               }
             }
@@ -1378,7 +1379,8 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
         }
       }
 
-      // Check whether subtype quantification has been requested.
+      // If subtype quantification has been requested, extend `result` to
+      // be downwards closed.
       if (capabilities
           .any((capability) => capability == subtypeQuantifyCapability)) {
         // At least one [SubtypeQuantifyCapability] occurs, so we must
@@ -1389,10 +1391,10 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
           for (dm.DeclarationMirror declaration
               in library.declarations.values) {
             if (declaration is dm.ClassMirror) {
-              if (result.contains(declaration)) continue;
+              if (result.contains(declaration.originalDeclaration)) continue;
               for (dm.ClassMirror classMirror in result) {
                 if (declaration.isSubtypeOf(classMirror)) {
-                  subtypes.add(declaration);
+                  subtypes.add(declaration.originalDeclaration);
                   break;
                 }
               }
@@ -1402,77 +1404,94 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
         result.addAll(subtypes);
       }
 
+      // Perform a fixed point iteration to extend the `result` set of classes
+      // to include the transitive closure of certain related classes: The
+      // ones that are used as type annotations for variables and in method
+      // signatures, and the ones which are superclasses of already included
+      // classes (in both cases: when suitable capabilities are present).
+      // This comment pertains to the following declarations and the long `if`.
+
+      bool annotatedTypesRequested = impliesTypes(capabilities);
       bool upwardsClosureRequested = impliesUpwardsClosure(capabilities);
+
       List<dm.ClassMirror> upwardsClosureBounds =
           extractUpwardsClosureBounds(capabilities);
-
       Set<dm.ClassMirror> workingSet = new Set<dm.ClassMirror>.from(result);
+
+      bool includedByUpwardsClosure(dm.ClassMirror classMirror) {
+        if (upwardsClosureBounds.isEmpty) return true;
+        return upwardsClosureBounds
+            .any((dm.ClassMirror bound) => classMirror.isSubclassOf(bound));
+      }
+
+      // Overall approach in this fixed point iteration: The set `result`
+      // is the set of currently included classes and `workingSet` is the
+      // subset thereof for which there may exist immediate successors
+      // (type annotations or superclass) which need to be added. In each
+      // iteration the set `additionalClasses` starts out empty and the
+      // immediate successors of classes in `workingSet` are added to
+      // `additionalClasses`. At the end of each iteration, `additionalClasses`
+      // becomes the new `workingSet` and the old `workingSet` is added to
+      // `result`, i.e., we can terminate when `workingSet` is empty.
       while (workingSet.isNotEmpty) {
         Set<dm.ClassMirror> additionalClasses = new Set<dm.ClassMirror>();
 
-        void addClass(dm.ClassMirror c) {
-          if (!result.contains(c)) {
-            additionalClasses.add(c);
+        void addClass(dm.TypeMirror typeMirror) {
+          dm.TypeMirror original = typeMirror.originalDeclaration;
+          if (original is dm.ClassMirror && !result.contains(original)) {
+            additionalClasses.add(original);
           }
         }
 
         for (dm.ClassMirror workingClass in workingSet) {
-          if (impliesTypes(capabilities)) {
+          if (annotatedTypesRequested) {
             for (dm.DeclarationMirror declaration
                 in workingClass.declarations.values) {
-              if (declaration is dm.VariableMirror &&
-                  declaration.type is dm.ClassMirror) {
+              if (declaration is dm.VariableMirror) {
                 addClass(declaration.type);
               }
-              for (dm.DeclarationMirror declaration
-                  in workingClass.declarations.values) {
-                if (declaration is dm.MethodMirror) {
-                  for (dm.ParameterMirror parameter in declaration.parameters) {
-                    dm.TypeMirror type = parameter.type;
-                    if (type is dm.ClassMirror) {
-                      addClass(type);
-                    }
-                  }
-                  if (declaration.returnType is dm.ClassMirror) {
-                    addClass(declaration.returnType);
-                  }
+              if (declaration is dm.MethodMirror) {
+                for (dm.ParameterMirror parameter in declaration.parameters) {
+                  addClass(parameter.type);
                 }
+                addClass(declaration.returnType);
               }
             }
           }
 
           if (upwardsClosureRequested) {
-            // Add superclasses and mixins.
-            if (workingClass.superclass != null) {
-              if (upwardsClosureBounds.any((dm.ClassMirror bound) =>
-                  workingClass.superclass.isSubclassOf(bound))) {
-                addClass(workingClass.superclass);
-              }
-            }
-            if (workingClass.mixin != workingClass) {
-              if (upwardsClosureBounds.any((dm.ClassMirror bound) =>
-                  workingClass.mixin.isSubclassOf(bound))) {
-                addClass(workingClass.mixin);
+            // Add the superclass, whether or not it is a mixin application.
+            dm.ClassMirror superclass = workingClass.superclass;
+            if (superclass != null) {
+              if (includedByUpwardsClosure(superclass)) {
+                addClass(superclass);
+                // If it is a mixin application, try to add the origin (the
+                // class that provided the mixin) as well.
+                // TODO(eernst) clarify: Consider whether we should do this!
+                // Pro: If a mixin application is included then the natural
+                //   consequence would be that so is its origin.
+                // Con: For overall space frugality, we should not include
+                //   the origin unless it is explicitly requested.
+                if (superclass.mixin != superclass &&
+                    includedByUpwardsClosure(superclass.mixin)) {
+                  addClass(superclass.mixin);
+                }
               }
             }
           } else {
-            // Add mixin-applications if the extended class and all the mixins
-            // are annotated.
-            for (dm.ClassMirror classMirror in result) {
-              dm.ClassMirror superclass = classMirror.superclass;
-              // Go up the superclass chain until meeting a
-              // non-mixin-application.
-              while (superclass != null && superclass.mixin != superclass) {
-                if (result.contains(superclass.mixin)) {
-                  addClass(superclass);
-                }
-                superclass = superclass.superclass;
+            // Add mixin-applications as long as the extended class and
+            // each mixin is included.
+            dm.ClassMirror superclass = workingClass.superclass;
+            while (superclass != null && superclass.mixin != superclass) {
+              if (result.contains(superclass.mixin.originalDeclaration)) {
+                addClass(superclass);
               }
+              superclass = superclass.superclass;
             }
           }
-          result.addAll(additionalClasses);
-          workingSet = additionalClasses;
         }
+        result.addAll(additionalClasses);
+        workingSet = additionalClasses;
       }
 
       return result;

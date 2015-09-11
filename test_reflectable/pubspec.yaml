@@ -54,5 +54,6 @@ transformers:
       - test/default_values_test.dart
       - test/superinterfaces_test.dart
       - test/subtype_quantify_test.dart
+      - test/expanding_generics_test.dart
 - $dart2js:
     $include: []

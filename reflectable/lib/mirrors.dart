@@ -96,15 +96,16 @@
 
 library reflectable.mirrors;
 
-// Currently skip 'abstract class MirrorSystem'
+// Currently skip 'abstract class MirrorSystem': represented by reflectors.
 
-// Currently skip 'external MirrorSystem currentMirrorSystem'
+// Currently skip 'external MirrorSystem currentMirrorSystem': represented by
+// reflectors.
 
-// Currently skip 'external InstanceMirror reflect'
+// Omit 'external InstanceMirror reflect': method on reflectors.
 
-// Currently skip 'external ClassMirror reflectClass'
+// Currently skip 'external ClassMirror reflectClass'.
 
-// Currently skip 'external TypeMirror reflectType'
+// Omit 'external TypeMirror reflectType': method on reflectors.
 
 abstract class Mirror {}
 

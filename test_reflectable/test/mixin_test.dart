@@ -9,25 +9,27 @@ import "package:unittest/unittest.dart";
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(invokingCapability, declarationsCapability, libraryCapability);
+      : super(invokingCapability, declarationsCapability, libraryCapability,
+            typeCapability);
 }
 
 // Note the class `A` is not annotated by this.
 class Reflector2 extends Reflectable {
   const Reflector2()
-      : super(invokingCapability, libraryCapability, metadataCapability);
+      : super(invokingCapability, libraryCapability, metadataCapability,
+            typeCapability);
 }
 
 class ReflectorUpwardsClosed extends Reflectable {
   const ReflectorUpwardsClosed()
       : super(superclassQuantifyCapability, invokingCapability,
-            declarationsCapability);
+            declarationsCapability, typeCapability);
 }
 
 class ReflectorUpwardsClosedToA extends Reflectable {
   const ReflectorUpwardsClosedToA()
       : super(const SuperclassQuantifyCapability(A), invokingCapability,
-            declarationsCapability);
+            declarationsCapability, typeCapability);
 }
 
 @Reflector()
@@ -107,7 +109,7 @@ Matcher throwsANoSuchCapabilityException =
 main() {
   testReflector(const Reflector(), "each is annotated");
   testReflector(const ReflectorUpwardsClosed(), "upwards closed");
-  test("Mixin, superclass not supported", () {
+  test("Mixin, superclasses not included", () {
     var reflector2 = const Reflector2();
     ClassMirror bMirror = reflector2.reflectType(B);
     ClassMirror cMirror = reflector2.reflectType(C);
@@ -131,7 +133,7 @@ main() {
     expect(cMirror.superclass.mixin, m3Mirror);
     expect(cMirror.superclass.superclass.superclass, bMirror);
   });
-  test("Mixin, superclass supported with bound", () {
+  test("Mixin, superclasses included up to bound", () {
     var reflector = const ReflectorUpwardsClosedToA();
     ClassMirror aMirror = reflector.reflectType(A);
     ClassMirror bMirror = reflector.reflectType(B);
@@ -147,4 +149,3 @@ main() {
     expect(cMirror.superclass.superclass.superclass, bMirror);
   });
 }
-

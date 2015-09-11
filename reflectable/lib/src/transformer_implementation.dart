@@ -2478,6 +2478,18 @@ class MixinApplication implements ClassElement {
   @override
   InterfaceType get type => mixin.type;
 
+  @override
+  bool operator ==(Object object) {
+    return object is MixinApplication &&
+        superclass == object.superclass &&
+        mixin == object.mixin &&
+        library == object.library;
+  }
+
+  @override
+  int get hashCode =>
+      superclass.hashCode ^ mixin.hashCode ^ library.hashCode;
+
   _unImplemented() => throw new UnimplementedError();
 
   @override
