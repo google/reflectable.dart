@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.5
+
+* Support for return types of getters and setters.
+* Support for superTypeQuantifyCapability.
+* Fix bug in the mirror-based implementation's collection of classes that could
+  lead to infinite loops.
+* Fix bug related to generating code for `operator~` in the transformer.
+* Avoid crashing the transformer when an entry-point has no member named `main`
+
 ## 0.1.4
 
 * Support for subtype quantification in transformed code.
