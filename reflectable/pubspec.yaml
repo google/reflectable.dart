@@ -6,7 +6,7 @@ description: >
   improves the performance of (esp. dart2js) generated code.
 version: 0.1.5
 author: The Dart Team <dart@google.com>
-homepage: https://www.github.com/dart-lang/reflectable/reflectable
+homepage: https://www.github.com/dart-lang/reflectable
 environment:
   sdk: ">=1.8.0 <2.0.0"
 dependencies:

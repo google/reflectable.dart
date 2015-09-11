@@ -4,7 +4,7 @@ description: >
   and which are transformed by the transformer in that package.
 version: 0.1.5
 author: The Dart Team <dart@google.com>
-homepage: https://www.github.com/dart-lang/reflectable/test_reflectable
+homepage: https://www.github.com/dart-lang/reflectable
 dependencies:
   reflectable:
     path: ../reflectable
