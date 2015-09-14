@@ -337,7 +337,9 @@ class _ReflectorDomain {
             ClassElement mixinClass = mixin.element;
             if (isSubclassOfBounds(mixinClass)) addClass(mixinClass);
             ClassElement mixinApplication = new MixinApplication(
-                superclass, mixinClass, classElement.library);
+                superclass, mixinClass, classElement.library,
+                "${_qualifiedName(superclass)} with "
+                    "${_qualifiedName(mixinClass)}");
             // We have already ensured that `workingSuperclass` is a
             // subclass of a bound (if any); the value of `superclass` is
             // either `workingSuperclass` or one of its superclasses created
@@ -363,17 +365,21 @@ class _ReflectorDomain {
           // we skip it here.
           if (supertype == null) return;
           ClassElement superclass = supertype.element;
+          String superclassName  = _qualifiedName(superclass);
           classElement.mixins.forEach((InterfaceType mixin) {
             ClassElement mixinClass = mixin.element;
             if (classes._contains(mixinClass)) {
               ClassElement mixinApplication = new MixinApplication(
-                  superclass, mixinClass, classElement.library);
+                  superclass, mixinClass, classElement.library,
+                  "${superclassName} with "
+              "${_qualifiedName(mixinClass)}");
               addClass(mixinApplication);
               superclasses[mixinApplication] = superclass;
               superclass = mixinApplication;
             } else {
               superclass = null;
             }
+            superclassName = _qualifiedName(mixinClass);
           });
           superclasses[classElement] = superclass;
         });
@@ -660,7 +666,7 @@ class _ReflectorDomain {
       int classIndex = classes.indexOf(classElement);
 
       String result = 'new r.ClassMirrorImpl(r"${classDomain._simpleName}", '
-          'r"${classDomain._qualifiedName}", $classIndex, '
+          'r"${_qualifiedName(classElement)}", $classIndex, '
           '${_constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
@@ -897,9 +903,6 @@ class _ClassDomain {
       this._reflectorDomain);
 
   String get _simpleName => _classElement.name;
-  String get _qualifiedName {
-    return "${_classElement.library.name}.${_classElement.name}";
-  }
 
   /// Returns the declared methods, accessors and constructors in
   /// [_classElement]. Note that this includes synthetic getters and
@@ -933,17 +936,18 @@ class _ClassDomain {
       }
 
       if (classElement is MixinApplication) {
-        helper(classElement.superclass)
-            .forEach((String name, ExecutableElement member) {
-          addIfCapable(member);
-        });
+        if (classElement.superclass != null) {
+          helper(classElement.superclass)
+              .forEach((String name, ExecutableElement member) {
+            addIfCapable(member);
+          });
+        }
         helper(classElement.mixin)
             .forEach((String name, ExecutableElement member) {
           addIfCapable(member);
         });
         return result;
       }
-
       ClassElement superclass = (classElement.supertype != null)
           ? classElement.supertype.element
           : null;
@@ -2457,11 +2461,10 @@ class MixinApplication implements ClassElement {
   final ClassElement mixin;
 
   final LibraryElement library;
+  final String name;
 
-  MixinApplication(this.superclass, this.mixin, this.library);
+  MixinApplication(this.superclass, this.mixin, this.library, this.name);
 
-  String get name => "${superclass.library.name}.${superclass.name} with "
-      "${mixin.library.name}.${mixin.name}";
 
   @override
   List<InterfaceType> get interfaces => <InterfaceType>[];
@@ -2489,6 +2492,8 @@ class MixinApplication implements ClassElement {
   @override
   int get hashCode =>
       superclass.hashCode ^ mixin.hashCode ^ library.hashCode;
+
+  toString() => "MixinApplication($superclass, $mixin)";
 
   _unImplemented() => throw new UnimplementedError();
 
@@ -2676,4 +2681,8 @@ class MixinApplication implements ClassElement {
 
   @override
   void visitChildren(ElementVisitor visitor) => _unImplemented();
+}
+
+String _qualifiedName(ClassElement classElement) {
+  return "${classElement.library.name}.${classElement.name}";
 }
