@@ -1880,6 +1880,8 @@ main($args) {
   return original.main($args);
 }
 
+final _data = ${code};
+
 _initializeReflectable() {
   if (!isTransformed) {
     throw new UnsupportedError(
@@ -1887,7 +1889,7 @@ _initializeReflectable() {
         "reflectable package. Remember to set your package-root to "
         "'build/.../packages'.");
   }
-  r.data = ${code};
+  r.data = _data;
 }
 """;
   }

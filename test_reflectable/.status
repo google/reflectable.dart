@@ -9,5 +9,3 @@ test/mixin_application_static_invoke_test: RuntimeError # dartbug.com/24204
 
 [ $compiler == dart2js ]
 test/*_test: skip # Some needed mirror features not implemented by dart2js.
-build/test/mixin_test: crash # Bug in dart2js
-
