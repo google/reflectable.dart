@@ -12,7 +12,7 @@ import 'package:unittest/unittest.dart';
 import 'default_values_lib.dart' as prefix;
 
 class MyReflectable extends Reflectable {
-  const MyReflectable() : super(newInstanceCapability);
+  const MyReflectable() : super(newInstanceCapability, typeCapability);
 }
 
 const myReflectable = const MyReflectable();

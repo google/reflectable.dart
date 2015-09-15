@@ -8,11 +8,11 @@ import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
 
 class MyReflectable extends Reflectable {
-  const MyReflectable();
+  const MyReflectable(): super(typeCapability);
 }
 
 class MyReflectable2 extends Reflectable {
-  const MyReflectable2();
+  const MyReflectable2(): super(typeCapability);
 }
 
 @MyReflectable()

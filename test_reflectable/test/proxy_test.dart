@@ -14,6 +14,7 @@ class ProxyReflectable extends Reflectable {
   const ProxyReflectable()
       : super(instanceInvokeCapability, declarationsCapability);
 }
+
 const proxyReflectable = const ProxyReflectable();
 
 @proxyReflectable
@@ -44,10 +45,13 @@ Map<Symbol, Function> createMethodMap(Type T) {
   for (String name in declarations.keys) {
     DeclarationMirror declaration = declarations[name];
     if (declaration is MethodMirror) {
-      methodMapForT.putIfAbsent(new Symbol(name), () => (forwardee) {
-        InstanceMirror instanceMirror = proxyReflectable.reflect(forwardee);
-        return instanceMirror.invokeGetter(name);
-      });
+      methodMapForT.putIfAbsent(
+          new Symbol(name),
+          () => (forwardee) {
+                InstanceMirror instanceMirror =
+                    proxyReflectable.reflect(forwardee);
+                return instanceMirror.invokeGetter(name);
+              });
     }
   }
   return methodMapForT;

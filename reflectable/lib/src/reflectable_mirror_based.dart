@@ -3,8 +3,9 @@
 // the LICENSE file.
 
 // TODO(sigurdm) doc: Make NoSuchCapability messages streamlined (the same in
-// both `reflectable_mirror_based.dart` and `reflectable_transformer_based.dart`, and
-// explaining as well as possible which capability is missing.)
+// both `reflectable_mirror_based.dart` and
+// `reflectable_transformer_based.dart`, and explaining as well as possible
+// which capability is missing.)
 
 /// Implementation of the reflectable interface using dart mirrors.
 library reflectable.src.reflectable_implementation;
@@ -282,7 +283,7 @@ String _getterToSetter(String getterName) {
 
 bool _supportsType(List<ReflectCapability> capabilities) {
   return capabilities.any((ReflectCapability capability) =>
-      capability is TypeCapability || capabilities is TypingCapability);
+      capability is TypeCapability);
 }
 
 abstract class _ObjectMirrorImplMixin implements rm.ObjectMirror {
@@ -1253,24 +1254,40 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
         "Attempt to reflect on class '${o.runtimeType}' without capability");
   }
 
-  bool _canReflectType(dm.ClassMirror mirror) =>
-      _supportedClasses.contains(mirror.originalDeclaration);
+  bool get _supportsType {
+    return capabilities
+        .any((ReflectCapability capability) => capability is TypeCapability);
+  }
+
+  bool _canReflectType(dm.ClassMirror mirror) {
+    return _supportsType &&
+        _supportedClasses.contains(mirror.originalDeclaration);
+  }
 
   @override
   bool canReflectType(Type type) {
-    dm.TypeMirror mirror = dm.reflectType(type);
-    if (mirror is dm.ClassMirror) {
-      return _canReflectType(mirror);
+    dm.TypeMirror typeMirror = dm.reflectType(type);
+    if (typeMirror is dm.ClassMirror) {
+      return _canReflectType(typeMirror);
     } else {
       throw new UnimplementedError("Checking reflection support on a "
-          "currently unsupported kind of type: $mirror");
+          "currently unsupported kind of type: $typeMirror");
     }
   }
 
   @override
-  rm.ClassMirror reflectType(Type type) {
+  rm.TypeMirror reflectType(Type type) {
+    if (!_supportsType) {
+      throw new NoSuchCapabilityError(
+          "Reflecting on type $type without capability");
+    }
     dm.TypeMirror typeMirror = dm.reflectType(type);
-    return wrapClassMirrorIfSupported(typeMirror, this);
+    if (typeMirror is dm.ClassMirror) {
+      return wrapClassMirrorIfSupported(typeMirror, this);
+    } else {
+      throw new UnimplementedError("Checking reflection support on a "
+          "currently unsupported kind of type: $typeMirror");
+    }
   }
 
   bool get _supportsLibraries {

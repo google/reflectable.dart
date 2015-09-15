@@ -9,27 +9,25 @@ import "package:unittest/unittest.dart";
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(invokingCapability, declarationsCapability, libraryCapability,
-            typeCapability);
+      : super(invokingCapability, declarationsCapability, libraryCapability);
 }
 
 // Note the class `A` is not annotated by this.
 class Reflector2 extends Reflectable {
   const Reflector2()
-      : super(invokingCapability, libraryCapability, metadataCapability,
-            typeCapability);
+      : super(invokingCapability, metadataCapability, libraryCapability);
 }
 
 class ReflectorUpwardsClosed extends Reflectable {
   const ReflectorUpwardsClosed()
       : super(superclassQuantifyCapability, invokingCapability,
-            declarationsCapability, typeCapability);
+            declarationsCapability);
 }
 
 class ReflectorUpwardsClosedToA extends Reflectable {
   const ReflectorUpwardsClosedToA()
       : super(const SuperclassQuantifyCapability(A), invokingCapability,
-            declarationsCapability, typeCapability);
+            declarationsCapability);
 }
 
 @Reflector()

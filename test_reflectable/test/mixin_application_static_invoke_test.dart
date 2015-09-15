@@ -32,16 +32,16 @@ Matcher throwsANoSuchCapabilityException =
 
 main() {
   test("Mixin-application invoke", () {
-    expect(
-        () => const Reflector()
-            .reflectType(B)
-            .superclass
-            .invoke("staticFoo", [10]),
+    TypeMirror typeMirror = const Reflector().reflectType(B);
+    expect(typeMirror is ClassMirror, true);
+    ClassMirror classMirror = typeMirror;
+    expect(() => classMirror.superclass.invoke("staticFoo", [10]),
         throwsANoSuchCapabilityException);
   });
   test("Mixin-application static member", () {
-    expect(
-        const Reflector().reflectType(B).superclass.declarations["staticFoo"],
-        null);
+    TypeMirror typeMirror = const Reflector().reflectType(B);
+    expect(typeMirror is ClassMirror, true);
+    ClassMirror classMirror = typeMirror;
+    expect(classMirror.superclass.declarations["staticFoo"], null);
   });
 }

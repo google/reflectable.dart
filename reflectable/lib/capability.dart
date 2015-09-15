@@ -98,13 +98,26 @@ class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
 /// [namePattern] is used as a regular expression, and the name of
 /// each candidate member is tested: the member receives reflection
 /// support iff its name matches [namePattern].
-class StaticInvokeCapability extends NamePatternCapability {
+class StaticInvokeCapability extends NamePatternCapability
+    implements TypeCapability {
   const StaticInvokeCapability(String namePattern) : super(namePattern);
 }
 
 /// Short hand for `StaticInvokeCapability("")`, meaning the capability to
 /// reflect over all static members.
 const staticInvokeCapability = const StaticInvokeCapability("");
+
+/// Capability class requesting support for reflective invocation
+/// of static members (static methods, getters, and setters).
+/// The metadata associated with each candidate member declaration, is searched
+/// for objects with the given type (exact match). And that member declaration
+/// receives reflection support iff the search succeeds. Note that this
+/// capability implies [TypeCapability], because there is no way to
+/// perform a `newInstance` operation without class mirrors.
+class StaticInvokeMetaCapability extends MetadataQuantifiedCapability
+    implements TypeCapability {
+  const StaticInvokeMetaCapability(Type metadata) : super(metadata);
+}
 
 /// Capability class requesting support for reflective invocation
 /// of top-level members(top-level methods, getters, and setters). The given
@@ -129,21 +142,15 @@ class TopLevelInvokeMetaCapability extends MetadataQuantifiedCapability {
 }
 
 /// Capability class requesting support for reflective invocation
-/// of static members (static methods, getters, and setters).
-/// The metadata associated with each candidate member declaration, is searched
-/// for objects with the given type (exact match). And that member declaration
-/// receives reflection support iff the search succeeds.
-class StaticInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const StaticInvokeMetaCapability(Type metadata) : super(metadata);
-}
-
-/// Capability class requesting support for reflective invocation
 /// of constructors (of all kinds). The given [namePattern] is used
 /// as a regular expression, and the name of each candidate member
 /// is tested: the member receives reflection support iff its name
 /// matches [namePattern]. In this test, constructors whose name is
-/// empty are considered to have the name `new`.
-class NewInstanceCapability extends NamePatternCapability {
+/// empty are considered to have the name `new`. Note that this
+/// capability implies [TypeCapability], because there is no way to
+/// perform a `newInstance` operation without class mirrors.
+class NewInstanceCapability extends NamePatternCapability
+    implements TypeCapability {
   const NewInstanceCapability(String namePattern) : super(namePattern);
 }
 
@@ -155,8 +162,11 @@ const newInstanceCapability = const NewInstanceCapability("");
 /// of constructors (of all kinds).
 /// The metadata associated with each candidate member declaration, is searched
 /// for objects with the given type (exact match). And that member declaration
-/// receives reflection support iff the search succeeds.
-class NewInstanceMetaCapability extends MetadataQuantifiedCapability {
+/// receives reflection support iff the search succeeds. Note that this
+/// capability implies [TypeCapability], because there is no way to
+/// perform a `newInstance` operation without class mirrors.
+class NewInstanceMetaCapability extends MetadataQuantifiedCapability
+    implements TypeCapability {
   const NewInstanceMetaCapability(Type metadataType) : super(metadataType);
 }
 
@@ -183,41 +193,35 @@ const classifyCapability = const _ClassifyCapability();
 /// same reason as mentioned with [classifyCapability].
 const metadataCapability = const _MetadataCapability();
 
-/// Capability class requesting support for invocation of the
-/// method `reflectType` on instances of subclasses of `Recflectable`,
-/// and for invocation of the method `type` on instances of
-/// `InstanceMirror`. Note that without this, there is no need to support
-/// any kind of reflective operations producing mirrors of source code
-/// entities (that is, instances of `ClassMirror`, `MethodMirror`,
-/// `DeclarationMirror`, `LibraryMirror`, `LibraryDependencyMirror`,
-/// `CombinatorMirror`, `TypeMirror`, `FunctionTypeMirror`,
-/// `TypeVariableMirror`, `TypedefMirror`, `VariableMirror`, and
-/// `ParameterMirror`), which may reduce the space consumption
-/// significantly because the generation of those classes can be
-/// avoided entirely. The given [upperBound] is used to specify that
-/// the abovementioned mirror classes need only be generated for
-/// the classes which are subtypes of [upperBound], along with
-/// method mirrors for their methods and so on. The value [null] given
-/// as an [upperBound] is taken to mean the target class itself, i.e.,
-/// source code related mirrors are generated for a class that has a
-/// reflector (or which is included in a quantification with such a
-/// reflector), and not for any of its supertypes, unless they are
-/// themselves targets for a reflector which requests their type.
+/// Supertype of all capabilities requesting support for types. For the
+/// detailed semantics, please see the instance `typeCapability`, which is
+/// the capability that users of the package reflectable should use in case
+/// they wish to request the type capability alone. This class has been
+/// defined in order to equip a number of capabilities with a link to the
+/// type capability (by being subtypes of this class) such that the inclusion
+/// of one of them (e.g., `declarationsCapability`) automatically implies the
+/// latter (so a lone `declarationsCapability` will work exactly like the pair
+/// `declarationCapability, typeCapability`).
 class TypeCapability implements ApiReflectCapability {
-  final Type upperBound;
-  const TypeCapability(this.upperBound);
+  const TypeCapability();
 }
 
-/// Short hand using [Object] as the upper bound for the type
-/// capability, such that all mirror classes of all supertypes
-/// and their methods etc. are generated.
-const typeCapability = const TypeCapability(Object);
-
-/// Short hand using [null] as the upper bound for the type capability,
-/// such that only the mirror classes concerned with the source code of
-/// the target class itself are generated, but not any of the ones
-/// concerned with its supertypes.
-const localTypeCapability = const TypeCapability(null);
+/// Capability instance requesting support for invocation of the method
+/// `reflectType` on instances of subclasses of `Recflectable` (also
+/// known as a reflector) with an argument which is a class supported
+/// by that reflector, and for invocation of the method `type` on
+/// instances of `InstanceMirror`. Note that without this capability
+/// there is no need to support any kind of reflective operations
+/// producing mirrors of source code entities (that is, instances of
+/// `ClassMirror`, `MethodMirror`, `DeclarationMirror`, `LibraryMirror`,
+/// `LibraryDependencyMirror`, `CombinatorMirror`, `TypeMirror`,
+/// `FunctionTypeMirror`, `TypeVariableMirror`, `TypedefMirror`,
+/// `VariableMirror`, and `ParameterMirror`), which may reduce the space
+/// consumption significantly because generation of the associated code
+/// can be avoided. Note, however, that this capability will be included
+/// implicitly if one of the subtypes of `TypeCapability` is included
+/// (for instance, if `declarationsCapability` is included).
+const typeCapability = const TypeCapability();
 
 /// Capability instance requesting reflective support for the following
 /// mirror methods, coming from several mirror classes: `typeVariables`,
@@ -230,7 +234,7 @@ const localTypeCapability = const TypeCapability(null);
 /// as mentioned with [classifyCapability].
 const typeRelationsCapability = const _TypeRelationsCapability();
 
-/// Capability instance requesting reflective support for library-mirrors.
+/// Capability instance requesting reflective support for library mirrors.
 /// This will cause support for reflecting for all libraries containing
 /// annotated classes (enabling support for [ClassMirror.owner]), and all
 /// annotated libraries.
@@ -287,8 +291,9 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
 /// TypeCapability([UpperBound]), nameCapability, classifyCapability,
 /// metadataCapability, typeRelationsCapability, ownerCapability,
 /// declarationsCapability, uriCapability, and libraryDependenciesCapability.
-class TypingCapability extends TypeCapability
+class TypingCapability
     implements
+        TypeCapability, // Redundant, just included for readability.
         _NameCapability,
         _ClassifyCapability,
         _MetadataCapability,
@@ -296,7 +301,7 @@ class TypingCapability extends TypeCapability
         _DeclarationsCapability,
         _UriCapability,
         _LibraryDependenciesCapability {
-  const TypingCapability(Type upperBound) : super(upperBound);
+  const TypingCapability();
 }
 
 // ---------- Reflectee quantification oriented capability classes.
@@ -335,8 +340,7 @@ class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
 /// [Reflectable] which also holds this capability should be provided
 /// for all superclasses of the classes which carry that [Reflectable]
 /// as metadata.
-const superclassQuantifyCapability =
-    const SuperclassQuantifyCapability(Object);
+const superclassQuantifyCapability = const SuperclassQuantifyCapability(Object);
 
 /// Quantifying capability instance specifying that the reflection support
 /// requested by the [ApiReflectCapability] instances held by the same
@@ -401,19 +405,25 @@ class GlobalQuantifyMetaCapability extends ImportAttachedCapability {
 
 // ---------- Private classes used to enable capability instances above.
 
-class _NameCapability implements ApiReflectCapability {
+// TODO(eernst) clarify: This should be enforced or deleted,
+// where 'enforced' means that `..name..` related methods must fail with a
+// [NoSuchCapabilityError] if this capability is not present. This sounds
+// like a really strict approach for a very cheap feature, but there might
+// be reasons (maybe related to code obfuscation) for keeping the names out
+// of reach.
+class _NameCapability implements TypeCapability {
   const _NameCapability();
 }
 
-class _ClassifyCapability implements ApiReflectCapability {
+class _ClassifyCapability implements TypeCapability {
   const _ClassifyCapability();
 }
 
-class _MetadataCapability implements ApiReflectCapability {
+class _MetadataCapability implements TypeCapability {
   const _MetadataCapability();
 }
 
-class _TypeRelationsCapability implements ApiReflectCapability {
+class _TypeRelationsCapability implements TypeCapability {
   const _TypeRelationsCapability();
 }
 
@@ -423,14 +433,16 @@ class _LibraryCapability implements ApiReflectCapability {
   const _LibraryCapability();
 }
 
-class _DeclarationsCapability implements ApiReflectCapability {
+class _DeclarationsCapability implements TypeCapability {
   const _DeclarationsCapability();
 }
 
+// TODO(eernst) clarify: Should this "imply" LibraryCapability?
 class _UriCapability implements ApiReflectCapability {
   const _UriCapability();
 }
 
+// TODO(eernst) clarify: Should this "imply" LibraryCapability?
 class _LibraryDependenciesCapability implements ApiReflectCapability {
   const _LibraryDependenciesCapability();
 }

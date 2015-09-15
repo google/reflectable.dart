@@ -6,13 +6,13 @@ library test_reflectable.test.global_quantify_test;
 
 @GlobalQuantifyCapability(
     r"^test_reflectable.test.global_quantify_test.(A|B)$", reflector)
-@GlobalQuantifyMetaCapability(
-    Mark, reflector)
+@GlobalQuantifyMetaCapability(Mark, reflector)
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
 
 class Reflector extends Reflectable {
-  const Reflector() : super(const InstanceInvokeCapability("foo"));
+  const Reflector()
+      : super(typeCapability, const InstanceInvokeCapability("foo"));
 }
 
 const reflector = const Reflector();

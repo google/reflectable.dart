@@ -12,7 +12,7 @@ import 'package:unittest/unittest.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable()
-      : super(typeRelationsCapability, superclassQuantifyCapability);
+      : super(superclassQuantifyCapability, typeRelationsCapability);
 }
 
 const myReflectable = const MyReflectable();

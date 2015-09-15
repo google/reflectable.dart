@@ -526,6 +526,7 @@ class _ReflectorDomain {
     }
 
     int computeFieldTypeIndex(FieldElement element, int descriptor) {
+      if (!_capabilities._impliesTypes) return constants.NO_CAPABILITY_INDEX;
       return computeTypeIndexBase(
           element.type.element,
           false, // No field has type `void`.
@@ -534,6 +535,7 @@ class _ReflectorDomain {
     }
 
     int computeReturnTypeIndex(ExecutableElement element, int descriptor) {
+      if (!_capabilities._impliesTypes) return constants.NO_CAPABILITY_INDEX;
       int result = computeTypeIndexBase(
           element.returnType.element,
           descriptor & constants.voidReturnTypeAttribute != 0,
@@ -543,137 +545,145 @@ class _ReflectorDomain {
     }
 
     // Generate the class mirrors.
-    String classMirrorsCode = _formatAsList("m.ClassMirror",
-        classes.items.map((ClassElement classElement) {
-      _ClassDomain classDomain = _classMap[classElement];
+    String classMirrorsCode = "<m.ClassMirror>[]";
+    if (_capabilities._impliesTypes) {
+      classMirrorsCode = _formatAsList("m.ClassMirror",
+          classes.items.map((ClassElement classElement) {
+        _ClassDomain classDomain = _classMap[classElement];
 
-      // Fields go first in [memberMirrors], so they will get the
-      // same index as in [fields].
-      Iterable<int> fieldsIndices =
-          classDomain._declaredFields.map((FieldElement element) {
-        return fields.indexOf(element);
-      });
+        // Fields go first in [memberMirrors], so they will get the
+        // same index as in [fields].
+        Iterable<int> fieldsIndices =
+            classDomain._declaredFields.map((FieldElement element) {
+          return fields.indexOf(element);
+        });
 
-      // All the elements in the behavioral interface go after the
-      // fields in [memberMirrors], so they must get an offset of
-      // `fields.length` on the index.
-      Iterable<int> methodsIndices = classDomain._declarations
-          .where(_executableIsntImplicitGetterOrSetter)
-          .map((ExecutableElement element) {
-        // TODO(eernst) implement: The "magic" default constructor in `Object`
-        // (the one that ultimately allocates the memory for _every_ new object)
-        // has no index, which creates the need to catch a `null` here.
-        // Search for "magic" to find other occurrences of the same issue.
-        // For now, we provide the index [constants.NO_CAPABILITY_INDEX]
-        // for this declaration, because it is not yet supported.
-        // Need to find the correct solution, though!
-        int index = members.indexOf(element);
-        return index == null
-            ? constants.NO_CAPABILITY_INDEX
-            : index + fields.length;
-      });
+        // All the elements in the behavioral interface go after the
+        // fields in [memberMirrors], so they must get an offset of
+        // `fields.length` on the index.
+        Iterable<int> methodsIndices = classDomain._declarations
+            .where(_executableIsntImplicitGetterOrSetter)
+            .map((ExecutableElement element) {
+          // TODO(eernst) implement: The "magic" default constructor in `Object`
+          // (the one that ultimately allocates the memory for _every_ new
+          // object) has no index, which creates the need to catch a `null`
+          // here. Search for "magic" to find other occurrences of the same
+          // issue. For now, we use the index [constants.NO_CAPABILITY_INDEX]
+          // for this declaration, because it is not yet supported.
+          // Need to find the correct solution, though!
+          int index = members.indexOf(element);
+          return index == null
+              ? constants.NO_CAPABILITY_INDEX
+              : index + fields.length;
+        });
 
-      String declarationsCode = "<int>[${constants.NO_CAPABILITY_INDEX}]";
-      if (_capabilities._impliesDeclarations) {
-        List<int> declarationsIndices = <int>[]
-          ..addAll(fieldsIndices)
-          ..addAll(methodsIndices);
-        declarationsCode = _formatAsList("int", declarationsIndices);
-      }
+        String declarationsCode = "<int>[${constants
+                            .NO_CAPABILITY_INDEX}]";
+        if (_capabilities._impliesDeclarations) {
+          List<int> declarationsIndices = <int>[]
+            ..addAll(fieldsIndices)
+            ..addAll(methodsIndices);
+          declarationsCode = _formatAsList("int", declarationsIndices);
+        }
 
-      // All instance members belong to the behavioral interface, so they
-      // also get an offset of `fields.length`.
-      String instanceMembersCode = _formatAsList("int",
-          classDomain._instanceMembers.map((ExecutableElement element) {
-        // TODO(eernst) implement: The "magic" default constructor has
-        // index: NO_CAPABILITY_INDEX; adjust this when support for it has been
-        // implemented.
-        int index = members.indexOf(element);
-        return index == null
-            ? constants.NO_CAPABILITY_INDEX
-            : index + fields.length;
-      }));
-
-      // All static members belong to the behavioral interface, so they
-      // also get an offset of `fields.length`.
-      String staticMembersCode = _formatAsList("int",
-          classDomain._staticMembers.map((ExecutableElement element) {
-        int index = members.indexOf(element);
-        return index == null
-            ? constants.NO_CAPABILITY_INDEX
-            : index + fields.length;
-      }));
-
-      ClassElement superclass = superclasses[classElement];
-      // [Object]'s superclass is reported as `null`.
-      String superclassIndex = (classElement ==
-              resolver.getType('dart.core.Object'))
-          ? "null"
-          : (classes._contains(superclass))
-              ? "${classes.indexOf(superclass)}"
-              : "${constants.NO_CAPABILITY_INDEX}";
-
-      String constructorsCode;
-      if (classElement is MixinApplication ||
-          classDomain._classElement.isAbstract) {
-        constructorsCode = '{}';
-      } else {
-        constructorsCode = _formatAsMap(
-            classDomain._constructors.map((ConstructorElement constructor) {
-          String code = _constructorCode(constructor, importCollector);
-          return 'r"${constructor.name}": $code';
+        // All instance members belong to the behavioral interface, so they
+        // also get an offset of `fields.length`.
+        String instanceMembersCode = _formatAsList("int",
+            classDomain._instanceMembers.map((ExecutableElement element) {
+          // TODO(eernst) implement: The "magic" default constructor has
+          // index: NO_CAPABILITY_INDEX; adjust this when support for it has
+          // been implemented.
+          int index = members.indexOf(element);
+          return index == null
+              ? constants.NO_CAPABILITY_INDEX
+              : index + fields.length;
         }));
-      }
 
-      String staticGettersCode = _formatAsMap([
-        classDomain._declaredMethods
-            .where((ExecutableElement element) => element.isStatic),
-        classDomain._declaredAndImplicitAccessors.where(
-            (PropertyAccessorElement element) =>
-                element.isStatic && element.isGetter)
-      ].expand((x) => x).map((ExecutableElement element) =>
-          staticGettingClosure(classDomain._classElement, element.name)));
-      String staticSettersCode = _formatAsMap(classDomain
-          ._declaredAndImplicitAccessors
-          .where((PropertyAccessorElement element) =>
-              element.isStatic && element.isSetter)
-          .map((PropertyAccessorElement element) =>
-              staticSettingClosure(classDomain._classElement, element.name)));
+        // All static members belong to the behavioral interface, so they
+        // also get an offset of `fields.length`.
+        String staticMembersCode = _formatAsList("int",
+            classDomain._staticMembers.map((ExecutableElement element) {
+          int index = members.indexOf(element);
+          return index == null
+              ? constants.NO_CAPABILITY_INDEX
+              : index + fields.length;
+        }));
 
-      int mixinIndex = (classElement is MixinApplication)
-          ? classes.indexOf(classElement.mixin) ?? constants.NO_CAPABILITY_INDEX
-          : classes.indexOf(classElement);
+        ClassElement superclass = superclasses[classElement];
+        // [Object]'s superclass is reported as `null`.
+        String superclassIndex =
+            (classElement == resolver.getType('dart.core.Object'))
+                ? "null"
+                : (classes._contains(superclass))
+                    ? "${classes.indexOf(
+                            superclass)}"
+                    : "${constants
+                            .NO_CAPABILITY_INDEX}";
 
-      int ownerIndex = _capabilities.supportsLibraries
-          ? libraries.indexOf(classElement.library)
-          : constants.NO_CAPABILITY_INDEX;
+        String constructorsCode;
+        if (classElement is MixinApplication ||
+            classDomain._classElement.isAbstract) {
+          constructorsCode = '{}';
+        } else {
+          constructorsCode = _formatAsMap(
+              classDomain._constructors.map((ConstructorElement constructor) {
+            String code = _constructorCode(constructor, importCollector);
+            return 'r"${constructor.name}": $code';
+          }));
+        }
 
-      String superinterfaceIndices = _formatAsList(
-          'int',
-          classElement.interfaces
-              .map((InterfaceType type) => type.element)
-              .where(classes._contains)
-              .map(classes.indexOf));
+        String staticGettersCode = _formatAsMap([
+          classDomain._declaredMethods
+              .where((ExecutableElement element) => element.isStatic),
+          classDomain._declaredAndImplicitAccessors.where(
+              (PropertyAccessorElement element) =>
+                  element.isStatic && element.isGetter)
+        ].expand((x) => x).map((ExecutableElement element) =>
+            staticGettingClosure(classDomain._classElement, element.name)));
+        String staticSettersCode = _formatAsMap(classDomain
+            ._declaredAndImplicitAccessors
+            .where((PropertyAccessorElement element) =>
+                element.isStatic && element.isSetter)
+            .map((PropertyAccessorElement element) =>
+                staticSettingClosure(classDomain._classElement, element.name)));
 
-      String classMetadataCode;
-      if (_capabilities._supportsMetadata) {
-        classMetadataCode = _extractMetadataCode(classDomain._classElement,
-            resolver, importCollector, logger, dataId);
-      } else {
-        classMetadataCode = "null";
-      }
+        int mixinIndex = (classElement is MixinApplication)
+            ? classes.indexOf(classElement.mixin) ??
+                constants.NO_CAPABILITY_INDEX
+            : classes.indexOf(classElement);
 
-      int classIndex = classes.indexOf(classElement);
+        int ownerIndex = _capabilities.supportsLibraries
+            ? libraries.indexOf(classElement.library)
+            : constants.NO_CAPABILITY_INDEX;
 
-      String result = 'new r.ClassMirrorImpl(r"${classDomain._simpleName}", '
-          'r"${_qualifiedName(classElement)}", $classIndex, '
-          '${_constConstructionCode(importCollector)}, '
-          '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
-          '$superclassIndex, $staticGettersCode, $staticSettersCode, '
-          '$constructorsCode, $ownerIndex, $mixinIndex, '
-          '$superinterfaceIndices, $classMetadataCode)';
-      return result;
-    }));
+        String superinterfaceIndices = _formatAsList(
+            'int',
+            classElement.interfaces
+                .map((InterfaceType type) => type.element)
+                .where(classes._contains)
+                .map(classes.indexOf));
+
+        String classMetadataCode;
+        if (_capabilities._supportsMetadata) {
+          classMetadataCode = _extractMetadataCode(classDomain._classElement,
+              resolver, importCollector, logger, dataId);
+        } else {
+          classMetadataCode = "null";
+        }
+
+        int classIndex = classes.indexOf(classElement);
+
+        String result = 'new r.ClassMirrorImpl(r"${classDomain
+                            ._simpleName}", '
+            'r"${_qualifiedName(classElement)}", $classIndex, '
+            '${_constConstructionCode(importCollector)}, '
+            '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
+            '$superclassIndex, $staticGettersCode, $staticSettersCode, '
+            '$constructorsCode, $ownerIndex, $mixinIndex, '
+            '$superinterfaceIndices, $classMetadataCode)';
+        return result;
+      }));
+    }
 
     String gettersCode = _formatAsMap(instanceGetterNames.map(gettingClosure));
     String settersCode = _formatAsMap(instanceSetterNames.map(settingClosure));
@@ -1197,7 +1207,7 @@ class _Capabilities {
   }
 
   List<Element> get _upwardsClosureBounds {
-     List<Element> result = <Element>[];
+    List<Element> result = <Element>[];
     _capabilities.forEach((ec.ReflectCapability capability) {
       if (capability is ec.SuperclassQuantifyCapability) {
         // Note that `null` represents the [ClassElement] for `Object`,
@@ -1218,7 +1228,6 @@ class _Capabilities {
   }
 
   bool get _impliesTypes {
-    if (!_impliesDeclarations) return false;
     return _capabilities.any((ec.ReflectCapability capability) {
       return capability is ec.TypeCapability;
     });
@@ -1751,13 +1760,13 @@ class TransformerImplementation {
       case "NewInstanceMetaCapability":
         return new ec.NewInstanceMetaCapability(extractMetaData(constant));
       case "TypeCapability":
-        return new ec.TypeCapability(constant.fields["upperBound"].value);
+        return new ec.TypeCapability();
       case "InvokingCapability":
         return new ec.InvokingCapability(extractNamePattern(constant));
       case "InvokingMetaCapability":
         return new ec.NewInstanceMetaCapability(extractMetaData(constant));
       case "TypingCapability":
-        return new ec.TypingCapability(constant.fields["upperBound"].value);
+        return new ec.TypingCapability();
       case "_SubtypeQuantifyCapability":
         return ec.subtypeQuantifyCapability;
       case "SuperclassQuantifyCapability":
@@ -2490,8 +2499,7 @@ class MixinApplication implements ClassElement {
   }
 
   @override
-  int get hashCode =>
-      superclass.hashCode ^ mixin.hashCode ^ library.hashCode;
+  int get hashCode => superclass.hashCode ^ mixin.hashCode ^ library.hashCode;
 
   toString() => "MixinApplication($superclass, $mixin)";
 

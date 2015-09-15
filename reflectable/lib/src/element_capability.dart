@@ -50,13 +50,15 @@ class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
       : super(metadataType);
 }
 
-class StaticInvokeCapability extends NamePatternCapability {
+class StaticInvokeCapability extends NamePatternCapability
+    implements TypeCapability {
   const StaticInvokeCapability(String namePattern) : super(namePattern);
 }
 
 const staticInvokeCapability = const StaticInvokeCapability("");
 
-class StaticInvokeMetaCapability extends MetadataQuantifiedCapability {
+class StaticInvokeMetaCapability extends MetadataQuantifiedCapability
+    implements TypeCapability {
   const StaticInvokeMetaCapability(ClassElement metadataType)
       : super(metadataType);
 }
@@ -67,16 +69,18 @@ class TopLevelInvokeCapability extends NamePatternCapability {
 
 class TopLevelInvokeMetaCapability extends MetadataQuantifiedCapability {
   const TopLevelInvokeMetaCapability(ClassElement metadataType)
-  : super(metadataType);
+      : super(metadataType);
 }
 
-class NewInstanceCapability extends NamePatternCapability {
+class NewInstanceCapability extends NamePatternCapability
+    implements TypeCapability {
   const NewInstanceCapability(String namePattern) : super(namePattern);
 }
 
 const newInstanceCapability = const NewInstanceCapability("");
 
-class NewInstanceMetaCapability extends MetadataQuantifiedCapability {
+class NewInstanceMetaCapability extends MetadataQuantifiedCapability
+    implements TypeCapability {
   const NewInstanceMetaCapability(ClassElement metadataType)
       : super(metadataType);
 }
@@ -88,12 +92,10 @@ const classifyCapability = const _ClassifyCapability();
 const metadataCapability = const _MetadataCapability();
 
 class TypeCapability implements ApiReflectCapability {
-  final Element upperBound;
-  const TypeCapability(this.upperBound);
+  const TypeCapability();
 }
 
-// Note that `null` represents the [ClassElement] for `Object`.
-const typeCapability = const TypeCapability(null);
+const typeCapability = const TypeCapability();
 
 const typeRelationsCapability = const _TypeRelationsCapability();
 
@@ -123,8 +125,9 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
   const InvokingMetaCapability(ClassElement metadataType) : super(metadataType);
 }
 
-class TypingCapability extends TypeCapability
+class TypingCapability
     implements
+        TypeCapability, // Redundant, just included for readability.
         _NameCapability,
         _ClassifyCapability,
         _MetadataCapability,
@@ -132,7 +135,7 @@ class TypingCapability extends TypeCapability
         _DeclarationsCapability,
         _UriCapability,
         _LibraryDependenciesCapability {
-  const TypingCapability(Element upperBound) : super(upperBound);
+  const TypingCapability();
 }
 
 abstract class ReflecteeQuantifyCapability implements ReflectCapability {
@@ -147,8 +150,7 @@ class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
 }
 
 // Note that `null` represents the [ClassElement] for `Object`.
-const superclassQuantifyCapability =
-    const SuperclassQuantifyCapability(null);
+const superclassQuantifyCapability = const SuperclassQuantifyCapability(null);
 
 const admitSubtypeCapability = const _AdmitSubtypeCapability();
 
@@ -169,19 +171,19 @@ class GlobalQuantifyMetaCapability extends ImportAttachedCapability {
       : super(reflector);
 }
 
-class _NameCapability implements ApiReflectCapability {
+class _NameCapability implements TypeCapability {
   const _NameCapability();
 }
 
-class _ClassifyCapability implements ApiReflectCapability {
+class _ClassifyCapability implements TypeCapability {
   const _ClassifyCapability();
 }
 
-class _MetadataCapability implements ApiReflectCapability {
+class _MetadataCapability implements TypeCapability {
   const _MetadataCapability();
 }
 
-class _TypeRelationsCapability implements ApiReflectCapability {
+class _TypeRelationsCapability implements TypeCapability {
   const _TypeRelationsCapability();
 }
 
@@ -189,7 +191,7 @@ class _LibraryCapability implements ApiReflectCapability {
   const _LibraryCapability();
 }
 
-class _DeclarationsCapability implements ApiReflectCapability {
+class _DeclarationsCapability implements TypeCapability {
   const _DeclarationsCapability();
 }
 

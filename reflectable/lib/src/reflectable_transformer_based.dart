@@ -97,7 +97,14 @@ class ReflectorData {
   /// Returns `null` if the given class is not marked for reflection.
   ClassMirror classMirrorForType(Type type) {
     if (_typeToClassMirrorCache == null) {
-      _typeToClassMirrorCache = new Map.fromIterables(types, classMirrors);
+      if (classMirrors.isEmpty) {
+        // This is the case when the capabilities do not include a
+        // `TypeCapability`; it is also the case when there are no
+        // supported classes but even then we can do the following.
+        _typeToClassMirrorCache = <Type, ClassMirror>{};
+      } else {
+        _typeToClassMirrorCache = new Map.fromIterables(types, classMirrors);
+      }
     }
     return _typeToClassMirrorCache[type];
   }
@@ -133,8 +140,13 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   _InstanceMirrorImpl(this.reflectee, this._reflector) {
     _type = _data.classMirrorForType(reflectee.runtimeType);
     if (_type == null) {
-      throw new NoSuchCapabilityError(
-          "Reflecting on un-marked type '${reflectee.runtimeType}'");
+      // We may not have a `TypeCapability`, in which case we need to check
+      // whether there is support based on the stored types.
+      if (!_data.types.contains(reflectee.runtimeType)) {
+        // No chance: this is an instance of an unsupported type.
+        throw new NoSuchCapabilityError(
+            "Reflecting on un-marked type '${reflectee.runtimeType}'");
+      }
     }
   }
 
@@ -489,6 +501,7 @@ class LibraryMirrorImpl implements LibraryMirror {
 
   final Uri uri;
 
+  // TODO(eernst) clarify: `_unsupported()` means not yet implemented here?
   Map<String, DeclarationMirror> get declarations => _unsupported();
 
   @override
@@ -960,7 +973,7 @@ class ParameterMirrorImpl extends VariableMirrorBase
       int descriptor,
       int ownerIndex,
       ReflectableImpl reflectable,
-      classMirrorIndex,
+      int classMirrorIndex,
       List<Object> metadata,
       this.defaultValue)
       : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
@@ -1095,28 +1108,33 @@ abstract class ReflectableImpl extends ReflectableBase
       : super.fromList(capabilities);
 
   @override
-  InstanceMirror reflect(Object reflectee) {
-    return new _InstanceMirrorImpl(reflectee, this);
-  }
-
-  @override
   bool canReflect(Object reflectee) {
     return data[this].classMirrorForType(reflectee.runtimeType) != null;
   }
 
   @override
-  ClassMirror reflectType(Type type) {
-    ClassMirror result = data[this].classMirrorForType(type);
-    if (result == null) {
-      throw new NoSuchCapabilityError(
-          "Reflecting on type '$type' without capability");
-    }
-    return result;
+  InstanceMirror reflect(Object reflectee) {
+    return new _InstanceMirrorImpl(reflectee, this);
+  }
+
+  bool get _hasTypeCapability {
+    return capabilities
+        .any((ReflectCapability capability) => capability is TypeCapability);
   }
 
   @override
   bool canReflectType(Type type) {
-    return data[this].classMirrorForType(type) != null;
+    return _hasTypeCapability && data[this].classMirrorForType(type) != null;
+  }
+
+  @override
+  TypeMirror reflectType(Type type) {
+    ClassMirror result = data[this].classMirrorForType(type);
+    if (result == null || !_hasTypeCapability) {
+      throw new NoSuchCapabilityError(
+          "Reflecting on type '$type' without capability");
+    }
+    return result;
   }
 
   @override

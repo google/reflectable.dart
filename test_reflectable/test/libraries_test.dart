@@ -19,11 +19,12 @@ class MyReflectable extends Reflectable {
 
 class MyReflectable2 extends Reflectable {
   const MyReflectable2()
-      : super(libraryCapability, const TopLevelInvokeMetaCapability(Test));
+      : super(typeCapability, libraryCapability,
+            const TopLevelInvokeMetaCapability(Test));
 }
 
 class MyReflectable3 extends Reflectable {
-  const MyReflectable3() : super();
+  const MyReflectable3() : super(typeCapability);
 }
 
 const myReflectable = const MyReflectable();
