@@ -337,9 +337,7 @@ class _ReflectorDomain {
             ClassElement mixinClass = mixin.element;
             if (isSubclassOfBounds(mixinClass)) addClass(mixinClass);
             ClassElement mixinApplication = new MixinApplication(
-                superclass, mixinClass, classElement.library,
-                "${_qualifiedName(superclass)} with "
-                    "${_qualifiedName(mixinClass)}");
+                superclass, mixinClass, classElement.library);
             // We have already ensured that `workingSuperclass` is a
             // subclass of a bound (if any); the value of `superclass` is
             // either `workingSuperclass` or one of its superclasses created
@@ -365,14 +363,12 @@ class _ReflectorDomain {
           // we skip it here.
           if (supertype == null) return;
           ClassElement superclass = supertype.element;
-          String superclassName  = _qualifiedName(superclass);
+          String superclassName = _qualifiedName(superclass);
           classElement.mixins.forEach((InterfaceType mixin) {
             ClassElement mixinClass = mixin.element;
             if (classes._contains(mixinClass)) {
               ClassElement mixinApplication = new MixinApplication(
-                  superclass, mixinClass, classElement.library,
-                  "${superclassName} with "
-              "${_qualifiedName(mixinClass)}");
+                  superclass, mixinClass, classElement.library);
               addClass(mixinApplication);
               superclasses[mixinApplication] = superclass;
               superclass = mixinApplication;
@@ -632,20 +628,24 @@ class _ReflectorDomain {
           }));
         }
 
-        String staticGettersCode = _formatAsMap([
-          classDomain._declaredMethods
-              .where((ExecutableElement element) => element.isStatic),
-          classDomain._declaredAndImplicitAccessors.where(
-              (PropertyAccessorElement element) =>
-                  element.isStatic && element.isGetter)
-        ].expand((x) => x).map((ExecutableElement element) =>
-            staticGettingClosure(classDomain._classElement, element.name)));
-        String staticSettersCode = _formatAsMap(classDomain
-            ._declaredAndImplicitAccessors
-            .where((PropertyAccessorElement element) =>
-                element.isStatic && element.isSetter)
-            .map((PropertyAccessorElement element) =>
-                staticSettingClosure(classDomain._classElement, element.name)));
+        String staticGettersCode = "{}";
+        String staticSettersCode = "{}";
+        if (classElement is! MixinApplication) {
+          staticGettersCode = _formatAsMap([
+            classDomain._declaredMethods
+                .where((ExecutableElement element) => element.isStatic),
+            classDomain._declaredAndImplicitAccessors.where(
+                (PropertyAccessorElement element) =>
+                    element.isStatic && element.isGetter)
+          ].expand((x) => x).map((ExecutableElement element) =>
+              staticGettingClosure(classDomain._classElement, element.name)));
+          staticSettersCode = _formatAsMap(classDomain
+              ._declaredAndImplicitAccessors
+              .where((PropertyAccessorElement element) =>
+                  element.isStatic && element.isSetter)
+              .map((PropertyAccessorElement element) => staticSettingClosure(
+                  classDomain._classElement, element.name)));
+        }
 
         int mixinIndex = (classElement is MixinApplication)
             ? classes.indexOf(classElement.mixin) ??
@@ -673,8 +673,7 @@ class _ReflectorDomain {
 
         int classIndex = classes.indexOf(classElement);
 
-        String result = 'new r.ClassMirrorImpl(r"${classDomain
-                            ._simpleName}", '
+        String result = 'new r.ClassMirrorImpl(r"${classDomain._simpleName}", '
             'r"${_qualifiedName(classElement)}", $classIndex, '
             '${_constConstructionCode(importCollector)}, '
             '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
@@ -912,7 +911,21 @@ class _ClassDomain {
       this._constructors,
       this._reflectorDomain);
 
-  String get _simpleName => _classElement.name;
+  String get _simpleName {
+    List<InterfaceType> mixins = _classElement.mixins;
+    if (mixins == null || mixins.isEmpty) return _classElement.name;
+    ClassElement superclass = _classElement.supertype?.element;
+    String superclassName =
+        superclass == null ? "null" : _qualifiedName(superclass);
+    StringBuffer name = new StringBuffer(superclassName);
+    bool firstSeparator = true;
+    for (InterfaceType mixin in mixins) {
+      name.write(firstSeparator ? " with " : ", ");
+      name.write(_qualifiedName(mixin.element));
+      firstSeparator = false;
+    }
+    return name.toString();
+  }
 
   /// Returns the declared methods, accessors and constructors in
   /// [_classElement]. Note that this includes synthetic getters and
@@ -954,7 +967,7 @@ class _ClassDomain {
         }
         helper(classElement.mixin)
             .forEach((String name, ExecutableElement member) {
-          addIfCapable(member);
+          if (!member.isStatic) addIfCapable(member);
         });
         return result;
       }
@@ -1644,8 +1657,8 @@ class TransformerImplementation {
 
       for (CompilationUnitElement unit in library.units) {
         for (ClassElement type in unit.types) {
-          for (ClassElement reflector in getReflectors(
-              "${type.library.name}.${type.name}", type.metadata)) {
+          for (ClassElement reflector
+              in getReflectors(_qualifiedName(type), type.metadata)) {
             addClassDomain(type, reflector);
           }
         }
@@ -2472,10 +2485,19 @@ class MixinApplication implements ClassElement {
   final ClassElement mixin;
 
   final LibraryElement library;
-  final String name;
 
-  MixinApplication(this.superclass, this.mixin, this.library, this.name);
+  MixinApplication(this.superclass, this.mixin, this.library);
 
+  @override
+  String get name {
+    if (superclass == null) {
+      return "null with ${_qualifiedName(mixin)}";
+    } else if (superclass is MixinApplication) {
+      return "${superclass.name}, ${_qualifiedName(mixin)}";
+    } else {
+      return "${_qualifiedName(superclass)} with ${_qualifiedName(mixin)}";
+    }
+  }
 
   @override
   List<InterfaceType> get interfaces => <InterfaceType>[];
@@ -2487,10 +2509,23 @@ class MixinApplication implements ClassElement {
   bool get isSynthetic => true;
 
   @override
-  InterfaceType get supertype => superclass.type;
+  InterfaceType get supertype {
+    if (superclass is MixinApplication) return superclass.supertype;
+    return superclass?.type;
+  }
 
   @override
   InterfaceType get type => mixin.type;
+
+  @override
+  List<InterfaceType> get mixins {
+    List<InterfaceType> result = <InterfaceType>[];
+    if (superclass != null && superclass is MixinApplication) {
+      result.addAll(superclass.mixins);
+    }
+    result.add(mixin.type);
+    return result;
+  }
 
   @override
   bool operator ==(Object object) {
@@ -2551,9 +2586,6 @@ class MixinApplication implements ClassElement {
 
   @override
   List<MethodElement> get methods => _unImplemented();
-
-  @override
-  List<InterfaceType> get mixins => _unImplemented();
 
   @override
   List<TypeParameterElement> get typeParameters => _unImplemented();
@@ -2694,5 +2726,7 @@ class MixinApplication implements ClassElement {
 }
 
 String _qualifiedName(ClassElement classElement) {
-  return "${classElement.library.name}.${classElement.name}";
+  return classElement == null
+      ? "null"
+      : "${classElement.library.name}.${classElement.name}";
 }

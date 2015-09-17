@@ -146,4 +146,41 @@ main() {
         throwsANoSuchCapabilityException);
     expect(cMirror.superclass.superclass.superclass, bMirror);
   });
+  test("Mixin, naming", () {
+    var reflector2 = const Reflector2();
+    ClassMirror bMirror = reflector2.reflectType(B);
+    ClassMirror cMirror = reflector2.reflectType(C);
+    ClassMirror aWithM1Mirror = bMirror.superclass;
+    ClassMirror bWithM2Mirror = cMirror.superclass.superclass;
+    ClassMirror bWithM2WithM3Mirror = cMirror.superclass;
+    expect(
+        aWithM1Mirror.simpleName,
+        "test_reflectable.test.mixin_test.A with "
+        "test_reflectable.test.mixin_test.M1");
+    expect(
+        bWithM2Mirror.simpleName,
+        "test_reflectable.test.mixin_test.B with "
+        "test_reflectable.test.mixin_test.M2");
+    expect(
+        bWithM2WithM3Mirror.simpleName,
+        "test_reflectable.test.mixin_test.B with "
+        "test_reflectable.test.mixin_test.M2, "
+        "test_reflectable.test.mixin_test.M3");
+    expect(
+        aWithM1Mirror.qualifiedName,
+        "test_reflectable.test.mixin_test."
+        "test_reflectable.test.mixin_test.A with "
+        "test_reflectable.test.mixin_test.M1");
+    expect(
+        bWithM2Mirror.qualifiedName,
+        "test_reflectable.test.mixin_test."
+        "test_reflectable.test.mixin_test.B with "
+        "test_reflectable.test.mixin_test.M2");
+    expect(
+        bWithM2WithM3Mirror.qualifiedName,
+        "test_reflectable.test.mixin_test."
+        "test_reflectable.test.mixin_test.B with "
+        "test_reflectable.test.mixin_test.M2, "
+        "test_reflectable.test.mixin_test.M3");
+  });
 }
