@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0
+
+* Enforces the use of a `TypeCapability` as specified in the design document,
+  and makes it a supertype of several other capabilities such that it is
+  automatically included with, e.g., `declarationsCapability`.
+* Fixed homepage link in pubspec
+* Fix several bug with mixins in the transformer.
+* Add `excludeUpperBound` flag to `SuperClassQuantifyCapability`.
+* Use a static initializer in the generated code which helps avoiding a stack
+  overflow.
+
 ## 0.1.5
 
 * Support for return types of getters and setters.
