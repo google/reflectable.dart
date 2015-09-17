@@ -375,14 +375,12 @@ class _ReflectorDomain {
           ClassElement superclass = supertype.element;
           classElement.mixins.forEach((InterfaceType mixin) {
             ClassElement mixinClass = mixin.element;
-            if (classes._contains(mixinClass)) {
               ClassElement mixinApplication = new MixinApplication(
                   superclass, mixinClass, classElement.library);
-              addClass(mixinApplication);
               superclasses[mixinApplication] = superclass;
               superclass = mixinApplication;
-            } else {
-              superclass = null;
+            if (classes._contains(mixinClass)) {
+              addClass(mixinApplication);
             }
           });
           superclasses[classElement] = superclass;
@@ -967,12 +965,10 @@ class _ClassDomain {
       }
 
       if (classElement is MixinApplication) {
-        if (classElement.superclass != null) {
-          helper(classElement.superclass)
-              .forEach((String name, ExecutableElement member) {
-            addIfCapable(member);
-          });
-        }
+        helper(classElement.superclass)
+            .forEach((String name, ExecutableElement member) {
+          addIfCapable(member);
+        });
         helper(classElement.mixin)
             .forEach((String name, ExecutableElement member) {
           if (!member.isStatic) addIfCapable(member);
@@ -2514,9 +2510,7 @@ class MixinApplication implements ClassElement {
 
   @override
   String get name {
-    if (superclass == null) {
-      return "null with ${_qualifiedName(mixin)}";
-    } else if (superclass is MixinApplication) {
+    if (superclass is MixinApplication) {
       return "${superclass.name}, ${_qualifiedName(mixin)}";
     } else {
       return "${_qualifiedName(superclass)} with ${_qualifiedName(mixin)}";
