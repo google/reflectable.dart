@@ -332,7 +332,10 @@ const subtypeQuantifyCapability = const _SubtypeQuantifyCapability();
 /// subclass of the given [upperbound].
 class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
   final Type upperBound;
-  const SuperclassQuantifyCapability(this.upperBound);
+  final bool excludeUpperBound;
+  const SuperclassQuantifyCapability(this.upperBound,
+      {bool excludeUpperBound: false})
+      : excludeUpperBound = excludeUpperBound;
 }
 
 /// Quantifying capability class specifying that the reflection support

@@ -130,14 +130,19 @@ bool impliesUpwardsClosure(List<ReflectCapability> capabilities) {
       capability is SuperclassQuantifyCapability);
 }
 
-List<dm.ClassMirror> extractUpwardsClosureBounds(
+bool impliesMixins(List<ReflectCapability> capabilities) {
+  return capabilities.any(
+      (ReflectCapability capability) => capability == typeRelationsCapability);
+}
+
+Map<dm.ClassMirror, bool> extractUpwardsClosureBounds(
     List<ReflectCapability> capabilities) {
-  List<dm.ClassMirror> result = <dm.ClassMirror>[];
+  Map<dm.ClassMirror, bool> result = <dm.ClassMirror, bool>{};
   capabilities.forEach((ReflectCapability capability) {
     if (capability is SuperclassQuantifyCapability) {
       dm.TypeMirror typeMirror = dm.reflectType(capability.upperBound);
       if (typeMirror is dm.ClassMirror) {
-        result.add(typeMirror);
+        result[typeMirror] = capability.excludeUpperBound;
       } else {
         throw new ArgumentError("Unexpected kind of upper bound specified "
             "for a `SuperclassQuantifyCapability`: $typeMirror.");
@@ -1430,15 +1435,18 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
 
       bool annotatedTypesRequested = impliesTypes(capabilities);
       bool upwardsClosureRequested = impliesUpwardsClosure(capabilities);
+      bool mixinsRequested = impliesMixins(capabilities);
 
-      List<dm.ClassMirror> upwardsClosureBounds =
+      Map<dm.ClassMirror, bool> upwardsClosureBounds =
           extractUpwardsClosureBounds(capabilities);
       Set<dm.ClassMirror> workingSet = new Set<dm.ClassMirror>.from(result);
 
       bool includedByUpwardsClosure(dm.ClassMirror classMirror) {
         if (upwardsClosureBounds.isEmpty) return true;
-        return upwardsClosureBounds
-            .any((dm.ClassMirror bound) => classMirror.isSubclassOf(bound));
+        return upwardsClosureBounds.keys.any((dm.ClassMirror bound) {
+          return classMirror.isSubclassOf(bound) &&
+              (!upwardsClosureBounds[bound] || classMirror != bound);
+        });
       }
 
       // Overall approach in this fixed point iteration: The set `result`
@@ -1482,15 +1490,12 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
             if (superclass != null) {
               if (includedByUpwardsClosure(superclass)) {
                 addClass(superclass);
-                // If it is a mixin application, try to add the origin (the
-                // class that provided the mixin) as well.
-                // TODO(eernst) clarify: Consider whether we should do this!
-                // Pro: If a mixin application is included then the natural
-                //   consequence would be that so is its origin.
-                // Con: For overall space frugality, we should not include
-                //   the origin unless it is explicitly requested.
-                if (superclass.mixin != superclass &&
-                    includedByUpwardsClosure(superclass.mixin)) {
+                // If it is a mixin application, and classes providing mixins
+                // are included in general then add the class that provided
+                // the mixin. We do not consider the class that provided the
+                // mixin as a superclass itself, so we do not check
+                // `includedByUpwardsClosure`.
+                if (superclass.mixin != superclass && mixinsRequested) {
                   addClass(superclass.mixin);
                 }
               }

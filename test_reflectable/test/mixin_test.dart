@@ -21,13 +21,19 @@ class Reflector2 extends Reflectable {
 class ReflectorUpwardsClosed extends Reflectable {
   const ReflectorUpwardsClosed()
       : super(superclassQuantifyCapability, invokingCapability,
-            declarationsCapability);
+            declarationsCapability, typeRelationsCapability);
 }
 
 class ReflectorUpwardsClosedToA extends Reflectable {
   const ReflectorUpwardsClosedToA()
       : super(const SuperclassQuantifyCapability(A), invokingCapability,
             declarationsCapability);
+}
+
+class ReflectorUpwardsClosedUntilA extends Reflectable {
+  const ReflectorUpwardsClosedUntilA()
+      : super(const SuperclassQuantifyCapability(A, excludeUpperBound: true),
+            invokingCapability, declarationsCapability);
 }
 
 @Reflector()
@@ -67,6 +73,7 @@ class B extends A with M1 {}
 @Reflector2()
 @ReflectorUpwardsClosed()
 @ReflectorUpwardsClosedToA()
+@ReflectorUpwardsClosedUntilA()
 class C extends B with M2, M3 {}
 
 testReflector(Reflectable reflector, String desc) {
@@ -145,6 +152,22 @@ main() {
     expect(() => cMirror.superclass.superclass.mixin,
         throwsANoSuchCapabilityException);
     expect(cMirror.superclass.superclass.superclass, bMirror);
+  });
+  test("Mixin, superclasses included up to but not including bound", () {
+    var reflector = const ReflectorUpwardsClosedUntilA();
+    ClassMirror bMirror = reflector.reflectType(B);
+    ClassMirror cMirror = reflector.reflectType(C);
+    expect(() => reflector.reflectType(A), throwsANoSuchCapabilityException);
+    expect(() => reflector.reflectType(M1), throwsANoSuchCapabilityException);
+    expect(() => reflector.reflectType(M2), throwsANoSuchCapabilityException);
+    expect(() => reflector.reflectType(M3), throwsANoSuchCapabilityException);
+    expect(() => cMirror.superclass.mixin, throwsANoSuchCapabilityException);
+    expect(() => cMirror.superclass.superclass.mixin,
+        throwsANoSuchCapabilityException);
+    expect(cMirror.superclass.superclass.superclass, bMirror);
+    expect(cMirror.superclass.superclass.superclass.superclass != null, true);
+    expect(() => cMirror.superclass.superclass.superclass.superclass.superclass,
+        throwsANoSuchCapabilityException);
   });
   test("Mixin, naming", () {
     var reflector2 = const Reflector2();

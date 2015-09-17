@@ -305,16 +305,23 @@ class _ReflectorDomain {
       }
 
       if (_capabilities._impliesUpwardsClosure) {
-        List<Element> upperBounds = _capabilities._upwardsClosureBounds;
+        Map<Element, bool> upperBounds = _capabilities._upwardsClosureBounds;
 
         bool isSubclassOfBounds(ClassElement classElement) {
-          bool isSuperclassOfClassElement(ClassElement bound) {
-            if (classElement == bound) return true;
-            if (classElement.supertype == null) return false;
-            return isSubclassOfBounds(classElement.supertype.element);
+          bool isSubclassHelper(ClassElement classElement, bool direct) {
+            bool isSuperclassOfClassElement(ClassElement bound) {
+              if (classElement == bound) {
+                // If `!direct` then the desired subclass relation exists.
+                // If `direct` then the original `classElement` is equal to
+                // `bound`, so we must return false if `excludeUpperBound`.
+                return !direct || !upperBounds[bound];
+              }
+              if (classElement.supertype == null) return false;
+              return isSubclassHelper(classElement.supertype.element, false);
+            }
+            return upperBounds.keys.any(isSuperclassOfClassElement);
           }
-          return upperBounds.isEmpty ||
-              upperBounds.any(isSuperclassOfClassElement);
+          return upperBounds.isEmpty || isSubclassHelper(classElement, true);
         }
 
         workingSetOfClasses.forEach((ClassElement classElement) {
@@ -326,7 +333,8 @@ class _ReflectorDomain {
           ClassElement workingSuperclass = workingSuperType.element;
 
           if (!isSubclassOfBounds(classElement)) return;
-          if (!classes._contains(workingSuperclass)) {
+          if (isSubclassOfBounds(workingSuperclass) &&
+              !classes._contains(workingSuperclass)) {
             addClass(workingSuperclass);
           }
 
@@ -335,7 +343,9 @@ class _ReflectorDomain {
           ClassElement superclass = workingSuperclass;
           classElement.mixins.forEach((InterfaceType mixin) {
             ClassElement mixinClass = mixin.element;
-            if (isSubclassOfBounds(mixinClass)) addClass(mixinClass);
+            if (_capabilities._impliesMixins) {
+              addClass(mixinClass);
+            }
             ClassElement mixinApplication = new MixinApplication(
                 superclass, mixinClass, classElement.library);
             // We have already ensured that `workingSuperclass` is a
@@ -363,7 +373,6 @@ class _ReflectorDomain {
           // we skip it here.
           if (supertype == null) return;
           ClassElement superclass = supertype.element;
-          String superclassName = _qualifiedName(superclass);
           classElement.mixins.forEach((InterfaceType mixin) {
             ClassElement mixinClass = mixin.element;
             if (classes._contains(mixinClass)) {
@@ -375,7 +384,6 @@ class _ReflectorDomain {
             } else {
               superclass = null;
             }
-            superclassName = _qualifiedName(mixinClass);
           });
           superclasses[classElement] = superclass;
         });
@@ -1210,24 +1218,39 @@ class _Capabilities {
         capability == ec.metadataCapability);
   }
 
-  // Returns [true] iff these [Capabilities] specify reflection support where
-  // the set of included classes must be upwards closed, i.e., extra classes
-  // must be added beyond the ones that are directly included as reflectable
-  // because we must support operations like `superclass`.
+  /// Returns [true] iff these [Capabilities] specify reflection support where
+  /// the set of included classes must be upwards closed, i.e., extra classes
+  /// must be added beyond the ones that are directly included as reflectable
+  /// because we must support operations like `superclass`.
   bool get _impliesUpwardsClosure {
     return _capabilities.any((ec.ReflectCapability capability) =>
         capability is ec.SuperclassQuantifyCapability);
   }
 
-  List<Element> get _upwardsClosureBounds {
-    List<Element> result = <Element>[];
+  /// Returns [true] iff these [Capabilities] specify that classes which have
+  /// been used for mixin application for an included class must themselves
+  /// be included (if you have `class B extends A with M ..` then the class `M`
+  /// will be included if `_impliesMixins`).
+  bool get _impliesMixins {
+    return _capabilities.any((ec.ReflectCapability capability) =>
+        capability == ec.typeRelationsCapability);
+  }
+
+  /// Maps each upper bound specified for the upwards closure to whether the
+  /// bound itself is excluded, as indicated by `excludeUpperBound` in the
+  /// corresponding capability. Intended usage: the `keys` of this map
+  /// provides a listing of the upper bounds, and the map itself may then
+  /// be consulted for each key (`if (myClosureBounds[key]) ..`) in order to
+  /// take `excludeUpperBound` into account.
+  Map<Element, bool> get _upwardsClosureBounds {
+    Map<Element, bool> result = <Element, bool>{};
     _capabilities.forEach((ec.ReflectCapability capability) {
       if (capability is ec.SuperclassQuantifyCapability) {
         // Note that `null` represents the [ClassElement] for `Object`,
         // which does not need to be included because it represents the
         // constraint which is always satisfied.
         if (capability.upperBound != null) {
-          result.add(capability.upperBound);
+          result[capability.upperBound] = capability.excludeUpperBound;
         }
       }
     });
@@ -1784,7 +1807,8 @@ class TransformerImplementation {
         return ec.subtypeQuantifyCapability;
       case "SuperclassQuantifyCapability":
         return new ec.SuperclassQuantifyCapability(
-            constant.fields["upperBound"].value);
+            constant.fields["upperBound"].value,
+            excludeUpperBound: constant.fields["excludeUpperBound"].value);
       case "AdmitSubtypeCapability":
         // TODO(eernst) feature:
         throw new UnimplementedError("$classElement not yet supported!");

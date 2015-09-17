@@ -146,7 +146,10 @@ const subtypeQuantifyCapability = const _SubtypeQuantifyCapability();
 
 class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
   final Element upperBound;
-  const SuperclassQuantifyCapability(this.upperBound);
+  final bool excludeUpperBound;
+  const SuperclassQuantifyCapability(this.upperBound,
+      {bool excludeUpperBound: false})
+      : excludeUpperBound = excludeUpperBound;
 }
 
 // Note that `null` represents the [ClassElement] for `Object`.
