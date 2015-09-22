@@ -120,9 +120,9 @@ dm.TypeMirror unwrapTypeMirror(rm.TypeMirror TypeMirror) {
 /// [capability].
 bool metadataSupported(
     List<dm.InstanceMirror> metadata, MetadataQuantifiedCapability capability) {
-  return metadata
-      .map((dm.InstanceMirror x) => x.reflectee.runtimeType)
-      .contains(capability.metadataType);
+  return metadata.map((dm.InstanceMirror x) => x.type).any(
+      (dm.ClassMirror classMirror) =>
+          classMirror.isSubtypeOf(dm.reflectType(capability.metadataType)));
 }
 
 bool impliesUpwardsClosure(List<ReflectCapability> capabilities) {
@@ -287,8 +287,8 @@ String _getterToSetter(String getterName) {
 }
 
 bool _supportsType(List<ReflectCapability> capabilities) {
-  return capabilities.any((ReflectCapability capability) =>
-      capability is TypeCapability);
+  return capabilities
+      .any((ReflectCapability capability) => capability is TypeCapability);
 }
 
 abstract class _ObjectMirrorImplMixin implements rm.ObjectMirror {

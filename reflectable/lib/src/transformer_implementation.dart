@@ -1082,9 +1082,9 @@ class _Capabilities {
   bool _supportsMeta(ec.MetadataQuantifiedCapability capability,
       Iterable<DartObject> metadata) {
     if (metadata == null) return false;
-    return metadata
-        .map((DartObject o) => o.type.element)
-        .contains(capability.metadataType);
+    return metadata.map((DartObject o) => o.type).any(
+        (InterfaceType interfaceType) =>
+            interfaceType.isSubtypeOf(capability.metadataType.type));
   }
 
   bool _supportsInstanceInvoke(List<ec.ReflectCapability> capabilities,
