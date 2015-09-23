@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1
+
+* Recognize private identifier constants as metadata in certain cases.
+* Bump required SDK version in `pubspec.yaml`.
+* Correct generation of imports of the original entry point.
+* Fix issues with the computation of static members.
+* Allows the metadata capabilities to recognize any subtype of the given type.
+
 ## 0.2.0
 
 * Enforces the use of a `TypeCapability` as specified in the design document,
