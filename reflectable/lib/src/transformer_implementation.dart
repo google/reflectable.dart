@@ -103,9 +103,6 @@ class _ReflectorDomain {
   Map<ClassElement, Map<String, ExecutableElement>> _instanceMemberCache =
       new Map<ClassElement, Map<String, ExecutableElement>>();
 
-  Map<ClassElement, Map<String, ExecutableElement>> _staticMemberCache =
-      new Map<ClassElement, Map<String, ExecutableElement>>();
-
   /// Returns a string that evaluates to a closure invoking [constructor] with
   /// the given arguments.
   /// [importCollector] is used to record all the imports needed to make the
@@ -375,10 +372,10 @@ class _ReflectorDomain {
           ClassElement superclass = supertype.element;
           classElement.mixins.forEach((InterfaceType mixin) {
             ClassElement mixinClass = mixin.element;
-              ClassElement mixinApplication = new MixinApplication(
-                  superclass, mixinClass, classElement.library);
-              superclasses[mixinApplication] = superclass;
-              superclass = mixinApplication;
+            ClassElement mixinApplication = new MixinApplication(
+                superclass, mixinClass, classElement.library);
+            superclasses[mixinApplication] = superclass;
+            superclass = mixinApplication;
             if (classes._contains(mixinClass)) {
               addClass(mixinApplication);
             }
@@ -952,7 +949,8 @@ class _ClassDomain {
       }
       Map<String, ExecutableElement> result =
           new Map<String, ExecutableElement>();
-      void addIfCapable(ExecutableElement member) {
+
+      void addIfCapable(String name, ExecutableElement member) {
         if (member.isPrivate) return;
         // If [member] is a synthetic accessor created from a field, search for
         // the metadata on the original field.
@@ -960,42 +958,32 @@ class _ClassDomain {
             member.isSynthetic) ? member.variable.metadata : member.metadata;
         if (_reflectorDomain._capabilities
             .supportsInstanceInvoke(member.name, metadata)) {
-          result[member.name] = member;
+          result[name] = member;
+        }
+      }
+
+      void addTypeIfCapable(InterfaceType type) {
+        helper(type.element).forEach(addIfCapable);
+      }
+
+      void addIfCapableConcreteInstance(ExecutableElement member) {
+        if (!member.isAbstract && !member.isStatic) {
+          addIfCapable(member.name, member);
         }
       }
 
       if (classElement is MixinApplication) {
-        helper(classElement.superclass)
-            .forEach((String name, ExecutableElement member) {
-          addIfCapable(member);
-        });
-        helper(classElement.mixin)
-            .forEach((String name, ExecutableElement member) {
-          if (!member.isStatic) addIfCapable(member);
-        });
+        helper(classElement.superclass).forEach(addIfCapable);
+        helper(classElement.mixin).forEach(addIfCapable);
         return result;
       }
-      ClassElement superclass = (classElement.supertype != null)
-          ? classElement.supertype.element
-          : null;
-      if (superclass != null) {
-        helper(superclass).forEach((String name, ExecutableElement member) {
-          addIfCapable(member);
-        });
-      }
-      for (InterfaceType mixin in classElement.mixins) {
-        helper(mixin.element).forEach((String name, ExecutableElement member) {
-          addIfCapable(member);
-        });
-      }
-      for (MethodElement member in classElement.methods) {
-        if (member.isAbstract || member.isStatic) continue;
-        addIfCapable(member);
-      }
-      for (PropertyAccessorElement member in classElement.accessors) {
-        if (member.isAbstract || member.isStatic) continue;
-        addIfCapable(member);
-      }
+      ClassElement superclass = classElement.supertype?.element;
+      if (superclass != null) helper(superclass).forEach(addIfCapable);
+      classElement.mixins.forEach(addTypeIfCapable);
+      classElement.methods.forEach(addIfCapableConcreteInstance);
+      classElement.accessors.forEach(addIfCapableConcreteInstance);
+      _reflectorDomain._instanceMemberCache[classElement] =
+          new Map.unmodifiable(result);
       return result;
     }
 
@@ -1015,41 +1003,33 @@ class _ClassDomain {
 
   /// Finds all static members.
   Iterable<ExecutableElement> get _staticMembers {
-    Map<String, ExecutableElement> helper(ClassElement classElement) {
-      if (_reflectorDomain._staticMemberCache[classElement] != null) {
-        return _reflectorDomain._staticMemberCache[classElement];
-      }
-      if (classElement is MixinApplication) {
-        return new Map<String, ExecutableElement>();
-      }
+    List<ExecutableElement> result = <ExecutableElement>[];
+    if (_classElement is MixinApplication) return result;
 
-      Map<String, ExecutableElement> result =
-          new Map<String, ExecutableElement>();
-
-      void addIfCapable(ExecutableElement member) {
-        if (member.isPrivate) return;
-        // If [member] is a synthetic accessor created from a field, search for
-        // the metadata on the original field.
-        List<ElementAnnotation> metadata = (member is PropertyAccessorElement &&
-            member.isSynthetic) ? member.variable.metadata : member.metadata;
-        if (_reflectorDomain._capabilities
-            .supportsInstanceInvoke(member.name, metadata)) {
-          result[member.name] = member;
-        }
+    void possiblyAddMethod(MethodElement method) {
+      if (method.isStatic &&
+          !method.isPrivate &&
+          _reflectorDomain._capabilities
+              .supportsStaticInvoke(method.name, method.metadata)) {
+        result.add(method);
       }
-
-      for (MethodElement member in classElement.methods) {
-        if (member.isAbstract || !member.isStatic) continue;
-        addIfCapable(member);
-      }
-      for (PropertyAccessorElement member in classElement.accessors) {
-        if (member.isAbstract || !member.isStatic) continue;
-        addIfCapable(member);
-      }
-      return result;
     }
 
-    return helper(_classElement).values;
+    void possiblyAddAccessor(PropertyAccessorElement accessor) {
+      if (!accessor.isStatic || accessor.isPrivate) return;
+      // If [member] is a synthetic accessor created from a field, search for
+      // the metadata on the original field.
+      List<ElementAnnotation> metadata =
+          accessor.isSynthetic ? accessor.variable.metadata : accessor.metadata;
+      if (_reflectorDomain._capabilities
+          .supportsStaticInvoke(accessor.name, metadata)) {
+        result.add(accessor);
+      }
+    }
+
+    _classElement.methods.forEach(possiblyAddMethod);
+    _classElement.accessors.forEach(possiblyAddAccessor);
+    return result;
   }
 
   String toString() {

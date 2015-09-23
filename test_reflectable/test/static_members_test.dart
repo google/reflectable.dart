@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 // File being transformed by the reflectable transformer.
-// Uses `reflect`.
+// Uses `staticMembers` to access a static const variable.
 
 library test_reflectable.test.reflect_test;
 
@@ -11,17 +11,20 @@ import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 
 class MyReflectable extends Reflectable {
-  const MyReflectable();
+  const MyReflectable() : super(staticInvokeCapability);
 }
 
 const myReflectable = const MyReflectable();
 
 @myReflectable
-class A {}
+class A {
+  static const List<String> foo = const ["apple"];
+}
 
 main() {
-  test('reflect', () {
-    InstanceMirror instanceMirror = myReflectable.reflect(new A());
-    expect(instanceMirror == null, isFalse);
+  ClassMirror classMirror = myReflectable.reflectType(A);
+  test('Static members', () {
+    expect(classMirror.staticMembers.length, 1);
+    expect(classMirror.staticMembers['foo'], isNotNull);
   });
 }

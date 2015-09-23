@@ -58,5 +58,6 @@ transformers:
       - test/expanding_generics_test.dart
       - test/mixin_static_const_test.dart
       - test/metadata_subtype_test.dart
+      - test/static_members_test.dart
 - $dart2js:
     $include: []
