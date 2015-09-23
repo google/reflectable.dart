@@ -22,9 +22,12 @@ import 'transformer_errors.dart' as errors;
 class ReflectionWorld {
   final List<_ReflectorDomain> reflectors = new List<_ReflectorDomain>();
   final LibraryElement reflectableLibrary;
-  final _ImportCollector importCollector = new _ImportCollector();
+  final LibraryElement entryPointLibrary;
+  final _ImportCollector importCollector;
 
-  ReflectionWorld(this.reflectableLibrary);
+  ReflectionWorld(this.reflectableLibrary, LibraryElement entryPointLibrary)
+      : this.entryPointLibrary = entryPointLibrary,
+        importCollector = new _ImportCollector();
 
   Iterable<_ReflectorDomain> reflectorsOfLibrary(LibraryElement library) {
     return reflectors.where((_ReflectorDomain domain) {
@@ -112,8 +115,8 @@ class _ReflectorDomain {
   /// For example for a constructor Foo(x, {y: 3}):
   /// returns "(x, {y: 3}) => new prefix1.Foo(x, y)", and records an import of
   /// the library of `Foo` associated with prefix1 in [importCollector].
-  String _constructorCode(
-      ConstructorElement constructor, _ImportCollector importCollector) {
+  String _constructorCode(ConstructorElement constructor,
+      _ImportCollector importCollector, TransformLogger logger) {
     FunctionType type = constructor.type;
 
     int requiredPositionalCount = type.normalParameterTypes.length;
@@ -139,7 +142,7 @@ class _ReflectorDomain {
         defaultValueCode = " = ${_extractConstantCode(
             parameterNode.defaultValue,
             parameterElement.library,
-            importCollector)}";
+            importCollector, logger)}";
       }
       return "${parameterNames[requiredPositionalCount + i]}"
           "$defaultValueCode";
@@ -160,7 +163,7 @@ class _ReflectorDomain {
         defaultValueCode = ": ${_extractConstantCode(
             parameterNode.defaultValue,
             parameterElement.library,
-            importCollector)}";
+            importCollector, logger)}";
       }
       return "${namedParameterNames[i]}$defaultValueCode";
     }).join(", ");
@@ -626,7 +629,8 @@ class _ReflectorDomain {
         } else {
           constructorsCode = _formatAsMap(
               classDomain._constructors.map((ConstructorElement constructor) {
-            String code = _constructorCode(constructor, importCollector);
+            String code =
+                _constructorCode(constructor, importCollector, logger);
             return 'r"${constructor.name}": $code';
           }));
         }
@@ -829,8 +833,8 @@ class _ReflectorDomain {
       String defaultValueCode = "null";
       if (parameterNode is DefaultFormalParameter &&
           parameterNode.defaultValue != null) {
-        defaultValueCode = _extractConstantCode(
-            parameterNode.defaultValue, element.library, importCollector);
+        defaultValueCode = _extractConstantCode(parameterNode.defaultValue,
+            element.library, importCollector, logger);
       }
       return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, ${_constConstructionCode(importCollector)}, '
@@ -1541,10 +1545,15 @@ class TransformerImplementation {
   }
 
   /// Returns a [ReflectionWorld] instantiated with all the reflectors seen by
-  /// [resolver] and all classes annotated by them.
-  ReflectionWorld _computeWorld(
-      LibraryElement reflectableLibrary, AssetId dataId) {
-    ReflectionWorld world = new ReflectionWorld(reflectableLibrary);
+  /// [_resolver] and all classes annotated by them. The [reflectableLibrary]
+  /// must be the element representing 'package:reflectable/reflectable.dart',
+  /// the [entryPoint] must be the element representing the entry point under
+  /// transformation, and [dataId] must represent the entry point as well,
+  /// and it is used to decide whether it is possible to import other libraries
+  /// from the entry point.
+  ReflectionWorld _computeWorld(LibraryElement reflectableLibrary,
+      LibraryElement entryPoint, AssetId dataId) {
+    ReflectionWorld world = new ReflectionWorld(reflectableLibrary, entryPoint);
     Map<ClassElement, _ReflectorDomain> domains =
         new Map<ClassElement, _ReflectorDomain>();
     ClassElement focusClass = _findReflectableClassElement(reflectableLibrary);
@@ -1857,21 +1866,24 @@ class TransformerImplementation {
   /// [entrypointLibrary] located at [originalEntryPointFilename]. The code is
   /// generated to be located at [generatedId].
   String _generateNewEntryPoint(ReflectionWorld world, AssetId generatedId,
-      String originalEntryPointFilename, LibraryElement entryPointLibrary) {
+      String originalEntryPointFilename) {
     // Notice it is important to generate the code before printing the
     // imports because generating the code can add further imports.
     String code = world.generateCode(_resolver, _logger, generatedId);
 
     List<String> imports = new List<String>();
     world.importCollector._libraries.forEach((LibraryElement library) {
-      Uri uri = _resolver.getImportUri(library, from: generatedId);
+      Uri uri = library == world.entryPointLibrary
+          ? originalEntryPointFilename
+          : _resolver.getImportUri(library, from: generatedId);
       String prefix = world.importCollector._getPrefix(library);
       imports.add("import '$uri' as $prefix;");
     });
     imports.sort();
 
-    String args =
-        (entryPointLibrary.entryPoint.parameters.length == 0) ? "" : "args";
+    String args = (world.entryPointLibrary.entryPoint.parameters.length == 0)
+        ? ""
+        : "args";
     return """
 // This file has been generated by the reflectable package.
 // https://github.com/dart-lang/reflectable.
@@ -1952,8 +1964,12 @@ _initializeReflectable() {
         // pass through without changes.
         continue;
       }
-      ReflectionWorld world =
-          _computeWorld(reflectableLibrary, entryPointAsset.id);
+
+      LibraryElement entryPointLibrary =
+          _resolver.getLibrary(entryPointAsset.id);
+
+      ReflectionWorld world = _computeWorld(
+          reflectableLibrary, entryPointLibrary, entryPointAsset.id);
       if (world == null) continue;
 
       String source = await entryPointAsset.readAsString();
@@ -1966,9 +1982,6 @@ _initializeReflectable() {
       String originalEntryPointFilename =
           path.basename(originalEntryPointId.path);
 
-      LibraryElement entryPointLibrary =
-          _resolver.getLibrary(entryPointAsset.id);
-
       if (entryPointLibrary.entryPoint == null) {
         aggregateTransform.logger.info(
             "Entry point: $entryPoint has no member called `main`. Skipping.");
@@ -1980,8 +1993,8 @@ _initializeReflectable() {
       // [originalEntryPointId].
       aggregateTransform.addOutput(new Asset.fromString(
           entryPointAsset.id,
-          _generateNewEntryPoint(world, entryPointAsset.id,
-              originalEntryPointFilename, entryPointLibrary)));
+          _generateNewEntryPoint(
+              world, entryPointAsset.id, originalEntryPointFilename)));
       _resolver.release();
     }
   }
@@ -2134,21 +2147,24 @@ String _formatAsMap(Iterable parts) => "{${parts.join(", ")}}";
 /// Returns a [String] containing code that will evaluate to the same
 /// value when evaluated in the generated file as the given [expression]
 /// would evaluate to in [originatingLibrary].
-String _extractConstantCode(Expression expression,
-    LibraryElement originatingLibrary, _ImportCollector importCollector) {
+String _extractConstantCode(
+    Expression expression,
+    LibraryElement originatingLibrary,
+    _ImportCollector importCollector,
+    TransformLogger logger) {
   if (expression is ListLiteral) {
     List<String> elements = expression.elements.map((Expression subExpression) {
       return _extractConstantCode(
-          subExpression, originatingLibrary, importCollector);
+          subExpression, originatingLibrary, importCollector, logger);
     });
     // TODO(sigurdm) feature: Type arguments.
     return "const ${_formatAsDynamicList(elements)}";
   } else if (expression is MapLiteral) {
     List<String> elements = expression.entries.map((MapLiteralEntry entry) {
-      String key =
-          _extractConstantCode(entry.key, originatingLibrary, importCollector);
+      String key = _extractConstantCode(
+          entry.key, originatingLibrary, importCollector, logger);
       String value = _extractConstantCode(
-          entry.value, originatingLibrary, importCollector);
+          entry.value, originatingLibrary, importCollector, logger);
       return "$key: $value";
     });
     // TODO(sigurdm) feature: Type arguments.
@@ -2163,41 +2179,54 @@ String _extractConstantCode(Expression expression,
     String arguments =
         expression.argumentList.arguments.map((Expression argument) {
       return _extractConstantCode(
-          argument, originatingLibrary, importCollector);
+          argument, originatingLibrary, importCollector, logger);
     }).join(", ");
     // TODO(sigurdm) feature: Type arguments.
     return "const $prefix.$constructor($arguments)";
   } else if (expression is Identifier) {
-    Element element = expression.staticElement;
-    importCollector._addLibrary(element.library);
-    String prefix = importCollector._getPrefix(element.library);
-    Element enclosingElement = element.enclosingElement;
-    if (enclosingElement is ClassElement) {
-      prefix += ".${enclosingElement.name}";
+    if (Identifier.isPrivateName(expression.name)) {
+      Element staticElement = expression.staticElement;
+      if (staticElement is PropertyAccessorElement) {
+        VariableElement variable = staticElement.variable;
+        VariableDeclaration variableDeclaration = variable.computeNode();
+        return _extractConstantCode(variableDeclaration.initializer,
+            originatingLibrary, importCollector, logger);
+      } else {
+        logger.error("Cannot handle private identifier $expression");
+        return "";
+      }
+    } else {
+      Element element = expression.staticElement;
+      importCollector._addLibrary(element.library);
+      String prefix = importCollector._getPrefix(element.library);
+      Element enclosingElement = element.enclosingElement;
+      if (enclosingElement is ClassElement) {
+        prefix += ".${enclosingElement.name}";
+      }
+      return "$prefix.${element.name}";
     }
-    return "$prefix.${element.name}";
   } else if (expression is BinaryExpression) {
     String a = _extractConstantCode(
-        expression.leftOperand, originatingLibrary, importCollector);
+        expression.leftOperand, originatingLibrary, importCollector, logger);
     String op = expression.operator.lexeme;
     String b = _extractConstantCode(
-        expression.rightOperand, originatingLibrary, importCollector);
+        expression.rightOperand, originatingLibrary, importCollector, logger);
     return "$a $op $b";
   } else if (expression is ConditionalExpression) {
     String condition = _extractConstantCode(
-        expression.condition, originatingLibrary, importCollector);
+        expression.condition, originatingLibrary, importCollector, logger);
     String a = _extractConstantCode(
-        expression.thenExpression, originatingLibrary, importCollector);
+        expression.thenExpression, originatingLibrary, importCollector, logger);
     String b = _extractConstantCode(
-        expression.elseExpression, originatingLibrary, importCollector);
+        expression.elseExpression, originatingLibrary, importCollector, logger);
     return "$condition ? $a : $b";
   } else if (expression is ParenthesizedExpression) {
     String nested = _extractConstantCode(
-        expression.expression, originatingLibrary, importCollector);
+        expression.expression, originatingLibrary, importCollector, logger);
     return "($nested)";
   } else if (expression is PropertyAccess) {
     String target = _extractConstantCode(
-        expression.target, originatingLibrary, importCollector);
+        expression.target, originatingLibrary, importCollector, logger);
     String selector = expression.propertyName.token.lexeme;
     return "$target.$selector";
   } else if (expression is MethodInvocation) {
@@ -2206,10 +2235,10 @@ String _extractConstantCode(Expression expression,
     assert(expression.methodName.token.lexeme == "identical");
     NodeList arguments = expression.argumentList.arguments;
     assert(arguments.length == 2);
-    String a =
-        _extractConstantCode(arguments[0], originatingLibrary, importCollector);
-    String b =
-        _extractConstantCode(arguments[1], originatingLibrary, importCollector);
+    String a = _extractConstantCode(
+        arguments[0], originatingLibrary, importCollector, logger);
+    String b = _extractConstantCode(
+        arguments[1], originatingLibrary, importCollector, logger);
     return "identical($a, $b)";
   } else {
     assert(expression is IntegerLiteral ||
@@ -2333,7 +2362,8 @@ String _extractMetadataCode(Element element, Resolver resolver,
           : "${annotationNode.name}.${annotationNode.constructorName}";
       String arguments =
           annotationNode.arguments.arguments.map((Expression argument) {
-        return _extractConstantCode(argument, element.library, importCollector);
+        return _extractConstantCode(
+            argument, element.library, importCollector, logger);
       }).join(", ");
       metadataParts.add("const $prefix.$constructor($arguments)");
     } else {

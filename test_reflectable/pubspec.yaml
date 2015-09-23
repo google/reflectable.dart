@@ -59,5 +59,6 @@ transformers:
       - test/mixin_static_const_test.dart
       - test/metadata_subtype_test.dart
       - test/static_members_test.dart
+      - test/original_prefix_test.dart
 - $dart2js:
     $include: []

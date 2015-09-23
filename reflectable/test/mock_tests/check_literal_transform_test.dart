@@ -51,7 +51,7 @@ library reflectable_generated_main_library;
 
 import "dart:core";
 import "main_reflectable_original_main.dart" as original show main;
-import 'main.dart' as prefix0;
+import 'main_reflectable_original_main.dart' as prefix0;
 
 import "package:reflectable/mirrors.dart" as m;
 import "package:reflectable/src/reflectable_transformer_based.dart" as r;
