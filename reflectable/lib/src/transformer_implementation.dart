@@ -1794,6 +1794,9 @@ class TransformerImplementation {
         return new ec.SuperclassQuantifyCapability(
             constant.fields["upperBound"].value,
             excludeUpperBound: constant.fields["excludeUpperBound"].value);
+      case "TypeAnnotationQuantifyCapability":
+        return new ec.TypeAnnotationQuantifyCapability(
+            transitive: constant.fields["transitive"].value);
       case "AdmitSubtypeCapability":
         // TODO(eernst) feature:
         throw new UnimplementedError("$classElement not yet supported!");

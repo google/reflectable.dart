@@ -16,7 +16,9 @@ import 'package:unittest/unittest.dart';
 // in 'parameter_mirrors_test.dart'.
 
 class MyReflectable extends Reflectable {
-  const MyReflectable() : super(invokingCapability, declarationsCapability);
+  const MyReflectable()
+      : super(typeAnnotationQuantifyCapability, invokingCapability,
+            declarationsCapability);
 }
 
 const myReflectable = const MyReflectable();

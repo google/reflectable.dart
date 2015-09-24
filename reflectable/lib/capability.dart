@@ -323,13 +323,12 @@ abstract class ReflecteeQuantifyCapability implements ReflectCapability {
 /// metadata.
 const subtypeQuantifyCapability = const _SubtypeQuantifyCapability();
 
-/// Quantifying capability instance specifying that the reflection support
+/// Quantifying capability class specifying that the reflection support
 /// requested by the [ApiReflectCapability] instances held by the same
 /// [Reflectable] which also holds this capability should be provided for
-/// each class which is (1) a superclasses, directly or indirectly, of a
-/// class which carries that [Reflectable] as metadata or is matched by
-/// a global quantifier for that [Reflectable], and which is also (2) a
-/// subclass of the given [upperbound].
+/// each class which is (1) a superclass, directly or indirectly, of a
+/// class which is covered by that [Reflectable], and which is also (2)
+/// a subclass of the given [upperbound].
 class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
   final Type upperBound;
   final bool excludeUpperBound;
@@ -338,12 +337,47 @@ class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
       : excludeUpperBound = excludeUpperBound;
 }
 
-/// Quantifying capability class specifying that the reflection support
+/// Quantifying capability instance specifying that the reflection support
 /// requested by the [ApiReflectCapability] instances held by the same
 /// [Reflectable] which also holds this capability should be provided
-/// for all superclasses of the classes which carry that [Reflectable]
-/// as metadata.
+/// for all superclasses of the classes which are covered by that
+/// [Reflectable].
 const superclassQuantifyCapability = const SuperclassQuantifyCapability(Object);
+
+/// Quantifying capability class specifying that the reflection support
+/// requested by the [ApiReflectCapability] instances held by the same
+/// [Reflectable] which also holds this capability should be provided for
+/// each class which is used as a type annotation in a variable or method
+/// parameter declaration which is covered by this [Reflectable]. Iff
+/// [transitive] is `true` then the extension of the set of covered classes
+/// is applied transitively (that is, classes covered because they are used
+/// as type annotations may themselves give rise to additional coverage
+/// based on their variables and parameters).
+class TypeAnnotationQuantifyCapability implements ReflecteeQuantifyCapability {
+  final bool transitive;
+  const TypeAnnotationQuantifyCapability({bool transitive: false})
+      : transitive = transitive;
+}
+
+/// Quantifying capability instance specifying that the reflection support
+/// requested by the [ApiReflectCapability] instances held by the same
+/// [Reflectable] which also holds this capability should be provided
+/// for all classes used as type annotations in variables and parameters or
+/// as return types of methods in the classes which are covered by that
+/// [Reflectable].
+const typeAnnotationQuantifyCapability =
+    const TypeAnnotationQuantifyCapability();
+
+/// Quantifying capability instance specifying that the reflection support
+/// requested by the [ApiReflectCapability] instances held by the same
+/// [Reflectable] which also holds this capability should be provided
+/// for all classes used as type annotations in variables and parameters or
+/// as return types of methods in the classes which are covered by that
+/// [Reflectable], as well as the transitive closure thereof (that is,
+/// including classes used as type annotations in classes used as type
+/// annotations, etc.).
+const typeAnnotationDeepQuantifyCapability =
+    const TypeAnnotationQuantifyCapability(transitive: true);
 
 /// Quantifying capability instance specifying that the reflection support
 /// requested by the [ApiReflectCapability] instances held by the same

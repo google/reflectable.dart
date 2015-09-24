@@ -155,6 +155,18 @@ class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
 // Note that `null` represents the [ClassElement] for `Object`.
 const superclassQuantifyCapability = const SuperclassQuantifyCapability(null);
 
+class TypeAnnotationQuantifyCapability implements ReflecteeQuantifyCapability {
+  final bool transitive;
+  const TypeAnnotationQuantifyCapability({bool transitive: false})
+      : transitive = transitive;
+}
+
+const typeAnnotationQuantifyCapability =
+    const TypeAnnotationQuantifyCapability();
+
+const typeAnnotationDeepQuantifyCapability =
+    const TypeAnnotationQuantifyCapability(transitive: true);
+
 const admitSubtypeCapability = const _AdmitSubtypeCapability();
 
 class ImportAttachedCapability {
