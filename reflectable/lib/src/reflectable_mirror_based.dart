@@ -1585,9 +1585,9 @@ Set<dm.ClassMirror> _superclassesOfClasses(Set<dm.ClassMirror> classes,
           }
         }
       }
-      superclasses.addAll(additionalClasses);
-      workingSet = additionalClasses;
     }
+    superclasses.addAll(additionalClasses);
+    workingSet = additionalClasses;
   }
   return superclasses;
 }
