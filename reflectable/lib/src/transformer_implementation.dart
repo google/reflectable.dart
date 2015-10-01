@@ -2317,6 +2317,10 @@ String _extractMetadataCode(Element element, Resolver resolver,
   List<String> metadataParts = new List<String>();
 
   AstNode node = element.computeNode();
+  if (node == null) {
+    // This can occur with members of subclasses of `Element` from 'dart:html'.
+    return "<Object>[]";
+  }
 
   // The `element.node` of a field is the [VariableDeclaration] that is nested
   // in a [VariableDeclarationList] that is nested in a [FieldDeclaration]. The
