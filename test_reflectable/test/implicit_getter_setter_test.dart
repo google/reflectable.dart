@@ -24,6 +24,7 @@ class A {
   static A f3;
   static final A f4 = new A(null);
   static const f5 = 542;
+  String get f6 => 'Hello';
   A(this.f2);
 }
 
@@ -145,6 +146,9 @@ main() {
     expect(f5GetterMirror.isFactoryConstructor, isFalse);
     expect(f5GetterMirror.parameters.length, 0);
     expect(f5GetterMirror.owner, classMirror);
+
+    MethodMirror f6GetterMirror = classMirror.instanceMembers["f6"];
+    expect(f6GetterMirror.returnType.reflectedType, String);
   });
 
   test("implicit setter properties", () {
