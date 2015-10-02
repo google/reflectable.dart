@@ -42,38 +42,44 @@ class F {}
 
 Matcher throwsNoSuchCapabilityError =
     throwsA(const isInstanceOf<NoSuchCapabilityError>());
+Matcher isClassMirror = const isInstanceOf<ClassMirror>();
 
 main() {
   test("Subtype quantification supports annotated class", () {
     expect(reflector.canReflectType(A), true);
     expect(reflector.canReflect(new A()), true);
-    expect(reflector.reflectType(A), const isInstanceOf<ClassMirror>());
+    expect(reflector.reflectType(A), isClassMirror);
     expect(reflector.reflect(new A()).invoke("foo", []), 42);
   });
 
   test("Subtype quantification supports subclass", () {
     expect(reflector.canReflectType(B), true);
     expect(reflector.canReflect(new B()), true);
-    expect(reflector.reflectType(B), const isInstanceOf<ClassMirror>());
+    expect(reflector.reflectType(B), isClassMirror);
     expect(reflector.reflect(new B()).invoke("foo", []), 43);
   });
 
   test("Subtype quantification supports subtype", () {
     expect(reflector.canReflectType(C), true);
     expect(reflector.canReflect(new C()), true);
-    expect(reflector.reflectType(C), const isInstanceOf<ClassMirror>());
+    expect(reflector.reflectType(C), isClassMirror);
     expect(reflector.reflect(new C()).invoke("foo", []), 44);
   });
 
-  test("Subtype quantification supports mixin applications", () {
+  test("Subtype quantification supports mixins", () {
     expect(reflector.canReflectType(D), true);
     expect(reflector.canReflect(new D()), true);
-    expect(reflector.reflectType(D), const isInstanceOf<ClassMirror>());
+    expect(reflector.reflectType(D), isClassMirror);
     expect(reflector.reflect(new D()).invoke("foo", []), 45);
     expect(reflector.canReflectType(E), true);
     expect(reflector.canReflect(new E()), true);
-    expect(reflector.reflectType(E), const isInstanceOf<ClassMirror>());
+    expect(reflector.reflectType(E), isClassMirror);
     expect(reflector.reflect(new E()).invoke("foo", []), 46);
+  });
+
+  test("Subtype quantification supports mixin applications", () {
+    expect(reflector.reflectType(E).superclass, isClassMirror);
+    // TODO(eernst) implement: Cover the different kinds of mixin applications.
   });
 
   test("Subtype quantification does not support unrelated class", () {

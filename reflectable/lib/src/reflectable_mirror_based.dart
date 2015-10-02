@@ -12,6 +12,7 @@ library reflectable.src.reflectable_implementation;
 
 import 'dart:mirrors' as dm;
 import 'reflectable_base.dart';
+import 'fixed_point.dart';
 import '../capability.dart';
 import '../mirrors.dart' as rm;
 import '../reflectable.dart';
@@ -135,15 +136,15 @@ bool impliesUpwardsClosure(List<ReflectCapability> capabilities) {
       capability is SuperclassQuantifyCapability);
 }
 
+bool impliesTypeAnnotations(List<ReflectCapability> capabilities) {
+  return capabilities.any((ReflectCapability capability) =>
+      capability is TypeAnnotationQuantifyCapability);
+}
+
 bool impliesTypeAnnotationClosure(List<ReflectCapability> capabilities) {
   return capabilities.any((ReflectCapability capability) =>
       capability is TypeAnnotationQuantifyCapability &&
           capability.transitive == true);
-}
-
-bool impliesTypeAnnotations(List<ReflectCapability> capabilities) {
-  return capabilities.any((ReflectCapability capability) =>
-      capability is TypeAnnotationQuantifyCapability);
 }
 
 bool impliesMixins(List<ReflectCapability> capabilities) {
@@ -1448,13 +1449,11 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
       Set<dm.ClassMirror> result = _directlySupportedClasses();
 
       if (impliesDownwardsClosure(capabilities)) {
-        result.addAll(_subtypesOfClasses(result));
+        new _SubtypesFixedPoint().expand(result);
       }
       if (impliesUpwardsClosure(capabilities)) {
-        result.addAll(_superclassesOfClasses(
-            result,
-            extractUpwardsClosureBounds(capabilities),
-            impliesMixins(capabilities)));
+        new _SuperclassesFixedPoint(extractUpwardsClosureBounds(capabilities),
+            impliesMixins(capabilities)).expand(result);
       } else {
         // Even without the upwards closure, we wish to support some
         // superclasses, namely mixin applications where the class
@@ -1464,8 +1463,10 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
         result.addAll(_mixinApplicationsOfClasses(result));
       }
       if (impliesTypes(capabilities) && impliesTypeAnnotations(capabilities)) {
-        result.addAll(_typeAnnotationsOfClasses(result,
-            transitive: impliesTypeAnnotationClosure(capabilities)));
+        _TypeAnnotationsFixedPoint fix = new _TypeAnnotationsFixedPoint();
+        (impliesTypeAnnotationClosure(capabilities)
+            ? fix.expand
+            : fix.singleExpand)(result);
       }
       return result;
     });
@@ -1485,25 +1486,56 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   }
 }
 
-/// Auxiliary function used by `_supportedClasses`. Returns the set of classes
-/// which are direct or indirect subtypes of classes in [classes] and not
-/// themselves included in [classes].
-Set<dm.ClassMirror> _subtypesOfClasses(Set<dm.ClassMirror> classes) {
-  Set<dm.ClassMirror> subtypes = new Set<dm.ClassMirror>();
-  for (dm.LibraryMirror library in dm.currentMirrorSystem().libraries.values) {
-    for (dm.DeclarationMirror declaration in library.declarations.values) {
-      if (declaration is dm.ClassMirror) {
-        if (classes.contains(declaration.originalDeclaration)) continue;
-        for (dm.ClassMirror classMirror in classes) {
-          if (declaration.isSubtypeOf(classMirror)) {
-            subtypes.add(declaration.originalDeclaration);
-            break;
+/// Auxiliary class used by `_supportedClasses`. Its `expand` method expands
+/// its argument to a fixed point, based on the `successors` method.
+class _SubtypesFixedPoint extends FixedPoint<dm.ClassMirror> {
+  /// The inverse relation of `superinterfaces`, globally.
+  final Map<dm.ClassMirror, Set<dm.ClassMirror>> subtypes =
+      <dm.ClassMirror, Set<dm.ClassMirror>>{};
+
+  _SubtypesFixedPoint() {
+    for (dm.LibraryMirror library
+        in dm.currentMirrorSystem().libraries.values) {
+      for (dm.DeclarationMirror declaration in library.declarations.values) {
+        if (declaration is dm.ClassMirror) {
+          // If `declaration` is a mixin application (`class C = B with M`)
+          // then include that mixin (`M`) as a supertype.
+          if (declaration.mixin != declaration) {
+            _addSubtypeRelation(declaration.mixin, declaration);
+          }
+          // If `declaration` has a superclass then include it.
+          dm.ClassMirror superclass = declaration.superclass;
+          if (superclass != null) _addSubtypeRelation(superclass, declaration);
+          // If `superclass` is a mixin application, traverse superclasses
+          // as long as they are mixin applications and add them, with the
+          // classes applied as mixins.
+          while (superclass != null && superclass.mixin != superclass) {
+            _addSubtypeRelation(superclass.mixin, superclass);
+            // Every mixin application has a non-null superclass: no check.
+            _addSubtypeRelation(superclass.superclass, superclass);
+            superclass = superclass.superclass;
+          }
+          for (dm.ClassMirror superinterface in declaration.superinterfaces) {
+            _addSubtypeRelation(superinterface, declaration);
           }
         }
       }
     }
   }
-  return subtypes;
+
+  _addSubtypeRelation(dm.ClassMirror supertype, dm.ClassMirror subtype) {
+    Set<dm.ClassMirror> subtypesOfClassMirror = subtypes[supertype];
+    if (subtypesOfClassMirror == null) {
+      subtypesOfClassMirror = new Set<dm.ClassMirror>();
+      subtypes[supertype] = subtypesOfClassMirror;
+    }
+    subtypesOfClassMirror.add(subtype);
+  }
+
+  /// Returns all the immediate subtypes of the given [classMirror].
+  Iterable<dm.ClassMirror> successors(final dm.ClassMirror classMirror) {
+    return subtypes[classMirror] ?? <dm.ClassMirror>[];
+  }
 }
 
 /// Auxiliary method used by `_supportedClasses`. Returns the set of classes
@@ -1538,22 +1570,35 @@ Set<dm.ClassMirror> _mixinApplicationsOfClasses(Set<dm.ClassMirror> classes) {
   return mixinApplications;
 }
 
-/// Auxiliary function used by `_supportedClasses`. Returns the set of
-/// classes which are direct or indirect superclasses of classes in
-/// [classes] and which are not themselves included in [classes]. If there
-/// are any elements in [upwardsClosureBounds], only classes which are
-/// subclasses of an upper bound specified there are included (for each
-/// bound, if it maps to [true] then `excludeUpperBound` was specified, in
-/// which case only proper subclasses are included). Iff [mixinsRequested],
-/// when considering a superclass which was created by a mixin application,
-/// the class which was applied as a mixin is also included (without
-/// consulting [upwardsClosureBounds], because a class used as a mixin cannot
-/// have other superclasses than [Object] so it would never pass that test)
-/// in addition to the mixin application itself.
-Set<dm.ClassMirror> _superclassesOfClasses(Set<dm.ClassMirror> classes,
-    Map<dm.ClassMirror, bool> upwardsClosureBounds, bool mixinsRequested) {
-  Set<dm.ClassMirror> superclasses = new Set<dm.ClassMirror>();
+/// Auxiliary class used by `_supportedClasses`. Its `expand` method expands
+/// its argument to a fixed point, based on the `successors` method.
+class _SuperclassesFixedPoint extends FixedPoint<dm.ClassMirror> {
+  Map<dm.ClassMirror, bool> upwardsClosureBounds;
+  bool mixinsRequested;
+  _SuperclassesFixedPoint(this.upwardsClosureBounds, this.mixinsRequested);
 
+  /// Returns the successors to the given [classMirror], that is, its direct
+  /// superclass (if [_includedByUpwardsClosure]) and (iff [mixinsRequested])
+  /// the class which was used in a mixin application to create [classMirror],
+  /// if any.
+  Iterable<dm.ClassMirror> successors(dm.ClassMirror classMirror) sync* {
+    dm.ClassMirror superclass = classMirror.superclass;
+    if (superclass != null) {
+      if (includedByUpwardsClosure(superclass)) {
+        dm.ClassMirror successor = superclass.originalDeclaration;
+        if (successor is dm.ClassMirror) yield successor;
+        if (superclass.mixin != superclass && mixinsRequested) {
+          dm.ClassMirror mixinSuccessor = superclass.mixin.originalDeclaration;
+          if (mixinSuccessor is dm.ClassMirror) yield mixinSuccessor;
+        }
+      }
+    }
+  }
+
+  /// Returns true iff [upwardsClosureBounds] is empty or there exists an
+  /// upper bound of [classMirror] in [upwardsClosureBounds] which is
+  /// either a proper superclass of [classMirror] or which does not have
+  /// a true `excludeUpperBound`.
   bool includedByUpwardsClosure(dm.ClassMirror classMirror) {
     if (upwardsClosureBounds.isEmpty) return true;
     return upwardsClosureBounds.keys.any((dm.ClassMirror bound) {
@@ -1561,86 +1606,26 @@ Set<dm.ClassMirror> _superclassesOfClasses(Set<dm.ClassMirror> classes,
           (!upwardsClosureBounds[bound] || classMirror != bound);
     });
   }
-
-  Set<dm.ClassMirror> workingSet = new Set<dm.ClassMirror>.from(classes);
-  while (workingSet.isNotEmpty) {
-    Set<dm.ClassMirror> additionalClasses = new Set<dm.ClassMirror>();
-
-    void addClass(dm.TypeMirror typeMirror) {
-      dm.TypeMirror original = typeMirror.originalDeclaration;
-      if (original is dm.ClassMirror &&
-          !classes.contains(original) &&
-          !superclasses.contains(original)) {
-        additionalClasses.add(original);
-      }
-    }
-
-    for (dm.ClassMirror workingClass in workingSet) {
-      dm.ClassMirror superclass = workingClass.superclass;
-      if (superclass != null) {
-        if (includedByUpwardsClosure(superclass)) {
-          addClass(superclass);
-          if (superclass.mixin != superclass && mixinsRequested) {
-            addClass(superclass.mixin);
-          }
-        }
-      }
-    }
-    superclasses.addAll(additionalClasses);
-    workingSet = additionalClasses;
-  }
-  return superclasses;
 }
 
-/// Auxiliary function used by `_supportedClasses`. Returns the set of classes
-/// that occur in covered type annotations in [classes]. Iff [transitive],
-/// the computation will iterate and thus include classes that occur
-/// in type annotations of classes that occur in type annotations, etc.
-Set<dm.ClassMirror> _typeAnnotationsOfClasses(Set<dm.ClassMirror> classes,
-    {bool transitive: false}) {
-  Set<dm.ClassMirror> computeAdditionalClasses(
-      Set<dm.ClassMirror> workingSet, Set<dm.ClassMirror> alreadyAddedSet) {
-    Set<dm.ClassMirror> additionalClasses = new Set<dm.ClassMirror>();
-
-    void addClass(dm.TypeMirror typeMirror) {
-      dm.TypeMirror original = typeMirror.originalDeclaration;
-      if (original is dm.ClassMirror &&
-          !classes.contains(original) &&
-          !alreadyAddedSet.contains(original)) {
-        additionalClasses.add(original);
+class _TypeAnnotationsFixedPoint extends FixedPoint<dm.ClassMirror> {
+  /// Returns the successors to the given [classMirror], that is, the mirrors
+  /// of classes used as type annotations in covered variables and parameters
+  /// of covered methods as well as their return types, in the class reflected
+  /// by [classMirror].
+  Iterable<dm.ClassMirror> successors(dm.ClassMirror classMirror) sync* {
+    for (dm.DeclarationMirror declaration in classMirror.declarations.values) {
+      if (declaration is dm.VariableMirror) {
+        dm.TypeMirror typeMirror = declaration.type.originalDeclaration;
+        if (typeMirror is dm.ClassMirror) yield typeMirror;
+      } else if (declaration is dm.MethodMirror) {
+        for (dm.ParameterMirror parameter in declaration.parameters) {
+          dm.TypeMirror typeMirror = parameter.type.originalDeclaration;
+          if (typeMirror is dm.ClassMirror) yield typeMirror;
+        }
+        dm.TypeMirror typeMirror = declaration.returnType;
+        if (typeMirror is dm.ClassMirror) yield typeMirror;
       }
     }
-
-    for (dm.ClassMirror workingClass in workingSet) {
-      for (dm.DeclarationMirror declaration
-      in workingClass.declarations.values) {
-        if (declaration is dm.VariableMirror) {
-          addClass(declaration.type);
-        }
-        if (declaration is dm.MethodMirror) {
-          for (dm.ParameterMirror parameter in declaration.parameters) {
-            addClass(parameter.type);
-          }
-          addClass(declaration.returnType);
-        }
-      }
-    }
-    return additionalClasses;
-  }
-
-  if (transitive) {
-    // Invariant: Every class that might give rise to additional classes is
-    // in `workingSet`.
-    Set<dm.ClassMirror> annotationClasses = new Set<dm.ClassMirror>();
-    Set<dm.ClassMirror> workingSet = classes;
-    while (workingSet.isNotEmpty) {
-      Set<dm.ClassMirror> newClasses =
-          computeAdditionalClasses(workingSet, annotationClasses);
-      annotationClasses.addAll(newClasses);
-      workingSet = newClasses;
-    }
-    return annotationClasses;
-  } else {
-    return computeAdditionalClasses(classes, new Set<dm.ClassMirror>());
   }
 }

@@ -76,11 +76,19 @@ class B extends A with M1 {}
 @ReflectorUpwardsClosedUntilA()
 class C extends B with M2, M3 {}
 
+@Reflector()
+@Reflector2()
+@ReflectorUpwardsClosed()
+@ReflectorUpwardsClosedToA()
+@ReflectorUpwardsClosedUntilA()
+class D = A with M1;
+
 testReflector(Reflectable reflector, String desc) {
   test("Mixin, $desc", () {
     ClassMirror aMirror = reflector.reflectType(A);
     ClassMirror bMirror = reflector.reflectType(B);
     ClassMirror cMirror = reflector.reflectType(C);
+    ClassMirror dMirror = reflector.reflectType(D);
     ClassMirror m1Mirror = reflector.reflectType(M1);
     ClassMirror m2Mirror = reflector.reflectType(M2);
     ClassMirror m3Mirror = reflector.reflectType(M3);
@@ -94,10 +102,8 @@ testReflector(Reflectable reflector, String desc) {
     expect(cMirror.superclass.superclass.mixin, m2Mirror);
     expect(cMirror.superclass.mixin, m3Mirror);
     expect(cMirror.superclass.superclass.superclass, bMirror);
-    expect(
-        bMirror.superclass.simpleName,
-        "test_reflectable.test.mixin_test.A with "
-        "test_reflectable.test.mixin_test.M1");
+    expect(dMirror.mixin, m1Mirror);
+    expect(dMirror.superclass.mixin, aMirror);
     expect(bMirror.superclass.declarations["foo"].owner, m1Mirror);
     expect(bMirror.superclass.declarations["field"].owner, m1Mirror);
     expect(bMirror.superclass.declarations["staticBar"], null);
@@ -118,11 +124,13 @@ main() {
     var reflector2 = const Reflector2();
     ClassMirror bMirror = reflector2.reflectType(B);
     ClassMirror cMirror = reflector2.reflectType(C);
+    ClassMirror dMirror = reflector2.reflectType(D);
     ClassMirror m1Mirror = reflector2.reflectType(M1);
     ClassMirror m2Mirror = reflector2.reflectType(M2);
     ClassMirror m3Mirror = reflector2.reflectType(M3);
     expect(bMirror.mixin, bMirror);
     expect(cMirror.mixin, cMirror);
+    expect(dMirror.mixin, m1Mirror);
     expect(m1Mirror.mixin, m1Mirror);
     // Test that metadata is preserved.
     expect(m1Mirror.metadata, contains(const P()));
@@ -137,12 +145,14 @@ main() {
     expect(cMirror.superclass.superclass.mixin, m2Mirror);
     expect(cMirror.superclass.mixin, m3Mirror);
     expect(cMirror.superclass.superclass.superclass, bMirror);
+    expect(() => dMirror.superclass, throwsANoSuchCapabilityException);
   });
   test("Mixin, superclasses included up to bound", () {
     var reflector = const ReflectorUpwardsClosedToA();
     ClassMirror aMirror = reflector.reflectType(A);
     ClassMirror bMirror = reflector.reflectType(B);
     ClassMirror cMirror = reflector.reflectType(C);
+    ClassMirror dMirror = reflector.reflectType(D);
     expect(() => reflector.reflectType(M1), throwsANoSuchCapabilityException);
     expect(() => reflector.reflectType(M2), throwsANoSuchCapabilityException);
     expect(() => reflector.reflectType(M3), throwsANoSuchCapabilityException);
@@ -152,11 +162,14 @@ main() {
     expect(() => cMirror.superclass.superclass.mixin,
         throwsANoSuchCapabilityException);
     expect(cMirror.superclass.superclass.superclass, bMirror);
+    expect(() => dMirror.mixin, throwsANoSuchCapabilityException);
+    expect(dMirror.superclass, aMirror);
   });
   test("Mixin, superclasses included up to but not including bound", () {
     var reflector = const ReflectorUpwardsClosedUntilA();
     ClassMirror bMirror = reflector.reflectType(B);
     ClassMirror cMirror = reflector.reflectType(C);
+    ClassMirror dMirror = reflector.reflectType(D);
     expect(() => reflector.reflectType(A), throwsANoSuchCapabilityException);
     expect(() => reflector.reflectType(M1), throwsANoSuchCapabilityException);
     expect(() => reflector.reflectType(M2), throwsANoSuchCapabilityException);
@@ -168,14 +181,20 @@ main() {
     expect(cMirror.superclass.superclass.superclass.superclass != null, true);
     expect(() => cMirror.superclass.superclass.superclass.superclass.superclass,
         throwsANoSuchCapabilityException);
+    expect(() => dMirror.mixin, throwsANoSuchCapabilityException);
+    expect(() => dMirror.superclass, throwsANoSuchCapabilityException);
   });
   test("Mixin, naming", () {
     var reflector2 = const Reflector2();
     ClassMirror bMirror = reflector2.reflectType(B);
     ClassMirror cMirror = reflector2.reflectType(C);
+    ClassMirror dMirror = reflector2.reflectType(D);
     ClassMirror aWithM1Mirror = bMirror.superclass;
     ClassMirror bWithM2Mirror = cMirror.superclass.superclass;
     ClassMirror bWithM2WithM3Mirror = cMirror.superclass;
+    expect(bMirror.simpleName, "B");
+    expect(cMirror.simpleName, "C");
+    expect(dMirror.simpleName, "D");
     expect(
         aWithM1Mirror.simpleName,
         "test_reflectable.test.mixin_test.A with "
@@ -189,6 +208,12 @@ main() {
         "test_reflectable.test.mixin_test.B with "
         "test_reflectable.test.mixin_test.M2, "
         "test_reflectable.test.mixin_test.M3");
+    expect(cMirror.simpleName, "C");
+    expect(dMirror.simpleName, "D");
+
+    expect(bMirror.qualifiedName, "test_reflectable.test.mixin_test.B");
+    expect(cMirror.qualifiedName, "test_reflectable.test.mixin_test.C");
+    expect(dMirror.qualifiedName, "test_reflectable.test.mixin_test.D");
     expect(
         aWithM1Mirror.qualifiedName,
         "test_reflectable.test.mixin_test."
@@ -205,5 +230,7 @@ main() {
         "test_reflectable.test.mixin_test.B with "
         "test_reflectable.test.mixin_test.M2, "
         "test_reflectable.test.mixin_test.M3");
+    expect(cMirror.qualifiedName, "test_reflectable.test.mixin_test.C");
+    expect(dMirror.qualifiedName, "test_reflectable.test.mixin_test.D");
   });
 }
