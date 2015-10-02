@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+* Change the way the set of supported classes are computed.
+* Fix crash when transforming certain dart:html classes.
+* Fix memory leak from the transformer.
+
 ## 0.2.1
 
 * Recognize private identifier constants as metadata in certain cases.
