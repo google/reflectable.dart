@@ -19,6 +19,10 @@ import 'encoding_constants.dart' as constants;
 import "reflectable_class_constants.dart" as reflectable_class_constants;
 import 'transformer_errors.dart' as errors;
 
+// Single source of instances of [Resolver], shared across multiple
+// invocations of `apply` to save memory.
+Resolvers _resolvers = new Resolvers(dartSdkDirectory);
+
 class ReflectionWorld {
   final List<_ReflectorDomain> reflectors = new List<_ReflectorDomain>();
   final LibraryElement reflectableLibrary;
@@ -1930,7 +1934,6 @@ _initializeReflectable() {
     _logger = aggregateTransform.logger;
     // The type argument in the return type is omitted because the
     // documentation on barback and on transformers do not specify it.
-    Resolvers resolvers = new Resolvers(dartSdkDirectory);
 
     List<Asset> assets = await aggregateTransform.primaryInputs.toList();
 
@@ -1959,7 +1962,7 @@ _initializeReflectable() {
       Transform wrappedTransform =
           new _AggregateTransformWrapper(aggregateTransform, entryPointAsset);
 
-      _resolver = await resolvers.get(wrappedTransform);
+      _resolver = await _resolvers.get(wrappedTransform);
       LibraryElement reflectableLibrary =
           _resolver.getLibraryByName("reflectable.reflectable");
       if (reflectableLibrary == null) {
