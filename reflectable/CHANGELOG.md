@@ -2,6 +2,9 @@
 
 ## 0.3.0
 
+* Add support for type annotation quantification (this is a breaking change: we
+  used to do that implicitly, but that is expensive and now it is only available
+  on request).
 * Change the way the set of supported classes are computed.
 * Fix crash when transforming certain dart:html classes.
 * Fix memory leak from the transformer.
