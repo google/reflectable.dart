@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1
+
+* Fix bug where metadata was searched the same way for invocation and for
+  declarations with `InstanceInvokeMetaCapability` (invocation must traverse
+  superclasses).
+* Fix bug where some libraries were imported into generated code, even though
+  they cannot be imported (private to core).
+* Fix bugs in publication support script.
+
 ## 0.3.0
 
 * Add support for type annotation quantification (this is a breaking change: we

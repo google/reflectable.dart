@@ -4,7 +4,7 @@ description: >
   reflection to a transformer generated specialization with the same
   behavior. The generated code does not use dynamic reflection and thus
   improves the performance of (esp. dart2js) generated code.
-version: 0.3.0
+version: 0.3.1
 author: The Dart Team <dart@google.com>
 homepage: https://www.github.com/dart-lang/reflectable
 environment:
