@@ -461,7 +461,7 @@ class _ReflectorDomain {
         defaultValueCode = " = ${_extractConstantCode(
             parameterNode.defaultValue,
             parameterElement.library,
-            importCollector, logger)}";
+            importCollector, logger, _generatedLibraryId, _resolver)}";
       }
       return "${parameterNames[requiredPositionalCount + i]}"
           "$defaultValueCode";
@@ -482,7 +482,7 @@ class _ReflectorDomain {
         defaultValueCode = ": ${_extractConstantCode(
             parameterNode.defaultValue,
             parameterElement.library,
-            importCollector, logger)}";
+            importCollector, logger, _generatedLibraryId, _resolver)}";
       }
       return "${namedParameterNames[i]}$defaultValueCode";
     }).join(", ");
@@ -997,7 +997,12 @@ class _ReflectorDomain {
     if (parameterNode is DefaultFormalParameter &&
         parameterNode.defaultValue != null) {
       defaultValueCode = _extractConstantCode(
-          parameterNode.defaultValue, element.library, importCollector, logger);
+          parameterNode.defaultValue,
+          element.library,
+          importCollector,
+          logger,
+          _generatedLibraryId,
+          _resolver);
     }
     return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
@@ -2052,6 +2057,7 @@ class TransformerImplementation {
       return domains.putIfAbsent(reflector, () {
         _Capabilities capabilities =
             _capabilitiesOf(capabilityLibrary, reflector);
+        assert(_isImportableLibrary(reflector.library, dataId, _resolver));
         importCollector._addLibrary(reflector.library);
         return new _ReflectorDomain(_resolver, dataId, reflector, capabilities);
       });
@@ -2061,6 +2067,7 @@ class TransformerImplementation {
     void addLibrary(LibraryElement library, ClassElement reflector) {
       _ReflectorDomain domain = getReflectorDomain(reflector);
       if (domain._capabilities.supportsLibraries) {
+        assert(_isImportableLibrary(reflector.library, dataId, _resolver));
         importCollector._addLibrary(library);
         domain._libraries.add(library);
       }
@@ -2161,6 +2168,7 @@ class TransformerImplementation {
     for (LibraryElement library in _resolver.libraries) {
       for (ClassElement reflector
           in getReflectors(library.name, library.metadata)) {
+        assert(_isImportableLibrary(reflector.library, dataId, _resolver));
         addLibrary(library, reflector);
       }
 
@@ -2654,105 +2662,111 @@ String _extractConstantCode(
     Expression expression,
     LibraryElement originatingLibrary,
     _ImportCollector importCollector,
-    TransformLogger logger) {
-  if (expression is ListLiteral) {
-    List<String> elements = expression.elements.map((Expression subExpression) {
-      return _extractConstantCode(
-          subExpression, originatingLibrary, importCollector, logger);
-    });
-    // TODO(sigurdm) feature: Type arguments.
-    return "const ${_formatAsDynamicList(elements)}";
-  } else if (expression is MapLiteral) {
-    List<String> elements = expression.entries.map((MapLiteralEntry entry) {
-      String key = _extractConstantCode(
-          entry.key, originatingLibrary, importCollector, logger);
-      String value = _extractConstantCode(
-          entry.value, originatingLibrary, importCollector, logger);
-      return "$key: $value";
-    });
-    // TODO(sigurdm) feature: Type arguments.
-    return "const ${_formatAsMap(elements)}";
-  } else if (expression is InstanceCreationExpression) {
-    String constructor = expression.constructorName.toSource();
-    LibraryElement libraryOfConstructor = expression.staticElement.library;
-    importCollector._addLibrary(libraryOfConstructor);
-    String prefix =
-        importCollector._getPrefix(expression.staticElement.library);
-    // TODO(sigurdm) implement: Named arguments.
-    String arguments =
-        expression.argumentList.arguments.map((Expression argument) {
-      return _extractConstantCode(
-          argument, originatingLibrary, importCollector, logger);
-    }).join(", ");
-    // TODO(sigurdm) feature: Type arguments.
-    return "const $prefix.$constructor($arguments)";
-  } else if (expression is Identifier) {
-    if (Identifier.isPrivateName(expression.name)) {
-      Element staticElement = expression.staticElement;
-      if (staticElement is PropertyAccessorElement) {
-        VariableElement variable = staticElement.variable;
-        VariableDeclaration variableDeclaration = variable.computeNode();
-        return _extractConstantCode(variableDeclaration.initializer,
-            originatingLibrary, importCollector, logger);
+    TransformLogger logger,
+    AssetId generatedLibraryId,
+    Resolver resolver) {
+  String helper(Expression expression) {
+    if (expression is ListLiteral) {
+      List<String> elements =
+          expression.elements.map((Expression subExpression) {
+        return helper(subExpression);
+      });
+      // TODO(sigurdm) feature: Type arguments.
+      return "const ${_formatAsDynamicList(elements)}";
+    } else if (expression is MapLiteral) {
+      List<String> elements = expression.entries.map((MapLiteralEntry entry) {
+        String key = helper(entry.key);
+        String value = helper(entry.value);
+        return "$key: $value";
+      });
+      // TODO(sigurdm) feature: Type arguments.
+      return "const ${_formatAsMap(elements)}";
+    } else if (expression is InstanceCreationExpression) {
+      String constructor = expression.constructorName.toSource();
+      LibraryElement libraryOfConstructor = expression.staticElement.library;
+      if (_isImportableLibrary(
+          libraryOfConstructor, generatedLibraryId, resolver)) {
+        importCollector._addLibrary(libraryOfConstructor);
+        String prefix =
+            importCollector._getPrefix(expression.staticElement.library);
+        // TODO(sigurdm) implement: Named arguments.
+        String arguments =
+            expression.argumentList.arguments.map((Expression argument) {
+          return helper(argument);
+        }).join(", ");
+        // TODO(sigurdm) feature: Type arguments.
+        return "const $prefix.$constructor($arguments)";
       } else {
-        logger.error("Cannot handle private identifier $expression");
+        logger.error("Cannot access library $libraryOfConstructor, "
+            "needed for expression $expression");
         return "";
       }
-    } else {
-      Element element = expression.staticElement;
-      importCollector._addLibrary(element.library);
-      String prefix = importCollector._getPrefix(element.library);
-      Element enclosingElement = element.enclosingElement;
-      if (enclosingElement is ClassElement) {
-        prefix += ".${enclosingElement.name}";
+    } else if (expression is Identifier) {
+      if (Identifier.isPrivateName(expression.name)) {
+        Element staticElement = expression.staticElement;
+        if (staticElement is PropertyAccessorElement) {
+          VariableElement variable = staticElement.variable;
+          VariableDeclaration variableDeclaration = variable.computeNode();
+          return helper(variableDeclaration.initializer);
+        } else {
+          logger.error("Cannot handle private identifier $expression");
+          return "";
+        }
+      } else {
+        Element element = expression.staticElement;
+        if (_isImportableLibrary(
+            element.library, generatedLibraryId, resolver)) {
+          importCollector._addLibrary(element.library);
+          String prefix = importCollector._getPrefix(element.library);
+          Element enclosingElement = element.enclosingElement;
+          if (enclosingElement is ClassElement) {
+            prefix += ".${enclosingElement.name}";
+          }
+          return "$prefix.${element.name}";
+        } else {
+          logger.error("Cannot access library ${element.library}, "
+              "needed for expression $expression");
+          return "";
+        }
       }
-      return "$prefix.${element.name}";
+    } else if (expression is BinaryExpression) {
+      String a = helper(expression.leftOperand);
+      String op = expression.operator.lexeme;
+      String b = helper(expression.rightOperand);
+      return "$a $op $b";
+    } else if (expression is ConditionalExpression) {
+      String condition = helper(expression.condition);
+      String a = helper(expression.thenExpression);
+      String b = helper(expression.elseExpression);
+      return "$condition ? $a : $b";
+    } else if (expression is ParenthesizedExpression) {
+      String nested = helper(expression.expression);
+      return "($nested)";
+    } else if (expression is PropertyAccess) {
+      String target = helper(expression.target);
+      String selector = expression.propertyName.token.lexeme;
+      return "$target.$selector";
+    } else if (expression is MethodInvocation) {
+      // We only handle "identical(a, b)".
+      assert(expression.target == null);
+      assert(expression.methodName.token.lexeme == "identical");
+      NodeList arguments = expression.argumentList.arguments;
+      assert(arguments.length == 2);
+      String a = helper(arguments[0]);
+      String b = helper(arguments[1]);
+      return "identical($a, $b)";
+    } else {
+      assert(expression is IntegerLiteral ||
+          expression is BooleanLiteral ||
+          expression is StringLiteral ||
+          expression is NullLiteral ||
+          expression is SymbolLiteral ||
+          expression is DoubleLiteral ||
+          expression is TypedLiteral);
+      return expression.toSource();
     }
-  } else if (expression is BinaryExpression) {
-    String a = _extractConstantCode(
-        expression.leftOperand, originatingLibrary, importCollector, logger);
-    String op = expression.operator.lexeme;
-    String b = _extractConstantCode(
-        expression.rightOperand, originatingLibrary, importCollector, logger);
-    return "$a $op $b";
-  } else if (expression is ConditionalExpression) {
-    String condition = _extractConstantCode(
-        expression.condition, originatingLibrary, importCollector, logger);
-    String a = _extractConstantCode(
-        expression.thenExpression, originatingLibrary, importCollector, logger);
-    String b = _extractConstantCode(
-        expression.elseExpression, originatingLibrary, importCollector, logger);
-    return "$condition ? $a : $b";
-  } else if (expression is ParenthesizedExpression) {
-    String nested = _extractConstantCode(
-        expression.expression, originatingLibrary, importCollector, logger);
-    return "($nested)";
-  } else if (expression is PropertyAccess) {
-    String target = _extractConstantCode(
-        expression.target, originatingLibrary, importCollector, logger);
-    String selector = expression.propertyName.token.lexeme;
-    return "$target.$selector";
-  } else if (expression is MethodInvocation) {
-    // We only handle "identical(a, b)".
-    assert(expression.target == null);
-    assert(expression.methodName.token.lexeme == "identical");
-    NodeList arguments = expression.argumentList.arguments;
-    assert(arguments.length == 2);
-    String a = _extractConstantCode(
-        arguments[0], originatingLibrary, importCollector, logger);
-    String b = _extractConstantCode(
-        arguments[1], originatingLibrary, importCollector, logger);
-    return "identical($a, $b)";
-  } else {
-    assert(expression is IntegerLiteral ||
-        expression is BooleanLiteral ||
-        expression is StringLiteral ||
-        expression is NullLiteral ||
-        expression is SymbolLiteral ||
-        expression is DoubleLiteral ||
-        expression is TypedLiteral);
-    return expression.toSource();
   }
+  return helper(expression);
 }
 
 /// Returns a [String] containing code that will evaluate to the same
@@ -2869,8 +2883,8 @@ String _extractMetadataCode(Element element, Resolver resolver,
           : "${annotationNode.name}.${annotationNode.constructorName}";
       String arguments =
           annotationNode.arguments.arguments.map((Expression argument) {
-        return _extractConstantCode(
-            argument, element.library, importCollector, logger);
+        return _extractConstantCode(argument, element.library, importCollector,
+            logger, dataId, resolver);
       }).join(", ");
       metadataParts.add("const $prefix.$constructor($arguments)");
     } else {
@@ -3002,14 +3016,20 @@ _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
       domain);
 }
 
-/// Answers true iff this [element] can be imported into [dataId].
+/// Answers true iff [element] can be imported into [generatedLibraryId].
 // TODO(sigurdm) implement: Make a test that tries to reflect on native/private
 // classes.
-bool _isImportable(Element element, AssetId dataId, Resolver resolver) {
-  Uri importUri = resolver.getImportUri(element.library, from: dataId);
-  return !(element.isPrivate ||
-      (importUri.scheme == "dart" &&
-          !sdkLibraryNames.contains(importUri.path)));
+bool _isImportable(
+    Element element, AssetId generatedLibraryId, Resolver resolver) {
+  return !element.isPrivate &&
+      _isImportableLibrary(element.library, generatedLibraryId, resolver);
+}
+
+/// Answers true iff [library] can be imported into [generatedLibraryId].
+bool _isImportableLibrary(
+    LibraryElement library, AssetId generatedLibraryId, Resolver resolver) {
+  Uri importUri = resolver.getImportUri(library, from: generatedLibraryId);
+  return importUri.scheme != "dart" || sdkLibraryNames.contains(importUri.path);
 }
 
 /// Modelling a mixin application as a [ClassElement].
