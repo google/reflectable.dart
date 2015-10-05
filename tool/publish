@@ -34,8 +34,6 @@ edit_version () {
   sed -e "s/^version: .*$/version: $2/" <$TMPFILE >$1
 }
 
-CMD_PREFIX="echo >>>>> Run this:"
-
 while [[ $1 =~ ^- ]]; do
   case $1 in
     (--help|-h) usage; exit 0;;
@@ -89,13 +87,14 @@ edit_version ../test_reflectable/pubspec.yaml $VERSION
 
 git diff HEAD
 
-pushd ../reflectable >/dev/null
-pub publish --dry-run
-$CMD_PREFIX git cl upload
-echo "Please get review etc. such that these changes can be landed.. "
-$CMD_PREFIX git cl land -m$COMMIT_MESSAGE
-$CMD_PREFIX git tag -a -m$TAG_MESSAGE $TAG_VALUE
-$CMD_PREFIX git push origin refs/tags/$TAG_VALUE:refs/tags/$TAG_VALUE
-$CMD_PREFIX pub publish
-popd >/dev/null
-
+( cd ../reflectable; pub publish --dry-run )
+echo ">>>>>> Run these commands:"
+echo pushd ../reflectable
+echo git commit -m$COMMIT_MESSAGE
+echo git cl upload
+echo ">>>>>> Please get review etc. such that these changes can be landed.. "
+echo git cl land
+echo pub publish
+echo git tag -a -m$TAG_MESSAGE $TAG_VALUE
+echo git push origin refs/tags/$TAG_VALUE:refs/tags/$TAG_VALUE
+echo popd >/dev/null
