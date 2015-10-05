@@ -196,15 +196,19 @@ bool reflectableSupportsInstanceInvoke(
     } else if (capability is InstanceInvokeMetaCapability) {
       // We have to use 'declarations' here instead of instanceMembers, because
       // the synthetic field mirrors generated from fields do not have metadata
-      // attached.
-      // TODO(eernst) clarify: If we use `declarations` in a context where
-      // `instanceMembers` is expected, we must iterate over all superclasses
-      // "manually". Check whether there is a bug here, alternatively update
-      // the above comment.
-      dm.DeclarationMirror declarationMirror =
-          classMirror.declarations[nameSymbol];
-      return declarationMirror != null &&
-          metadataSupported(declarationMirror.metadata, capability);
+      // attached. This means we have to walk up all the classes on the super
+      // chain as well.
+      while (classMirror != null) {
+        dm.DeclarationMirror declarationMirror =
+            classMirror.declarations[nameSymbol];
+        if (declarationMirror != null &&
+            metadataSupported(declarationMirror.metadata, capability)) {
+          return true;
+        }
+        classMirror = classMirror.superclass;
+      }
+
+      return false;
     } else {
       return false;
     }
