@@ -181,8 +181,7 @@ bool impliesTypes(List<ReflectCapability> capabilities) {
 }
 
 /// Returns true if [classMirror] supports reflective invoke of the
-/// instance-member named [name] according to the
-/// capabilities of [reflectable].
+/// instance-member named [name] according to the capabilities of [reflectable].
 bool reflectableSupportsInstanceInvoke(
     ReflectableImpl reflectable, String name, dm.ClassMirror classMirror) {
   Symbol nameSymbol = new Symbol(name);
@@ -207,8 +206,36 @@ bool reflectableSupportsInstanceInvoke(
         }
         classMirror = classMirror.superclass;
       }
-
       return false;
+    } else {
+      return false;
+    }
+  }
+
+  return reflectable.hasCapability(predicate);
+}
+
+/// Returns true if [classMirror] supports looking up the declaration of the
+/// instance-member named [name] according to the capabilities of [reflectable].
+bool reflectableSupportsDeclaration(
+    ReflectableImpl reflectable, String name, dm.ClassMirror classMirror) {
+  Symbol nameSymbol = new Symbol(name);
+
+  bool predicate(ApiReflectCapability capability) {
+    if (capability == invokingCapability ||
+        capability == instanceInvokeCapability) {
+      // We have the convention that declarations cover all members when
+      // invocation has been requested for all members.
+      return true;
+    } else if (capability is InstanceInvokeCapability) {
+      // We have the convention that declarations covers the members for which
+      // there is a specific request for invocation support.
+      return new RegExp(capability.namePattern).hasMatch(name);
+    } else if (capability is InstanceInvokeMetaCapability) {
+      dm.DeclarationMirror declarationMirror =
+          classMirror.declarations[nameSymbol];
+      return declarationMirror != null &&
+          metadataSupported(declarationMirror.metadata, capability);
     } else {
       return false;
     }
@@ -600,7 +627,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
           } else {
             // `declarationMirror` is an instance method/getter/setter.
             included = included ||
-                reflectableSupportsInstanceInvoke(
+                reflectableSupportsDeclaration(
                     _reflectable, name, _classMirror);
           }
         }
@@ -620,9 +647,9 @@ class ClassMirrorImpl extends _TypeMirrorImpl
                   _getterToSetter(name), declarationMirror.metadata);
         } else {
           included = included ||
-              reflectableSupportsInstanceInvoke(
+              reflectableSupportsDeclaration(
                   _reflectable, name, _classMirror) ||
-              reflectableSupportsInstanceInvoke(
+              reflectableSupportsDeclaration(
                   _reflectable, _getterToSetter(name), _classMirror);
         }
         if (included) {

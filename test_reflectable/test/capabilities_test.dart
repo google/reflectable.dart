@@ -24,8 +24,12 @@ class StaticReflector extends r.Reflectable {
 
 const staticReflector = const StaticReflector();
 
+class ABase {
+  static int notIncluded() => 48;
+}
+
 @staticReflector
-class A {
+class A extends ABase {
   static int foo() => 42;
   static int bar() => 43;
   static int get getFoo => 44;
@@ -54,8 +58,13 @@ class InstanceReflector extends r.Reflectable {
 
 const instanceReflector = const InstanceReflector();
 
+class BBase {
+  @C()
+  int includedByInvokeInBBase() => 48;
+}
+
 @instanceReflector
-class B {
+class B extends BBase {
   int foo() => 42;
   int bar() => 43;
   int get getFoo => 44;
@@ -65,6 +74,13 @@ class B {
   int field = 46;
   @C()
   int boo() => 47;
+  // Tricky case! Not included for invocation by `instanceReflector`: No
+  // regexp match, and no matching metadata. So we can invoke it because
+  // of the declaration in `BBase` (which is visible for invocation and
+  // `instanceMembers` even though `BBase` is not covered). But we still
+  // get this _implementation_ at runtime.
+  // TODO(eernst) implement: Test the same situation with a mixin.
+  int includedByInvokeInBBase() => 49;
 }
 
 class BSubclass extends B {}
@@ -78,6 +94,7 @@ class BImplementer implements B {
   set setBar(int x) => field = x;
   int field = 46;
   int boo() => 47;
+  int includedByInvokeInBBase() => 48;
 }
 
 Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
@@ -99,6 +116,7 @@ void testDynamic(B o, String description) {
     expect(o.field, 100);
     expect(() => instanceMirror.invokeSetter("setBar=", 100),
         throwsNoSuchCapabilityError);
+    expect(instanceMirror.invoke("includedByInvokeInBBase", []), 49);
   });
 }
 
@@ -120,6 +138,7 @@ void main() {
     expect(classMirror.invoke("boo", []), 47);
   });
   testDynamic(new B(), "Annotated");
+
   test("Declarations", () {
     expect(instanceReflector.reflect(new B()).type.declarations.keys,
         ["foo", "setFoo=", "getFoo", "boo"].toSet());

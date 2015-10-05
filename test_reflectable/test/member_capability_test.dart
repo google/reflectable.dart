@@ -48,8 +48,13 @@ class Foo2 {
   var z;
 }
 
+class Foo3Base {
+  @Bar()
+  var c = 3;
+}
+
 @myReflectable3
-class Foo3 {
+class Foo3 extends Foo3Base{
   var a = 1;
   @Bar()
   var b = 2;
@@ -101,6 +106,9 @@ main() {
     expect(fooMirror.invokeGetter("b"), 2);
     expect(fooMirror.invokeSetter("b", 12), 12);
     expect(fooMirror.invokeGetter("b"), 12);
+    expect(fooMirror.invokeGetter("c"), 3);
+    expect(fooMirror.invokeSetter("c", 13), 13);
+    expect(fooMirror.invokeGetter("c"), 13);
 
     expect(() => myReflectable3.reflect(new Foo3()).invoke("x", []),
         throwsA(const isInstanceOf<NoSuchCapabilityError>()));
