@@ -5,7 +5,7 @@
 // File being transformed by the reflectable transformer.
 // Uses `staticMembers` to access a static const variable.
 
-library test_reflectable.test.reflect_test;
+library test_reflectable.test.static_members_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';

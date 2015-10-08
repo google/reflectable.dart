@@ -60,5 +60,6 @@ transformers:
       - test/metadata_subtype_test.dart
       - test/static_members_test.dart
       - test/original_prefix_test.dart
+      - test/reflected_type_test.dart
 - $dart2js:
     $include: []

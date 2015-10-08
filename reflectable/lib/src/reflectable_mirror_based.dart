@@ -152,6 +152,11 @@ bool impliesMixins(List<ReflectCapability> capabilities) {
       (ReflectCapability capability) => capability == typeRelationsCapability);
 }
 
+bool impliesReflectedType(List<ReflectCapability> capabilities) {
+  return capabilities.any(
+      (ReflectCapability capability) => capability == reflectedTypeCapability);
+}
+
 Map<dm.ClassMirror, bool> extractUpwardsClosureBounds(
     List<ReflectCapability> capabilities) {
   Map<dm.ClassMirror, bool> result = <dm.ClassMirror, bool>{};
@@ -882,6 +887,24 @@ class MethodMirrorImpl extends _DeclarationMirrorImpl
   }
 
   @override
+  bool get hasReflectedReturnType {
+    if (impliesReflectedType(_reflectable.capabilities)) {
+      return _methodMirror.returnType.hasReflectedType;
+    }
+    throw new NoSuchCapabilityError(
+        "Attempt to evaluate hasReflectedReturnType without capability");
+  }
+
+  @override
+  Type get reflectedReturnType {
+    if (impliesReflectedType(_reflectable.capabilities)) {
+      return _methodMirror.returnType.reflectedType;
+    }
+    throw new NoSuchCapabilityError(
+        "Attempt to get reflectedReturnType without capability");
+  }
+
+  @override
   String get source => _methodMirror.source;
 
   @override
@@ -981,6 +1004,24 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
       return wrapTypeMirror(_variableMirror.type, _reflectable);
     }
     throw new NoSuchCapabilityError("Attempt to get type without capability");
+  }
+
+  @override
+  bool get hasReflectedType {
+    if (impliesReflectedType(_reflectable.capabilities)) {
+      return _variableMirror.type.hasReflectedType;
+    }
+    throw new NoSuchCapabilityError(
+        "Attempt to evaluate hasReflectedType without capability");
+  }
+
+  @override
+  Type get reflectedType {
+    if (impliesReflectedType(_reflectable.capabilities)) {
+      return _variableMirror.type.reflectedType;
+    }
+    throw new NoSuchCapabilityError(
+        "Attempt to get reflectedType without capability");
   }
 
   @override

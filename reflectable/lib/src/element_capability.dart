@@ -99,6 +99,8 @@ const typeCapability = const TypeCapability();
 
 const typeRelationsCapability = const _TypeRelationsCapability();
 
+const reflectedTypeCapability = const _ReflectedTypeCapability();
+
 const libraryCapability = const _LibraryCapability();
 
 const declarationsCapability = const _DeclarationsCapability();
@@ -200,6 +202,10 @@ class _MetadataCapability implements TypeCapability {
 
 class _TypeRelationsCapability implements TypeCapability {
   const _TypeRelationsCapability();
+}
+
+class _ReflectedTypeCapability implements _DeclarationsCapability {
+  const _ReflectedTypeCapability();
 }
 
 class _LibraryCapability implements ApiReflectCapability {

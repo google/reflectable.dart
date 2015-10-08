@@ -601,14 +601,17 @@ class _ReflectorDomain {
     String gettersCode = _formatAsMap(instanceGetterNames.map(_gettingClosure));
     String settersCode = _formatAsMap(instanceSetterNames.map(_settingClosure));
 
+    bool reflectedTypeRequested = _capabilities._impliesReflectedType;
+
     // Generate code for creation of member mirrors.
     Iterable<String> methodsList =
         members.items.map((ExecutableElement executableElement) {
       return _methodMirrorCode(executableElement, fields, members, parameters,
-          importCollector, logger);
+          importCollector, logger, reflectedTypeRequested);
     });
     Iterable<String> fieldsList = fields.items.map((FieldElement element) {
-      return _fieldMirrorCode(element, importCollector, logger);
+      return _fieldMirrorCode(
+          element, importCollector, logger, reflectedTypeRequested);
     });
     List<String> membersList = <String>[]
       ..addAll(fieldsList)
@@ -618,7 +621,7 @@ class _ReflectorDomain {
     // Generate code for listing [Type] instances.
     String typesCode =
         _formatAsList("Type", classes.map((ClassElement classElement) {
-      return _typeCode(classElement, importCollector);
+      return _typeCodeOfClass(classElement, importCollector);
     }));
 
     // Generate code for creation of library mirrors.
@@ -635,8 +638,8 @@ class _ReflectorDomain {
     // Generate code for creation of parameter mirrors.
     Iterable<String> parametersList =
         parameters.items.map((ParameterElement element) {
-      return _parameterMirrorCode(
-          element, fields, members, importCollector, logger);
+      return _parameterMirrorCode(element, fields, members, importCollector,
+          logger, reflectedTypeRequested);
     });
     String parameterMirrorsCode =
         _formatAsList("m.ParameterMirror", parametersList);
@@ -781,7 +784,8 @@ class _ReflectorDomain {
     // convention we make it supported and report it in the same way as
     // 'dart:mirrors'. Other superclasses use `NO_CAPABILITY_INDEX` to
     // indicate missing support.
-    String superclassIndex = classElement.type.isObject
+    String superclassIndex = (classElement is! MixinApplication &&
+            classElement.type.isObject)
         ? "null"
         : (classes.contains(superclass))
             ? "${classes.indexOf(superclass)}"
@@ -864,22 +868,26 @@ class _ReflectorDomain {
       Enumerator<ExecutableElement> members,
       Enumerator<ParameterElement> parameters,
       _ImportCollector importCollector,
-      TransformLogger logger) {
+      TransformLogger logger,
+      bool reflectedTypeRequested) {
     if (element is PropertyAccessorElement && element.isSynthetic) {
       // There is no type propagation, so we declare an `accessorElement`.
       PropertyAccessorElement accessorElement = element;
       int variableMirrorIndex = fields.indexOf(accessorElement.variable);
+      String reflectedTypeCode = reflectedTypeRequested
+          ? _typeCode(accessorElement.variable.type, importCollector)
+          : "null";
       // The `indexOf` is non-null: `accessorElement` came from `members`.
       int selfIndex = members.indexOf(accessorElement) + fields.length;
       if (accessorElement.isGetter) {
         return 'new r.ImplicitGetterMirrorImpl('
             '${_constConstructionCode(importCollector)}, '
-            '$variableMirrorIndex, $selfIndex)';
+            '$variableMirrorIndex, $reflectedTypeCode, $selfIndex)';
       } else {
         assert(accessorElement.isSetter);
         return 'new r.ImplicitSetterMirrorImpl('
             '${_constConstructionCode(importCollector)}, '
-            '$variableMirrorIndex, $selfIndex)';
+            '$variableMirrorIndex, $reflectedTypeCode, $selfIndex)';
       }
     } else {
       int descriptor = _declarationDescriptor(element);
@@ -889,21 +897,31 @@ class _ReflectorDomain {
           element.parameters.map((ParameterElement parameterElement) {
         return parameters.indexOf(parameterElement);
       }));
+      String reflectedReturnTypeCode = element.returnType.isVoid
+          ? "null"
+          : _typeCode(element.returnType, importCollector);
       String metadataCode = _capabilities._supportsMetadata
           ? _extractMetadataCode(
               element, _resolver, importCollector, logger, _generatedLibraryId)
           : null;
       return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
-          '$ownerIndex, $returnTypeIndex, $parameterIndicesCode, '
-          '${_constConstructionCode(importCollector)}, $metadataCode)';
+          '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeCode, '
+          '$parameterIndicesCode, ${_constConstructionCode(importCollector)}, '
+          '$metadataCode)';
     }
   }
 
-  String _fieldMirrorCode(FieldElement element,
-      _ImportCollector importCollector, TransformLogger logger) {
+  String _fieldMirrorCode(
+      FieldElement element,
+      _ImportCollector importCollector,
+      TransformLogger logger,
+      bool reflectedTypeRequested) {
     int descriptor = _fieldDescriptor(element);
     int ownerIndex = classes.indexOf(element.enclosingElement);
     int classMirrorIndex = _computeFieldTypeIndex(element, descriptor);
+    String reflectedTypeCode = reflectedTypeRequested
+        ? _typeCode(element.type, importCollector)
+        : "null";
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
@@ -915,13 +933,25 @@ class _ReflectorDomain {
     }
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $metadataCode)';
+        '$classMirrorIndex, $reflectedTypeCode, $metadataCode)';
   }
 
-  String _typeCode(
+  String _typeCode(DartType dartType, _ImportCollector importCollector) {
+    if (dartType is TypeParameterType) {
+      ClassElement owningClassElement = dartType.element.enclosingElement;
+      return 'new r.FakeType(r"${_qualifiedName(owningClassElement)}.'
+          '${dartType.element}")';
+    }
+    return _typeCodeOfClass(dartType.element, importCollector);
+  }
+
+  String _typeCodeOfClass(
       ClassElement classElement, _ImportCollector importCollector) {
     if (classElement is MixinApplication && classElement.declaredName == null) {
-      return 'new r.FakeType(r"${classElement.name}")';
+      return 'new r.FakeType(r"${_qualifiedName(classElement)}")';
+    }
+    if (classElement is! MixinApplication && classElement.type.isDynamic) {
+      return "dynamic";
     }
     String prefix = importCollector._getPrefix(classElement.library);
     return "$prefix.${classElement.name}";
@@ -960,7 +990,8 @@ class _ReflectorDomain {
       Enumerator<FieldElement> fields,
       Enumerator<ExecutableElement> members,
       _ImportCollector importCollector,
-      TransformLogger logger) {
+      TransformLogger logger,
+      bool reflectedTypeRequested) {
     int descriptor = _parameterDescriptor(element);
     int ownerIndex = members.indexOf(element.enclosingElement) + fields.length;
     int classMirrorIndex;
@@ -978,6 +1009,9 @@ class _ReflectorDomain {
     } else {
       classMirrorIndex = constants.NO_CAPABILITY_INDEX;
     }
+    String reflectedTypeCode = reflectedTypeRequested
+        ? _typeCode(element.type, importCollector)
+        : "null";
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
       FormalParameter node = element.computeNode();
@@ -1006,7 +1040,8 @@ class _ReflectorDomain {
     }
     return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $metadataCode, $defaultValueCode)';
+        '$classMirrorIndex, $reflectedTypeCode, $metadataCode, '
+        '$defaultValueCode)';
   }
 }
 
@@ -1359,6 +1394,8 @@ class _ClassDomain {
       this._reflectorDomain);
 
   String get _simpleName {
+    // TODO(eernst) clarify: Decide whether this should be simplified
+    // by adding a method implementation to `MixinApplication`.
     if (_classElement.isMixinApplication) {
       // This is the case `class B = A with M;`.
       return _classElement.name;
@@ -1675,6 +1712,11 @@ class _Capabilities {
   bool get _impliesMixins {
     return _capabilities.any((ec.ReflectCapability capability) =>
         capability == ec.typeRelationsCapability);
+  }
+
+  bool get _impliesReflectedType {
+    return _capabilities.any((ec.ReflectCapability capability) =>
+        capability == ec.reflectedTypeCapability);
   }
 
   /// Maps each upper bound specified for the upwards closure to whether the
@@ -2265,6 +2307,8 @@ class TransformerImplementation {
         return ec.metadataCapability;
       case "_TypeRelationsCapability":
         return ec.typeRelationsCapability;
+      case "_ReflectedTypeCapability":
+        return ec.reflectedTypeCapability;
       case "_LibraryCapability":
         return ec.libraryCapability;
       case "_DeclarationsCapability":
@@ -3078,16 +3122,20 @@ class MixinApplication implements ClassElement {
   List<ElementAnnotation> get metadata => <ElementAnnotation>[];
 
   @override
-  bool get isSynthetic => true;
+  bool get isSynthetic => declaredName != null;
+
+  // Note that the `InterfaceTypeImpl` may well call methods on this
+  // `MixinApplication` whose body is `_unImplemented()`, but it still provides
+  // a slightly better service than leaving this method `_unImplemented()`:
+  // We are allowed to take one more step, which may be enough.
+  @override
+  InterfaceType get type => new InterfaceTypeImpl(this);
 
   @override
   InterfaceType get supertype {
     if (superclass is MixinApplication) return superclass.supertype;
     return superclass?.type;
   }
-
-  @override
-  InterfaceType get type => mixin.type;
 
   @override
   List<InterfaceType> get mixins {
@@ -3105,6 +3153,10 @@ class MixinApplication implements ClassElement {
   /// case.
   @override
   bool get isMixinApplication => declaredName != null;
+
+  @override
+  NamedCompilationUnitMember computeNode() =>
+      declaredName != null ? subclass.computeNode() : null;
 
   @override
   bool operator ==(Object object) {
@@ -3169,9 +3221,6 @@ class MixinApplication implements ClassElement {
 
   @override
   ConstructorElement get unnamedConstructor => _unImplemented();
-
-  @override
-  NamedCompilationUnitMember computeNode() => _unImplemented();
 
   @override
   FieldElement getField(String name) => _unImplemented();

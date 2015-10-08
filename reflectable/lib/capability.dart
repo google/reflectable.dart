@@ -234,6 +234,11 @@ const typeCapability = const TypeCapability();
 /// as mentioned with [classifyCapability].
 const typeRelationsCapability = const _TypeRelationsCapability();
 
+/// Capability instance requesting support for the method `reflectedType`
+/// on `VariableMirror` and  `ParameterMirror`, and `reflectedReturnType`
+/// on `MethodMirror`.
+const reflectedTypeCapability = const _ReflectedTypeCapability();
+
 /// Capability instance requesting reflective support for library mirrors.
 /// This will cause support for reflecting for all libraries containing
 /// annotated classes (enabling support for [ClassMirror.owner]), and all
@@ -462,6 +467,10 @@ class _MetadataCapability implements TypeCapability {
 
 class _TypeRelationsCapability implements TypeCapability {
   const _TypeRelationsCapability();
+}
+
+class _ReflectedTypeCapability implements _DeclarationsCapability {
+  const _ReflectedTypeCapability();
 }
 
 // TODO(sigurdm) feature: Split this into EnclosingLibraryCapability(),

@@ -445,6 +445,8 @@ abstract class TypedefMirror implements TypeMirror {
 
 abstract class MethodMirror implements DeclarationMirror {
   TypeMirror get returnType; // Possible RET: Type
+  bool get hasReflectedReturnType;
+  Type get reflectedReturnType;
   String get source;
   List<ParameterMirror> get parameters;
   bool get isStatic;
@@ -465,6 +467,8 @@ abstract class MethodMirror implements DeclarationMirror {
 
 abstract class VariableMirror implements DeclarationMirror {
   TypeMirror get type; // Possible RET: Type
+  bool get hasReflectedType;
+  Type get reflectedType;
   bool get isStatic;
   bool get isFinal;
   bool get isConst;
@@ -473,6 +477,8 @@ abstract class VariableMirror implements DeclarationMirror {
 
 abstract class ParameterMirror implements VariableMirror {
   TypeMirror get type; // Possible RET: Type
+  bool get hasReflectedType;
+  Type get reflectedType;
   bool get isOptional;
   bool get isNamed;
   bool get hasDefaultValue;
