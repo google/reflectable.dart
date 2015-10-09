@@ -19,6 +19,37 @@ import '../reflectable.dart';
 
 bool get isTransformed => false;
 
+/// Returns the set of reflectors in the current program.
+Set<Reflectable> get reflectors {
+  Set<Reflectable> result = new Set<Reflectable>();
+  for (dm.LibraryMirror library in dm.currentMirrorSystem().libraries.values) {
+    for (dm.LibraryDependencyMirror dependency in library.libraryDependencies) {
+      if (dependency.isImport &&
+          dependency.targetLibrary.qualifiedName == reflectableLibrarySymbol) {
+        for (dm.InstanceMirror metadatumMirror in dependency.metadata) {
+          Object metadatum = metadatumMirror.reflectee;
+          if (metadatum is GlobalQuantifyCapability) {
+            result.add(metadatum.reflector);
+          }
+          if (metadatum is GlobalQuantifyMetaCapability) {
+            result.add(metadatum.reflector);
+          }
+        }
+      }
+    }
+  }
+  for (dm.LibraryMirror library in dm.currentMirrorSystem().libraries.values) {
+    for (dm.DeclarationMirror declaration in library.declarations.values) {
+      for (dm.InstanceMirror metadatum in declaration.metadata) {
+        if (metadatum.reflectee is Reflectable) {
+          result.add(metadatum.reflectee);
+        }
+      }
+    }
+  }
+  return result;
+}
+
 /// The name of the reflectable library.
 const Symbol reflectableLibrarySymbol = #reflectable.reflectable;
 
@@ -369,7 +400,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
     Iterable<Symbol> relevantKeys = decls.keys.where((k) {
       List<dm.InstanceMirror> metadata = decls[k].metadata;
       for (var item in metadata) {
-        if (item.hasReflectee && item.reflectee is ReflectableImpl) return true;
+        if (item.hasReflectee && item.reflectee == _reflectable) return true;
       }
       return false;
     });

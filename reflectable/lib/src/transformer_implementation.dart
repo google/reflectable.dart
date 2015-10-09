@@ -525,18 +525,32 @@ class _ReflectorDomain {
   /// `_reflector` to behave correctly.
   String _generateCode(
       _ImportCollector importCollector, TransformLogger logger) {
-    Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
+    // Library related collections.
+    Enumerator<_LibraryDomain> libraries = new Enumerator<_LibraryDomain>();
+    Map<LibraryElement, _LibraryDomain> libraryMap =
+        <LibraryElement, _LibraryDomain>{};
+    Enumerator<TopLevelVariableElement> topLevelVariables =
+        new Enumerator<TopLevelVariableElement>();
+
+    // Class related collections.
     Enumerator<FieldElement> fields = new Enumerator<FieldElement>();
     Enumerator<ParameterElement> parameters =
         new Enumerator<ParameterElement>();
-    Enumerator<LibraryElement> libraries = new Enumerator<LibraryElement>();
     Set<String> instanceGetterNames = new Set<String>();
     Set<String> instanceSetterNames = new Set<String>();
+
+    // Library and class related collections.
+    Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
 
     // Fill in [libraries], [members], [fields], [parameters],
     // [instanceGetterNames], and [instanceSetterNames].
     for (LibraryElement library in _libraries) {
-      libraries.add(library);
+      _LibraryDomain libraryDomain = _createLibraryDomain(library, this);
+      libraries.add(libraryDomain);
+      libraryMap[library] = libraryDomain;
+      libraryDomain._declarations.forEach(members.add);
+      libraryDomain._declaredParameters.forEach(parameters.add);
+      libraryDomain._declaredVariables.forEach(topLevelVariables.add);
     }
     for (_ClassDomain classDomain in classes.domains) {
       // Gather the behavioral interface into [members]. Note that
@@ -588,13 +602,25 @@ class _ReflectorDomain {
       });
     }
 
+    // Find the offsets of fields and of methods and functions in members.
+    int fieldsOffset = topLevelVariables.length;
+    int methodsOffset = fieldsOffset + fields.length;
+
     // Generate code for creation of class mirrors.
     String classMirrorsCode = _formatAsList(
         "m.ClassMirror",
         _capabilities._impliesTypes
             ? classes.domains.map((_ClassDomain classDomain) =>
-                _classMirrorCode(classDomain, fields, members, libraries,
-                    importCollector, logger))
+                _classMirrorCode(
+                    classDomain,
+                    fields,
+                    fieldsOffset,
+                    methodsOffset,
+                    members,
+                    libraries,
+                    libraryMap,
+                    importCollector,
+                    logger))
             : <String>[]);
 
     // Generate code for creation of getter and setter closures.
@@ -630,8 +656,9 @@ class _ReflectorDomain {
       librariesCode = "null";
     } else {
       librariesCode = _formatAsList("m.LibraryMirror",
-          libraries.items.map((LibraryElement library) {
-        return _libraryMirrorCode(library, importCollector, logger);
+          libraries.items.map((_LibraryDomain library) {
+        return _libraryMirrorCode(library, members, topLevelVariables,
+            fields.length, importCollector, logger);
       }));
     }
 
@@ -686,44 +713,34 @@ class _ReflectorDomain {
     return result;
   }
 
-  Iterable<PropertyAccessorElement> _gettersOfLibrary(LibraryElement library) {
-    return library.units.map((CompilationUnitElement part) {
-      Iterable<Element> getters = <Iterable<Element>>[
-        part.accessors
-            .where((PropertyAccessorElement accessor) => accessor.isGetter),
-        part.functions,
-        part.topLevelVariables
-      ].expand((Iterable<Element> elements) => elements);
-      return getters.where((Element getter) =>
-          _capabilities.supportsTopLevelInvoke(getter.name, getter.metadata));
-    }).expand((Iterable<Element> x) => x);
+  Iterable<ExecutableElement> _gettersOfLibrary(_LibraryDomain library) sync* {
+    yield* library._accessors
+        .where((PropertyAccessorElement accessor) => accessor.isGetter);
+    yield* library._declaredFunctions;
   }
 
-  Iterable<PropertyAccessorElement> _settersOfLibrary(LibraryElement library) {
-    return library.units.map((CompilationUnitElement part) {
-      Iterable setters = <Iterable<Element>>[
-        part.accessors
-            .where((PropertyAccessorElement accessor) => accessor.isSetter),
-        part.topLevelVariables
-            .where((TopLevelVariableElement variable) => !variable.isFinal)
-      ].expand((Iterable<Element> elements) => elements);
-      return setters.where((Element setter) =>
-          _capabilities.supportsTopLevelInvoke(setter.name, setter.metadata));
-    }).expand((Iterable<Element> x) => x);
+  Iterable<PropertyAccessorElement> _settersOfLibrary(_LibraryDomain library) {
+    return library._accessors
+        .where((PropertyAccessorElement accessor) => accessor.isSetter);
   }
 
   String _classMirrorCode(
       _ClassDomain classDomain,
       Enumerator<FieldElement> fields,
+      int fieldsOffset,
+      int methodsOffset,
       Enumerator<ExecutableElement> members,
-      Enumerator<LibraryElement> libraries,
+      Enumerator<_LibraryDomain> libraries,
+      Map<LibraryElement, _LibraryDomain> libraryMap,
       _ImportCollector importCollector,
       TransformLogger logger) {
+    int descriptor = _classDescriptor(classDomain._classElement);
+
     // Fields go first in [memberMirrors], so they will get the
     // same index as in [fields].
     Iterable<int> fieldsIndices =
         classDomain._declaredFields.map((FieldElement element) {
-      return fields.indexOf(element);
+      return fields.indexOf(element) + fieldsOffset;
     });
 
     // All the elements in the behavioral interface go after the
@@ -742,17 +759,17 @@ class _ReflectorDomain {
       int index = members.indexOf(element);
       return index == null
           ? constants.NO_CAPABILITY_INDEX
-          : index + fields.length;
+          : index + methodsOffset;
     });
 
-    String declarationsCode = "<int>[${constants
-        .NO_CAPABILITY_INDEX}]";
-    if (_capabilities._impliesDeclarations) {
-      List<int> declarationsIndices = <int>[]
-        ..addAll(fieldsIndices)
-        ..addAll(methodsIndices);
-      declarationsCode = _formatAsList("int", declarationsIndices);
-    }
+    String declarationsCode = _capabilities._impliesDeclarations
+        ? _formatAsList(
+            "int",
+            () sync* {
+              yield* fieldsIndices;
+              yield* methodsIndices;
+            }())
+        : "<int>[${constants.NO_CAPABILITY_INDEX}]";
 
     // All instance members belong to the behavioral interface, so they
     // also get an offset of `fields.length`.
@@ -764,7 +781,7 @@ class _ReflectorDomain {
       int index = members.indexOf(element);
       return index == null
           ? constants.NO_CAPABILITY_INDEX
-          : index + fields.length;
+          : index + methodsOffset;
     }));
 
     // All static members belong to the behavioral interface, so they
@@ -774,7 +791,7 @@ class _ReflectorDomain {
       int index = members.indexOf(element);
       return index == null
           ? constants.NO_CAPABILITY_INDEX
-          : index + fields.length;
+          : index + methodsOffset;
     }));
 
     ClassElement classElement = classDomain._classElement;
@@ -808,12 +825,11 @@ class _ReflectorDomain {
       staticGettersCode = _formatAsMap([
         classDomain._declaredMethods
             .where((ExecutableElement element) => element.isStatic),
-        classDomain._declaredAndImplicitAccessors.where(
-            (PropertyAccessorElement element) =>
-                element.isStatic && element.isGetter)
+        classDomain._accessors.where((PropertyAccessorElement element) =>
+            element.isStatic && element.isGetter)
       ].expand((x) => x).map((ExecutableElement element) =>
           _staticGettingClosure(importCollector, classElement, element.name)));
-      staticSettersCode = _formatAsMap(classDomain._declaredAndImplicitAccessors
+      staticSettersCode = _formatAsMap(classDomain._accessors
           .where((PropertyAccessorElement element) =>
               element.isStatic && element.isSetter)
           .map((PropertyAccessorElement element) => _staticSettingClosure(
@@ -832,7 +848,7 @@ class _ReflectorDomain {
     if (mixinIndex == null) mixinIndex = constants.NO_CAPABILITY_INDEX;
 
     int ownerIndex = _capabilities.supportsLibraries
-        ? libraries.indexOf(classElement.library)
+        ? libraries.indexOf(libraryMap[classElement.library])
         : constants.NO_CAPABILITY_INDEX;
 
     String superinterfaceIndices = _formatAsList(
@@ -853,7 +869,7 @@ class _ReflectorDomain {
     int classIndex = classes.indexOf(classElement);
 
     String result = 'new r.ClassMirrorImpl(r"${classDomain._simpleName}", '
-        'r"${_qualifiedName(classElement)}", $classIndex, '
+        'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
         '${_constConstructionCode(importCollector)}, '
         '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
         '$superclassIndex, $staticGettersCode, $staticSettersCode, '
@@ -950,23 +966,54 @@ class _ReflectorDomain {
     if (classElement is MixinApplication && classElement.declaredName == null) {
       return 'new r.FakeType(r"${_qualifiedName(classElement)}")';
     }
-    if (classElement is! MixinApplication && classElement.type.isDynamic) {
-      return "dynamic";
-    }
+    if (classElement.type.isDynamic) return "dynamic";
     String prefix = importCollector._getPrefix(classElement.library);
     return "$prefix.${classElement.name}";
   }
 
-  String _libraryMirrorCode(LibraryElement library,
-      _ImportCollector importCollector, TransformLogger logger) {
+  String _libraryMirrorCode(
+      _LibraryDomain libraryDomain,
+      Enumerator<ExecutableElement> members,
+      Enumerator<TopLevelVariableElement> variables,
+      int fieldsLength,
+      _ImportCollector importCollector,
+      TransformLogger logger) {
+    LibraryElement library = libraryDomain._libraryElement;
+
     String gettersCode = _formatAsMap(
-        _gettersOfLibrary(library).map((PropertyAccessorElement getter) {
+        _gettersOfLibrary(libraryDomain).map((PropertyAccessorElement getter) {
       return _topLevelGettingClosure(importCollector, library, getter.name);
     }));
+
     String settersCode = _formatAsMap(
-        _settersOfLibrary(library).map((PropertyAccessorElement setter) {
+        _settersOfLibrary(libraryDomain).map((PropertyAccessorElement setter) {
       return topLevelSettingClosure(importCollector, library, setter.name);
     }));
+
+    // Fields go first in [memberMirrors], so they will get the
+    // same index as in [fields].
+    Iterable<int> variableIndices =
+        libraryDomain._declaredVariables.map((TopLevelVariableElement element) {
+      return variables.indexOf(element);
+    });
+
+    // All the elements in the behavioral interface go after the
+    // fields in [memberMirrors], so they must get an offset of
+    // `fields.length` on the index.
+    Iterable<int> methodsIndices = libraryDomain._declarations
+        .where(_executableIsntImplicitGetterOrSetter)
+        .map((ExecutableElement element) {
+      int index = members.indexOf(element);
+      return index + fieldsLength;
+    });
+
+    String declarationsCode = "<int>[${constants.NO_CAPABILITY_INDEX}]";
+    if (_capabilities._impliesDeclarations) {
+      List<int> declarationsIndices = <int>[]
+        ..addAll(variableIndices)
+        ..addAll(methodsIndices);
+      declarationsCode = _formatAsList("int", declarationsIndices);
+    }
 
     // TODO(sigurdm) clarify: Find out how to get good uri's in a
     // transformer.
@@ -982,7 +1029,8 @@ class _ReflectorDomain {
     }
 
     return 'new r.LibraryMirrorImpl(r"${library.name}", $uriCode, '
-        '$gettersCode, $settersCode, $metadataCode)';
+        '${_constConstructionCode(importCollector)}, '
+        '$declarationsCode, $gettersCode, $settersCode, $metadataCode)';
   }
 
   String _parameterMirrorCode(
@@ -1305,11 +1353,8 @@ String _gettingClosure(String getterName) {
 // Auxiliary function used by `_generateCode`.
 String _settingClosure(String setterName) {
   assert(setterName.substring(setterName.length - 1) == "=");
-  // The [setterName] includes the "=", remove it.
   String name = setterName.substring(0, setterName.length - 1);
-
-  return 'r"$setterName": (dynamic instance, value) => '
-      'instance.$name = value';
+  return 'r"$setterName": (dynamic instance, value) => instance.$name = value';
 }
 
 // Auxiliary function used by `_generateCode`.
@@ -1350,34 +1395,101 @@ String topLevelSettingClosure(_ImportCollector importCollector,
   return 'r"$setterName": (value) => $prefix.$name = value';
 }
 
+/// Information about reflectability for a given library.
+class _LibraryDomain {
+  /// Element describing the target library.
+  final LibraryElement _libraryElement;
+
+  /// Fields declared by [_libraryElement] and included for reflection support,
+  /// according to the reflector described by the [_reflectorDomain];
+  /// obtained by filtering `_libraryElement.fields`.
+  final Iterable<TopLevelVariableElement> _declaredVariables;
+
+  /// Methods which are declared by [_libraryElement] and included for
+  /// reflection support, according to the reflector described by
+  /// [_reflectorDomain]; obtained by filtering `_libraryElement.functions`.
+  final Iterable<FunctionElement> _declaredFunctions;
+
+  /// Formal parameters declared by one of the [_declaredFunctions].
+  final Iterable<ParameterElement> _declaredParameters;
+
+  /// Getters and setters possessed by [_libraryElement] and included for
+  /// reflection support, according to the reflector described by
+  /// [_reflectorDomain]; obtained by filtering `_libraryElement.accessors`.
+  /// Note that it includes declared as well as synthetic accessors, implicitly
+  /// created as getters/setters for fields.
+  final Iterable<PropertyAccessorElement> _accessors;
+
+  /// The reflector domain that holds [this] object as one of its
+  /// library domains.
+  final _ReflectorDomain _reflectorDomain;
+
+  _LibraryDomain(
+      this._libraryElement,
+      this._declaredVariables,
+      this._declaredFunctions,
+      this._declaredParameters,
+      this._accessors,
+      this._reflectorDomain);
+
+  String get _simpleName {
+    return _libraryElement.name;
+  }
+
+  /// Returns the declared methods, accessors and constructors in
+  /// [_classElement]. Note that this includes synthetic getters and
+  /// setters, and omits fields; in other words, it provides the
+  /// behavioral point of view on the class. Also note that this is not
+  /// the same semantics as that of `declarations` in [ClassMirror].
+  Iterable<ExecutableElement> get _declarations sync* {
+    yield* _declaredFunctions;
+    yield* _accessors;
+  }
+
+  String toString() {
+    return "LibraryDomain($_libraryElement)";
+  }
+
+  bool operator ==(Object other) {
+    if (other is _LibraryDomain) {
+      return _libraryElement == other._libraryElement &&
+          _reflectorDomain == other._reflectorDomain;
+    } else {
+      return false;
+    }
+  }
+
+  int get hashCode => _libraryElement.hashCode ^ _reflectorDomain.hashCode;
+}
+
 /// Information about reflectability for a given class.
 class _ClassDomain {
   /// Element describing the target class.
   final ClassElement _classElement;
 
-  /// Fields declared by [classElement] and included for reflection support,
-  /// according to the reflector described by the [reflectorDomain];
-  /// obtained by filtering `classElement.fields`.
+  /// Fields declared by [_classElement] and included for reflection support,
+  /// according to the reflector described by the [_reflectorDomain];
+  /// obtained by filtering `_classElement.fields`.
   final Iterable<FieldElement> _declaredFields;
 
-  /// Methods which are declared by [classElement] and included for
+  /// Methods which are declared by [_classElement] and included for
   /// reflection support, according to the reflector described by
-  /// [reflectorDomain]; obtained by filtering `classElement.methods`.
+  /// [reflectorDomain]; obtained by filtering `_classElement.methods`.
   final Iterable<MethodElement> _declaredMethods;
 
   /// Formal parameters declared by one of the [_declaredMethods].
   final Iterable<ParameterElement> _declaredParameters;
 
-  /// Getters and setters possessed by [classElement] and included for
+  /// Getters and setters possessed by [_classElement] and included for
   /// reflection support, according to the reflector described by
-  /// [reflectorDomain]; obtained by filtering `classElement.accessors`.
+  /// [reflectorDomain]; obtained by filtering `_classElement.accessors`.
   /// Note that it includes declared as well as synthetic accessors,
   /// implicitly created as getters/setters for fields.
-  final Iterable<PropertyAccessorElement> _declaredAndImplicitAccessors;
+  final Iterable<PropertyAccessorElement> _accessors;
 
-  /// Constructors declared by [classElement] and included for reflection
-  /// support, according to the reflector described by [reflectorDomain];
-  /// obtained by filtering `classElement.constructors`.
+  /// Constructors declared by [_classElement] and included for reflection
+  /// support, according to the reflector described by [_reflectorDomain];
+  /// obtained by filtering `_classElement.constructors`.
   final Iterable<ConstructorElement> _constructors;
 
   /// The reflector domain that holds [this] object as one of its
@@ -1389,7 +1501,7 @@ class _ClassDomain {
       this._declaredFields,
       this._declaredMethods,
       this._declaredParameters,
-      this._declaredAndImplicitAccessors,
+      this._accessors,
       this._constructors,
       this._reflectorDomain);
 
@@ -1429,8 +1541,7 @@ class _ClassDomain {
   /// the same semantics as that of `declarations` in [ClassMirror].
   Iterable<ExecutableElement> get _declarations {
     // TODO(sigurdm) feature: Include type variables (if we keep them).
-    return [_declaredMethods, _declaredAndImplicitAccessors, _constructors]
-        .expand((x) => x);
+    return [_declaredMethods, _accessors, _constructors].expand((x) => x);
   }
 
   /// Finds all instance members by going through the class hierarchy.
@@ -1641,7 +1752,7 @@ class _Capabilities {
         return true;
       }
       // Quantifying capabilities do not influence the availability
-      // of reflection support for top level invocation.
+      // of reflection support for top-level invocation.
     }
 
     // All options exhausted, give up.
@@ -1942,7 +2053,7 @@ class TransformerImplementation {
         bool isOk = checkInheritance(result.value.type, focusClass.type);
         return isOk ? result.value.type.element : null;
       } else {
-        // Not a const top level variable, not relevant.
+        // Not a const top-level variable, not relevant.
         return null;
       }
     }
@@ -2133,7 +2244,9 @@ class TransformerImplementation {
             for (InterfaceType mixin in type.mixins) {
               ClassElement mixinElement = mixin.element;
               ClassElement subClass = mixin == type.mixins.last ? type : null;
-              String name = subClass == null ? null : type.name;
+              String name = subClass == null
+                  ? null
+                  : (type.isMixinApplication ? type.name : null);
               MixinApplication mixinApplication = new MixinApplication(
                   name, superclass, mixinElement, type.library, subClass);
               domain._classes.add(mixinApplication);
@@ -2219,6 +2332,15 @@ class TransformerImplementation {
           for (ClassElement reflector
               in getReflectors(_qualifiedName(type), type.metadata)) {
             addClassDomain(type, reflector);
+          }
+        }
+        for (FunctionElement function in unit.functions) {
+          for (ClassElement reflector in getReflectors(
+              _qualifiedFunctionName(function), function.metadata)) {
+            // We just add the library here, the function itself will be
+            // supported using `invoke` and `declarations` of that library
+            // mirror.
+            addLibrary(library, reflector);
           }
         }
       }
@@ -2588,6 +2710,17 @@ bool _executableIsntImplicitGetterOrSetter(ExecutableElement executable) {
 }
 
 /// Returns an integer encoding of the kind and attributes of the given
+/// class.
+int _classDescriptor(ClassElement element) {
+  int result = constants.clazz;
+  if (element.isPrivate) result |= constants.privateAttribute;
+  if (element.isSynthetic) result |= constants.syntheticAttribute;
+  if (element.isAbstract) result |= constants.abstractAttribute;
+  if (element.isEnum) result |= constants.enumAttribute;
+  return result;
+}
+
+/// Returns an integer encoding of the kind and attributes of the given
 /// field.
 int _fieldDescriptor(FieldElement element) {
   int result = constants.field;
@@ -2940,6 +3073,58 @@ String _extractMetadataCode(Element element, Resolver resolver,
   return _formatAsList("Object", metadataParts);
 }
 
+/// Returns the top level variables declared in the given [libraryElement],
+/// filtering them such that the returned ones are those that are supported
+/// by [capabilities].
+Iterable<TopLevelVariableElement> _extractDeclaredVariables(
+    LibraryElement libraryElement, _Capabilities capabilities) sync* {
+  for (CompilationUnitElement unit in libraryElement.units) {
+    for (TopLevelVariableElement variable in unit.topLevelVariables) {
+      if (variable.isPrivate || variable.isSynthetic) continue;
+      // TODO(eernst) clarify: Do we want to subsume variables under invoke?
+      if (capabilities.supportsTopLevelInvoke(
+          variable.name, variable.metadata)) {
+        yield variable;
+      }
+    }
+  }
+}
+
+/// Returns the top level functions declared in the given [libraryElement],
+/// filtering them such that the returned ones are those that are supported
+/// by [capabilities].
+Iterable<FunctionElement> _extractDeclaredFunctions(
+    LibraryElement libraryElement, _Capabilities capabilities) sync* {
+  for (CompilationUnitElement unit in libraryElement.units) {
+    for (FunctionElement function in unit.functions) {
+      if (function.isPrivate) continue;
+      if (capabilities.supportsTopLevelInvoke(
+          function.name, function.metadata)) {
+        yield function;
+      }
+    }
+  }
+}
+
+/// Returns the parameters declared in the given [declaredFunctions] as well
+/// as the setters from the given [accessors].
+Iterable<ParameterElement> _extractDeclaredFunctionParameters(
+    Iterable<FunctionElement> declaredFunctions,
+    Iterable<ExecutableElement> accessors) {
+  List<ParameterElement> result = <ParameterElement>[];
+  for (FunctionElement declaredFunction in declaredFunctions) {
+    result.addAll(declaredFunction.parameters);
+  }
+  for (ExecutableElement accessor in accessors) {
+    if (accessor is PropertyAccessorElement && accessor.isSetter) {
+      result.addAll(accessor.parameters);
+    }
+  }
+  return result;
+}
+
+/// Returns the declared fields in the given [classElement], filtered such
+/// that the returned ones are the ones that are supported by [capabilities].
 Iterable<FieldElement> _extractDeclaredFields(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.fields.where((FieldElement field) {
@@ -2951,6 +3136,8 @@ Iterable<FieldElement> _extractDeclaredFields(
   });
 }
 
+/// Returns the declared methods in the given [classElement], filtered such
+/// that the returned ones are the ones that are supported by [capabilities].
 Iterable<MethodElement> _extractDeclaredMethods(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.methods.where((MethodElement method) {
@@ -2962,6 +3149,9 @@ Iterable<MethodElement> _extractDeclaredMethods(
   });
 }
 
+/// Returns the declared parameters in the given [declaredMethods] and
+/// [declaredConstructors], as well as the ones from the setters in
+/// [accessors].
 Iterable<ParameterElement> _extractDeclaredParameters(
     Iterable<MethodElement> declaredMethods,
     Iterable<ConstructorElement> declaredConstructors,
@@ -2981,6 +3171,21 @@ Iterable<ParameterElement> _extractDeclaredParameters(
   return result;
 }
 
+/// Returns the accessors from the given [libraryElement], filtured such that
+/// the returned ones are the ones that are supported by [capabilities].
+Iterable<ExecutableElement> _extractLibraryAccessors(
+    LibraryElement libraryElement, _Capabilities capabilities) sync* {
+  for (CompilationUnitElement unit in libraryElement.units) {
+    for (PropertyAccessorElement accessor in unit.accessors) {
+      if (accessor.isPrivate) continue;
+      if (capabilities.supportsTopLevelInvoke(
+          accessor.name, accessor.metadata)) {
+        yield accessor;
+      }
+    }
+  }
+}
+
 /// Returns the [PropertyAccessorElement]s which are the accessors
 /// of the given [classElement], including both the declared ones
 /// and the implicitly generated ones corresponding to fields. This
@@ -2989,7 +3194,7 @@ Iterable<ParameterElement> _extractDeclaredParameters(
 /// interface, e.g., `declarations`. But the latter can be computed from
 /// here, by filtering out the accessors whose `isSynthetic` is true
 /// and adding the fields.
-Iterable<PropertyAccessorElement> _declaredAndImplicitAccessors(
+Iterable<PropertyAccessorElement> _extractAccessors(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.accessors.where((PropertyAccessorElement accessor) {
     if (accessor.isPrivate) return false;
@@ -3000,13 +3205,35 @@ Iterable<PropertyAccessorElement> _declaredAndImplicitAccessors(
   });
 }
 
-Iterable<ConstructorElement> _declaredConstructors(
+/// Returns the declared constructors from [classElement], filtered such that
+/// the returned ones are the ones that are supported by [capabilities].
+Iterable<ConstructorElement> _extractDeclaredConstructors(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.constructors.where((ConstructorElement constructor) {
     if (constructor.isPrivate) return false;
     return capabilities.supportsNewInstance(
         constructor.name, constructor.metadata);
   });
+}
+
+_LibraryDomain _createLibraryDomain(
+    LibraryElement library, _ReflectorDomain domain) {
+  List<TopLevelVariableElement> declaredVariablesOfLibrary =
+      _extractDeclaredVariables(library, domain._capabilities).toList();
+  List<FunctionElement> declaredFunctionsOfLibrary =
+      _extractDeclaredFunctions(library, domain._capabilities).toList();
+  List<PropertyAccessorElement> accessorsOfLibrary =
+      _extractLibraryAccessors(library, domain._capabilities);
+  List<ParameterElement> declaredParametersOfLibrary =
+      _extractDeclaredFunctionParameters(
+          declaredFunctionsOfLibrary, accessorsOfLibrary);
+  return new _LibraryDomain(
+      library,
+      declaredVariablesOfLibrary,
+      declaredFunctionsOfLibrary,
+      declaredParametersOfLibrary,
+      accessorsOfLibrary,
+      domain);
 }
 
 _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
@@ -3020,8 +3247,7 @@ _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
             .where((MethodElement e) => !e.isStatic)
             .toList();
     List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
-        _declaredAndImplicitAccessors(type.mixin, domain._capabilities)
-            .toList();
+        _extractAccessors(type.mixin, domain._capabilities).toList();
     List<ConstructorElement> declaredConstructorsOfClass =
         new List<ConstructorElement>();
     List<ParameterElement> declaredParametersOfClass =
@@ -3043,9 +3269,9 @@ _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
   List<MethodElement> declaredMethodsOfClass =
       _extractDeclaredMethods(type, domain._capabilities).toList();
   List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
-      _declaredAndImplicitAccessors(type, domain._capabilities).toList();
+      _extractAccessors(type, domain._capabilities).toList();
   List<ConstructorElement> declaredConstructorsOfClass =
-      _declaredConstructors(type, domain._capabilities).toList();
+      _extractDeclaredConstructors(type, domain._capabilities).toList();
   List<ParameterElement> declaredParametersOfClass = _extractDeclaredParameters(
       declaredMethodsOfClass,
       declaredConstructorsOfClass,
@@ -3116,13 +3342,16 @@ class MixinApplication implements ClassElement {
   }
 
   @override
+  String get displayName => name;
+
+  @override
   List<InterfaceType> get interfaces => <InterfaceType>[];
 
   @override
   List<ElementAnnotation> get metadata => <ElementAnnotation>[];
 
   @override
-  bool get isSynthetic => declaredName != null;
+  bool get isSynthetic => declaredName == null;
 
   // Note that the `InterfaceTypeImpl` may well call methods on this
   // `MixinApplication` whose body is `_unImplemented()`, but it still provides
@@ -3153,6 +3382,12 @@ class MixinApplication implements ClassElement {
   /// case.
   @override
   bool get isMixinApplication => declaredName != null;
+
+  @override
+  bool get isAbstract => !isMixinApplication || mixin.isAbstract;
+
+  @override
+  bool get isEnum => false;
 
   @override
   NamedCompilationUnitMember computeNode() =>
@@ -3194,12 +3429,6 @@ class MixinApplication implements ClassElement {
 
   @override
   bool get hasStaticMember => _unImplemented();
-
-  @override
-  bool get isAbstract => _unImplemented();
-
-  @override
-  bool get isEnum => _unImplemented();
 
   @override
   bool get isOrInheritsProxy => _unImplemented();
@@ -3297,9 +3526,6 @@ class MixinApplication implements ClassElement {
   get context => _unImplemented();
 
   @override
-  String get displayName => _unImplemented();
-
-  @override
   Element get enclosingElement => _unImplemented();
 
   @override
@@ -3355,4 +3581,10 @@ String _qualifiedName(ClassElement classElement) {
   return classElement == null
       ? "null"
       : "${classElement.library.name}.${classElement.name}";
+}
+
+String _qualifiedFunctionName(FunctionElement functionElement) {
+  return functionElement == null
+      ? "null"
+      : "${functionElement.library.name}.${functionElement.name}";
 }

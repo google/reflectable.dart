@@ -15,6 +15,9 @@ import 'reflectable_base.dart';
 
 bool get isTransformed => true;
 
+/// Returns the set of reflectors in the current program.
+Set<Reflectable> get reflectors => data.keys.toSet();
+
 // Mirror classes with default implementations of all methods, to be used as
 // superclasses of transformer generated static mirror classes.  They serve to
 // ensure that the static mirror classes always implement all methods, such that
@@ -208,6 +211,9 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   /// mirror belongs to.
   final ReflectableImpl _reflector;
 
+  /// An encoding of the attributes and kind of this class mirror.
+  final int _descriptor;
+
   /// The index of this mirror in the [ReflectorData.classMirrors] table.
   /// Also this is the index of the Type of the reflected class in
   /// [ReflectorData.types].
@@ -281,6 +287,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   ClassMirrorImpl(
       this.simpleName,
       this.qualifiedName,
+      this._descriptor,
       this._classIndex,
       this._reflector,
       this._declarationIndices,
@@ -297,7 +304,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
       : _metadata =
             (metadata == null) ? null : new UnmodifiableListView(metadata);
 
-  bool get isAbstract => _unsupported();
+  bool get isAbstract => (_descriptor & constants.abstractAttribute != 0);
 
   Map<String, DeclarationMirror> _declarations;
 
@@ -493,22 +500,66 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   // operations.
 }
 
-class LibraryMirrorImpl implements LibraryMirror {
-  LibraryMirrorImpl(this.simpleName, this.uri, this.getters, this.setters,
+class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
+  LibraryMirrorImpl(
+      this.simpleName,
+      this.uri,
+      this._reflector,
+      this._declarationIndices,
+      this.getters,
+      this.setters,
       List<Object> metadata)
       : _metadata =
             metadata == null ? null : new UnmodifiableListView(metadata);
 
-  final Uri uri;
+  final ReflectableImpl _reflector;
 
-  // TODO(eernst) clarify: `_unsupported()` means not yet implemented here?
-  Map<String, DeclarationMirror> get declarations => _unsupported();
+  /// A list of the indices in [ReflectorData.memberMirrors] of the
+  /// declarations of the reflected class. This includes method mirrors for
+  /// top level functions of this library and it directly corresponds to
+  /// `declarations`. Exception: When the given `_reflector.capabilities` do
+  /// not support the operation `declarations`, this will be
+  /// `<int>[NO_CAPABILITY_INDEX]`. It is enough to check that the list is
+  /// non-empty and first element is NO_CAPABILITY_INDEX to detect this
+  /// situation, because NO_CAPABILITY_INDEX` will otherwise never occur.
+  final List<int> _declarationIndices;
+
+  @override
+  final Uri uri;
 
   @override
   final String simpleName;
 
   final Map<String, _StaticGetter> getters;
   final Map<String, _StaticSetter> setters;
+
+  Map<String, DeclarationMirror> _declarations;
+
+  @override
+  Map<String, DeclarationMirror> get declarations {
+    if (_declarations == null) {
+      Map<String, DeclarationMirror> result =
+          new Map<String, DeclarationMirror>();
+      for (int declarationIndex in _declarationIndices) {
+        // We encode a missing `declarations` capability as an index with
+        // the value NO_CAPABILITY_INDEX. Note that `_declarations` will not be
+        // initialized and hence we will come here repeatedly if that is the
+        // case; however, performing operations for which there is no capability
+        // need not have stellar performance, it is almost always a bug to do
+        // that.
+        if (declarationIndex == NO_CAPABILITY_INDEX) {
+          throw new NoSuchCapabilityError(
+              "Requesting declarations of '$qualifiedName' without capability");
+        }
+        DeclarationMirror declarationMirror =
+            _data.memberMirrors[declarationIndex];
+        result[declarationMirror.simpleName] = declarationMirror;
+      }
+      _declarations =
+          new UnmodifiableMapView<String, DeclarationMirror>(result);
+    }
+    return _declarations;
+  }
 
   @override
   Object invoke(String memberName, List positionalArguments,
@@ -519,7 +570,7 @@ class LibraryMirrorImpl implements LibraryMirror {
           null, memberName, positionalArguments, namedArguments);
     }
     return Function.apply(
-        getters[memberName](), positionalArguments, namedArguments);
+        getter(), positionalArguments, namedArguments);
   }
 
   @override
@@ -1199,7 +1250,13 @@ abstract class ReflectableImpl extends ReflectableBase
   }
 
   @override
-  Map<Uri, LibraryMirror> get libraries => _unsupported();
+  Map<Uri, LibraryMirror> get libraries {
+    Map<Uri, LibraryMirror> result = <Uri, LibraryMirror>{};
+    for (LibraryMirror library in data[this].libraryMirrors) {
+      result[library.uri] = library;
+    }
+    return new UnmodifiableMapView(result);
+  }
 
   @override
   Iterable<ClassMirror> get annotatedClasses {

@@ -90,7 +90,7 @@ abstract class ReflectableInterface {
 /// which means that the behavior of the instance can be expressed by
 /// generating code in the class.  Generalizations of this setup may
 /// be supported in the future if compelling use cases come up.
-class Reflectable extends implementation.ReflectableImpl
+abstract class Reflectable extends implementation.ReflectableImpl
     implements ReflectableInterface {
   // Intended to near-uniquely identify this class in target programs.
   static const thisClassName = reflectable_class_constants.name;
@@ -108,6 +108,19 @@ class Reflectable extends implementation.ReflectableImpl
 
   const Reflectable.fromList(List<ReflectCapability> capabilities)
       : super.fromList(capabilities);
+
+
+  /// Returns the canonicalized instance of the given reflector [type].
+  ///
+  /// If [type] is not a subclass of [Reflectable], or if it is such a class
+  /// but no entities are covered (that is, it is unused, so we don't have
+  /// any reflection data for it) then [null] is returned.
+  static Reflectable getInstance(Type type) {
+    for (Reflectable reflector in implementation.reflectors) {
+      if (reflector.runtimeType == type) return reflector;
+    }
+    return null;
+  }
 }
 
 /// Returns true if the transformed version is running, false otherwise.

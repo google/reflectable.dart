@@ -138,7 +138,7 @@ main() {
     expect(namedArgumentsParameter2.reflectedType, String);
   });
 
-  test('parameter list properties, getters and setters', () {
+  test('parameter reflected types, static getters and setters', () {
     expect(staticGetsetMirror.parameters.length, 0);
     expect(staticGetsetEqualsMirror.parameters.length, 1);
     ParameterMirror staticGetsetEqualsParameter0 =
@@ -146,7 +146,7 @@ main() {
     expect(staticGetsetEqualsParameter0.reflectedType, List);
   });
 
-  test("method return types", () {
+  test('reflected return types, methods', () {
     expect(arg0Mirror.reflectedReturnType, int);
     expect(arg1Mirror.reflectedReturnType, int);
     expect(arg2to4Mirror.reflectedReturnType, int);
