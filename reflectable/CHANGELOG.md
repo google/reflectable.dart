@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.2
+
+* Introduce `reflectedTypeCapability` which enables methods `reflectedType` on
+  variable and parameter mirrors, and `reflectedReturnType` on method mirrors.
+  This enables limited access to type annotations while avoiding the generation
+  of many class mirrors.
+* Introduce `Reflectable.getInstance` which delivers the canonical instance of
+  any given reflector class which is being used in the current program. An
+  example shows how this enables "meta-reflection".
+* Fixed bugs in methods `isAbstract`, `isSynthetic`; fixed bug in selection of
+  supported members of library mirrors; and implemented methods `libraries`
+  and `declarations` for library mirrors; and fixed several other library
+  related bugs.
+
 ## 0.3.1
 
 * Fix bug where metadata was searched the same way for invocation and for
