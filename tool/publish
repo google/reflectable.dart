@@ -89,12 +89,15 @@ git diff HEAD
 
 ( cd ../reflectable; pub publish --dry-run )
 echo ">>>>>> Run these commands:"
-echo pushd ../reflectable
+echo git add --all
 echo git commit -m$COMMIT_MESSAGE
 echo git cl upload
-echo ">>>>>> Please get review etc. such that these changes can be landed.. "
+echo ">>>>>> Please get review such that these changes can be landed.. "
 echo git cl land
+echo git co master
+echo git pull --rebase origin master
+echo pushd ../reflectable
 echo pub publish
 echo git tag -a -m$TAG_MESSAGE $TAG_VALUE
 echo git push origin refs/tags/$TAG_VALUE:refs/tags/$TAG_VALUE
-echo popd >/dev/null
+echo popd
