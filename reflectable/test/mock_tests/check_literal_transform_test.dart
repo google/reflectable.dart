@@ -64,7 +64,7 @@ main() {
   return original.main();
 }
 
-final _data = {const prefix0.MyReflectable(): new r.ReflectorData(<m.ClassMirror>[new r.ClassMirrorImpl(r"A", r".A", 7, 0, const prefix0.MyReflectable(), <int>[-1], <int>[], <int>[], -1, {}, {}, {r"": () => new prefix0.A()}, -1, 0, <int>[], null)], <m.DeclarationMirror>[new r.MethodMirrorImpl(r"", 64, 0, -1, prefix0.A, <int>[], const prefix0.MyReflectable(), null)], <m.ParameterMirror>[], <Type>[prefix0.A], {}, {}, null)};
+final _data = {const prefix0.MyReflectable(): new r.ReflectorData(<m.ClassMirror>[new r.ClassMirrorImpl(r"A", r".A", 7, 0, const prefix0.MyReflectable(), const <int>[-1], const <int>[], const <int>[], -1, {}, {}, {r"": () => new prefix0.A()}, -1, 0, const <int>[], null)], <m.DeclarationMirror>[new r.MethodMirrorImpl(r"", 64, 0, -1, prefix0.A, const <int>[], const prefix0.MyReflectable(), null)], <m.ParameterMirror>[], const <Type>[prefix0.A], {}, {}, null)};
 
 _initializeReflectable() {
   if (!isTransformed) {

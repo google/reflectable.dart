@@ -15,6 +15,8 @@ g: get
 
 c: check
 
+m: measure_output
+
 b: build
 
 t: test
@@ -25,6 +27,9 @@ get:
 check:
 	dartanalyzer $(OPTIONS) ../{lib,test}/*.dart
 
+measure_output: build
+	@./measure_output --include-js --include-source-tree --include-unminified
+
 build:
 	( cd ..; pub build --mode=debug test )
 
@@ -32,5 +37,5 @@ test:
 	@echo "-------------------- test"
 	@./run_tests
 
-.PHONY: all c b t ft check build test
+.PHONY: all c b t ft check measure_output build test
 

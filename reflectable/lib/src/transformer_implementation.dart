@@ -646,7 +646,7 @@ class _ReflectorDomain {
 
     // Generate code for listing [Type] instances.
     String typesCode =
-        _formatAsList("Type", classes.map((ClassElement classElement) {
+        _formatAsConstList("Type", classes.map((ClassElement classElement) {
       return _typeCodeOfClass(classElement, importCollector);
     }));
 
@@ -763,17 +763,17 @@ class _ReflectorDomain {
     });
 
     String declarationsCode = _capabilities._impliesDeclarations
-        ? _formatAsList(
+        ? _formatAsConstList(
             "int",
             () sync* {
               yield* fieldsIndices;
               yield* methodsIndices;
             }())
-        : "<int>[${constants.NO_CAPABILITY_INDEX}]";
+        : "const <int>[${constants.NO_CAPABILITY_INDEX}]";
 
     // All instance members belong to the behavioral interface, so they
     // also get an offset of `fields.length`.
-    String instanceMembersCode = _formatAsList("int",
+    String instanceMembersCode = _formatAsConstList("int",
         classDomain._instanceMembers.map((ExecutableElement element) {
       // TODO(eernst) implement: The "magic" default constructor has
       // index: NO_CAPABILITY_INDEX; adjust this when support for it has
@@ -786,7 +786,7 @@ class _ReflectorDomain {
 
     // All static members belong to the behavioral interface, so they
     // also get an offset of `fields.length`.
-    String staticMembersCode = _formatAsList("int",
+    String staticMembersCode = _formatAsConstList("int",
         classDomain._staticMembers.map((ExecutableElement element) {
       int index = members.indexOf(element);
       return index == null
@@ -810,7 +810,7 @@ class _ReflectorDomain {
 
     String constructorsCode;
     if (classElement is MixinApplication || classElement.isAbstract) {
-      constructorsCode = '{}';
+      constructorsCode = 'const {}';
     } else {
       constructorsCode = _formatAsMap(
           classDomain._constructors.map((ConstructorElement constructor) {
@@ -819,8 +819,8 @@ class _ReflectorDomain {
       }));
     }
 
-    String staticGettersCode = "{}";
-    String staticSettersCode = "{}";
+    String staticGettersCode = "const {}";
+    String staticSettersCode = "const {}";
     if (classElement is! MixinApplication) {
       staticGettersCode = _formatAsMap([
         classDomain._declaredMethods
@@ -851,7 +851,7 @@ class _ReflectorDomain {
         ? libraries.indexOf(libraryMap[classElement.library])
         : constants.NO_CAPABILITY_INDEX;
 
-    String superinterfaceIndices = _formatAsList(
+    String superinterfaceIndices = _formatAsConstList(
         'int',
         classElement.interfaces
             .map((InterfaceType type) => type.element)
@@ -909,7 +909,7 @@ class _ReflectorDomain {
       int descriptor = _declarationDescriptor(element);
       int returnTypeIndex = _computeReturnTypeIndex(element, descriptor);
       int ownerIndex = classes.indexOf(element.enclosingElement);
-      String parameterIndicesCode = _formatAsList("int",
+      String parameterIndicesCode = _formatAsConstList("int",
           element.parameters.map((ParameterElement parameterElement) {
         return parameters.indexOf(parameterElement);
       }));
@@ -955,7 +955,7 @@ class _ReflectorDomain {
   String _typeCode(DartType dartType, _ImportCollector importCollector) {
     if (dartType is TypeParameterType) {
       ClassElement owningClassElement = dartType.element.enclosingElement;
-      return 'new r.FakeType(r"${_qualifiedName(owningClassElement)}.'
+      return 'const r.FakeType(r"${_qualifiedName(owningClassElement)}.'
           '${dartType.element}")';
     }
     return _typeCodeOfClass(dartType.element, importCollector);
@@ -964,7 +964,7 @@ class _ReflectorDomain {
   String _typeCodeOfClass(
       ClassElement classElement, _ImportCollector importCollector) {
     if (classElement is MixinApplication && classElement.declaredName == null) {
-      return 'new r.FakeType(r"${_qualifiedName(classElement)}")';
+      return 'const r.FakeType(r"${_qualifiedName(classElement)}")';
     }
     if (classElement.type.isDynamic) return "dynamic";
     String prefix = importCollector._getPrefix(classElement.library);
@@ -1007,12 +1007,13 @@ class _ReflectorDomain {
       return index + fieldsLength;
     });
 
-    String declarationsCode = "<int>[${constants.NO_CAPABILITY_INDEX}]";
+    String declarationsCode =
+        "const <int>[${constants.NO_CAPABILITY_INDEX}]";
     if (_capabilities._impliesDeclarations) {
       List<int> declarationsIndices = <int>[]
         ..addAll(variableIndices)
         ..addAll(methodsIndices);
-      declarationsCode = _formatAsList("int", declarationsIndices);
+      declarationsCode = _formatAsConstList("int", declarationsIndices);
     }
 
     // TODO(sigurdm) clarify: Find out how to get good uri's in a
@@ -1064,11 +1065,11 @@ class _ReflectorDomain {
     if (_capabilities._supportsMetadata) {
       FormalParameter node = element.computeNode();
       if (node == null) {
-        metadataCode = "<Object>[]";
+        metadataCode = "const []";
       } else {
         NodeList<Annotation> annotations = node.metadata;
-        metadataCode =
-            _formatAsList("Object", annotations.map((Annotation annotation) {
+        metadataCode = _formatAsConstList("Object",
+            annotations.map((Annotation annotation) {
           return _extractAnnotationValue(
               annotation, element.library, importCollector);
         }));
@@ -2826,7 +2827,10 @@ String _nameOfDeclaration(ExecutableElement element) {
 }
 
 String _formatAsList(String typeName, Iterable parts) =>
-    "<$typeName>[${parts.join(", ")}]";
+    "<${typeName}>[${parts.join(", ")}]";
+
+String _formatAsConstList(String typeName, Iterable parts) =>
+    "const <${typeName}>[${parts.join(", ")}]";
 
 String _formatAsDynamicList(Iterable parts) => "[${parts.join(", ")}]";
 
@@ -2995,14 +2999,14 @@ String _extractMetadataCode(Element element, Resolver resolver,
     _ImportCollector importCollector, TransformLogger logger, AssetId dataId) {
   Iterable<ElementAnnotation> elementAnnotations = element.metadata;
 
-  if (elementAnnotations == null) return "<Object>[]";
+  if (elementAnnotations == null) return "const []";
 
   // Synthetic accessors do not have metadata. Only their associated fields.
   if ((element is PropertyAccessorElement ||
           element is ConstructorElement ||
           element is MixinApplication) &&
       element.isSynthetic) {
-    return "<Object>[]";
+    return "const []";
   }
 
   List<String> metadataParts = new List<String>();
@@ -3010,7 +3014,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
   AstNode node = element.computeNode();
   if (node == null) {
     // This can occur with members of subclasses of `Element` from 'dart:html'.
-    return "<Object>[]";
+    return "const []";
   }
 
   // The `element.node` of a field is the [VariableDeclaration] that is nested
@@ -3070,7 +3074,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
     }
   }
 
-  return _formatAsList("Object", metadataParts);
+  return _formatAsConstList("Object", metadataParts);
 }
 
 /// Returns the top level variables declared in the given [libraryElement],

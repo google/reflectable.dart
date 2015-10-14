@@ -300,9 +300,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
       this._ownerIndex,
       this._mixinIndex,
       this._superinterfaceIndices,
-      List<Object> metadata)
-      : _metadata =
-            (metadata == null) ? null : new UnmodifiableListView(metadata);
+      this._metadata);
 
   bool get isAbstract => (_descriptor & constants.abstractAttribute != 0);
 
@@ -508,9 +506,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
       this._declarationIndices,
       this.getters,
       this.setters,
-      List<Object> metadata)
-      : _metadata =
-            metadata == null ? null : new UnmodifiableListView(metadata);
+      this._metadata);
 
   final ReflectableImpl _reflector;
 
@@ -569,8 +565,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
       throw new NoSuchInvokeCapabilityError(
           null, memberName, positionalArguments, namedArguments);
     }
-    return Function.apply(
-        getter(), positionalArguments, namedArguments);
+    return Function.apply(getter(), positionalArguments, namedArguments);
   }
 
   @override
@@ -661,9 +656,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
       this._reflectedReturnType,
       this._parameterIndices,
       this._reflector,
-      List<Object> metadata)
-      : _metadata =
-            (metadata == null) ? null : new UnmodifiableListView(metadata);
+      this._metadata);
 
   int get kind => constants.kindFromEncoding(_descriptor);
 
@@ -952,9 +945,7 @@ abstract class VariableMirrorBase extends _DataCaching
       this._reflector,
       this._classMirrorIndex,
       this._reflectedType,
-      List<Object> metadata)
-      : _metadata =
-            (metadata == null) ? null : new UnmodifiableListView(metadata);
+      this._metadata);
 
   int get kind => constants.kindFromEncoding(_descriptor);
 

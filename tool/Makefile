@@ -16,6 +16,8 @@ g: get
 
 c: check
 
+m: measure_output
+
 b: build
 
 t: test
@@ -34,6 +36,9 @@ check:
 	@./grep_todos --check-consistency
 	@./grep_todos --find-unknown-category
 
+measure_output:
+	@./makein Measuring $(TTOOLS) measure_output
+
 build:
 	@./makein Building $(RTOOLS) build
 	@./makein Building $(TTOOLS) build
@@ -49,3 +54,4 @@ bot_test:
 full_test: test bot_test
 
 .PHONY: all_except_bottest all c b t ft check build test bot_test full_test
+.PHONY: measure_output
