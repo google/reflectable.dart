@@ -188,6 +188,11 @@ bool impliesReflectedType(List<ReflectCapability> capabilities) {
       (ReflectCapability capability) => capability == reflectedTypeCapability);
 }
 
+bool impliesCorrespondingSetter(List<ReflectCapability> capabilities) {
+  return capabilities.any((ReflectCapability capability) =>
+      capability == correspondingSetterQuantifyCapability);
+}
+
 Map<dm.ClassMirror, bool> extractUpwardsClosureBounds(
     List<ReflectCapability> capabilities) {
   Map<dm.ClassMirror, bool> result = <dm.ClassMirror, bool>{};
@@ -233,14 +238,15 @@ bool reflectableSupportsInstanceInvoke(
       // the synthetic field mirrors generated from fields do not have metadata
       // attached. This means we have to walk up all the classes on the super
       // chain as well.
-      while (classMirror != null) {
+      dm.ClassMirror currentClass = classMirror;
+      while (currentClass != null) {
         dm.DeclarationMirror declarationMirror =
-            classMirror.declarations[nameSymbol];
+            currentClass.declarations[nameSymbol];
         if (declarationMirror != null &&
             metadataSupported(declarationMirror.metadata, capability)) {
           return true;
         }
-        classMirror = classMirror.superclass;
+        currentClass = currentClass.superclass;
       }
       return false;
     } else {
@@ -248,7 +254,14 @@ bool reflectableSupportsInstanceInvoke(
     }
   }
 
-  return reflectable.hasCapability(predicate);
+  bool result = reflectable.hasCapability(predicate);
+  if (!result &&
+      impliesCorrespondingSetter(reflectable.capabilities) &&
+      name.endsWith("=")) {
+    return reflectableSupportsInstanceInvoke(
+        reflectable, name.substring(0, name.length - 1), classMirror);
+  }
+  return result;
 }
 
 /// Returns true if [classMirror] supports looking up the declaration of the
@@ -281,8 +294,13 @@ bool reflectableSupportsDeclaration(
 }
 
 /// Returns true iff [reflectable] supports static invoke of [name].
+/// The metadata of the declaration of [name] is provided as [metadata], and
+/// the metadata of the declaration of the corresponding getter is provided
+/// as [getterMetadata]; the latter must be [null] in the cases where [name]
+/// does not declare a setter or it does declare a setter but there is no
+/// corresponding getter declaration.
 bool reflectableSupportsStaticInvoke(ReflectableImpl reflectable, String name,
-    List<dm.InstanceMirror> metadata) {
+    List<dm.InstanceMirror> metadata, List<dm.InstanceMirror> getterMetadata) {
   bool predicate(ApiReflectCapability capability) {
     if (capability == staticInvokeCapability) {
       return true;
@@ -295,7 +313,14 @@ bool reflectableSupportsStaticInvoke(ReflectableImpl reflectable, String name,
     return false;
   }
 
-  return reflectable.hasCapability(predicate);
+  bool result = reflectable.hasCapability(predicate);
+  if (!result &&
+      impliesCorrespondingSetter(reflectable.capabilities) &&
+      name.endsWith("=")) {
+    result = reflectableSupportsStaticInvoke(
+        reflectable, name.substring(0, name.length - 1), getterMetadata, null);
+  }
+  return result;
 }
 
 /// Returns true iff [reflectable] supports top-level invoke of [name].
@@ -657,9 +682,18 @@ class ClassMirrorImpl extends _TypeMirrorImpl
           // `declarationMirror` is a non-constructor.
           if (declarationMirror.isStatic) {
             // `declarationMirror` is a static method/getter/setter.
+            List<dm.InstanceMirror> getterMetadata = null;
+            if (declarationMirror.isSetter &&
+                !declarationMirror.isSynthetic &&
+                name.endsWith("=")) {
+              dm.DeclarationMirror correspondingGetter =
+                  _classMirror.declarations[
+                      new Symbol(name.substring(0, name.length - 1))];
+              getterMetadata = correspondingGetter?.metadata;
+            }
             included = included ||
-                reflectableSupportsStaticInvoke(
-                    _reflectable, name, declarationMirror.metadata);
+                reflectableSupportsStaticInvoke(_reflectable, name,
+                    declarationMirror.metadata, getterMetadata);
           } else {
             // `declarationMirror` is an instance method/getter/setter.
             included = included ||
@@ -678,9 +712,9 @@ class ClassMirrorImpl extends _TypeMirrorImpl
         if (declarationMirror.isStatic) {
           included = included ||
               reflectableSupportsStaticInvoke(
-                  _reflectable, name, declarationMirror.metadata) ||
+                  _reflectable, name, declarationMirror.metadata, null) ||
               reflectableSupportsStaticInvoke(_reflectable,
-                  _getterToSetter(name), declarationMirror.metadata);
+                  _getterToSetter(name), declarationMirror.metadata, null);
         } else {
           included = included ||
               reflectableSupportsDeclaration(
@@ -749,7 +783,17 @@ class ClassMirrorImpl extends _TypeMirrorImpl
     dm.DeclarationMirror declaration =
         _classMirror.declarations[new Symbol(memberName)];
     List<Object> metadata = declaration == null ? null : declaration.metadata;
-    if (reflectableSupportsStaticInvoke(_reflectable, memberName, metadata)) {
+    List<dm.InstanceMirror> getterMetadata = null;
+    if (declaration is dm.MethodMirror &&
+        declaration.isSetter &&
+        !declaration.isSynthetic &&
+        memberName.endsWith("=")) {
+      dm.DeclarationMirror correspondingGetter = _classMirror.declarations[
+          memberName.substring(0, memberName.length - 1)];
+      getterMetadata = correspondingGetter?.metadata;
+    }
+    if (reflectableSupportsStaticInvoke(
+        _reflectable, memberName, metadata, getterMetadata)) {
       Symbol memberNameSymbol = new Symbol(memberName);
       return _classMirror
           .invoke(memberNameSymbol, positionalArguments, namedArguments)
@@ -762,7 +806,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   @override
   Object invokeGetter(String getterName) {
     if (reflectableSupportsStaticInvoke(_reflectable, getterName,
-        _classMirror.declarations[new Symbol(getterName)].metadata)) {
+        _classMirror.declarations[new Symbol(getterName)]?.metadata, null)) {
       Symbol getterNameSymbol = new Symbol(getterName);
       return _classMirror.getField(getterNameSymbol).reflectee;
     }
@@ -771,8 +815,16 @@ class ClassMirrorImpl extends _TypeMirrorImpl
 
   @override
   Object invokeSetter(String setterName, Object value) {
-    if (reflectableSupportsStaticInvoke(_reflectable, setterName,
-        _classMirror.declarations[new Symbol(setterName)].metadata)) {
+    List<dm.InstanceMirror> metadata =
+        _classMirror.declarations[new Symbol(setterName)]?.metadata;
+    List<dm.InstanceMirror> getterMetadata = null;
+    if (setterName.endsWith("=")) {
+      dm.DeclarationMirror correspondingGetter = _classMirror.declarations[
+          new Symbol(setterName.substring(0, setterName.length - 1))];
+      getterMetadata = correspondingGetter?.metadata;
+    }
+    if (reflectableSupportsStaticInvoke(
+        _reflectable, setterName, metadata, getterMetadata)) {
       String getterName = _setterToGetter(setterName);
       Symbol getterNameSymbol = new Symbol(getterName);
       return _classMirror.setField(getterNameSymbol, value).reflectee;

@@ -385,6 +385,12 @@ const typeAnnotationDeepQuantifyCapability =
     const TypeAnnotationQuantifyCapability(transitive: true);
 
 /// Quantifying capability instance specifying that the reflection support
+/// for any given explicitly declared getter must also be given to its
+/// corresponding explicitly declared setter, if any.
+const correspondingSetterQuantifyCapability =
+    const _CorrespondingSetterQuantifyCapability();
+
+/// Quantifying capability instance specifying that the reflection support
 /// requested by the [ApiReflectCapability] instances held by the same
 /// [Reflectable] which also holds this capability should be provided for
 /// instances of the target class whose metadata includes this capability,
@@ -495,6 +501,11 @@ class _LibraryDependenciesCapability implements ApiReflectCapability {
 
 class _SubtypeQuantifyCapability implements ReflecteeQuantifyCapability {
   const _SubtypeQuantifyCapability();
+}
+
+class _CorrespondingSetterQuantifyCapability
+    implements ReflecteeQuantifyCapability {
+  const _CorrespondingSetterQuantifyCapability();
 }
 
 class _AdmitSubtypeCapability implements ReflecteeQuantifyCapability {

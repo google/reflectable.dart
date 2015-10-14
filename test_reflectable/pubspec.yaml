@@ -64,5 +64,6 @@ transformers:
       - test/reflectors_test.dart
       - test/meta_reflector_test.dart
       - test/meta_reflectors_test.dart
+      - test/corresponding_setter_test.dart
 - $dart2js:
     $include: []

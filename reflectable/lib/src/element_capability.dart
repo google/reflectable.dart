@@ -169,6 +169,9 @@ const typeAnnotationQuantifyCapability =
 const typeAnnotationDeepQuantifyCapability =
     const TypeAnnotationQuantifyCapability(transitive: true);
 
+const correspondingSetterQuantifyCapability =
+    const _CorrespondingSetterQuantifyCapability();
+
 const admitSubtypeCapability = const _AdmitSubtypeCapability();
 
 class ImportAttachedCapability {
@@ -226,6 +229,11 @@ class _LibraryDependenciesCapability implements ApiReflectCapability {
 
 class _SubtypeQuantifyCapability implements ReflecteeQuantifyCapability {
   const _SubtypeQuantifyCapability();
+}
+
+class _CorrespondingSetterQuantifyCapability
+    implements ReflecteeQuantifyCapability {
+  const _CorrespondingSetterQuantifyCapability();
 }
 
 class _AdmitSubtypeCapability implements ReflecteeQuantifyCapability {

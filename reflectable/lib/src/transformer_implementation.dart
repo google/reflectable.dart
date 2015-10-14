@@ -1007,8 +1007,7 @@ class _ReflectorDomain {
       return index + fieldsLength;
     });
 
-    String declarationsCode =
-        "const <int>[${constants.NO_CAPABILITY_INDEX}]";
+    String declarationsCode = "const <int>[${constants.NO_CAPABILITY_INDEX}]";
     if (_capabilities._impliesDeclarations) {
       List<int> declarationsIndices = <int>[]
         ..addAll(variableIndices)
@@ -1560,8 +1559,17 @@ class _ClassDomain {
         // the metadata on the original field.
         List<ElementAnnotation> metadata = (member is PropertyAccessorElement &&
             member.isSynthetic) ? member.variable.metadata : member.metadata;
+        List<ElementAnnotation> getterMetadata = null;
+        if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
+            member is PropertyAccessorElement &&
+            !member.isSynthetic &&
+            member.isSetter) {
+          PropertyAccessorElement correspondingGetter =
+              member.correspondingGetter;
+          getterMetadata = correspondingGetter?.metadata;
+        }
         if (_reflectorDomain._capabilities
-            .supportsInstanceInvoke(member.name, metadata)) {
+            .supportsInstanceInvoke(member.name, metadata, getterMetadata)) {
           result[name] = member;
         }
       }
@@ -1614,7 +1622,7 @@ class _ClassDomain {
       if (method.isStatic &&
           !method.isPrivate &&
           _reflectorDomain._capabilities
-              .supportsStaticInvoke(method.name, method.metadata)) {
+              .supportsStaticInvoke(method.name, method.metadata, null)) {
         result.add(method);
       }
     }
@@ -1625,8 +1633,16 @@ class _ClassDomain {
       // the metadata on the original field.
       List<ElementAnnotation> metadata =
           accessor.isSynthetic ? accessor.variable.metadata : accessor.metadata;
+      List<ElementAnnotation> getterMetadata = null;
+      if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
+          accessor.isSetter &&
+          !accessor.isSynthetic) {
+        PropertyAccessorElement correspondingGetter =
+            accessor.correspondingGetter;
+        getterMetadata = correspondingGetter?.metadata;
+      }
       if (_reflectorDomain._capabilities
-          .supportsStaticInvoke(accessor.name, metadata)) {
+          .supportsStaticInvoke(accessor.name, metadata, getterMetadata)) {
         result.add(accessor);
       }
     }
@@ -1671,8 +1687,11 @@ class _Capabilities {
             interfaceType.isSubtypeOf(capability.metadataType.type));
   }
 
-  bool _supportsInstanceInvoke(List<ec.ReflectCapability> capabilities,
-      String methodName, Iterable<DartObjectImpl> metadata) {
+  bool _supportsInstanceInvoke(
+      List<ec.ReflectCapability> capabilities,
+      String methodName,
+      Iterable<DartObject> metadata,
+      Iterable<DartObject> getterMetadata) {
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
       if (capability is ec.InstanceInvokeCapability &&
@@ -1688,12 +1707,18 @@ class _Capabilities {
       // fully when the set of supported classes was computed.
     }
 
+    // Check if we can retry, using the corresponding getter.
+    if (_isSetterName(methodName) && getterMetadata != null) {
+      return _supportsInstanceInvoke(capabilities,
+          _setterNameToGetterName(methodName), getterMetadata, null);
+    }
+
     // All options exhausted, give up.
     return false;
   }
 
   bool _supportsNewInstance(Iterable<ec.ReflectCapability> capabilities,
-      String constructorName, Iterable<DartObjectImpl> metadata) {
+      String constructorName, Iterable<DartObject> metadata) {
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
       if ((capability is ec.InvokingCapability ||
@@ -1716,7 +1741,7 @@ class _Capabilities {
   }
 
   Iterable<DartObjectImpl> _getEvaluatedMetadata(
-      List<ElementAnnotation> metadata) {
+      Iterable<ElementAnnotation> metadata) {
     return metadata.map((ElementAnnotationImpl elementAnnotation) {
       EvaluationResultImpl evaluation = elementAnnotation.evaluationResult;
       assert(evaluation != null);
@@ -1727,21 +1752,29 @@ class _Capabilities {
   // TODO(sigurdm) future: Find a way to cache these. Perhaps take an
   // element instead of name+metadata.
   bool supportsInstanceInvoke(
-      String methodName, List<ElementAnnotation> metadata) {
+      String methodName,
+      Iterable<ElementAnnotation> metadata,
+      Iterable<ElementAnnotation> getterMetadata) {
     var v = _supportsInstanceInvoke(
-        _capabilities, methodName, _getEvaluatedMetadata(metadata));
+        _capabilities,
+        methodName,
+        _getEvaluatedMetadata(metadata),
+        getterMetadata == null ? null : _getEvaluatedMetadata(getterMetadata));
     return v;
   }
 
   bool supportsNewInstance(
-      String constructorName, List<ElementAnnotation> metadata) {
+      String constructorName, Iterable<ElementAnnotation> metadata) {
     var result = _supportsNewInstance(
         _capabilities, constructorName, _getEvaluatedMetadata(metadata));
     return result;
   }
 
-  bool _supportsTopLevelInvoke(List<ec.ReflectCapability> capabilities,
-      String methodName, Iterable<DartObject> metadata) {
+  bool _supportsTopLevelInvoke(
+      List<ec.ReflectCapability> capabilities,
+      String methodName,
+      Iterable<DartObject> metadata,
+      Iterable<DartObject> getterMetadata) {
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
       if ((capability is ec.TopLevelInvokeCapability) &&
@@ -1756,12 +1789,21 @@ class _Capabilities {
       // of reflection support for top-level invocation.
     }
 
+    // Check if we can retry, using the corresponding getter.
+    if (_isSetterName(methodName) && getterMetadata != null) {
+      return _supportsTopLevelInvoke(capabilities,
+          _setterNameToGetterName(methodName), getterMetadata, null);
+    }
+
     // All options exhausted, give up.
     return false;
   }
 
-  bool _supportsStaticInvoke(List<ec.ReflectCapability> capabilities,
-      String methodName, Iterable<DartObject> metadata) {
+  bool _supportsStaticInvoke(
+      List<ec.ReflectCapability> capabilities,
+      String methodName,
+      Iterable<DartObject> metadata,
+      Iterable<DartObject> getterMetadata) {
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
       if (capability is ec.StaticInvokeCapability &&
@@ -1777,20 +1819,36 @@ class _Capabilities {
       // fully when the set of supported classes was computed.
     }
 
+    // Check if we can retry, using the corresponding getter.
+    if (_isSetterName(methodName) && getterMetadata != null) {
+      return _supportsStaticInvoke(capabilities,
+          _setterNameToGetterName(methodName), getterMetadata, null);
+    }
+
     // All options exhausted, give up.
     return false;
   }
 
   bool supportsTopLevelInvoke(
-      String methodName, List<ElementAnnotation> metadata) {
+      String methodName,
+      Iterable<ElementAnnotation> metadata,
+      Iterable<ElementAnnotation> getterMetadata) {
     return _supportsTopLevelInvoke(
-        _capabilities, methodName, _getEvaluatedMetadata(metadata));
+        _capabilities,
+        methodName,
+        _getEvaluatedMetadata(metadata),
+        getterMetadata == null ? null : _getEvaluatedMetadata(getterMetadata));
   }
 
   bool supportsStaticInvoke(
-      String methodName, List<ElementAnnotation> metadata) {
+      String methodName,
+      Iterable<ElementAnnotation> metadata,
+      Iterable<ElementAnnotation> getterMetadata) {
     return _supportsStaticInvoke(
-        _capabilities, methodName, _getEvaluatedMetadata(metadata));
+        _capabilities,
+        methodName,
+        _getEvaluatedMetadata(metadata),
+        getterMetadata == null ? null : _getEvaluatedMetadata(getterMetadata));
   }
 
   bool get _supportsMetadata {
@@ -1875,6 +1933,11 @@ class _Capabilities {
     return _capabilities.any((ec.ReflectCapability capability) =>
         capability is ec.TypeAnnotationQuantifyCapability &&
             capability.transitive == true);
+  }
+
+  bool get _impliesCorrespondingSetters {
+    return _capabilities.any((ec.ReflectCapability capability) =>
+        capability == ec.correspondingSetterQuantifyCapability);
   }
 
   bool get supportsLibraries {
@@ -2461,7 +2524,7 @@ class TransformerImplementation {
       case "InvokingCapability":
         return new ec.InvokingCapability(extractNamePattern(constant));
       case "InvokingMetaCapability":
-        return new ec.NewInstanceMetaCapability(extractMetaData(constant));
+        return new ec.InvokingMetaCapability(extractMetaData(constant));
       case "TypingCapability":
         return new ec.TypingCapability();
       case "_SubtypeQuantifyCapability":
@@ -2473,6 +2536,8 @@ class TransformerImplementation {
       case "TypeAnnotationQuantifyCapability":
         return new ec.TypeAnnotationQuantifyCapability(
             transitive: constant.fields["transitive"].value);
+      case "_CorrespondingSetterQuantifyCapability":
+        return ec.correspondingSetterQuantifyCapability;
       case "AdmitSubtypeCapability":
         // TODO(eernst) feature:
         throw new UnimplementedError("$classElement not yet supported!");
@@ -3087,7 +3152,7 @@ Iterable<TopLevelVariableElement> _extractDeclaredVariables(
       if (variable.isPrivate || variable.isSynthetic) continue;
       // TODO(eernst) clarify: Do we want to subsume variables under invoke?
       if (capabilities.supportsTopLevelInvoke(
-          variable.name, variable.metadata)) {
+          variable.name, variable.metadata, null)) {
         yield variable;
       }
     }
@@ -3103,7 +3168,7 @@ Iterable<FunctionElement> _extractDeclaredFunctions(
     for (FunctionElement function in unit.functions) {
       if (function.isPrivate) continue;
       if (capabilities.supportsTopLevelInvoke(
-          function.name, function.metadata)) {
+          function.name, function.metadata, null)) {
         yield function;
       }
     }
@@ -3127,16 +3192,22 @@ Iterable<ParameterElement> _extractDeclaredFunctionParameters(
   return result;
 }
 
+typedef bool CapabilityChecker(
+    String methodName,
+    Iterable<ElementAnnotation> metadata,
+    Iterable<ElementAnnotation> getterMetadata);
+
 /// Returns the declared fields in the given [classElement], filtered such
 /// that the returned ones are the ones that are supported by [capabilities].
 Iterable<FieldElement> _extractDeclaredFields(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.fields.where((FieldElement field) {
     if (field.isPrivate) return false;
-    Function capabilityChecker = field.isStatic
+    CapabilityChecker capabilityChecker = field.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
-    return !field.isSynthetic && capabilityChecker(field.name, field.metadata);
+    return !field.isSynthetic &&
+        capabilityChecker(field.name, field.metadata, null);
   });
 }
 
@@ -3146,10 +3217,10 @@ Iterable<MethodElement> _extractDeclaredMethods(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.methods.where((MethodElement method) {
     if (method.isPrivate) return false;
-    Function capabilityChecker = method.isStatic
+    CapabilityChecker capabilityChecker = method.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
-    return capabilityChecker(method.name, method.metadata);
+    return capabilityChecker(method.name, method.metadata, null);
   });
 }
 
@@ -3182,8 +3253,17 @@ Iterable<ExecutableElement> _extractLibraryAccessors(
   for (CompilationUnitElement unit in libraryElement.units) {
     for (PropertyAccessorElement accessor in unit.accessors) {
       if (accessor.isPrivate) continue;
+      List<ElementAnnotation> metadata = accessor.metadata;
+      List<ElementAnnotation> getterMetadata = null;
+      if (capabilities._impliesCorrespondingSetters &&
+          accessor.isSetter &&
+          !accessor.isSynthetic) {
+        PropertyAccessorElement correspondingGetter =
+            accessor.correspondingGetter;
+        getterMetadata = correspondingGetter?.metadata;
+      }
       if (capabilities.supportsTopLevelInvoke(
-          accessor.name, accessor.metadata)) {
+          accessor.name, metadata, getterMetadata)) {
         yield accessor;
       }
     }
@@ -3202,10 +3282,22 @@ Iterable<PropertyAccessorElement> _extractAccessors(
     ClassElement classElement, _Capabilities capabilities) {
   return classElement.accessors.where((PropertyAccessorElement accessor) {
     if (accessor.isPrivate) return false;
-    Function capabilityChecker = accessor.isStatic
+    // TODO(eernst) implement: refactor treatment of `getterMetadata`
+    // such that we avoid passing in `null` at all call sites except one,
+    // when we might as well move the processing to that single call site (such
+    // as here, but also in `_extractLibraryAccessors()`, etc).
+    CapabilityChecker capabilityChecker = accessor.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
-    return capabilityChecker(accessor.name, accessor.metadata);
+    List<ElementAnnotation> getterMetadata = null;
+    if (capabilities._impliesCorrespondingSetters &&
+        accessor.isSetter &&
+        !accessor.isSynthetic) {
+      PropertyAccessorElement correspondingGetter =
+          accessor.correspondingGetter;
+      getterMetadata = correspondingGetter?.metadata;
+    }
+    return capabilityChecker(accessor.name, accessor.metadata, getterMetadata);
   });
 }
 
@@ -3579,6 +3671,13 @@ class MixinApplication implements ClassElement {
 
   @override
   void visitChildren(ElementVisitor visitor) => _unImplemented();
+}
+
+bool _isSetterName(String name) => name.endsWith("=");
+
+String _setterNameToGetterName(String name) {
+  assert(_isSetterName(name));
+  return name.substring(0, name.length - 1);
 }
 
 String _qualifiedName(ClassElement classElement) {
