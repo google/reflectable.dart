@@ -64,7 +64,32 @@ main() {
   return original.main();
 }
 
-final _data = {const prefix0.MyReflectable(): new r.ReflectorData(<m.ClassMirror>[new r.ClassMirrorImpl(r"A", r".A", 7, 0, const prefix0.MyReflectable(), const <int>[-1], const <int>[], const <int>[], -1, {}, {}, {r"": () => new prefix0.A()}, -1, 0, const <int>[], null)], <m.DeclarationMirror>[new r.MethodMirrorImpl(r"", 64, 0, -1, prefix0.A, const <int>[], const prefix0.MyReflectable(), null)], <m.ParameterMirror>[], const <Type>[prefix0.A], {}, {}, null)};
+final _data = {
+  const prefix0.MyReflectable(): new r.ReflectorData(<m.ClassMirror>[
+    new r.ClassMirrorImpl(
+        r"A",
+        r".A",
+        7,
+        0,
+        const prefix0.MyReflectable(),
+        const <int>[-1],
+        const <int>[],
+        const <int>[],
+        -1,
+        {},
+        {},
+        {r"": () => new prefix0.A()},
+        -1,
+        0,
+        const <int>[],
+        null)
+  ], <m.DeclarationMirror>[
+    new r.MethodMirrorImpl(r"", 64, 0, -1, prefix0.A, const <int>[],
+        const prefix0.MyReflectable(), null)
+  ], <m.ParameterMirror>[], const <Type>[
+    prefix0.A
+  ], {}, {}, null)
+};
 
 _initializeReflectable() {
   if (!isTransformed) {
@@ -85,7 +110,8 @@ checkTransform(List maps) async {
   TestAggregateTransform transform = new TestAggregateTransform(inputs);
   ReflectableTransformer transformer =
       new ReflectableTransformer.asPlugin(new BarbackSettings({
-    "entry_points": ["main.dart"]
+    "entry_points": ["main.dart"],
+    "formatted": true,
   }, BarbackMode.RELEASE));
 
   // Test `declareOutputs`.
@@ -103,6 +129,7 @@ checkTransform(List maps) async {
   outputs.forEach((key, value) {
     // The error message is nicer when the strings are compared separately
     // instead of comparing Maps.
+    print(value);
     expect(value, expectedOutputs[key]);
   });
 }

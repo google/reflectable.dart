@@ -14,18 +14,19 @@ class ReflectableTransformer extends AggregateTransformer
     implements DeclaringAggregateTransformer {
   BarbackSettings _settings;
   List<String> _entryPoints = <String>[];
+  bool _formatted;
 
   /// Reports an error in a situation where we do not yet have
   /// a [Logger].
   void _reportEarlyError(String message) {
-    print("Error: $message.");
+    print("Error(Reflectable): $message.");
     exit(-1);
   }
 
   /// Reports an info message in a situation where we do not yet have
   /// a [Logger].
   void _reportEarlyInfo(String message) {
-    print("Info: $message.");
+    print("Info(Reflectable): $message.");
     exit(0);
   }
 
@@ -52,9 +53,21 @@ class ReflectableTransformer extends AggregateTransformer
     return entryPoints;
   }
 
+  bool _findFormatted(formattedSettings) {
+    if (formattedSettings == null) {
+      return false;
+    } else if (formattedSettings is! bool) {
+      _reportEarlyError("Encountered non-bool value for 'formatted' option.");
+      return false;
+    } else {
+      return formattedSettings;
+    }
+  }
+
   /// Creates new instance as required by Barback.
   ReflectableTransformer.asPlugin(this._settings) {
     _entryPoints = _findEntryPoints(_settings.configuration['entry_points']);
+    _formatted = _findFormatted(_settings.configuration['formatted']);
   }
 
   /// Return a [String] or [Future<String>] valued key for each
@@ -73,7 +86,7 @@ class ReflectableTransformer extends AggregateTransformer
   @override
   Future apply(AggregateTransform transform) {
     return new implementation.TransformerImplementation()
-        .apply(transform, _entryPoints);
+        .apply(transform, _entryPoints, _formatted);
   }
 
   @override

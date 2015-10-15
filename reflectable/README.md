@@ -135,6 +135,7 @@ transformers:
 - reflectable:
     entry_points:
       - web/main.dart # The path to your main file
+    formatted: true # Will run dartfmt to format the generated code.
 ```
 
 And then run `pub build --mode=debug web` (you can omit `web` because that
