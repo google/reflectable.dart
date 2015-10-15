@@ -129,7 +129,6 @@ checkTransform(List maps) async {
   outputs.forEach((key, value) {
     // The error message is nicer when the strings are compared separately
     // instead of comparing Maps.
-    print(value);
     expect(value, expectedOutputs[key]);
   });
 }
