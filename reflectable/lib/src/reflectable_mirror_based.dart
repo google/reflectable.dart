@@ -257,9 +257,9 @@ bool reflectableSupportsInstanceInvoke(
   bool result = reflectable.hasCapability(predicate);
   if (!result &&
       impliesCorrespondingSetter(reflectable.capabilities) &&
-      name.endsWith("=")) {
+      _isSetterName(name)) {
     return reflectableSupportsInstanceInvoke(
-        reflectable, name.substring(0, name.length - 1), classMirror);
+        reflectable, _setterNameToGetterName(name), classMirror);
   }
   return result;
 }
@@ -316,16 +316,16 @@ bool reflectableSupportsStaticInvoke(ReflectableImpl reflectable, String name,
   bool result = reflectable.hasCapability(predicate);
   if (!result &&
       impliesCorrespondingSetter(reflectable.capabilities) &&
-      name.endsWith("=")) {
+      _isSetterName(name)) {
     result = reflectableSupportsStaticInvoke(
-        reflectable, name.substring(0, name.length - 1), getterMetadata, null);
+        reflectable, _setterNameToGetterName(name), getterMetadata, null);
   }
   return result;
 }
 
 /// Returns true iff [reflectable] supports top-level invoke of [name].
 bool reflectableSupportsTopLevelInvoke(ReflectableImpl reflectable, String name,
-    List<dm.InstanceMirror> metadata) {
+    List<dm.InstanceMirror> metadata, List<dm.InstanceMirror> getterMetadata) {
   // We don't have to check for `libraryCapability` because this method is only
   // ever called from the methods of a `LibraryMirrorImpl` and the existence of
   // an instance of a `LibraryMirrorImpl` implies the `libraryMirrorCapability`.
@@ -339,6 +339,11 @@ bool reflectableSupportsTopLevelInvoke(ReflectableImpl reflectable, String name,
     }
     if (capability is TopLevelInvokeMetaCapability) {
       return metadataSupported(metadata, capability);
+    }
+    if (impliesCorrespondingSetter(reflectable.capabilities) &&
+        _isSetterName(name)) {
+      return reflectableSupportsTopLevelInvoke(
+          reflectable, _setterNameToGetterName(name), getterMetadata, null);
     }
     return false;
   });
@@ -379,16 +384,16 @@ bool reflectableSupportsDeclarations(Reflectable reflectable) {
 /// Returns [setterName] with final "=" removed.
 /// If the it does not have a final "=" it is returned as is.
 String _setterToGetter(String setterName) {
-  if (!setterName.endsWith("=")) {
+  if (!_isSetterName(setterName)) {
     return setterName;
   }
-  return setterName.substring(0, setterName.length - 1);
+  return _setterNameToGetterName(setterName);
 }
 
 /// Returns [getterName] with a final "=" added.
 /// If [getter] already ends with "=" an error is thrown.
 String _getterToSetter(String getterName) {
-  if (getterName.endsWith("=")) {
+  if (_isSetterName(getterName)) {
     throw new ArgumentError(
         "$getterName is a setter name (ends with `=`) already.");
   }
@@ -421,28 +426,73 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
       throw new NoSuchCapabilityError(
           "Attempt to get declarations without capability");
     }
-    Map<Symbol, dm.DeclarationMirror> decls = _libraryMirror.declarations;
-    Iterable<Symbol> relevantKeys = decls.keys.where((k) {
-      List<dm.InstanceMirror> metadata = decls[k].metadata;
-      for (var item in metadata) {
-        if (item.hasReflectee && item.reflectee == _reflectable) return true;
+    Map<String, rm.DeclarationMirror> result =
+        new Map<String, rm.DeclarationMirror>();
+    _libraryMirror.declarations
+        .forEach((Symbol nameSymbol, dm.DeclarationMirror declarationMirror) {
+      String name = dm.MirrorSystem.getName(nameSymbol);
+      if (declarationMirror is dm.MethodMirror) {
+        List<dm.InstanceMirror> getterMetadata = null;
+        if (declarationMirror.isSetter &&
+            !declarationMirror.isSynthetic &&
+            _isSetterName(name)) {
+          dm.DeclarationMirror correspondingGetter =
+              _libraryMirror.declarations[
+                  new Symbol(_setterNameToGetterName(name))];
+          getterMetadata = correspondingGetter?.metadata;
+        }
+        if (reflectableSupportsTopLevelInvoke(
+            _reflectable, name, declarationMirror.metadata, getterMetadata)) {
+          result[name] = wrapDeclarationMirror(declarationMirror, _reflectable);
+        }
+      } else if (declarationMirror is dm.VariableMirror) {
+        // For variableMirrors we test both for support of the name and the
+        // derived setter name.
+        if (reflectableSupportsTopLevelInvoke(
+                _reflectable, name, declarationMirror.metadata, null) ||
+            reflectableSupportsTopLevelInvoke(_reflectable,
+                _getterToSetter(name), declarationMirror.metadata, null)) {
+          result[name] = wrapDeclarationMirror(declarationMirror, _reflectable);
+        }
+      } else {
+        // The additional subtypes of [dm.DeclarationMirror] are
+        // [dm.LibraryMirror]: doees not occur inside another library,
+        // [dm.ParameterMirror]: not declared in a library, [dm.TypeMirror],
+        // and the 4 subtypes thereof; [dm.ClassMirror]: processed here,
+        // [dm.TypedefMirror]: not yet supported, [dm.FunctionTypeMirror]: not
+        // yet supported, and [dm.TypeVariableMirror]: not yet supported.
+        if (declarationMirror is dm.ClassMirror) {
+          if (_reflectable._supportedClasses.contains(declarationMirror)) {
+            result[name] =
+                wrapDeclarationMirror(declarationMirror, _reflectable);
+          }
+        } else {
+          // TODO(eernst) implement: currently ignoring the unsupported cases.
+        }
       }
-      return false;
     });
-    return new Map<String, rm.DeclarationMirror>.fromIterable(relevantKeys,
-        key: (k) => dm.MirrorSystem.getName(k),
-        value: (v) => wrapDeclarationMirror(decls[v], _reflectable));
+    return result;
   }
 
   @override
   Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
-    if (!reflectableSupportsTopLevelInvoke(_reflectable, memberName,
-        _libraryMirror.declarations[new Symbol(memberName)].metadata)) {
+    dm.DeclarationMirror declaration =
+        _libraryMirror.declarations[new Symbol(memberName)];
+    List<dm.InstanceMirror> metadata = declaration.metadata;
+    List<dm.InstanceMirror> getterMetadata = null;
+    if (impliesCorrespondingSetter(_reflectable.capabilities) &&
+        declaration is dm.MethodMirror &&
+        declaration.isSetter) {
+      dm.MethodMirror correspondingGetter = _libraryMirror.declarations[
+          new Symbol(_setterNameToGetterName(memberName))];
+      getterMetadata = correspondingGetter?.metadata;
+    }
+    if (!reflectableSupportsTopLevelInvoke(
+        _reflectable, memberName, metadata, getterMetadata)) {
       throw new NoSuchInvokeCapabilityError(
           _receiver, memberName, positionalArguments, namedArguments);
     }
-
     return _libraryMirror
         .invoke(new Symbol(memberName), positionalArguments, namedArguments)
         .reflectee;
@@ -451,7 +501,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   @override
   Object invokeGetter(String getterName) {
     if (!reflectableSupportsTopLevelInvoke(_reflectable, getterName,
-        _libraryMirror.declarations[new Symbol(getterName)].metadata)) {
+        _libraryMirror.declarations[new Symbol(getterName)].metadata, null)) {
       throw new NoSuchInvokeCapabilityError(_receiver, getterName, [], null);
     }
     Symbol getterNameSymbol = new Symbol(getterName);
@@ -460,13 +510,24 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
 
   @override
   Object invokeSetter(String setterName, Object value) {
-    if (!reflectableSupportsTopLevelInvoke(_reflectable, setterName,
-        _libraryMirror.declarations[new Symbol(setterName)].metadata)) {
+    dm.DeclarationMirror declaration =
+        _libraryMirror.declarations[new Symbol(setterName)];
+    List<dm.InstanceMirror> metadata = declaration.metadata;
+    List<dm.InstanceMirror> getterMetadata = null;
+    String getterName = _setterToGetter(setterName);
+    Symbol getterNameSymbol = new Symbol(getterName);
+    if (impliesCorrespondingSetter(_reflectable.capabilities) &&
+        declaration is dm.MethodMirror &&
+        declaration.isSetter) {
+      dm.MethodMirror correspondingGetter =
+          _libraryMirror.declarations[getterNameSymbol];
+      getterMetadata = correspondingGetter?.metadata;
+    }
+    if (!reflectableSupportsTopLevelInvoke(
+        _reflectable, setterName, metadata, getterMetadata)) {
       throw new NoSuchInvokeCapabilityError(
           _receiver, setterName, [value], null);
     }
-    String getterName = _setterToGetter(setterName);
-    Symbol getterNameSymbol = new Symbol(getterName);
     return _libraryMirror.setField(getterNameSymbol, value).reflectee;
   }
 
@@ -685,10 +746,10 @@ class ClassMirrorImpl extends _TypeMirrorImpl
             List<dm.InstanceMirror> getterMetadata = null;
             if (declarationMirror.isSetter &&
                 !declarationMirror.isSynthetic &&
-                name.endsWith("=")) {
+                _isSetterName(name)) {
               dm.DeclarationMirror correspondingGetter =
                   _classMirror.declarations[
-                      new Symbol(name.substring(0, name.length - 1))];
+                      new Symbol(_setterNameToGetterName(name))];
               getterMetadata = correspondingGetter?.metadata;
             }
             included = included ||
@@ -787,9 +848,9 @@ class ClassMirrorImpl extends _TypeMirrorImpl
     if (declaration is dm.MethodMirror &&
         declaration.isSetter &&
         !declaration.isSynthetic &&
-        memberName.endsWith("=")) {
+        _isSetterName(memberName)) {
       dm.DeclarationMirror correspondingGetter = _classMirror.declarations[
-          memberName.substring(0, memberName.length - 1)];
+          new Symbol(_setterNameToGetterName(memberName))];
       getterMetadata = correspondingGetter?.metadata;
     }
     if (reflectableSupportsStaticInvoke(
@@ -818,9 +879,9 @@ class ClassMirrorImpl extends _TypeMirrorImpl
     List<dm.InstanceMirror> metadata =
         _classMirror.declarations[new Symbol(setterName)]?.metadata;
     List<dm.InstanceMirror> getterMetadata = null;
-    if (setterName.endsWith("=")) {
+    if (_isSetterName(setterName)) {
       dm.DeclarationMirror correspondingGetter = _classMirror.declarations[
-          new Symbol(setterName.substring(0, setterName.length - 1))];
+          new Symbol(_setterNameToGetterName(setterName))];
       getterMetadata = correspondingGetter?.metadata;
     }
     if (reflectableSupportsStaticInvoke(
@@ -1415,8 +1476,10 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   const ReflectableImpl.fromList(List<ReflectCapability> capabilities)
       : super.fromList(capabilities);
 
-  bool _canReflect(dm.InstanceMirror mirror) =>
-      _supportedClasses.contains(mirror.type.originalDeclaration);
+  bool _canReflect(dm.InstanceMirror mirror) {
+    dm.ClassMirror classMirror = mirror.type.originalDeclaration;
+    return !classMirror.isPrivate && _supportedClasses.contains(classMirror);
+  }
 
   /// Determines whether reflection is supported for the given [o].
   @override
@@ -1783,4 +1846,11 @@ class _TypeAnnotationsFixedPoint extends FixedPoint<dm.ClassMirror> {
       }
     }
   }
+}
+
+bool _isSetterName(String name) => name.endsWith("=");
+
+String _setterNameToGetterName(String name) {
+  assert(_isSetterName(name));
+  return name.substring(0, name.length - 1);
 }

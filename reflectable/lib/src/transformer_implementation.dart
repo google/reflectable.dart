@@ -365,7 +365,7 @@ class _ReflectorDomain {
   final AssetId _generatedLibraryId;
   final ClassElement _reflector;
 
-  /// Do not use this, use [classes] which ensures that closures operations
+  /// Do not use this, use [classes] which ensures that closure operations
   /// have been performed as requested in [_capabilities]. Exception: In
   /// `_computeWorld`, [_classes] is filled in with the set of directly
   /// covered classes during creation of this [_ReflectorDomain].
@@ -543,9 +543,10 @@ class _ReflectorDomain {
     // Library and class related collections.
     Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
 
-    // Fill in [libraries], [members], [fields], [parameters],
-    // [instanceGetterNames], and [instanceSetterNames].
-    for (LibraryElement library in _libraries) {
+    /// Adds a library domain for [library] to [libraries], relying on checks
+    /// for importability and insertion into [importCollector] to have taken
+    /// place already.
+    void uncheckedAddLibrary(LibraryElement library) {
       _LibraryDomain libraryDomain = _createLibraryDomain(library, this);
       libraries.add(libraryDomain);
       libraryMap[library] = libraryDomain;
@@ -553,6 +554,25 @@ class _ReflectorDomain {
       libraryDomain._declaredParameters.forEach(parameters.add);
       libraryDomain._declaredVariables.forEach(topLevelVariables.add);
     }
+
+    /// Used to add a library domain for [library] to [libraries], checking
+    /// that it is importable and registering it with [importCollector].
+    void addLibrary(LibraryElement library) {
+      if (!_isImportableLibrary(
+          library, _generatedLibraryId, _resolver)) return;
+      importCollector._addLibrary(library);
+      uncheckedAddLibrary(library);
+    }
+
+    // Fill in [libraries], [members], [fields], [parameters],
+    // [instanceGetterNames], and [instanceSetterNames].
+    _libraries.forEach(uncheckedAddLibrary);
+    classes.forEach((ClassElement classElement) {
+      if (!libraries.items.any((_LibraryDomain libraryDomain) =>
+          libraryDomain._libraryElement == classElement.library)) {
+        addLibrary(classElement.library);
+      }
+    });
     for (_ClassDomain classDomain in classes.domains) {
       // Gather the behavioral interface into [members]. Note that
       // this includes implicitly generated getters and setters, but
@@ -658,8 +678,8 @@ class _ReflectorDomain {
     } else {
       librariesCode = _formatAsList("m.LibraryMirror",
           libraries.items.map((_LibraryDomain library) {
-        return _libraryMirrorCode(library, members, topLevelVariables,
-            fields.length, importCollector, logger);
+        return _libraryMirrorCode(library, libraries.indexOf(library), members,
+            topLevelVariables, fields.length, importCollector, logger);
       }));
     }
 
@@ -869,14 +889,13 @@ class _ReflectorDomain {
 
     int classIndex = classes.indexOf(classElement);
 
-    String result = 'new r.ClassMirrorImpl(r"${classDomain._simpleName}", '
+    return 'new r.ClassMirrorImpl(r"${classDomain._simpleName}", '
         'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
         '${_constConstructionCode(importCollector)}, '
         '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
         '$superclassIndex, $staticGettersCode, $staticSettersCode, '
         '$constructorsCode, $ownerIndex, $mixinIndex, '
         '$superinterfaceIndices, $classMetadataCode)';
-    return result;
   }
 
   String _methodMirrorCode(
@@ -964,7 +983,9 @@ class _ReflectorDomain {
 
   String _typeCodeOfClass(
       ClassElement classElement, _ImportCollector importCollector) {
-    if (classElement is MixinApplication && classElement.declaredName == null) {
+    if ((classElement is MixinApplication &&
+            classElement.declaredName == null) ||
+        classElement.isPrivate) {
       return 'const r.FakeType(r"${_qualifiedName(classElement)}")';
     }
     if (classElement.type.isDynamic) return "dynamic";
@@ -974,6 +995,7 @@ class _ReflectorDomain {
 
   String _libraryMirrorCode(
       _LibraryDomain libraryDomain,
+      int libraryIndex,
       Enumerator<ExecutableElement> members,
       Enumerator<TopLevelVariableElement> variables,
       int fieldsLength,
@@ -1018,8 +1040,10 @@ class _ReflectorDomain {
 
     // TODO(sigurdm) clarify: Find out how to get good uri's in a
     // transformer.
-    // TODO(sigurdm) implement: Check for `uriCapability`.
-    String uriCode = "null";
+    String uriCode = (_capabilities._supportsUri ||
+            _capabilities.supportsLibraries)
+        ? 'Uri.parse(r"reflectable://$libraryIndex/$library")'
+        : 'null';
 
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -1857,6 +1881,11 @@ class _Capabilities {
         capability == ec.metadataCapability);
   }
 
+  bool get _supportsUri {
+    return _capabilities.any(
+        (ec.ReflectCapability capability) => capability == ec.uriCapability);
+  }
+
   /// Returns [true] iff these [Capabilities] specify reflection support
   /// where the set of classes must be downwards closed, i.e., extra classes
   /// must be added beyond the ones that are directly covered by the given
@@ -2286,7 +2315,7 @@ class TransformerImplementation {
     void addLibrary(LibraryElement library, ClassElement reflector) {
       _ReflectorDomain domain = getReflectorDomain(reflector);
       if (domain._capabilities.supportsLibraries) {
-        assert(_isImportableLibrary(reflector.library, dataId, _resolver));
+        assert(_isImportableLibrary(library, dataId, _resolver));
         importCollector._addLibrary(library);
         domain._libraries.add(library);
       }
@@ -2389,7 +2418,7 @@ class TransformerImplementation {
     for (LibraryElement library in _resolver.libraries) {
       for (ClassElement reflector
           in getReflectors(library.name, library.metadata)) {
-        assert(_isImportableLibrary(reflector.library, dataId, _resolver));
+        assert(_isImportableLibrary(library, dataId, _resolver));
         addLibrary(library, reflector);
       }
 

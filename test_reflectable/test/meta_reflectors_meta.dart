@@ -29,7 +29,9 @@ class ScopeMetaReflector extends Reflectable {
     Set<Reflectable> result = new Set<Reflectable>();
     for (LibraryMirror library in libraries.values) {
       for (DeclarationMirror declaration in library.declarations.values) {
-        result.addAll(library.invoke(declaration.simpleName, [scope]));
+        if (declaration is MethodMirror) {
+          result.addAll(library.invoke(declaration.simpleName, [scope]));
+        }
       }
     }
     return result;

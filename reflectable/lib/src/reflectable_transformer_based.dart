@@ -109,7 +109,7 @@ class ReflectorData {
         _typeToClassMirrorCache = new Map.fromIterables(types, classMirrors);
       }
     }
-    return _typeToClassMirrorCache[type];
+    return  _typeToClassMirrorCache[type];
   }
 }
 
@@ -499,14 +499,8 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
 }
 
 class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
-  LibraryMirrorImpl(
-      this.simpleName,
-      this.uri,
-      this._reflector,
-      this._declarationIndices,
-      this.getters,
-      this.setters,
-      this._metadata);
+  LibraryMirrorImpl(this.simpleName, this.uri, this._reflector,
+      this._declarationIndices, this.getters, this.setters, this._metadata);
 
   final ReflectableImpl _reflector;
 
@@ -551,6 +545,11 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
             _data.memberMirrors[declarationIndex];
         result[declarationMirror.simpleName] = declarationMirror;
       }
+      _data.classMirrors.forEach((ClassMirror classMirror) {
+        if (classMirror.owner == this) {
+          result[classMirror.simpleName] = classMirror;
+        }
+      });
       _declarations =
           new UnmodifiableMapView<String, DeclarationMirror>(result);
     }
@@ -612,8 +611,15 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   @override
   String get qualifiedName => simpleName;
 
-  bool operator ==(other) => _unsupported();
-  int get hashCode => _unsupported();
+  bool operator ==(other) {
+    return other is LibraryMirrorImpl &&
+        other.uri == uri &&
+        other._reflector == _reflector &&
+        other._declarationIndices == _declarationIndices;
+  }
+
+  int get hashCode =>
+      uri.hashCode ^ _reflector.hashCode ^ _declarationIndices.hashCode;
 
   // TODO(sigurdm) implement: Need to implement this. Probably only when a given
   // capability is enabled.
@@ -1255,8 +1261,8 @@ abstract class ReflectableImpl extends ReflectableBase
   }
 }
 
-// For mixin-applications we need to construct objects that represents their
-// type.
+// For mixin-applications and private classes we need to construct objects
+// that represents their type.
 class FakeType implements Type {
   const FakeType(this.description);
 
