@@ -16,13 +16,22 @@ which is importing and using the package reflectable, or a package
 containing such a library. Using one or another capability as
 metadata on a class `C` in client code may determine whether or not it is
 possible to reflectively `invoke` a method on an instance of `C` via an
-`InstanceMirror`. Given that the motivation for having the package
+`InstanceMirror`. Given that one main reason for having the package
 reflectable in the first place is to save space consumed by less frugal
 kinds of reflection, the ability to restrict reflection support to the
 actual needs is a core point in the design of the package.
 
+It should be noted that the notion of capabilities in this document and
+in relation to the package reflectable in general is different from the
+capability concept known from
+[operating systems research][capabilities_in_OS], which is about
+unforgeable tokens of authority (that is, large and secret numbers).
+Here, a capability is only concerned with the ability to do something,
+not with security.
+
 [package_reflectable]: https://github.com/dart-lang/reflectable
 [dartdoc_for_capability]: http://www.dartdocs.org/documentation/reflectable/0.1.0/index.html#reflectable/reflectable-capability
+[capabilities_in_OS]: https://en.wikipedia.org/wiki/Capability-based_security
 
 # Context and Design Ideas
 
@@ -51,8 +60,8 @@ differences that do exist were introduced for two reasons:
   as **reflectors**, are intended to play the role as mirror systems
   &#91;1, or search 'mirror systems' below&#93;, and these operations are
   mirror system specific. For instance, the top-level function `reflect`
-  in `dart:mirrors` corresponds to two different methods (with different
-  semantics, so they cannot be merged) for two different mirror systems.
+  in `dart:mirrors` corresponds to two different methods for two different
+  mirror systems (with different semantics, so they cannot be merged).
 
 * Some proposals have been made for changes to the `dart:mirrors` API. We
   took the opportunity to try out an **updated API** by making
@@ -70,6 +79,22 @@ differences that do exist were introduced for two reasons:
   order to save space), because `String` values remain unchanged
   throughout compilation.
 
+* New methods have been added to certain mirrors such that the package
+  reflectable also provides an **extended API** compared to `dart:mirrors`.
+  In particular, variable mirrors and parameter mirrors support the method
+  `reflectedType` and method mirrors support `reflectedReturnType`. These
+  methods are short hands for method invocation chains (that is, they work
+  like `.type.reflectedType` respectively `.returnType.reflectedType`).
+  The reason for having them is that the intermediate class mirror need
+  not exist, which means that the space consumption can be reduced in
+  cases where a substantial number of class mirrors would exist only
+  because they would occur as intermediate results during execution of
+  those particular method call chains. An added method on reflectors
+  is `getInstance`, which returns the canonical reflector for a given
+  reflector class; this method is needed in order to enable meta-level
+  reflection, where the current program is browsed programmatically in
+  order to find a suitable mirror system.
+
 In summary, the vast majority of the API offered by the package
 reflectable is identical to the API offered by `dart:mirrors`, and design
 documents about that API or about reflection in general &#91;2,3&#93;
@@ -86,8 +111,8 @@ able to express.
 In general, we maintain the property that the specifications of
 reflection support with one reflector (that is, inside one mirror-system)
 are **monotone**, in the sense that any program having a certain amount
-of reflection support specifications will support at least as many
-reflective operations if additional specifications are added to that
+of reflection support will support at least as many
+reflective operations if additional specifications are added to the given
 reflector. In other words, reflection support specifications can request
 additional features, they can never prevent any reflection features from
 being supported. As a result, we obtain a modularity law: a programmer
@@ -117,8 +142,9 @@ use the following stratification as an overall framework for the design:
   capability, and another capability will turn on
   `ClassMirror.invoke`. In case a supported method is called it behaves
   like the corresponding method in a corresponding mirror class from
-  `dart:mirrors`; in case an unsupported method is called, an exception
-  is thrown.
+  `dart:mirrors` (except for the adjustments mentioned above, such as
+  returning a base value rather than a mirror on it). In case an
+  unsupported method is called, an exception is thrown.
 
 * As a refinement of the API based specification, we have chosen to focus
   on the specification of allowable argument values given to specific
@@ -145,7 +171,7 @@ dimension is concerned with the available selection of reflectees.
 
 The general feature covering this type of specification is
 **quantification** over source code elements&mdash;in particular over
-classes (future extensions will deal with other entities). In this area
+classes and other top-level declarations. In this area
 we have focused on the mechanisms listed below. Note that `MyReflectable`
 is assumed to be the name of a subclass of `Reflectable` and
 `myReflectable` is assumed to be a `const` instance of `MyReflectable`,
@@ -161,10 +187,10 @@ declarations.
   without support for instance mirrors. In contrast, we have chosen to
   have a capability for obtaining class mirrors and similar source code
   oriented mirrors, which also controls the ability to perform
-  `reflectType`; this is because having these mirrors may have
-  substantial cost in terms of program size. Finally, we have chosen to
-  omit the method `reflectClass`, because it may be replaced by
-  `reflectType`, followed by `originalDeclaration` when
+  `reflectType`; this is because having these mirrors may be costly in
+  terms of program size, and it may not be needed in some situations.
+  Finally, we have chosen to omit the method `reflectClass`, because it
+  may be replaced by `reflectType`, followed by `originalDeclaration` when
   `isOriginalDeclaration` is `false`.
 
 * The basic mechanism to get reflection support for a class `C` is to
@@ -188,7 +214,7 @@ declarations.
   could be predefined, it could be provided by a third party such that
   modifications incur repeated maintenance after updates, etc.). This
   feature has been known as **side tags** since the beginnings of the
-  package reflectable. Currently they are attached as metadata to an
+  package reflectable. Currently they must be attached as metadata to an
   import directive for the library
   `package:reflectable/reflectable.dart`, but they could in principle be
   attached to any program element that admits metadata, or they could
@@ -203,30 +229,34 @@ declarations.
   quantification mechanisms, so each of the ones we have should be
   comprehensible and reasonably powerful, and they should not overlap. So
   far, we have focused on the following variants:
-    * It should be possible to specify that one or more specific classes
-      get a specific level of reflection support; this is a simple
-      generalization of side tags where the target is a list of classes
-      rather than a single class.
     * It should be possible to request reflection support for a set of
-      classes chosen in a more abstract manner than by
-      enumeration. Obvious candidate quantification mechanisms quantify
-      over all superclasses of a given class; over all supertypes of a
-      given class; over all subclasses of a given class; over all
-      subtypes of a given class; and over all classes whose name matches
-      a given pattern.
+      classes chosen via some query mechanism. Obvious candidate
+      quantification mechanisms quantify over all superclasses; over all
+      supertypes; over all subclasses; over all subtypes of a given class;
+      and over all classes whose name matches a given pattern.
     * Quantification as in the previous bullet is centralized because it
       is based on one specification which is then used to 'query' the
-      whole program (or certain large parts of it) for matching
-      entities. It is common and useful to supplement this with a
-      decentralized mechanism, where programmers manually enumerate the
-      members of a set, for instance by attaching a certain marker as
-      metadata to those members. This makes it possible to maintain the
-      set precisely and explicitly, even in the cases where the members
-      do not share obvious common traits that makes the centralized
-      approach convenient. A good example is that a set of methods can be
-      given reflective support by annotating them with metadata; for
-      instance, we may wish to be able to reflectively invoke all methods
-      marked with @businessRule.
+      whole program for matching entities. It is common and useful to
+      supplement this with a decentralized mechanism, where programmers
+      explicitly mark each member of a set, for instance by attaching a
+      certain marker as metadata to those members. This makes it possible
+      to maintain the set precisely and explicitly, even in the cases
+      where the members do not share obvious common traits that fit into
+      the centralized 'query' approach. A good example is that a set of
+      methods can be given reflective support by annotating them with
+      metadata; for instance, we may wish to be able to reflectively
+      invoke all methods marked with `@businessRule`.
+
+It is worth noting the flexibility that is enabled by the separation of
+the mechanisms for supporting specific methods on mirrors (API related)
+and for supporting specific target classes (reflectee related). The
+separation comes about because API related support is specified in
+reflector classes via capabilities, and reflectee related support is
+specified by adding reflectors as metadata to top-level declarations
+like classes, and via global quantifiers. In particular, it is possible
+to use a reflector which is declared in some third-party package, and then
+locally specify which classes that reflector should provide reflection
+support for, because there is no need to edit the reflector class itself.
 
 We subscribe to a point of view where reflective operations are divided
 into (a) operations concerned with the dynamic behavior of class
@@ -246,24 +276,40 @@ the reflectee. Conversely, introspective operations are concerned with
 source code entities such as declarations, and hence the `declarations`
 reported for a given class does *not* include inherited declarations,
 they must be found by explicitly iterating over the superclass chain.
+Similarly, the introspective point of view includes abstract member
+declarations, but they are ignored when using the behavioral point of
+view.
 
-Finally, we need to mention the notion of a **mirror system**, that is, a
-set of features which provides support for mirror based reflection. This
-is because we may have several of them: With a choice of a level of
-reflection support (based on the mirror APIs), and a choice of classes
-for which this level of support should be provided (based on reflectee
-selection), it is reasonable to say that we have specified a mirror
-system. Using multiple mirror systems is relevant in cases where some
-classes (and/or their instances) require very different levels of
-support. For example, when a few classes require extensive reflection
-support and a large number of other classes require just a little bit,
-using a powerful mirror system with the former and a minimalist one with
-the latter may be worth the effort, due to the globally improved resource
-economy. Some extra complexity must be expected; e.g., if we can obtain
-both a "cheap" and a "powerful" mirror for the same object it will happen
-via something like `myCheapReflectable.reflect(o)` and
-`myPowerfulReflectable.reflect(o)`, and it is then up to the programmer
-to avoid asking the cheap one to do powerful things.
+Finally, we need to elaborate a little on the notion of mirror systems,
+which is a term that we have already used several times. As mentioned
+earlier, the 2004 OOPSLA paper by Bracha and Ungar establishes the
+conceptual foundation for mirrors and mirror systems &#91;1&#93;.
+A **mirror system** is a set of features which provide support for
+mirror based reflection in a specialized context, e.g., only for some
+classes or methods in a given execution rather than all classes and all
+methods, or only for some of the features that mirrors can provide, e.g.,
+only for reflective invocation of instance methods and not for static
+methods. Typical examples could also be mirror systems tailored for
+remote debugging, or for compile-time reflection, but those examples
+are less relevant here.
+
+With package reflectable, we need the concept of mirror systems because
+it can be useful to use several different mirror systems in the same
+program, e.g., when a few classes require extensive reflection support
+and a large number of other classes require just a little bit. In that
+situation, using a powerful mirror system with the former and a minimalist
+one with the latter may be worth the effort, due to the globally improved
+resource economy.
+
+Some extra complexity must be expected; e.g., if we can obtain both a
+"cheap" and a "powerful" mirror for the same object it will happen via
+something like `myCheapReflectable.reflect(o)` respectively
+`myPowerfulReflectable.reflect(o)`. It is up to the programmer to avoid
+asking the cheap one to do powerful things. In return, the program as a
+whole may save a substantial amount of space, compared to the situation
+where a single mirror system is used and every class with any need for
+reflection must carry the full set of data for the most demanding kind
+of reflection done anywhere in that program.
 
 # Specifying Reflection Capabilities
 
@@ -276,29 +322,30 @@ setup can be used to specify reflection support.
 
 The subtype hierarchy under `ReflectCapability` is sealed, in the sense
 that there is a set of subtypes of `ReflectCapability` in that library,
-and there should never be any other subtypes of that class; the language
-does not enforce this concept, but it is a convention that should be
-followed.
+and there should never be any other subtypes of that class, as explained
+below.
 
 Being used as `const` values, instances of these classes obviously cannot
 have mutable state, but some of them do contain `const` values such as
-`String`s or other capabilities. They do not have methods, except the
+`String`s or `Type`s. Capabilities do not have methods, except the
 ones that they inherit from `Object`. Altogether, this means that
-instances of these classes cannot "do anything", but they can be used to
-build immutable trees, and the universe of possible trees is fixed
+instances of these classes cannot "do anything", but they can be used
+to build immutable trees, and the universe of possible trees is fixed
 because the set of classes is fixed. This makes the trees similar to
 abstract syntax trees, and we can ascribe a semantics to these syntax
 trees from the outside. That semantics may be implemented by an
 interpreter or a translator. The sealedness of the set of classes
 involved is required because an unknown subtype of `ReflectCapability`
-would not have a semantics, and interpreters and translators would not be
-able to handle them (and we haven't been convinced that a suitable level
-of extensibility in those interpreters and translators is worth the
-effort).
+would not have a semantics, and interpreters and translators would not
+be able to handle them (and we haven't been convinced that a suitable
+level of extensibility in those interpreters and translators is worth
+the added complexity).
 
-In other words, we specify reflection capabilities by building an
-abstract syntax tree for an expression in a domain specific language; let
-us call that language the **reflectable capability language**.
+In other words, we specify reflection capabilities by building a
+representation of an expression in a domain specific language; let
+us call that language the **reflectable capability language**. There is
+an interpreter as well as a translator for that language, and they are
+integrated parts of the implementation of the package reflectable.
 
 It is obviously possible to have multiple representations of expressions
 in this language, and we have considered introducing a traditional,
@@ -359,44 +406,52 @@ fine-grained control.
 
 We have added *`RegExp`* arguments, specifying that each of these
 capabilities can meaningfully apply a pattern matching constraint to
-select the methods, getters, etc. which are included. With the empty
-*`RegExp`* as the default value, all entities in the relevant category
-are included when no *`RegExp`* is given. Similarly, we have created
-variants taking a *`MetadataClass`* argument which expresses that an
-entity in the relevant category is included iff it has been annotated
-with metadata whose type is a subtype of the given
-*`MetadataClass`*. This provides support for centralized and slightly
-abstract selection of entities using regular expressions, and it provides
-support for decentralized selection of entities using metadata to
-explicitly mark the entities.
+select the methods, getters, etc. which are included. Concretely, this
+argument is a `String` which is used as a regular expression. The empty
+*`RegExp`* is the default value, which means that all entities in the
+relevant category are included when the *`RegExp`* is omitted.
+
+Similarly, we have created variants taking a *`MetadataClass`* argument
+which expresses that an entity in the relevant category is included iff
+it has been annotated with metadata whose type is a subtype of the given
+*`MetadataClass`* (it can be the trivial subtype, i.e., *`MetadataClass`*
+itself). That argument is an instance of type `Type` corresponding to
+the intended class.
+
+In summary, this provides support for centralized and slightly abstract
+selection of entities using regular expressions, and it provides support
+for decentralized selection of entities using metadata to explicitly mark
+the entities.
 
 It is important to note that the *`MetadataClass`* is potentially
-unrelated to the package reflectable: We expect the use case where some
+unrelated to the package reflectable: We have the use case where some
 class `C` from a package `P` unrelated to reflectable happens to fit
 well, because instances of `C` are already attached as metadata to the
-relevant set of members, which would in turn be the case because the need
-for reflection arises as a consequence of the semantics of `C` as
-metadata relative to `P`.
+relevant set of members. That could in turn be because some other package
+requires `C` metadata for some other purpose which is somehow linked to
+the need for reflection.
 
 | **Non-terminal**               | **Expansion**                  |
 | ------------------------------ | ------------------------------ |
 | *apiSelection*                 | *invocation* \| *naming* \| *classification* \| *annotation* \| *typing* \| *introspection* |
-| *invocation*                   | `instanceInvoke([`*`RegExp`*`])` \| `instanceInvokeMeta(`*`MetadataClass`*`)` \| `staticInvoke([`*`RegExp`*`])` \| `staticInvokeMeta(`*`MetadataClass`*`)` \| `newInstance([`*`RegExp`*`])` \| `newInstanceMeta(`*`MetadataClass`*`)` |
+| *invocation*                   | `instanceInvoke([`*`RegExp`*`])` \| `instanceInvokeMeta(`*`MetadataClass`*`)` \| `staticInvoke([`*`RegExp`*`])` \| `staticInvokeMeta(`*`MetadataClass`*`)` \| `topLevelInvoke([`*`RegExp`*`])` \| `topLevelInvokeMeta(`*`MetadataClass`*`)` \| `newInstance([`*`RegExp`*`])` \| `newInstanceMeta(`*`MetadataClass`*`)` |
 | *naming*                       | `name`                         |
 | *classification*               | `classify`                     |
 | *annotation*                   | `metadata`                     |
-| *typing*                       | `type([`*`UpperBound`*`])` \| `typeRelations` |
+| *typing*                       | `type` \| `typeRelations` |
 | *introspection*                | `owner` \| `declarations` \| `uri` \| `libraryDependencies` |
 
 **Figure 2.** Reflectable capability language API grammar tokens.
 
-The category *text* was removed because we do not plan to support
-reflective access to the source code as a whole at this point; *naming*
-has been expressed atomically as name because we do not want to
+In the category *invocation* we have used the prefix `topLevel` rather
+than `library`, because this terminology is common in the existing
+documentation of mirror classes. The category *naming*
+has been expressed atomically as `name` because we do not want to
 distinguish among the different kinds of names, and similarly for all the
 *classification* predicates. The category *concretization* was removed
 because it is trivial to support these features, so they are always
-enabled.
+enabled. The category *text* was removed because we do not plan to
+support reflective access to the source code as a whole at this point.
 
 We have omitted `apply` and `function` because we do not have support for
 `ClosureMirror` and we do not expect to get it anytime soon.
@@ -405,21 +460,19 @@ Moreover, `delegate` was made implicit such that the ability to invoke a
 method implies the ability to delegate to it.
 
 The category *typing* was simplified in several ways: `instance_type` was
-renamed into `type` because of its prominence. It optionally receives an
-*`UpperBound`* argument which puts a limit on the available class mirrors
-(class mirrors will only be supported for classes which are subclasses of
-that *`UpperBound`*). The method `reflectType` on reflectors is only
-supported when this capability is present, and only on class mirrors
-passing the *`UpperBound`*, if any. The capabilities `variable_type`,
-`parameter_type`, and `returnType` were unified into `type` because they
-are concerned with lookups for the same kind of mirrors. To give some
+renamed into `type` because of its prominence. The method `reflectType` on
+reflectors is only supported when this capability is present. The
+capabilities `variable_type`, `parameter_type`, and `returnType` were
+unified into `type` because they are concerned with lookups for the same
+kind of mirrors, but the set of classes supported is controlled using
+a type annotation quantifier, described below. To give some
 control over the level of detail in the type related mirrors,
 `typeVariables`, `typeArguments`, `originalDeclaration`, `isSubtypeOf`,
 `isAssignableTo`, `superclass`, `superinterfaces`, `mixin`,
 `isSubclassOf`, `upperBound`, and `referent` were unified into
 `typeRelations`; they all address relations among types, type variables,
-and `typedef`s, and it may be a substantial extra cost to preserve
-information about these topics if it is not used.
+and `typedef`s, and it may cause a substantial space overhead to preserve
+the associated information if it is never used.
 
 The category *introspection* was also simplified: We unified
 `class_declarations`, `library_declarations`, `instanceMembers`,
@@ -429,7 +482,7 @@ The category *introspection* was also simplified: We unified
 `targetLibrary`, `prefix`, and `combinators`. We have retained the
 `owner` capability separately, because we expect the ability to look up
 the enclosing declaration for a given declaration to be too costly to
-include implicitly as part of another capability; and we have retained
+include implicitly as part of another capability. We have also retained
 the `uri` capability separately because the preservation of information
 about URIs in JavaScript translated code (which is needed in order to
 implement the method uri on a library mirror) has been characterized as a
@@ -443,7 +496,7 @@ the **elementary** ones. This affects the following capabilities:
 for transformed programs, so they are provided as part of the package
 reflectable rather than being generated. Hence, they are supported if and
 only if the methods they rely on are supported. This is what it means
-when we say that `instanceMembers` is 'unified into' `declarations`.
+when we say that `instanceMembers` has been 'unified into' `declarations`.
 
 ### Covering Multiple API Based Capabilities Concisely
 
@@ -462,7 +515,7 @@ construct.
 | ------------------------------ | -------------------------------- |
 | `invoking([`*`RegExp`*`])`     | `instanceInvoke([`*`RegExp`*`])`, `staticInvoke([`*`RegExp`*`])`, `newInstance([`*`RegExp`*`])` |
 | `invokingMeta(`*`MetadataClass`*`)` | `instanceInvokeMeta(`*`MetadataClass`*`)`, `staticInvokeMeta(`*`MetadataClass`*`)`, `newInstanceMeta(`*`MetadataClass`*`>)` |
-| `typing([`*`UpperBound`*`])`   | `type([`*`UpperBound`*`])`, `name`, `classify`, `metadata`, `typeRelations`, `owner`, `declarations`, `uri`, `libraryDependencies` |
+| `typing`   | `type`, `name`, `classify`, `metadata`, `typeRelations`, `owner`, `declarations`, `uri`, `libraryDependencies` |
 
 **Figure 3.** Grouping tokens for the reflectable capability language.
 
@@ -473,14 +526,26 @@ of the figure, giving all of them the same *`RegExp`* as
 argument. Similarly, `invoking()` without an argument requests support
 for reflective invocation of all instance methods, all static methods,
 and all constructors. The semantics of including the capability
-`invokingMeta(`*`MetadataClass`*`)` is the same as the semantics of including
-all three capabilities to the right in the same row, with the same
-argument. Finally, the semantics of including `typing(`*`UpperBound`*`)` is to
-request support for all the capabilities on the right, passing
-*`UpperBound`* to the `type` capability; that is, requesting support for
-every feature associated with information about the program structure,
-bounded by the given *`UpperBound`*; and `typing()` without an argument
-works the same, only with `type()`.
+`invokingMeta(`*`MetadataClass`*`)` is the same as the semantics of
+including all three capabilities to the right in the same row, with the
+same argument. Finally, the semantics of including `typing`
+is to request support for all the capabilities on the right; that is,
+requesting support for every feature associated with information about
+the program structure.
+
+### Automatically Obtaining Related Capabilities
+
+We have chosen to use the subtype structure among capabilities to ensure
+that there is an automatic relation between some of them. For instance, if
+you specify the `declarations` capability then the `type` capability is
+automatically also included. The reason for this is that the `declarations`
+capability is useless unless there are some class or library mirrors from
+which those declarations can be obtained, i.e., there is no situation where
+anyone would need the `declarations` capability and not the `type` capability.
+The details of this mechanism can be inspected by checking the actual
+subtype relationships among the capability classes: If a capability class
+`C1` is a subtype of another capability class `C0` then inclusion of `C1`
+implies inclusion of `C0`.
 
 ## Specifying Reflectee Based Capabilities
 
@@ -493,12 +558,10 @@ all. We shall use them several at a time, so the typical usage is a list,
 written as *`apiSelection*`*.
 
 In this section we discuss how the reflection support specified by a
-given *`apiSelection*`* can be requested for a specific set of
-program elements. Currently the only supported kind of program element is
-classes, but this will be generalized later. The program elements that
-receive reflection support are called the **targets** of the
-specification, and the specification itself is given as a
-superinitializer in a subclass (call it `MyReflectable`) of class
+given *`apiSelection*`* can be requested for a specific set of program
+elements. The program elements that receive reflection support are called
+the **targets** of the specification, and the specification itself is given
+as a superinitializer in a subclass (call it `MyReflectable`) of class
 `Reflectable`, with a unique instance (call it `myReflectable`). Now,
 `myReflectable` is used as metadata somewhere in the program, and each
 kind of capability is only applicable as an annotation in certain
@@ -509,17 +572,17 @@ generally starting from an *`apiSelection*`*. The non-terminals in
 this part of the grammar have been named after the intended location of
 the metadata which is or contains a capability of the corresponding kind.
 
-|**Non-terminals**                | **Expansions**                 |
-| ------------------------------- | ------------------------------ |
-| *reflector*                     | `Reflectable(`*`targetMetadata`*`)`  |
-| *targetMetadata*                | *`apiSelection*`* \| `subtypeQuantify(`*`apiSelection*`*`)` \| `admitSubtype(`*`apiSelection*`*`)` |
-| *globalMetadata*                | `globalQuantify(`*`RegExp`*`, `*`reflector`*`)` \| `globalQuantifyMeta(`*`MetadataClass`*`, `*`reflector`*`)` |
+|**Non-terminals**   | **Expansions**                 |
+| ------------------ | ------------------------------ |
+| *reflector*        | `Reflectable(`*`targetMetadata`*`)`  |
+| *targetMetadata*   | *`apiSelection`* \| `subtypeQuantify` \| `superclassQuantify(`*`upperBound`*`, `*`excludeUpperBound`*`)` \| `typeAnnotationQuantify(`*`transitive`*`)` \| `correspondingSetterQuantify` \| `admitSubtype` |
+| *globalMetadata*   | `globalQuantify(`*`RegExp`*`, `*`reflector`*`)` \| `globalQuantifyMeta(`*`MetadataClass`*`, `*`reflector`*`)` |
 
 **Figure 4.** Reflectable capability language target selection.
 
 In practice, a *`reflector`* is an instance of a subclass of class
 `Reflectable` that is directly attached to a class as metadata, or passed
-to a global quantifier; in the running example it is the object
+to a global quantifier; in the running example terminology it is the object
 `myReflectable`. The reflector has one piece of state that we model with
 *`targetMetadata`*. In the grammar in Fig. 4 we use the identifier
 `Reflectable` to stand for all the subclasses, and we model the state by
@@ -528,18 +591,75 @@ semantics of annotating a class with a given *`reflector`* depends on the
 *`targetMetadata`*, as described below.
 
 A *`targetMetadata`* capability can be a base level set of capabilities,
-that is, an *`apiSelection*`*, and it can also be a quantifier taking
-such an *`apiSelection*`* as an argument. The semantics of attaching
-a *`reflector`* containing a plain *`apiSelection*`* to a target
-class `C` is that reflection support at the level specified by the given
-*`apiSelection*`* is provided for the class `C` and instances
-thereof. The semantics of attaching a *`reflector`* containing
-`subtypeQuantify(`*`apiSelection*`*`)` to a class `C` is that the reflection
-support specified by the given *`apiSelection*`* is provided for all
-classes which are subtypes of the class `C`, including `C` itself, and
-their instances. The semantics of attaching a *`reflector`* containing
-`admitSubtype(`*`apiSelection*`*`)` to a class `C` is a pragmatic mix of the
-former two which is subtle enough to warrant a slightly more detailed
+that is, an *`apiSelection*`*, and it can also be a quantifier, possibly
+taking an argument for expressing variants. The semantics of attaching
+a *`reflector`* containing a plain *`apiSelection*`* to a target class
+`C` is that reflection support at the level specified by the given
+*`apiSelection*`* is provided for the class `C` and instances thereof.
+
+The semantics of attaching a *`reflector`* containing `subtypeQuantify`
+to a class `C` is that the reflection support specified by the
+*`apiSelection`* elements given to the same *`reflector`* is provided
+for all classes which are subtypes of the class `C`, including `C`
+itself, and their instances.
+
+The semantics of attaching a *`reflector`* containing
+`superclassQuantify(`*`upperBound`*`, `*`excludeUpperBound`*`)`
+to a class `C` is that the reflection support specified by the
+*`apiSelection`* elements given to the same *`reflector`* is provided
+for all classes (and their instances) which are superclasses of the class
+`C`, including `C` itself and stopping at the given *`upperBound`* or
+immediately below it if *`excludeUpperBound`* is true. If
+*`excludeUpperBound`* is omitted then it is taken to be false, and if
+*`upperBound`* is omitted then it is taken to be `Object`.
+
+The set of classes receiving reflection support as specified by a given
+*`reflector`* is computed as the least fixed point based on these rules.
+For instance, `subtypeQuantify` gives rise to repeated addition of
+immediate subtypes of the already included classes until such a state is
+reached where this does not add any classes. The fixed point computation
+adds subtypes first in one phase, and then it adds superclasses in a
+second phase. Note that we would trivially have included all classes when
+both quantifiers are present if we had used the opposite order, or if
+we had run the fixed point iteration on the two together, so the chosen
+ordering is the only meaningful ordering.
+
+If the `declarations` capability is specified then it is possible to
+obtain a class mirror and then look up the variable mirrors for its
+fields and the method mirrors for its methods, getters, and setters
+(using the `declarations`, `instanceMembers`, or `staticMembers`
+methods on the class mirror). With those mirrors it is in turn
+possible to look up further class mirrors, such as the mirrors of
+the types of the parameters of the given method mirrors, and that
+procedure could be repeated any number of times. This means that a
+naively provided support for all reachable class mirrors would easily
+cause all classes in a program to be included, even though this may
+not be a good choice. Because of this, we have chosen to *omit* all
+the class mirrors for the type annotations of declarations by default.
+If those class mirrors should indeed be included then they must be
+requested explicitly. This is done using the `typeAnnotationQuantify`
+capability.
+
+The semantics of attaching a *`reflector`* containing
+`typeAnnotationQuantify(`*`transient`*`)` to a class `C` is that the
+set of included class mirrors will be enhanced with all the classes
+used as type annotations in included members. That is, the set of
+already included classes is traversed, each of the included members
+of those classes is inspected (a method, say, is included if it
+matches the given *`RegExp`* or carries the given type of metadata,
+if the corresponding capability takes such an argument). For each
+parameter as well as the return value of that method, any given type
+annotation which is a class is added to the set of included classes.
+This process runs just once if *`transient`* is false or omitted, and
+it runs until no more classes are added if *`transient`* is true.
+
+The extension of the set of covered classes based on type annotations,
+whether it is a single step or a fixed point iteration, takes place
+in a third phase, after the subtype and superclass fixed point
+iterations.
+
+The semantics of attaching a *`reflector`* containing `admitSubtype`
+to a class `C` is subtle enough to warrant a slightly more detailed
 discussion, given in the next section. The basic idea is that it allows
 instances of subtypes of the target class to be treated as if they were
 instances of the target class.
@@ -555,17 +675,14 @@ program contains more than one such *`globalMetadata`*, the provided
 reflection support will simply be the least one that satisfies all
 requests.
 
-The semantics of having `globalQuantify(`*`RegExp`*`, `*`reflector`*`)` in a program
-is ideally identical to the semantics of having the given *`reflector`*
+The semantics of having `globalQuantify(`*`RegExp`*`, `*`reflector`*`)` in a
+program is identical to the semantics of having the given *`reflector`*
 attached directly to each of those classes in the program whose qualified
 name matches the given *`RegExp`*. Similarly, the semantics of having
-`globalQuantifyMeta(`*`MetadataClass`*`, `*`reflector`*`)` in a program is ideally
+`globalQuantifyMeta(`*`MetadataClass`*`, `*`reflector`*`)` in a program is
 identical to the semantics of having the given *`reflector`* attached
 directly to each of those classes whose metadata includes an instance of
-type *`MetadataClass`*. At this point, however, we must add an adjustment
-to the ideal goal that the semantics is identical: Access to private
-declarations may not be fully supported with a *`globalMetadata`*. This
-is discussed in the next section.
+type *`MetadataClass`* or a subtype thereof.
 
 ### Completely or Partially Mirrored Instances?
 
@@ -610,42 +727,39 @@ consequences of admitting subtypes as specified with
 The restrictions discussed in this subsection are motivated by trade-offs
 in the implementation in package reflectable, so we need to mention some
 implementation details. The package reflectable has been designed for
-program transformation, i.e., it is intended that a source to source
-transformer shall be able to receive a given program (which is using
-package reflectable, and indirectly `dart:mirrors`) as input, and
-transform it to an equivalent program that does not use `dart:mirrors`,
-generally by generating mirror implementation classes containing
-ordinary, non-reflective code.
+program transformation, i.e., a source to source transformer receives a
+given program (which is using package reflectable, and indirectly
+`dart:mirrors`) as input, and transforms it into an equivalent program
+that does not use `dart:mirrors`, generally by generating a "database"
+of mirror creation expressions and consulting that database at runtime,
+all expressed as ordinary, non-reflective code.
 
 Ordinary code cannot violate privacy restrictions. Hence, reflective
 operations cannot, say, read or write a private field in a different
 library. The implication is that private access can only be supported for
 classes declared in a library which can be transformed, because only then
 can the generated mirror implementation class coexist with the target
-class. Using a transformer as we currently do (and plan to do in the
-future), all libraries in the client package can be transformed. However,
-libraries outside the client package cannot be transformed, which in
-particular matters for libraries from other packages, and for pre-defined
-libraries.
+class. The current transformation approach is to generate a new library
+which contains all the mirror creation expressions, which means that
+no private declaration in the program can be reached from generated
+code, not even the ones in the package that is being transformed.
 
-For some libraries which cannot be transformed, it would be possible to
-create a local copy of the library in the client package and modify the
-program globally such that it uses that local copy, and such that the
-semantics of the copied library is identical to the semantics of the
-original. This cannot be done for libraries that contain language
-primitives which cannot be implemented in the language; for instance, the
-pre-defined class int cannot be replaced by a user-defined
-class. Moreover, the need to copy and adjust one library could propagate
-to another library, e.g., if the latter imports the former. Hence, not
-even this workaround would enable transformation of all libraries. We do
-not currently have any plans to use this kind of techniques, and hence
-only libraries in the current package can be transformed.
+It would be possible to modify all the libraries in that package itself,
+but even though this could be used to get access to the private
+declarations locally, it would still leave all private declarations in
+imported packages out of reach. However, this would only help in the
+cases where a solution is not so desparately needed: Libraries in the
+local package could normally just be edited, adding a suitable public
+declaration in order to give some kind of access to the member which is
+otherwise inaccessible. So we decided to entirely leave out support for
+reflective access to private declarations.
 
-Given that the main transformation technique for package reflectable is
-to generate a number of mirror classes for each target class, this means
-that access to private declarations cannot be supported for classes in
-libraries that cannot be transformed. This applies to private classes as
-a whole, and it applies to private declarations in public classes.
+There is one exception: Mirrors for private classes can be obtained
+from a mirror on the enclosing library, and private classes in
+superclass chains are preserved, such that it will work to iterate
+over all superclasses if superclass quantification has been requested.
+But these private classes do not support invocation of static methods,
+and they do not support getting a mirror on their instances.
 
 It should be noted that transformation of libraries imported from other
 packages might be manageable to implement, but it requires changes to the
@@ -682,10 +796,10 @@ supertype of `C1 .. Ck` which is called their **least upper bound**. We
 cannot use this algorithm directly because we have an arbitrary subset of
 the types in a type hierarchy rather than all types, and then we need to
 make a similar decision for this "sparse" subtype hierarchy that only
-includes classes with reflection support from the given
-reflector. Nevertheless, we expect that it is possible to create a
-variant of the least upper bound algorithm which will work for these
-sparse subtype hierarchies.
+includes classes with reflection support from the given reflector.
+Nevertheless, we expect that it is possible to create a variant of the
+least upper bound algorithm which will work for these sparse subtype
+hierarchies.
 
 It should be noted that a very basic invariant which is commonly assumed
 for reflection support in various languages is violated: An instance
@@ -738,9 +852,10 @@ consider some cases:
 
 Reflectively calling instance methods on *O* which are declared in `C` or
 inherited into `C` will work as expected, and standard object-oriented
-method invocation will ensure that it is the correct method
-implementation for *O* which is called, not just the most specific
-implementation which is available in `C`.
+method invocation will ensure that it is the correct method implementation
+for *O* which is called, and that might be the implementation which is
+available in `C` or it might be an implementation in a proper subtype of
+`C`.
 
 Calling instance methods on *O* which are declared in a proper subtype of
 `C`, including methods from `D` itself, will not work. This is because
@@ -757,18 +872,18 @@ Based on these serious issues, we have decided that when an instance
 mirror is associated with the `admitSubtype` quantifier, it shall be an
 error to execute the `type` method in order to obtain a mirror of a
 class, because it is very unlikely to work as intended when that class is
-in fact not the class of the reflectee. It would be possible to allow it
-in the cases where the match happens to be perfect, but this would be
-difficult for programmers to use, and they may as well use `reflectType`
-directly if they want to reflect upon a class which is not taken directly
-from an instance.
+in fact not the class of the reflectee. Similarly, `declarations` is not
+supported in this situation. It would be possible to allow it in the
+cases where the match happens to be perfect (`C == D`), but this would
+be difficult for programmers to use, and they may as well use
+`reflectType(C)` directly if they want to reflect upon a class which is
+not taken directly from an instance.
 
 In summary, there is a delicate trade-off to make in the case where an
 entire subtype hierarchy should be equipped with reflection support. The
-trade off is to either pay the price in terms of program size and get
-full support (using `subtypeQuantify`); or to save space aggressively and
-in return tolerate the partial support for reflection (using
-`admitSubtype`).
+trade off is to either pay the price in terms of program size and get full
+support (using `subtypeQuantify`); or to save space aggressively and in
+return tolerate the partial support for reflection (using `admitSubtype`).
 
 # Summary
 
@@ -776,19 +891,18 @@ We have described the design of the capabilities used in the package
 reflectable to specify the desired level of support for reflection. The
 underlying idea is that the capabilities at the base level specify a
 selection of operations from the API of the mirror classes, along with
-some simple restrictions on the allowable arguments to those
-operations. On top of that, the API based capabilities can be associated
-with specific parts of the target program (though at this point only
-classes) such that exactly those classes will have the reflection support
-specified with the API based capabilities. The target classes can be
-selected individually, by adding a reflector as metadata on each target
-class. Alternatively, target classes can be selected by quantification:
-It is possible to quantify over all subtypes, in which case not only the
-class `C` that holds the metadata receives reflection support, but also all
-subtypes of `C`. Finally, it is possible to admit instances of subtypes as
-reflectees of a small set of mirrors, such that partial reflection
-support is achieved for many classes, without the cost of having many
-mirror classes.
+some simple restrictions on the allowable arguments to those operations.
+On top of that, the API based capabilities can be associated with specific
+parts of the target program (though at this point only classes) such that
+exactly those classes will have the reflection support specified with the
+API based capabilities. The target classes can be selected individually,
+by adding a reflector as metadata on each target class. Alternatively,
+target classes can be selected by quantification: It is possible to quantify
+over all subtypes, in which case not only the class `C` that holds the
+metadata receives reflection support, but also all subtypes of `C`.
+Finally, it is possible to admit instances of subtypes as reflectees of
+a small set of mirrors, such that partial reflection support is achieved
+for many classes, without the cost of having many mirror classes.
 
 # References
 
