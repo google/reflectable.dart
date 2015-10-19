@@ -228,10 +228,10 @@ bool impliesTypes(List<ReflectCapability> capabilities) {
 /// and then, if allowed, via the corresponding getter.
 bool _checkWithGetter(
     ReflectableImpl reflectable, String name, bool predicate(String name)) {
-  return func(name) ||
+  return predicate(name) ||
       (_isSetterName(name) &&
           impliesCorrespondingSetter(reflectable.capabilities) &&
-          func(_setterNameToGetterName(name)));
+          predicate(_setterNameToGetterName(name)));
 }
 
 /// Returns true if [classMirror] supports reflective invoke of the
@@ -320,14 +320,14 @@ bool _checkWithGetterUsingMetadata(
     bool predicate(String name, List<dm.InstanceMirror> metadata),
     List<dm.InstanceMirror> metadata,
     MetadataEvaluator getMetadata) {
-  if (func(name, metadata)) return true;
+  if (predicate(name, metadata)) return true;
   if (getMetadata == null ||
       !_isSetterName(name) ||
       !impliesCorrespondingSetter(reflectable.capabilities)) {
     return false;
   }
   String getterName = _setterNameToGetterName(name);
-  return func(getterName, getMetadata(getterName));
+  return predicate(getterName, getMetadata(getterName));
 }
 
 /// Returns true iff [reflectable] supports static invoke of [name].
