@@ -176,13 +176,14 @@ information about those used by another.
 Several parts of the library have not yet been implemented. In particular, the
 following parts are still missing:
 
-- Side-tagging, i.e., the ability to annotate a class in another file.
-- Library-mirrors (hence top-level functions).
-- Generic types.
-- Reflection on closures.
+- Reflection on functions/closures.
 - Private members. There is currently no support for reflection on private
-members, as this would require special support from the runtime for accessing
-private names from other libraries.
+  members, as this would require special support from the runtime for accessing
+  private names from other libraries.
+- uri's of libraries. The transformer framework does not give us access to good uri's of libraries, so these are
+  currently only partially supported (a unique uri is generated for each library, but it is not related to the location
+  of the file). 
+- Generic types (would require more runtime support for a useful implementation).
 
 ## Feature requests and bug reports
 
