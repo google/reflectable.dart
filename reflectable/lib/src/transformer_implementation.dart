@@ -3476,6 +3476,9 @@ class MixinApplication implements ClassElement {
   }
 
   @override
+  int get nameLength => name.length;
+
+  @override
   String get displayName => name;
 
   @override
@@ -3688,6 +3691,9 @@ class MixinApplication implements ClassElement {
 
   @override
   get source => _unImplemented();
+
+  @override
+  get docRange => _unImplemented();
 
   @override
   CompilationUnit get unit => _unImplemented();
