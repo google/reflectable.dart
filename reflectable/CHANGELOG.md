@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.3
+
+* Update many DartDoc comments in 'capability.dart'.
+* Update the document _The Design of Reflectable Capabilities_ to match the
+  current selection of quantifiers and their semantics.
+* Add very limited support for private classes: They are preserved such that
+  iteration over all superclasses will work even if some of them are private,
+  and private class mirrors are included in `declarations` of library mirrors.
+  However, it is not possible to `reflect` on an instance of a private class,
+  to create new instances with `newInstance`, nor to call its static methods.
+* Fix bug where some private names were used in generated code (which makes
+  subsequent compilation fail).
+* Add option to format the generated code (off by default).
+* Add `correspondingSetterQuantifyCapability`, which will add the corresponding
+  setter for each already included explicitly declared getter.
+* Change generated code: Eliminate many invocations of
+  `new UnmodifiableListView..`, replace many plain list literals by `const`
+  list literals, for better startup time and more redundancy elimination.
+* Fix bug where an `InvokingMetaCapability` was treated as a
+  `NewInstanceMetaCapability`.
+* Fix bugs in the publication support script.
+
 ## 0.3.2
 
 * Introduce `reflectedTypeCapability` which enables methods `reflectedType` on
@@ -80,14 +102,14 @@
   update to `code_transformers`. Changed `pubspec.yaml` to avoid the conflict.
 * Made changes to avoid deprecated features in the new version of `analyzer`.
 * Implemented support for implicit accessors (setters, getters).
-* Implemented support for `staticMembers` on `ClassMirror`.      
+* Implemented support for `staticMembers` on `ClassMirror`.
 
 ## 0.1.1
 
 * Transformer implements `.type` of fields and parameters.
 * Transformer has support for `main` function that is not in the entry-point
   file.
-* Transformer supports async `main` returning a `Future`. 
+* Transformer supports async `main` returning a `Future`.
 * Other bug fixes...
 
 ## 0.1.0
