@@ -1,0 +1,18 @@
+#!/bin/bash --norc
+
+# Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+# source code is governed by a BSD-style license that can be found in
+# the LICENSE file.
+
+BUILD_DIR=../../test_reflectable
+TIMESTAMP=$(date +"%Y%m%d-%H%M")
+OUTPUT_FILE="/tmp/unexecuted-lines-$TIMESTAMP.txt"
+VM_PORT=43979
+DART_VM_OPTIONS="--enable-vm-service:$VM_PORT -Dreflectable.pause.at.exit=true"
+export DART_VM_OPTIONS
+( cd $BUILD_DIR; pub build --mode=debug test ) & sleep 1
+
+dart --checked ./unexecuted_lines.dart $VM_PORT >$OUTPUT_FILE
+echo "Output is stored in: $OUTPUT_FILE"
+echo
+cat $OUTPUT_FILE

@@ -6,6 +6,7 @@ library reflectable.src.transformer_implementation;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/constant.dart';
@@ -2777,6 +2778,10 @@ _initializeReflectable() {
           _generateNewEntryPoint(
               world, entryPointAsset.id, originalEntryPointFilename)));
       _resolver.release();
+    }
+    if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+      print("Transformation complete, pausing at exit.");
+      developer.debugger();
     }
   }
 }

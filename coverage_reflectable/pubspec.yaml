@@ -1,0 +1,9 @@
+name: coverage_reflectable
+version: 0.3.3
+description: A simple console application.
+dependencies:
+  observatory:
+    path: /usr/local/google/home/eernst/devel/dart/work/sdk/runtime/observatory
+  observe: any
+dependency_overrides:
+  analyzer: 0.26.1+14
