@@ -10,6 +10,8 @@ dependencies:
     path: ../reflectable
 dev_dependencies:
   unittest: '^0.11.0'
+dependency_overrides:
+  analyzer: 0.26.1+14
 transformers:
 - reflectable:
     $include: ["test/*.dart"]
