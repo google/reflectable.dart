@@ -821,6 +821,9 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   }
 
   bool get _isMixin => _classMirror.mixin != _classMirror;
+
+  @override
+  bool get isEnum => _classMirror.isEnum;
 }
 
 class _FunctionTypeMirrorImpl extends ClassMirrorImpl
