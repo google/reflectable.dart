@@ -109,7 +109,7 @@ class ReflectorData {
         _typeToClassMirrorCache = new Map.fromIterables(types, classMirrors);
       }
     }
-    return  _typeToClassMirrorCache[type];
+    return _typeToClassMirrorCache[type];
   }
 }
 
@@ -308,8 +308,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
 
   Map<String, DeclarationMirror> get declarations {
     if (_declarations == null) {
-      Map<String, DeclarationMirror> result =
-          new Map<String, DeclarationMirror>();
+      Map<String, DeclarationMirror> result = <String, DeclarationMirror>{};
       for (int declarationIndex in _declarationIndices) {
         // We encode a missing `declarations` capability as an index with
         // the value NO_CAPABILITY_INDEX. Note that `_declarations` will not be
@@ -335,7 +334,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
 
   Map<String, MethodMirror> get instanceMembers {
     if (_instanceMembers == null) {
-      Map<String, MethodMirror> result = new Map<String, MethodMirror>();
+      Map<String, MethodMirror> result = <String, MethodMirror>{};
       for (int instanceMemberIndex in _instanceMemberIndices) {
         DeclarationMirror declarationMirror =
             _data.memberMirrors[instanceMemberIndex];
@@ -351,7 +350,7 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
 
   Map<String, MethodMirror> get staticMembers {
     if (_staticMembers == null) {
-      Map<String, MethodMirror> result = new Map<String, MethodMirror>();
+      Map<String, MethodMirror> result = <String, MethodMirror>{};
       for (int staticMemberIndex in _staticMemberIndices) {
         DeclarationMirror declarationMirror =
             _data.memberMirrors[staticMemberIndex];
@@ -528,8 +527,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   @override
   Map<String, DeclarationMirror> get declarations {
     if (_declarations == null) {
-      Map<String, DeclarationMirror> result =
-          new Map<String, DeclarationMirror>();
+      Map<String, DeclarationMirror> result = <String, DeclarationMirror>{};
       for (int declarationIndex in _declarationIndices) {
         // We encode a missing `declarations` capability as an index with
         // the value NO_CAPABILITY_INDEX. Note that `_declarations` will not be

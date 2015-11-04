@@ -26,12 +26,12 @@ class MessageRecord {
 /// [packageRoot] should use the system path-separator.
 class TestAggregateTransform implements AggregateTransform {
   final Map<String, String> files;
-  final List<Asset> outputs = new List<Asset>();
-  final Map<AssetId, Asset> assets = new Map<AssetId, Asset>();
+  final List<Asset> outputs = <Asset>[];
+  final Map<AssetId, Asset> assets = <AssetId, Asset>{};
   final Set<AssetId> consumed = new Set<AssetId>();
   String packageRoot;
 
-  final List<MessageRecord> messages = new List<MessageRecord>();
+  final List<MessageRecord> messages = <MessageRecord>[];
 
   logFunction(AssetId id, LogLevel level, String message, SourceSpan span) {
     messages.add(new MessageRecord(id, level, message, span));
@@ -95,7 +95,7 @@ class TestAggregateTransform implements AggregateTransform {
   }
 
   Future<Map<String, String>> outputMap() async {
-    Map<String, String> result = new Map<String, String>();
+    Map<String, String> result = <String, String>{};
     for (Asset asset in outputs) {
       String content = await asset.readAsString();
       result["${asset.id.package}|${asset.id.path}"] = content;

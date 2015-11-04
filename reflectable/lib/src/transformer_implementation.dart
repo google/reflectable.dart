@@ -55,7 +55,7 @@ class ReflectionWorld {
 /// Similar to a `Set<T>` but also keeps track of the index of the first
 /// insertion of each item.
 class Enumerator<T> {
-  final Map<T, int> _map = new Map<T, int>();
+  final Map<T, int> _map = <T, int>{};
   int _count = 0;
 
   bool _contains(T t) => _map.containsKey(t);
@@ -425,7 +425,7 @@ class _ReflectorDomain {
   // TODO(eernst) future: Perhaps reconsider what the best strategy
   // for caching is.
   Map<ClassElement, Map<String, ExecutableElement>> _instanceMemberCache =
-      new Map<ClassElement, Map<String, ExecutableElement>>();
+      <ClassElement, Map<String, ExecutableElement>>{};
 
   /// Returns a string that evaluates to a closure invoking [constructor] with
   /// the given arguments.
@@ -494,8 +494,8 @@ class _ReflectorDomain {
     String namedArguments =
         namedParameterNames.map((String name) => "$name: $name").join(", ");
 
-    List<String> parameterParts = new List<String>();
-    List<String> argumentParts = new List<String>();
+    List<String> parameterParts = <String>[];
+    List<String> argumentParts = <String>[];
 
     if (requiredPositionalCount != 0) {
       parameterParts.add(positionals);
@@ -1576,8 +1576,7 @@ class _ClassDomain {
       if (_reflectorDomain._instanceMemberCache[classElement] != null) {
         return _reflectorDomain._instanceMemberCache[classElement];
       }
-      Map<String, ExecutableElement> result =
-          new Map<String, ExecutableElement>();
+      Map<String, ExecutableElement> result = <String, ExecutableElement>{};
 
       void addIfCapable(String name, ExecutableElement member) {
         if (member.isPrivate) return;
@@ -1980,7 +1979,7 @@ class _Capabilities {
 /// Collects the libraries that needs to be imported, and gives each library
 /// a unique prefix.
 class _ImportCollector {
-  Map<LibraryElement, String> _mapping = new Map<LibraryElement, String>();
+  Map<LibraryElement, String> _mapping = <LibraryElement, String>{};
   int _count = 0;
 
   /// Returns the prefix associated with [library].
@@ -2052,7 +2051,8 @@ class TransformerImplementation {
     if (idField is ConstFieldElementImpl) {
       EvaluationResultImpl idResult = idField.evaluationResult;
       if (idResult != null) {
-        return idResult.value.stringValue == reflectable_class_constants.id;
+        return idField.constantValue.toStringValue() ==
+            reflectable_class_constants.id;
       }
       // idResult == null: analyzer/.../element.dart does not specify
       // whether this could happen, but it is surely not the right
@@ -2203,7 +2203,7 @@ class TransformerImplementation {
             EvaluationResultImpl evaluation = metadatum.evaluationResult;
             if (evaluation != null && evaluation.value != null) {
               DartObjectImpl value = evaluation.value;
-              String pattern = value.fields["classNamePattern"].stringValue;
+              String pattern = value.fields["classNamePattern"].toStringValue();
               if (pattern == null) {
                 // TODO(sigurdm) implement: Create a span for the annotation
                 // rather than the import.
@@ -2224,16 +2224,16 @@ class TransformerImplementation {
                 continue;
               }
               globalPatterns
-                  .putIfAbsent(
-                      new RegExp(pattern), () => new List<ClassElement>())
+                  .putIfAbsent(new RegExp(pattern), () => <ClassElement>[])
                   .add(reflector);
             }
           } else if (metadatum.element ==
               globalQuantifyMetaCapabilityConstructor) {
             EvaluationResultImpl evaluation = metadatum.evaluationResult;
-            if (evaluation != null && evaluation.value != null) {
+            if (evaluation?.value != null) {
               DartObjectImpl value = evaluation.value;
-              Object metadataFieldValue = value.fields["metadataType"].value;
+              Object metadataFieldValue =
+                  value.fields["metadataType"].toTypeValue().element;
               if (metadataFieldValue == null ||
                   value.fields["metadataType"].type.element != typeClass) {
                 // TODO(sigurdm) implement: Create a span for the annotation.
@@ -2257,8 +2257,7 @@ class TransformerImplementation {
                 continue;
               }
               globalMetadata
-                  .putIfAbsent(
-                      metadataFieldValue, () => new List<ClassElement>())
+                  .putIfAbsent(metadataFieldValue, () => <ClassElement>[])
                   .add(reflector);
             }
           }
@@ -2284,13 +2283,13 @@ class TransformerImplementation {
 
     // The world will be built from the library arguments plus these two.
     final Map<ClassElement, _ReflectorDomain> domains =
-        new Map<ClassElement, _ReflectorDomain>();
+        <ClassElement, _ReflectorDomain>{};
     final _ImportCollector importCollector = new _ImportCollector();
 
     // Maps each pattern to the list of reflectors associated with it via
     // a [GlobalQuantifyCapability].
     Map<RegExp, List<ClassElement>> globalPatterns =
-        new Map<RegExp, List<ClassElement>>();
+        <RegExp, List<ClassElement>>{};
 
     // Maps each [Type] to the list of reflectors associated with it via
     // a [GlobalQuantifyMetaCapability].
@@ -2372,7 +2371,7 @@ class TransformerImplementation {
     /// metadata.
     Iterable<ClassElement> getReflectors(
         String qualifiedName, List<ElementAnnotation> metadata) {
-      List<ClassElement> result = new List<ClassElement>();
+      List<ClassElement> result = <ClassElement>[];
 
       for (ElementAnnotationImpl metadatum in metadata) {
         EvaluationResultImpl evaluation = metadatum.evaluationResult;
@@ -2488,12 +2487,12 @@ class TransformerImplementation {
       if (constant.fields == null ||
           constant.fields["(super)"] == null ||
           constant.fields["(super)"].fields["namePattern"] == null ||
-          constant.fields["(super)"].fields["namePattern"].stringValue ==
+          constant.fields["(super)"].fields["namePattern"].toStringValue() ==
               null) {
         // TODO(sigurdm) diagnostic: Better error-message.
         _logger.warning("Could not extract namePattern.");
       }
-      return constant.fields["(super)"].fields["namePattern"].stringValue;
+      return constant.fields["(super)"].fields["namePattern"].toStringValue();
     }
 
     /// Extracts the metadata property from an instance of a subclass of
@@ -2507,13 +2506,13 @@ class TransformerImplementation {
         _logger.warning("Could not extract the metadata field.");
         return null;
       }
-      Object metadataFieldValue =
-          constant.fields["(super)"].fields["metadataType"].value;
+      Object metadataFieldValue = constant.fields["(super)"].fields[
+          "metadataType"].toTypeValue().element;
       if (metadataFieldValue is! ClassElement) {
         _logger.warning("The metadataType field must be a Type object.");
         return null;
       }
-      return constant.fields["(super)"].fields["metadataType"].value;
+      return metadataFieldValue;
     }
 
     switch (classElement.name) {
@@ -2563,11 +2562,12 @@ class TransformerImplementation {
         return ec.subtypeQuantifyCapability;
       case "SuperclassQuantifyCapability":
         return new ec.SuperclassQuantifyCapability(
-            constant.fields["upperBound"].value,
-            excludeUpperBound: constant.fields["excludeUpperBound"].value);
+            constant.fields["upperBound"].toTypeValue().element,
+            excludeUpperBound:
+                constant.fields["excludeUpperBound"].toBoolValue());
       case "TypeAnnotationQuantifyCapability":
         return new ec.TypeAnnotationQuantifyCapability(
-            transitive: constant.fields["transitive"].value);
+            transitive: constant.fields["transitive"].toBoolValue());
       case "_CorrespondingSetterQuantifyCapability":
         return ec.correspondingSetterQuantifyCapability;
       case "AdmitSubtypeCapability":
@@ -2647,10 +2647,10 @@ class TransformerImplementation {
     // imports because generating the code can add further imports.
     String code = world.generateCode(_logger);
 
-    List<String> imports = new List<String>();
+    List<String> imports = <String>[];
     world.importCollector._libraries.forEach((LibraryElement library) {
       Uri uri = library == world.entryPointLibrary
-          ? originalEntryPointFilename
+          ? Uri.parse(originalEntryPointFilename)
           : _resolver.getImportUri(library, from: generatedId);
       String prefix = world.importCollector._getPrefix(library);
       imports.add("import '$uri' as $prefix;");
@@ -2703,8 +2703,7 @@ _initializeReflectable() {
   /// Performs the transformation which eliminates all imports of
   /// `package:reflectable/reflectable.dart` and instead provides a set of
   /// statically generated mirror classes.
-  Future apply(
-      AggregateTransform aggregateTransform, List<String> entryPoints,
+  Future apply(AggregateTransform aggregateTransform, List<String> entryPoints,
       bool formatted) async {
     _logger = aggregateTransform.logger;
     _formatted = formatted;
@@ -2773,10 +2772,10 @@ _initializeReflectable() {
       // Generate a new file with the name of the entry-point, whose main
       // initializes the reflection data, and calls the main from
       // [originalEntryPointId].
-      aggregateTransform.addOutput(new Asset.fromString(
-          entryPointAsset.id,
-          _generateNewEntryPoint(
-              world, entryPointAsset.id, originalEntryPointFilename)));
+      String newEntryPoint = _generateNewEntryPoint(
+          world, entryPointAsset.id, originalEntryPointFilename);
+      aggregateTransform
+          .addOutput(new Asset.fromString(entryPointAsset.id, newEntryPoint));
       _resolver.release();
     }
     if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
@@ -3117,7 +3116,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
     return "const []";
   }
 
-  List<String> metadataParts = new List<String>();
+  List<String> metadataParts = <String>[];
 
   AstNode node = element.computeNode();
   if (node == null) {
@@ -3357,13 +3356,13 @@ Iterable<ConstructorElement> _extractDeclaredConstructors(
 
 _LibraryDomain _createLibraryDomain(
     LibraryElement library, _ReflectorDomain domain) {
-  List<TopLevelVariableElement> declaredVariablesOfLibrary =
+  Iterable<TopLevelVariableElement> declaredVariablesOfLibrary =
       _extractDeclaredVariables(library, domain._capabilities).toList();
-  List<FunctionElement> declaredFunctionsOfLibrary =
+  Iterable<FunctionElement> declaredFunctionsOfLibrary =
       _extractDeclaredFunctions(library, domain._capabilities).toList();
-  List<PropertyAccessorElement> accessorsOfLibrary =
+  Iterable<PropertyAccessorElement> accessorsOfLibrary =
       _extractLibraryAccessors(library, domain._capabilities);
-  List<ParameterElement> declaredParametersOfLibrary =
+  Iterable<ParameterElement> declaredParametersOfLibrary =
       _extractDeclaredFunctionParameters(
           declaredFunctionsOfLibrary, accessorsOfLibrary);
   return new _LibraryDomain(
@@ -3377,19 +3376,19 @@ _LibraryDomain _createLibraryDomain(
 
 _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
   if (type is MixinApplication) {
-    List<FieldElement> declaredFieldsOfClass =
+    Iterable<FieldElement> declaredFieldsOfClass =
         _extractDeclaredFields(type.mixin, domain._capabilities)
             .where((FieldElement e) => !e.isStatic)
             .toList();
-    List<MethodElement> declaredMethodsOfClass =
+    Iterable<MethodElement> declaredMethodsOfClass =
         _extractDeclaredMethods(type.mixin, domain._capabilities)
             .where((MethodElement e) => !e.isStatic)
             .toList();
-    List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
+    Iterable<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
         _extractAccessors(type.mixin, domain._capabilities).toList();
-    List<ConstructorElement> declaredConstructorsOfClass =
-        new List<ConstructorElement>();
-    List<ParameterElement> declaredParametersOfClass =
+    Iterable<ConstructorElement> declaredConstructorsOfClass =
+        <ConstructorElement>[];
+    Iterable<ParameterElement> declaredParametersOfClass =
         _extractDeclaredParameters(declaredMethodsOfClass,
             declaredConstructorsOfClass, declaredAndImplicitAccessorsOfClass);
 

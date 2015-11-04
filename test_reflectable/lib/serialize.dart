@@ -21,7 +21,7 @@ class Serializable extends Reflectable {
 /// construct a new empty instance, and all the fields are set.
 class Serializer {
   var serializable = const Serializable();
-  final Map<String, ClassMirror> classes = new Map<String, ClassMirror>();
+  final Map<String, ClassMirror> classes = <String, ClassMirror>{};
 
   Serializer() {
     // `Serializable` inherits support for finding all classes carrying itself

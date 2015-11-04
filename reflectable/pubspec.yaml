@@ -17,6 +17,8 @@ dependencies:
   logging: '^0.11.0'
 dev_dependencies:
   unittest: '^0.11.0'
+dependency_overrides:
+  analyzer: 0.26.1+14
 transformers:
 - reflectable/src/transform_import:
     $include: lib/reflectable.dart

@@ -469,8 +469,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
       throw new NoSuchCapabilityError(
           "Attempt to get declarations without capability");
     }
-    Map<String, rm.DeclarationMirror> result =
-        new Map<String, rm.DeclarationMirror>();
+    Map<String, rm.DeclarationMirror> result = <String, rm.DeclarationMirror>{};
     _libraryMirror.declarations
         .forEach((Symbol nameSymbol, dm.DeclarationMirror declarationMirror) {
       String name = dm.MirrorSystem.getName(nameSymbol);
@@ -753,8 +752,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
           "Attempt to get declarations without capability");
     }
     // TODO(sigurdm) future: Possibly cache this.
-    Map<String, rm.DeclarationMirror> result =
-        new Map<String, rm.DeclarationMirror>();
+    Map<String, rm.DeclarationMirror> result = <String, rm.DeclarationMirror>{};
     _classMirror.declarations
         .forEach((Symbol nameSymbol, dm.DeclarationMirror declarationMirror) {
       String name = dm.MirrorSystem.getName(nameSymbol);
@@ -1579,7 +1577,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   /// as well as classes that match a global quantifier.
   Set<dm.ClassMirror> _directlySupportedClasses() {
     Set<dm.ClassMirror> result = new Set<dm.ClassMirror>();
-    List<RegExp> globalPatterns = new List<RegExp>();
+    List<RegExp> globalPatterns = <RegExp>[];
     Set<Type> globalMetadataClasses = new Set<Type>();
 
     for (dm.LibraryMirror library
@@ -1698,7 +1696,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   }
 
   static Map<ReflectableImpl, Set<dm.ClassMirror>> _supportedClassesCache =
-      new Map<ReflectableImpl, Set<dm.ClassMirror>>();
+      <ReflectableImpl, Set<dm.ClassMirror>>{};
 
   /// Returns `true` iff this [ReflectableImpl] contains an
   /// [ApiReflectCapability] which satisfies the given [predicate], i.e.,

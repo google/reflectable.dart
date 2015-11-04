@@ -56,7 +56,7 @@ class C extends B {
 }
 
 List<r.DeclarationMirror> filteredDeclarationsOf(r.ClassMirror cm, predicate) {
-  var result = new List();
+  var result = [];
   cm.declarations.forEach((k, v) {
     if (predicate(v)) {
       result.add(v);
