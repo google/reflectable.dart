@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 /// File being transformed by the reflectable transformer.
-/// Part of the entry point 'reflectors_test.dart'.
+/// Part of the entry point 'meta_reflectors_test.dart'.
 ///
 /// Independence: This library defines reflectors only, and it does not depend
 /// on domain classes (`M1..3, A..D, P`) nor on the usage of reflection, i.e.,

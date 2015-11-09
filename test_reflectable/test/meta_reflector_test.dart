@@ -4,7 +4,10 @@
 
 /// File being transformed by the reflectable transformer.
 /// Creates a `MetaReflector` which may be used to reflect on the set of
-/// reflectors themselves.
+/// reflectors themselves. Illustrates how it is possible to avoid the
+/// use of the method `Reflectable.getInstance` using an extra interface
+/// `AllReflectorsCapable`, which also serves to illustrate why
+/// `Reflectable.getInstance` is a useful addition to reflectable.
 library test_reflectable.test.meta_reflector_test;
 
 @GlobalQuantifyCapability(

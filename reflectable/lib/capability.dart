@@ -266,7 +266,7 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
 
 /// Gives the capabilities of [TypeCapability], [nameCapability],
 /// [classifyCapability], [metadataCapability], [typeRelationsCapability],
-/// [ownerCapability], [declarationsCapability], [uriCapability], and
+/// [declarationsCapability], [uriCapability], and
 /// [libraryDependenciesCapability].
 class TypingCapability
     implements

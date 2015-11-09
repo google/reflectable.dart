@@ -194,10 +194,9 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   }
 
   @override
-  Object invokeSetter(String setterName, Object value) {
-    if (setterName.substring(setterName.length - 1) != "=") {
-      setterName += "=";
-    }
+  Object invokeSetter(String name, Object value) {
+    String setterName =
+        _isSetterName(name) ? name : _getterNameToSetterName(name);
     Function setter = _data.setters[setterName];
     if (setter != null) {
       return setter(reflectee, value);
@@ -398,7 +397,9 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   }
 
   @override
-  Object invokeSetter(String setterName, Object value) {
+  Object invokeSetter(String name, Object value) {
+    String setterName =
+        _isSetterName(name) ? name : _getterNameToSetterName(name);
     _StaticSetter setter = _setters[setterName];
     if (setter == null) {
       throw new NoSuchInvokeCapabilityError(
@@ -575,7 +576,9 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   }
 
   @override
-  Object invokeSetter(String setterName, Object value) {
+  Object invokeSetter(String name, Object value) {
+    String setterName =
+        _isSetterName(name) ? name : _getterNameToSetterName(name);
     _StaticSetter setter = setters[setterName];
     if (setter == null) {
       throw new NoSuchInvokeCapabilityError(null, setterName, [value], {});
@@ -628,10 +631,11 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// An encoding of the attributes and kind of this mirror.
   final int _descriptor;
 
-  /// The name of this method. Setters names will end in '='.
+  /// The name of this method. Setter names will end in '='.
   final String _name;
 
-  /// The index of the [ClassMirror] of the owner of this method,
+  /// The index of the [ClassMirror] of the owner of this method, respectively
+  /// the [LibraryMirror] of the owner of this top-level function,
   final int _ownerIndex;
 
   /// The index of the mirror for the return type of this method.
@@ -664,7 +668,16 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
 
   int get kind => constants.kindFromEncoding(_descriptor);
 
-  ClassMirror get owner => _data.classMirrors[_ownerIndex];
+  DeclarationMirror get owner {
+    if (_ownerIndex == NO_CAPABILITY_INDEX) {
+      throw new NoSuchCapabilityError(
+          "Trying to get owner of method '$qualifiedName' "
+          "without 'LibraryCapability'");
+    }
+    return isTopLevel
+        ? _data.libraryMirrors[_ownerIndex]
+        : _data.classMirrors[_ownerIndex];
+  }
 
   @override
   String get constructorName => isConstructor ? _name : "";
@@ -711,7 +724,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   bool get isSynthetic => (_descriptor & constants.syntheticAttribute != 0);
 
   @override
-  bool get isTopLevel => owner is LibraryMirror;
+  bool get isTopLevel => (_descriptor & constants.topLevelAttribute != 0);
 
   bool get _hasDynamicReturnType =>
       (_descriptor & constants.dynamicReturnTypeAttribute != 0);
@@ -800,7 +813,7 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
 
   int get kind => constants.kindFromEncoding(_variableMirror._descriptor);
 
-  ClassMirror get owner => _variableMirror.owner;
+  DeclarationMirror get owner => _variableMirror.owner;
 
   @override
   String get constructorName => "";
@@ -957,7 +970,7 @@ abstract class VariableMirrorBase extends _DataCaching
   bool get isPrivate => (_descriptor & constants.privateAttribute != 0);
 
   @override
-  bool get isTopLevel => owner is LibraryMirror;
+  bool get isTopLevel => (_descriptor & constants.topLevelAttribute != 0);
 
   @override
   bool get isFinal => (_descriptor & constants.finalAttribute != 0);
@@ -1020,7 +1033,16 @@ abstract class VariableMirrorBase extends _DataCaching
 
 class VariableMirrorImpl extends VariableMirrorBase {
   @override
-  ClassMirror get owner => _data.classMirrors[_ownerIndex];
+  DeclarationMirror get owner {
+    if (_ownerIndex == NO_CAPABILITY_INDEX) {
+      throw new NoSuchCapabilityError(
+          "Trying to get owner of variable '$qualifiedName' "
+              "without capability");
+    }
+    return isTopLevel
+        ? _data.libraryMirrors[_ownerIndex]
+        : _data.classMirrors[_ownerIndex];
+  }
 
   @override
   bool get isStatic => (_descriptor & constants.staticAttribute != 0);
@@ -1268,3 +1290,7 @@ class FakeType implements Type {
 
   String toString() => "Type($description)";
 }
+
+bool _isSetterName(String name) => name.endsWith("=");
+
+String _getterNameToSetterName(String name) => name + "=";

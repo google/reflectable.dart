@@ -11,12 +11,13 @@ const flagsBit = 4;
 // Kinds:
 const generativeConstructor = 0;
 const factoryConstructor = 1;
-const method = 2;
+const method = 2; // Instance method.
 const getter = 3;
 const setter = 4;
 const field = 5;
 const parameter = 6;
 const clazz = 7; // Cannot use keyword `class`.
+const function = 8; // Top level function.
 
 // Flags:
 const staticAttribute = 1 << (flagsBit);
@@ -35,6 +36,7 @@ const dynamicReturnTypeAttribute = 1 << (flagsBit + 12);
 const classReturnTypeAttribute = 1 << (flagsBit + 13);
 const voidReturnTypeAttribute = 1 << (flagsBit + 14);
 const enumAttribute = 1 << (flagsBit + 15);
+const topLevelAttribute = 1 << (flagsBit + 16);
 
 int kindFromEncoding(int encoding) => encoding & ((1 << flagsBit) - 1);
 

@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 /// File being transformed by the reflectable transformer.
-/// Part of the entry point 'reflectors_test.dart'.
+/// Part of the entry point 'meta_reflectors_test.dart'.
 ///
 /// Independence: The `ScopeMetaReflector` and `AllReflectorsMetaReflector`
 /// classes are independent of the particular entry point 'reflectors_test.dart'
