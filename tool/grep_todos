@@ -19,8 +19,8 @@ show_section () {
 
 function run_find {
   find ../reflectable ../test_reflectable . \
-    \( -path '*/packages' -o -path '*/build' -prune \) -o \
-    \( -name \*.dart -o -name Makefile -o -name .status \) -print
+    \( -name \*.dart -o -name Makefile -o -name .status \) \
+    ! -path '*/packages/*' ! -path '*/build/*' ! -path '*/.pub/*'
 }
 
 function run_grep {
