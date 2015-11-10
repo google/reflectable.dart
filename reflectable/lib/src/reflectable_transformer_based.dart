@@ -496,6 +496,10 @@ class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   // Because we take care to only ever create one instance for each
   // type/reflector-combination we can rely on the default `hashCode` and `==`
   // operations.
+
+  // TODO: implement isEnum
+  @override
+  bool get isEnum => _unsupported();
 }
 
 class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {

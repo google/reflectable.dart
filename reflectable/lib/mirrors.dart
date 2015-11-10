@@ -333,6 +333,12 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   ClassMirror get superclass;
   List<ClassMirror> get superinterfaces;
   bool get isAbstract;
+
+  /**
+   * Is the reflectee an enum?
+   */
+  bool get isEnum;
+
   // The non-abstract members declared in this class.
   Map<String, DeclarationMirror> get declarations;
   Map<String, MethodMirror> get instanceMembers;
