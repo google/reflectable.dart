@@ -30,7 +30,7 @@ class A {
   int f1;
   final String f2 = "f2";
   static A f3;
-  static final List f4 = <num>[1];
+  static final List<num> f4 = <num>[1];
   static const f5 = "42!";
 }
 
@@ -85,7 +85,8 @@ main() {
     expect(f4Mirror.isStatic, isTrue);
     expect(f4Mirror.isFinal, isTrue);
     expect(f4Mirror.isConst, isFalse);
-    expect(f4Mirror.type.reflectedType, List);
+    expect(f4Mirror.type.isOriginalDeclaration, false);
+    expect(f4Mirror.type.originalDeclaration.simpleName, "List");
 
     VariableMirror f5Mirror = classMirror.declarations["f5"];
     expect(f5Mirror.simpleName, "f5");

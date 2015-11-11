@@ -37,6 +37,72 @@ class ReflectionWorld {
   ReflectionWorld(this.resolver, this.generatedLibraryId, this.reflectors,
       this.reflectableLibrary, this.entryPointLibrary, this.importCollector);
 
+  /// The inverse relation of `superinterfaces` union `superclass`, globally.
+  Map<ClassElement, Set<ClassElement>> get subtypes {
+    if (_subtypesCache != null) return _subtypesCache;
+
+    // Initialize [_subtypesCache], ready to be filled in.
+    Map<ClassElement, Set<ClassElement>> subtypes =
+        <ClassElement, Set<ClassElement>>{};
+
+    void addSubtypeRelation(ClassElement supertype, ClassElement subtype) {
+      Set<ClassElement> subtypesOfSupertype = subtypes[supertype];
+      if (subtypesOfSupertype == null) {
+        subtypesOfSupertype = new Set<ClassElement>();
+        subtypes[supertype] = subtypesOfSupertype;
+      }
+      subtypesOfSupertype.add(subtype);
+    }
+
+    // Fill in [_subtypesCache].
+    for (LibraryElement library in resolver.libraries) {
+      void addClassElement(ClassElement classElement) {
+        InterfaceType supertype = classElement.type.superclass;
+        if (classElement.mixins.isEmpty) {
+          if (supertype?.element != null) {
+            addSubtypeRelation(supertype.element, classElement);
+          }
+        } else {
+          // Mixins must be applied to a superclass, so it is not null.
+          ClassElement superclass = supertype.element;
+          // Iterate over all mixins in most-general-first order (so with
+          // `class C extends B with M1, M2..` we visit `M1` then `M2`.
+          for (InterfaceType mixin in classElement.mixins) {
+            ClassElement mixinElement = mixin.element;
+            ClassElement subClass =
+                mixin == classElement.mixins.last ? classElement : null;
+            String name = subClass == null
+                ? null
+                : (classElement.isMixinApplication ? classElement.name : null);
+            MixinApplication mixinApplication = new MixinApplication(
+                name, superclass, mixinElement, library, subClass);
+            addSubtypeRelation(superclass, mixinApplication);
+            addSubtypeRelation(mixinElement, mixinApplication);
+            if (subClass != null) {
+              addSubtypeRelation(mixinApplication, subClass);
+            }
+            superclass = mixinApplication;
+          }
+        }
+        for (InterfaceType type in classElement.interfaces) {
+          if (type.element != null) {
+            addSubtypeRelation(type.element, classElement);
+          }
+        }
+      }
+
+      for (CompilationUnitElement unit in library.units) {
+        unit.types.forEach(addClassElement);
+        unit.enums.forEach(addClassElement);
+      }
+    }
+    _subtypesCache =
+        new Map<ClassElement, Set<ClassElement>>.unmodifiable(subtypes);
+    return _subtypesCache;
+  }
+
+  Map<ClassElement, Set<ClassElement>> _subtypesCache;
+
   /// Returns code which will create all the data structures (esp. mirrors)
   /// needed to enable the correct behavior for all [reflectors]. The
   /// [resolver] is used to obtain static analysis information about the
@@ -45,7 +111,8 @@ class ReflectionWorld {
   /// asset where the generated code will be stored.
   String generateCode(TransformLogger logger) {
     return _formatAsMap(reflectors.map((_ReflectorDomain reflector) {
-      String reflectorCode = reflector._generateCode(importCollector, logger);
+      String reflectorCode =
+          reflector._generateCode(this, importCollector, logger);
       return "${reflector._constConstructionCode(importCollector)}: "
           "$reflectorCode";
     }));
@@ -362,6 +429,7 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
 /// Information about the program parts that can be reflected by a given
 /// Reflector.
 class _ReflectorDomain {
+  ReflectionWorld _world; // Non-final due to cycle, do not modify.
   final Resolver _resolver;
   final AssetId _generatedLibraryId;
   final ClassElement _reflector;
@@ -385,7 +453,7 @@ class _ReflectorDomain {
   ClassElementEnhancedSet get classes {
     if (!_classesInitialized) {
       if (_capabilities._impliesDownwardsClosure) {
-        new _SubtypesFixedPoint(_resolver).expand(_classes);
+        new _SubtypesFixedPoint(_world.subtypes).expand(_classes);
       }
       if (_capabilities._impliesUpwardsClosure) {
         new _SuperclassFixedPoint(_capabilities._upwardsClosureBounds,
@@ -513,21 +581,21 @@ class _ReflectorDomain {
 
     String prefix = importCollector._getPrefix(constructor.library);
     return ('(${parameterParts.join(', ')}) => '
-        'new $prefix.${_nameOfDeclaration(constructor)}'
+        'new $prefix${_nameOfDeclaration(constructor)}'
         '(${argumentParts.join(", ")})');
   }
 
   /// The code of the const-construction of this reflector.
   String _constConstructionCode(_ImportCollector importCollector) {
     String prefix = importCollector._getPrefix(_reflector.library);
-    return "const $prefix.${_reflector.name}()";
+    return "const $prefix${_reflector.name}()";
   }
 
   /// Generate the code which will create a `ReflectorData` instance
   /// containing the mirrors and other reflection data which is needed for
   /// `_reflector` to behave correctly.
-  String _generateCode(
-      _ImportCollector importCollector, TransformLogger logger) {
+  String _generateCode(ReflectionWorld world, _ImportCollector importCollector,
+      TransformLogger logger) {
     // Library related collections.
     Enumerator<_LibraryDomain> libraries = new Enumerator<_LibraryDomain>();
     Map<LibraryElement, _LibraryDomain> libraryMap =
@@ -911,13 +979,60 @@ class _ReflectorDomain {
 
     int classIndex = classes.indexOf(classElement);
 
-    return 'new r.ClassMirrorImpl(r"${classDomain._simpleName}", '
-        'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
-        '${_constConstructionCode(importCollector)}, '
-        '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
-        '$superclassIndex, $staticGettersCode, $staticSettersCode, '
-        '$constructorsCode, $ownerIndex, $mixinIndex, '
-        '$superinterfaceIndices, $classMetadataCode)';
+    if (classElement.typeParameters.isEmpty) {
+      return 'new r.NonGenericClassMirrorImpl(r"${classDomain._simpleName}", '
+          'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
+          '${_constConstructionCode(importCollector)}, '
+          '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
+          '$superclassIndex, $staticGettersCode, $staticSettersCode, '
+          '$constructorsCode, $ownerIndex, $mixinIndex, '
+          '$superinterfaceIndices, $classMetadataCode)';
+    } else {
+      // We are able to match up a given instance with a given generic type
+      // by checking that the instance `is` an instance of the fully dynamic
+      // instance of that generic type (for the generic class `List`, that is
+      // `List<dynamic>`), and not an instance of any of its immediate subtypes,
+      // if any. [isCheckCode] is a function which will test that its argument
+      // (1) `is` an instance of the fully dynamic instance of the generic
+      // class modeled by [classElement], and (2) that it is not an instance
+      // of the fully dynamic instance of any of the classes that `extends` or
+      // `implements` this [classElement].
+      Iterable<String> isCheckList = () sync* {
+        if (classElement.isPrivate ||
+            !_isImportable(classElement, _generatedLibraryId, _resolver)) {
+          yield "(o) => false";
+        } else {
+          String prefix = importCollector._getPrefix(classElement.library);
+          yield "(o) { return o is $prefix${classElement.name}";
+
+          Iterable<String> helper(ClassElement classElement) sync* {
+            Iterable<ClassElement> subtypes =
+                _world.subtypes[classElement] ?? <ClassElement>[];
+            for (ClassElement subtype in subtypes) {
+              if (subtype.isPrivate ||
+                  !_isImportable(subtype, _generatedLibraryId, _resolver)) {
+                yield* helper(subtype);
+              } else {
+                String prefix = importCollector._getPrefix(subtype.library);
+                yield " && o is! $prefix${subtype.name}";
+              }
+            }
+          }
+
+          yield* helper(classElement);
+          yield "; }";
+        }
+      }();
+      String isCheckCode = isCheckList.join();
+
+      return 'new r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
+          'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
+          '${_constConstructionCode(importCollector)}, '
+          '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
+          '$superclassIndex, $staticGettersCode, $staticSettersCode, '
+          '$constructorsCode, $ownerIndex, $mixinIndex, '
+          '$superinterfaceIndices, $classMetadataCode, $isCheckCode)';
+    }
   }
 
   String _methodMirrorCode(
@@ -1044,7 +1159,7 @@ class _ReflectorDomain {
     }
     if (typeDefiningElement.type.isDynamic) return "dynamic";
     String prefix = importCollector._getPrefix(typeDefiningElement.library);
-    return "$prefix.${typeDefiningElement.name}";
+    return "$prefix${typeDefiningElement.name}";
   }
 
   String _libraryMirrorCode(
@@ -1179,64 +1294,9 @@ class _ReflectorDomain {
 /// Auxiliary class used by `classes`. Its `expand` method expands
 /// its argument to a fixed point, based on the `successors` method.
 class _SubtypesFixedPoint extends FixedPoint<ClassElement> {
-  final Resolver resolver;
+  final Map<ClassElement, Set<ClassElement>> subtypes;
 
-  /// The inverse relation of `superinterfaces`, globally.
-  final Map<ClassElement, Set<ClassElement>> subtypes =
-      <ClassElement, Set<ClassElement>>{};
-
-  _SubtypesFixedPoint(this.resolver) {
-    // Initialize `subtypes`.
-    for (LibraryElement library in resolver.libraries) {
-      for (CompilationUnitElement unit in library.units) {
-        for (ClassElement classElement in unit.types) {
-          InterfaceType supertype = classElement.type.superclass;
-          if (classElement.mixins.isEmpty) {
-            if (supertype?.element != null) {
-              _addSubtypeRelation(supertype.element, classElement);
-            }
-          } else {
-            // Mixins must be applied to a superclass, so it is not null.
-            ClassElement superclass = supertype.element;
-            // Iterate over all mixins in most-general-first order (so with
-            // `class C extends B with M1, M2..` we visit `M1` then `M2`.
-            for (InterfaceType mixin in classElement.mixins) {
-              ClassElement mixinElement = mixin.element;
-              ClassElement subClass =
-                  mixin == classElement.mixins.last ? classElement : null;
-              String name = subClass == null
-                  ? null
-                  : (classElement.isMixinApplication
-                      ? classElement.name
-                      : null);
-              MixinApplication mixinApplication = new MixinApplication(
-                  name, superclass, mixinElement, library, subClass);
-              _addSubtypeRelation(superclass, mixinApplication);
-              _addSubtypeRelation(mixinElement, mixinApplication);
-              if (subClass != null) {
-                _addSubtypeRelation(mixinApplication, subClass);
-              }
-              superclass = mixinApplication;
-            }
-          }
-          for (InterfaceType type in classElement.interfaces) {
-            if (type.element != null) {
-              _addSubtypeRelation(type.element, classElement);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  _addSubtypeRelation(ClassElement supertype, ClassElement subtype) {
-    Set<ClassElement> subtypesOfSupertype = subtypes[supertype];
-    if (subtypesOfSupertype == null) {
-      subtypesOfSupertype = new Set<ClassElement>();
-      subtypes[supertype] = subtypesOfSupertype;
-    }
-    subtypesOfSupertype.add(subtype);
-  }
+  _SubtypesFixedPoint(this.subtypes);
 
   /// Returns all the immediate subtypes of the given [classMirror].
   Iterable<ClassElement> successors(final ClassElement classElement) {
@@ -1446,7 +1506,7 @@ String _staticGettingClosure(_ImportCollector importCollector,
   String className = classElement.name;
   String prefix = importCollector._getPrefix(classElement.library);
   // Operators cannot be static.
-  return 'r"${getterName}": () => $prefix.$className.$getterName';
+  return 'r"${getterName}": () => $prefix$className.$getterName';
 }
 
 // Auxiliary function used by `_generateCode`.
@@ -1457,7 +1517,7 @@ String _staticSettingClosure(_ImportCollector importCollector,
   String name = setterName.substring(0, setterName.length - 1);
   String className = classElement.name;
   String prefix = importCollector._getPrefix(classElement.library);
-  return 'r"$setterName": (value) => $prefix.$className.$name = value';
+  return 'r"$setterName": (value) => $prefix$className.$name = value';
 }
 
 // Auxiliary function used by `_generateCode`.
@@ -1465,7 +1525,7 @@ String _topLevelGettingClosure(_ImportCollector importCollector,
     LibraryElement library, String getterName) {
   String prefix = importCollector._getPrefix(library);
   // Operators cannot be top-level.
-  return 'r"${getterName}": () => $prefix.$getterName';
+  return 'r"${getterName}": () => $prefix$getterName';
 }
 
 // Auxiliary function used by `_generateCode`.
@@ -1475,7 +1535,7 @@ String topLevelSettingClosure(_ImportCollector importCollector,
   // The [setterName] includes the "=", remove it.
   String name = setterName.substring(0, setterName.length - 1);
   String prefix = importCollector._getPrefix(library);
-  return 'r"$setterName": (value) => $prefix.$name = value';
+  return 'r"$setterName": (value) => $prefix$name = value';
 }
 
 /// Information about reflectability for a given library.
@@ -2053,9 +2113,10 @@ class _ImportCollector {
 
   /// Returns the prefix associated with [library].
   String _getPrefix(LibraryElement library) {
+    if (library.isDartCore) return "";
     String prefix = _mapping[library];
     if (prefix != null) return prefix;
-    prefix = "prefix$_count";
+    prefix = "prefix$_count.";
     _count++;
     _mapping[library] = prefix;
     return prefix;
@@ -2064,9 +2125,10 @@ class _ImportCollector {
   /// Adds [library] to the collected libraries and generate a prefix for it if
   /// it has not been encountered before.
   void _addLibrary(LibraryElement library) {
+    if (library.isDartCore) return;
     String prefix = _mapping[library];
     if (prefix != null) return;
-    prefix = "prefix$_count";
+    prefix = "prefix$_count.";
     _count++;
     _mapping[library] = prefix;
   }
@@ -2141,6 +2203,7 @@ class TransformerImplementation {
           return type;
         }
       }
+      // No need to check `unit.enums`: [Reflectable] is not an enum.
     }
     // Class [Reflectable] was not found in the target program.
     return null;
@@ -2498,6 +2561,12 @@ class TransformerImplementation {
             addClassDomain(type, reflector);
           }
         }
+        for (ClassElement type in unit.enums) {
+          for (ClassElement reflector
+              in getReflectors(_qualifiedName(type), type.metadata)) {
+            addClassDomain(type, reflector);
+          }
+        }
         for (FunctionElement function in unit.functions) {
           for (ClassElement reflector in getReflectors(
               _qualifiedFunctionName(function), function.metadata)) {
@@ -2510,8 +2579,19 @@ class TransformerImplementation {
       }
     }
 
-    return new ReflectionWorld(_resolver, dataId, domains.values.toList(),
-        reflectableLibrary, entryPoint, importCollector);
+    // Create the world and tie the knot: A [ReflectionWorld] refers to all its
+    // [_ReflectorDomain]s, and each of them refer back. Such a cycle cannot be
+    // defined during construction, so `_world` is non-final and left unset by
+    // the constructor, and we need to close the cycle here.
+    ReflectionWorld world = new ReflectionWorld(
+        _resolver,
+        dataId,
+        domains.values.toList(),
+        reflectableLibrary,
+        entryPoint,
+        importCollector);
+    domains.values.forEach((_ReflectorDomain domain) => domain._world = world);
+    return world;
   }
 
   /// Returns the [ReflectCapability] denoted by the given [initializer].
@@ -2722,7 +2802,10 @@ class TransformerImplementation {
           ? Uri.parse(originalEntryPointFilename)
           : _resolver.getImportUri(library, from: generatedId);
       String prefix = world.importCollector._getPrefix(library);
-      imports.add("import '$uri' as $prefix;");
+      if (prefix.length > 0) {
+        imports
+            .add("import '$uri' as ${prefix.substring(0, prefix.length - 1)};");
+      }
     });
     imports.sort();
 
@@ -2946,6 +3029,9 @@ int _fieldDescriptor(FieldElement element) {
   Element elementType = element.type.element;
   if (elementType is ClassElement) {
     result |= constants.classTypeAttribute;
+    if (elementType.typeParameters.isNotEmpty) {
+      result |= constants.genericTypeAttribute;
+    }
   }
   return result;
 }
@@ -2973,6 +3059,9 @@ int _parameterDescriptor(ParameterElement element) {
   Element elementType = element.type.element;
   if (elementType is ClassElement) {
     result |= constants.classTypeAttribute;
+    if (elementType.typeParameters.isNotEmpty) {
+      result |= constants.genericTypeAttribute;
+    }
   }
   return result;
 }
@@ -2992,6 +3081,9 @@ int _declarationDescriptor(ExecutableElement element) {
     Element elementReturnType = element.returnType.element;
     if (elementReturnType is ClassElement) {
       result |= constants.classReturnTypeAttribute;
+      if (elementReturnType.typeParameters.isNotEmpty) {
+        result |= constants.genericReturnTypeAttribute;
+      }
     }
   }
 
@@ -3086,7 +3178,7 @@ String _extractConstantCode(
           return helper(argument);
         }).join(", ");
         // TODO(sigurdm) feature: Type arguments.
-        return "const $prefix.$constructor($arguments)";
+        return "const $prefix$constructor($arguments)";
       } else {
         logger.error("Cannot access library $libraryOfConstructor, "
             "needed for expression $expression");
@@ -3111,9 +3203,9 @@ String _extractConstantCode(
           String prefix = importCollector._getPrefix(element.library);
           Element enclosingElement = element.enclosingElement;
           if (enclosingElement is ClassElement) {
-            prefix += ".${enclosingElement.name}";
+            prefix += "${enclosingElement.name}.";
           }
-          return "$prefix.${element.name}";
+          return "$prefix${element.name}";
         } else {
           logger.error("Cannot access library ${element.library}, "
               "needed for expression $expression");
@@ -3180,7 +3272,7 @@ String _extractAnnotationValue(Annotation annotation, LibraryElement library,
   String _nullIsEmpty(Object object) => object == null ? "" : "$object";
   if (name is SimpleIdentifier) {
     return "$keywordCode"
-        "${importCollector._getPrefix(library)}.$name"
+        "${importCollector._getPrefix(library)}$name"
         "${_nullIsEmpty(annotation.period)}"
         "${_nullIsEmpty(annotation.constructorName)}"
         "${_nullIsEmpty(annotation.arguments)}";
@@ -3286,10 +3378,10 @@ String _extractMetadataCode(Element element, Resolver resolver,
         return _extractConstantCode(argument, element.library, importCollector,
             logger, dataId, resolver);
       }).join(", ");
-      metadataParts.add("const $prefix.$constructor($arguments)");
+      metadataParts.add("const $prefix$constructor($arguments)");
     } else {
       // A field reference.
-      metadataParts.add("$prefix.${annotationNode.name}");
+      metadataParts.add("$prefix${annotationNode.name}");
     }
   }
 
@@ -3459,8 +3551,7 @@ Iterable<PropertyAccessorElement> _extractAccessors(
           accessor.correspondingGetter;
       getterMetadata = correspondingGetter?.metadata;
     }
-    return capabilityChecker(
-        accessor.name, metadata, getterMetadata);
+    return capabilityChecker(accessor.name, metadata, getterMetadata);
   });
 }
 
@@ -3557,8 +3648,7 @@ _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
 // classes.
 bool _isImportable(
     Element element, AssetId generatedLibraryId, Resolver resolver) {
-  return !element.isPrivate &&
-      _isImportableLibrary(element.library, generatedLibraryId, resolver);
+  return _isImportableLibrary(element.library, generatedLibraryId, resolver);
 }
 
 /// Answers true iff [library] can be imported into [generatedLibraryId].
@@ -3659,6 +3749,9 @@ class MixinApplication implements ClassElement {
   bool get isEnum => false;
 
   @override
+  List<TypeParameterElement> get typeParameters => <TypeParameterElement>[];
+
+  @override
   NamedCompilationUnitMember computeNode() =>
       declaredName != null ? subclass.computeNode() : null;
 
@@ -3713,9 +3806,6 @@ class MixinApplication implements ClassElement {
 
   @override
   List<MethodElement> get methods => _unImplemented();
-
-  @override
-  List<TypeParameterElement> get typeParameters => _unImplemented();
 
   @override
   ConstructorElement get unnamedConstructor => _unImplemented();

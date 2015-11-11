@@ -37,6 +37,8 @@ const classReturnTypeAttribute = 1 << (flagsBit + 13);
 const voidReturnTypeAttribute = 1 << (flagsBit + 14);
 const enumAttribute = 1 << (flagsBit + 15);
 const topLevelAttribute = 1 << (flagsBit + 16);
+const genericTypeAttribute = 1 << (flagsBit + 17);
+const genericReturnTypeAttribute = 1 << (flagsBit + 18);
 
 int kindFromEncoding(int encoding) => encoding & ((1 << flagsBit) - 1);
 

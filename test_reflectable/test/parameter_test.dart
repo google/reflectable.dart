@@ -182,7 +182,9 @@ main() {
     expect(namedArgumentsParameter0.isOptional, false);
     expect(namedArgumentsParameter0.type.reflectedType, String);
     expect(namedArgumentsParameter1.isOptional, false);
-    expect(namedArgumentsParameter1.type.reflectedType, List);
+    expect(namedArgumentsParameter1.type.isOriginalDeclaration, false);
+    expect(
+        namedArgumentsParameter1.type.originalDeclaration.simpleName, "List");
     expect(namedArgumentsParameter2.isOptional, true);
     expect(namedArgumentsParameter2.isNamed, true);
     expect(namedArgumentsParameter2.type.reflectedType, String);
@@ -196,7 +198,9 @@ main() {
     ParameterMirror staticGetsetEqualsParameter0 =
         staticGetsetEqualsMirror.parameters[0];
     expect(staticGetsetEqualsParameter0.isOptional, false);
-    expect(staticGetsetEqualsParameter0.type.reflectedType, List);
+    expect(staticGetsetEqualsParameter0.type.isOriginalDeclaration, false);
+    expect(staticGetsetEqualsParameter0.type.originalDeclaration.simpleName,
+        "List");
   });
 
   test("method return types", () {
@@ -215,7 +219,9 @@ main() {
     expect(oneArgumentMirror.returnType.reflectedType, int);
     expect(optionalArgumentsMirror.returnType.reflectedType, int);
     expect(namedArgumentsMirror.returnType.reflectedType, int);
-    expect(staticGetsetMirror.returnType.reflectedType, List);
+    expect(staticGetsetMirror.returnType.isOriginalDeclaration, false);
+    expect(
+        staticGetsetMirror.returnType.originalDeclaration.simpleName, "List");
     expect(staticGetsetEqualsMirror.returnType.simpleName, "void");
   });
 }

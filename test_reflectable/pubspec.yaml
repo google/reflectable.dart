@@ -69,6 +69,7 @@ transformers:
       - test/corresponding_setter_test.dart
       - test/private_class_test.dart
       - test/multi_field_test.dart
+      - test/class_property_test.dart
     formatted: true
 - $dart2js:
     $include: []

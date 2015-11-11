@@ -66,7 +66,7 @@ main() {
 
 final _data = {
   const prefix0.MyReflectable(): new r.ReflectorData(<m.ClassMirror>[
-    new r.ClassMirrorImpl(
+    new r.NonGenericClassMirrorImpl(
         r"A",
         r".A",
         7,

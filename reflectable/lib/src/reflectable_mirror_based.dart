@@ -119,7 +119,8 @@ rm.TypeMirror wrapTypeMirror(
     return new _TypeVariableMirrorImpl(typeMirror, reflectable);
   } else if (typeMirror is dm.TypedefMirror) {
     return new _TypedefMirrorImpl(typeMirror, reflectable);
-  } else if (typeMirror.reflectedType == dynamic) {
+  } else if (typeMirror.hasReflectedType &&
+      typeMirror.reflectedType == dynamic) {
     return new _SpecialTypeMirrorImpl(typeMirror, reflectable);
   } else {
     assert(typeMirror is dm.ClassMirror);
@@ -744,6 +745,9 @@ class ClassMirrorImpl extends _TypeMirrorImpl
 
   @override
   bool get isAbstract => _classMirror.isAbstract;
+
+  @override
+  bool get isEnum => _classMirror.isEnum;
 
   @override
   Map<String, rm.DeclarationMirror> get declarations {

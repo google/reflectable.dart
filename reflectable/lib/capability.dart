@@ -503,9 +503,9 @@ class _NoSuchCapabilityErrorImpl extends Error
 /// Thrown when a method is invoked via a reflectable, but the reflectable
 /// doesn't have the capabilities to invoke it.
 ///
-/// TODO: The intended semantics is to throw this only when the required
-/// capabilities are not present, but there currently are cases where it might
-/// be thrown if the method doesn't exist.
+/// TODO(eernst) implement: The intended semantics is to throw this only when
+/// the required capabilities are not present, but there currently are cases
+/// where it might be thrown if the method doesn't exist (issue #30).
 class NoSuchInvokeCapabilityError extends Error
     implements NoSuchCapabilityError {
   Object receiver;
