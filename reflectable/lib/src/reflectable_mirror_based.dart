@@ -1509,8 +1509,15 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   }
 
   bool _canReflectType(dm.ClassMirror mirror) {
+    // We refuse support for class mirrors with type arguments, because they
+    // are instantiated generic classes (that is, `!isOriginalDeclaration`)
+    // and until we get support for detecting whether a given instantiated
+    // generic class "C<T>" is an instance of a given generic class "C", we
+    // cannot find the right class mirror in post-transform code. So for
+    // consistency we must also reject doing it here.
     return _supportsType &&
-        _supportedClasses.contains(mirror.originalDeclaration);
+        _supportedClasses.contains(mirror.originalDeclaration) &&
+        mirror.typeArguments.isEmpty;
   }
 
   @override

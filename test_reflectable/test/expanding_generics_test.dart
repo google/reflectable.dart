@@ -12,13 +12,13 @@ library test_reflectable.test.expanding_generics_test;
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 
-class MyReflectable extends Reflectable {
-  const MyReflectable() : super(declarationsCapability);
+class Reflector extends Reflectable {
+  const Reflector() : super(typeCapability);
 }
 
-const myReflectable = const MyReflectable();
+const reflector = const Reflector();
 
-@myReflectable
+@reflector
 class C<X> {
   C<C<X>> get boom => null;
 }
@@ -26,10 +26,18 @@ class C<X> {
 class Typer<X> { Type get type => X; }
 final Type COfInt = new Typer<C<int>>().type;
 
-main() {
-  test("Obtain a mirror for the expanding generic class", () {
-    ClassMirror classMirror = myReflectable.reflectType(COfInt);
+void runTest(String message, ClassMirror classMirror) {
+  test("Obtain mirror for expanding generic $message", () {
+    expect(classMirror, isNotNull);
     expect(classMirror.hasReflectedType, true);
     expect(classMirror.reflectedType, COfInt);
   });
+}
+
+main() {
+  test('Reject reflection directly on instantiated generic class', () {
+    expect(reflector.canReflectType(COfInt), false);
+  });
+  InstanceMirror instanceMirror = reflector.reflect(new C<int>());
+  runTest('using `reflect`, then `type`.', instanceMirror.type);
 }
