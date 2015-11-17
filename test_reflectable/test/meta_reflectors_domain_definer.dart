@@ -16,11 +16,11 @@ import "meta_reflectors_domain.dart";
 class ReflectorUpwardsClosedToA extends Reflectable {
   const ReflectorUpwardsClosedToA()
       : super(const SuperclassQuantifyCapability(A), invokingCapability,
-                  declarationsCapability);
+            declarationsCapability, typeRelationsCapability);
 }
 
 class ReflectorUpwardsClosedUntilA extends Reflectable {
   const ReflectorUpwardsClosedUntilA()
       : super(const SuperclassQuantifyCapability(A, excludeUpperBound: true),
-                  invokingCapability, declarationsCapability);
+            invokingCapability, declarationsCapability);
 }

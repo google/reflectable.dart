@@ -47,18 +47,19 @@ typedef Object _StaticSetter(Object value);
 
 /// The data backing a reflector.
 class ReflectorData {
-  /// List of class mirrors, one class mirror for each class that is
+  /// List of type mirrors, one [ClassMirror] for each class that is
   /// supported by reflection as specified by the reflector backed up
-  /// by this [ReflectorData].
-  final List<ClassMirror> classMirrors;
+  /// by this [ReflectorData], and one [TypeVariableMirror] for each
+  /// type variable declared by those classes.
+  final List<TypeMirror> typeMirrors;
 
   /// List of library mirrors, one library mirror for each library that is
   /// supported by reflection as specified by the reflector backed up
   /// by this [ReflectorData].
   final List<LibraryMirror> libraryMirrors;
 
-  /// Repository of method mirrors used (via indices into this list) by
-  /// the [classMirrors] to describe the behavior of the mirrored
+  /// Repository of method mirrors used (via indices into this list) by the
+  /// class mirrors in [typeMirrors] to describe the behavior of the mirrored
   /// class and its instances, and of variable mirrors used to describe
   /// their state. From the behavioral point of view there are no fields,
   /// but each of them gives rise to a getter and possibly a setter (whose
@@ -76,7 +77,7 @@ class ReflectorData {
   final List<ParameterMirror> parameterMirrors;
 
   /// List of [Type]s used to select class mirrors: If M is a class
-  /// mirror in [classMirrors] at index `i`, the mirrored class (and
+  /// mirror in [typeMirrors] at index `i`, the mirrored class (and
   /// hence the runtime type of the mirrored instances) is found in
   /// `types[i]`.
   final List<Type> types;
@@ -92,7 +93,7 @@ class ReflectorData {
 
   Map<Type, ClassMirror> _typeToClassMirrorCache;
 
-  ReflectorData(this.classMirrors, this.memberMirrors, this.parameterMirrors,
+  ReflectorData(this.typeMirrors, this.memberMirrors, this.parameterMirrors,
       this.types, this.getters, this.setters, this.libraryMirrors);
 
   /// Returns a class-mirror for the given [type].
@@ -100,13 +101,17 @@ class ReflectorData {
   /// Returns `null` if the given class is not marked for reflection.
   ClassMirror classMirrorForType(Type type) {
     if (_typeToClassMirrorCache == null) {
-      if (classMirrors.isEmpty) {
+      if (typeMirrors.isEmpty) {
         // This is the case when the capabilities do not include a
         // `TypeCapability`; it is also the case when there are no
-        // supported classes but even then we can do the following.
+        // supported classes. In both cases the empty map is correct.
         _typeToClassMirrorCache = <Type, ClassMirror>{};
       } else {
-        _typeToClassMirrorCache = new Map.fromIterables(types, classMirrors);
+        // Note that [types] corresponds to the prefix of [typeMirrors] which
+        // are class mirrors; [typeMirrors] continues with type variable
+        // mirrors, and they are irrelevant here.
+        _typeToClassMirrorCache =
+            new Map.fromIterables(types, typeMirrors.sublist(0, types.length));
       }
     }
     return _typeToClassMirrorCache[type];
@@ -229,30 +234,25 @@ abstract class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   /// An encoding of the attributes and kind of this class mirror.
   final int _descriptor;
 
-  /// The index of this mirror in the [ReflectorData.classMirrors] table.
-  /// Also this is the index of the Type of the reflected class in
-  /// [ReflectorData.types].
+  /// The index of this mirror in [ReflectorData.typeMirrors]. This is also
+  /// the index of the Type of the reflected class in [ReflectorData.types].
   final int _classIndex;
 
   /// The index of the owner library in the [ReflectorData.libraryMirrors]
   /// table.
   final int _ownerIndex;
 
-  /// The index of the mirror of the superclass in the
-  /// [ReflectorData.classMirrors] table.
+  /// The index of the mirror of the superclass in [ReflectorData.typeMirrors].
   final int _superclassIndex;
 
-  /// The index of the mixin of this class in the
-  /// [ReflectorData.classMirrors] table.
+  /// The index of the mixin of this class in [ReflectorData.typeMirrors].
   ///
   /// For classes that are not mixin-applications this is the same as the class
   /// itself.
   final int _mixinIndex;
 
   List<ClassMirror> get superinterfaces {
-    return _superinterfaceIndices
-        .map((int i) => _data.classMirrors[i])
-        .toList();
+    return _superinterfaceIndices.map((int i) => _data.typeMirrors[i]).toList();
   }
 
   /// A list of the indices in [ReflectorData.memberMirrors] of the
@@ -279,7 +279,7 @@ abstract class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   /// obtain the correct result for `staticMembers`.
   final List<int> _staticMemberIndices;
 
-  /// A list of the indices in [ReflectorData.classMirrors] of the
+  /// A list of the indices in [ReflectorData.typeMirrors] of the
   /// superinterfaces of the reflected class.
   final List<int> _superinterfaceIndices;
 
@@ -373,7 +373,7 @@ abstract class ClassMirrorImpl extends _DataCaching implements ClassMirror {
       throw new NoSuchCapabilityError(
           "Attempt to get mixin from '$simpleName' without capability");
     }
-    return _data.classMirrors[_mixinIndex];
+    return _data.typeMirrors[_mixinIndex];
   }
 
   Object newInstance(String constructorName, List positionalArguments,
@@ -481,12 +481,12 @@ abstract class ClassMirrorImpl extends _DataCaching implements ClassMirror {
   }
 
   ClassMirror get superclass {
-    if (_superclassIndex == null) return null;
+    if (_superclassIndex == null) return null; // Superclass of [Object].
     if (_superclassIndex == NO_CAPABILITY_INDEX) {
       throw new NoSuchCapabilityError(
           "Requesting mirror on un-marked class, superclass of '$simpleName'");
     }
-    return _data.classMirrors[_superclassIndex];
+    return _data.typeMirrors[_superclassIndex];
   }
 
   // Because we take care to only ever create one instance for each
@@ -565,6 +565,8 @@ class GenericClassMirrorImpl extends ClassMirrorImpl {
   /// C). The check is implemented by this function.
   final InstanceChecker _isGenericRuntimeTypeOf;
 
+  final List<int> _typeVariableIndices;
+
   GenericClassMirrorImpl(
       String simpleName,
       String qualifiedName,
@@ -582,7 +584,8 @@ class GenericClassMirrorImpl extends ClassMirrorImpl {
       int mixinIndex,
       List<int> superinterfaceIndices,
       List<Object> metadata,
-      this._isGenericRuntimeTypeOf)
+      this._isGenericRuntimeTypeOf,
+      this._typeVariableIndices)
       : super(
             simpleName,
             qualifiedName,
@@ -604,9 +607,25 @@ class GenericClassMirrorImpl extends ClassMirrorImpl {
   @override
   List<TypeMirror> get typeArguments => <TypeMirror>[];
 
-  // TODO(sigurdm) implement: Implement typeVariables.
+  // The type variables declared by this generic class, in declaration order.
+  // The value `null` means no capability. The empty list would mean no type
+  // parameters, but the empty list does not occur: [this] mirror would then
+  // model a non-generic class.
   @override
-  List<TypeVariableMirror> get typeVariables => _unsupported();
+  List<TypeVariableMirror> get typeVariables {
+    if (_typeVariableIndices == null) {
+      throw new NoSuchCapabilityError(
+          "Requesting type variables of '$simpleName' without capability");
+    }
+    List<TypeVariableMirror> result = <TypeVariableMirror>[];
+    for (int typeVariableIndex in _typeVariableIndices) {
+      TypeVariableMirror typeVariableMirror =
+          _data.typeMirrors[typeVariableIndex];
+      assert(typeVariableMirror is TypeVariableMirror);
+      result.add(typeVariableMirror);
+    }
+    return new List<TypeVariableMirror>.unmodifiable(result);
+  }
 
   @override
   bool get isOriginalDeclaration => true;
@@ -696,8 +715,9 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorImpl {
 
 InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
     GenericClassMirrorImpl genericClassMirror, Type reflectedType) {
-  // TODO(eernst): Pass a representation of type arguments to this method
-  // and create an instantiated generic class which includes that information.
+  // TODO(eernst) implement: Pass a representation of type arguments to this
+  // method, and create an instantiated generic class which includes that
+  // information.
   return new InstantiatedGenericClassMirrorImpl(
       genericClassMirror.simpleName,
       genericClassMirror.qualifiedName,
@@ -717,6 +737,102 @@ InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
       genericClassMirror._metadata,
       genericClassMirror,
       reflectedType);
+}
+
+class TypeVariableMirrorImpl extends _DataCaching
+    implements TypeVariableMirror {
+  /// The simple name of this type variable.
+  final String simpleName;
+
+  /// The qualified name of this type variable, i.e., the qualified name of
+  /// the declaring class followed by its simple name.
+  final String qualifiedName;
+
+  /// The reflector which represents the mirror system that this
+  /// mirror belongs to.
+  final ReflectableImpl _reflector;
+
+  /// The index into [typeMirrors] of the upper bound of this type variable.
+  final int _upperBoundIndex;
+
+  /// The index inte [typeMirrors] of the class that declares this type
+  /// variable.
+  final int _ownerIndex;
+
+  /// The metadata that is associated with this type variable. The empty list
+  /// means no metadata, null means no capability.
+  final List<Object> _metadata;
+
+  TypeVariableMirrorImpl(this.simpleName, this.qualifiedName, this._reflector,
+      this._upperBoundIndex, this._ownerIndex, this._metadata);
+
+  @override
+  bool get isStatic => false;
+
+  @override
+  TypeMirror get upperBound {
+    if (_upperBoundIndex == NO_CAPABILITY_INDEX) {
+      throw new NoSuchCapabilityError("Attempt to get `upperBound` from type "
+          "variable mirror without capability.");
+    }
+    return _data.typeMirrors[_upperBoundIndex];
+  }
+
+  @override
+  bool isAssignableTo(TypeMirror other) => _unsupported();
+
+  @override
+  bool isSubtypeOf(TypeMirror other) => _unsupported();
+
+  @override
+  TypeMirror get originalDeclaration => this;
+
+  @override
+  bool get isOriginalDeclaration => true;
+
+  @override
+  List<TypeMirror> get typeArguments => <TypeMirror>[];
+
+  @override
+  List<TypeVariableMirror> get typeVariables => <TypeVariableMirror>[];
+
+  @override
+  Type get reflectedType {
+    throw new UnsupportedError("Attempt to get `reflectedType` from type "
+        "variable $simpleName");
+  }
+
+  @override
+  bool get hasReflectedType => false;
+
+  @override
+  List<Object> get metadata {
+    if (_metadata == null) {
+      throw new NoSuchCapabilityError("Attempt to get `metadata` from type "
+          "variable $simpleName without capability");
+    }
+    return <Object>[];
+  }
+
+  /// It is allowed to return null;
+  @override
+  SourceLocation get location => null;
+
+  @override
+  bool get isTopLevel => false;
+
+  @override
+  bool get isPrivate => false;
+
+  @override
+  DeclarationMirror get owner {
+    if (_ownerIndex == NO_CAPABILITY_INDEX) {
+      throw new NoSuchCapabilityError(
+          "Trying to get owner of type parameter '$qualifiedName' "
+          "without capability");
+    }
+    return _data.typeMirrors[_ownerIndex];
+  }
 }
 
 class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
@@ -765,9 +881,9 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
             _data.memberMirrors[declarationIndex];
         result[declarationMirror.simpleName] = declarationMirror;
       }
-      _data.classMirrors.forEach((ClassMirror classMirror) {
-        if (classMirror.owner == this) {
-          result[classMirror.simpleName] = classMirror;
+      _data.typeMirrors.forEach((TypeMirror typeMirror) {
+        if (typeMirror is ClassMirror && typeMirror.owner == this) {
+          result[typeMirror.simpleName] = typeMirror;
         }
       });
       _declarations =
@@ -898,7 +1014,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
     }
     return isTopLevel
         ? _data.libraryMirrors[_ownerIndex]
-        : _data.classMirrors[_ownerIndex];
+        : _data.typeMirrors[_ownerIndex];
   }
 
   @override
@@ -994,8 +1110,8 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
     if (_hasClassReturnType) {
       return _hasGenericReturnType
           ? _createInstantiatedGenericClass(
-              _data.classMirrors[_returnTypeIndex], null)
-          : _data.classMirrors[_returnTypeIndex];
+              _data.typeMirrors[_returnTypeIndex], null)
+          : _data.typeMirrors[_returnTypeIndex];
     }
     // TODO(eernst) implement: Support remaining kinds of types.
     return _unsupported();
@@ -1247,8 +1363,8 @@ abstract class VariableMirrorBase extends _DataCaching
     if (_isClassType) {
       return _isGenericType
           ? _createInstantiatedGenericClass(
-              _data.classMirrors[_classMirrorIndex], null)
-          : _data.classMirrors[_classMirrorIndex];
+              _data.typeMirrors[_classMirrorIndex], null)
+          : _data.typeMirrors[_classMirrorIndex];
     }
     // TODO(eernst) implement: Support remaining kinds of types.
     return _unsupported();
@@ -1277,7 +1393,7 @@ class VariableMirrorImpl extends VariableMirrorBase {
     }
     return isTopLevel
         ? _data.libraryMirrors[_ownerIndex]
-        : _data.classMirrors[_ownerIndex];
+        : _data.typeMirrors[_ownerIndex];
   }
 
   @override
@@ -1513,7 +1629,9 @@ abstract class ReflectableImpl extends ReflectableBase
 
   @override
   Iterable<ClassMirror> get annotatedClasses {
-    return new UnmodifiableListView<ClassMirror>(data[this].classMirrors);
+    return new List<ClassMirror>.unmodifiable(data[this]
+        .typeMirrors
+        .where((TypeMirror typeMirror) => typeMirror is ClassMirror));
   }
 }
 

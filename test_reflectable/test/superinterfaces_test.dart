@@ -9,7 +9,8 @@ import "package:unittest/unittest.dart";
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(invokingCapability, declarationsCapability, libraryCapability);
+      : super(invokingCapability, declarationsCapability,
+            typeRelationsCapability, libraryCapability);
 }
 
 @Reflector()

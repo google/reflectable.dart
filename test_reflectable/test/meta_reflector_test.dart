@@ -40,14 +40,16 @@ Set<String> setOf(String s) => new Set<String>.from(<String>[s]);
 
 class Reflector extends Reflectable implements AllReflectorsCapable {
   const Reflector()
-      : super(invokingCapability, declarationsCapability, libraryCapability);
+      : super(invokingCapability, declarationsCapability,
+            typeRelationsCapability, libraryCapability);
   Reflectable get self => const Reflector();
   Set<String> get scopes => setOf("polymer");
 }
 
 class Reflector2 extends Reflectable implements AllReflectorsCapable {
   const Reflector2()
-      : super(invokingCapability, metadataCapability, libraryCapability);
+      : super(invokingCapability, metadataCapability, typeRelationsCapability,
+            libraryCapability);
   Reflectable get self => const Reflector2();
   Set<String> get scopes => setOf("observe");
 }
@@ -65,7 +67,7 @@ class ReflectorUpwardsClosedToA extends Reflectable
     implements AllReflectorsCapable {
   const ReflectorUpwardsClosedToA()
       : super(const SuperclassQuantifyCapability(A), invokingCapability,
-            declarationsCapability);
+            declarationsCapability, typeRelationsCapability);
   Reflectable get self => const ReflectorUpwardsClosedToA();
   Set<String> get scopes => new Set<String>();
 }
@@ -73,8 +75,11 @@ class ReflectorUpwardsClosedToA extends Reflectable
 class ReflectorUpwardsClosedUntilA extends Reflectable
     implements AllReflectorsCapable {
   const ReflectorUpwardsClosedUntilA()
-      : super(const SuperclassQuantifyCapability(A, excludeUpperBound: true),
-            invokingCapability, declarationsCapability);
+      : super(
+            const SuperclassQuantifyCapability(A, excludeUpperBound: true),
+            invokingCapability,
+            declarationsCapability,
+            typeRelationsCapability);
   Reflectable get self => const ReflectorUpwardsClosedUntilA();
   Set<String> get scopes => new Set<String>();
 }
@@ -229,16 +234,18 @@ main() {
     ClassMirror bMirror = reflector.reflectType(B);
     ClassMirror cMirror = reflector.reflectType(C);
     ClassMirror dMirror = reflector.reflectType(D);
-    expect(() => reflector.reflectType(M1), throwsANoSuchCapabilityException);
-    expect(() => reflector.reflectType(M2), throwsANoSuchCapabilityException);
-    expect(() => reflector.reflectType(M3), throwsANoSuchCapabilityException);
-    expect(() => bMirror.superclass.mixin, throwsANoSuchCapabilityException);
+    ClassMirror m1Mirror = reflector.reflectType(M1);
+    ClassMirror m2Mirror = reflector.reflectType(M2);
+    ClassMirror m3Mirror = reflector.reflectType(M3);
+    expect(reflector.reflectType(M1), m1Mirror);
+    expect(reflector.reflectType(M2), m2Mirror);
+    expect(reflector.reflectType(M3), m3Mirror);
+    expect(bMirror.superclass.mixin, m1Mirror);
     expect(bMirror.superclass.superclass, aMirror);
-    expect(() => cMirror.superclass.mixin, throwsANoSuchCapabilityException);
-    expect(() => cMirror.superclass.superclass.mixin,
-        throwsANoSuchCapabilityException);
+    expect(cMirror.superclass.mixin, m3Mirror);
+    expect(cMirror.superclass.superclass.mixin, m2Mirror);
     expect(cMirror.superclass.superclass.superclass, bMirror);
-    expect(() => dMirror.mixin, throwsANoSuchCapabilityException);
+    expect(dMirror.mixin, m1Mirror);
     expect(dMirror.superclass, aMirror);
   });
 }

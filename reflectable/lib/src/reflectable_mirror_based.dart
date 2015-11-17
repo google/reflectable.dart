@@ -306,6 +306,13 @@ bool reflectableSupportsDeclaration(
   return _checkWithGetter(reflectable, name, helper);
 }
 
+/// Returns true if [reflectable] supports types.
+bool reflectableSupportsType(ReflectableImpl reflectable) {
+  bool predicate(ApiReflectCapability capability) =>
+      capability is TypeCapability;
+  return reflectable.hasCapability(predicate);
+}
+
 /// Used to delay the extraction of metadata that may be needed.
 typedef List<dm.InstanceMirror> MetadataEvaluator(String name);
 
@@ -416,6 +423,12 @@ bool reflectableSupportsConstructorInvoke(
 bool reflectableSupportsDeclarations(Reflectable reflectable) {
   bool predicate(ApiReflectCapability capability) =>
       capability == declarationsCapability;
+  return reflectable.hasCapability(predicate);
+}
+
+bool reflectableSupportsTypeRelations(Reflectable reflectable) {
+  bool predicate(ApiReflectCapability capability) =>
+      capability == typeRelationsCapability;
   return reflectable.hasCapability(predicate);
 }
 
@@ -636,7 +649,13 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
   _InstanceMirrorImpl(this._instanceMirror, this._reflectable);
 
   @override
-  rm.TypeMirror get type => wrapTypeMirror(_instanceMirror.type, _reflectable);
+  rm.TypeMirror get type {
+    if (!reflectableSupportsType(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `type` without capability");
+    }
+    return wrapTypeMirror(_instanceMirror.type, _reflectable);
+  }
 
   @override
   bool get hasReflectee => _instanceMirror.hasReflectee;
@@ -715,18 +734,32 @@ class ClassMirrorImpl extends _TypeMirrorImpl
 
   @override
   List<rm.TypeVariableMirror> get typeVariables {
+    if (!reflectableSupportsDeclarations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get typeVariables without `declarationsCapability`");
+    }
     return _classMirror.typeVariables.map((v) {
       return new _TypeVariableMirrorImpl(v, _reflectable);
     }).toList();
   }
 
   @override
-  List<rm.TypeMirror> get typeArguments => _classMirror.typeArguments.map((a) {
-        return wrapTypeMirror(a, _reflectable);
-      }).toList();
+  List<rm.TypeMirror> get typeArguments {
+    if (!reflectableSupportsDeclarations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get typeArguments without `declarationsCapability`");
+    }
+    return _classMirror.typeArguments.map((a) {
+      return wrapTypeMirror(a, _reflectable);
+    }).toList();
+  }
 
   @override
   rm.ClassMirror get superclass {
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get superinterfaces without `typeRelationsCapability`");
+    }
     dm.ClassMirror sup = _classMirror.superclass;
     if (sup == null) return null; // For `Object`, do as `dm`.
     return wrapClassMirrorIfSupported(sup, _reflectable);
@@ -734,6 +767,10 @@ class ClassMirrorImpl extends _TypeMirrorImpl
 
   @override
   List<rm.ClassMirror> get superinterfaces {
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get superinterfaces without `typeRelationsCapability`");
+    }
     List<dm.ClassMirror> superinterfaces = _classMirror.superinterfaces;
     return superinterfaces
         .where((dm.ClassMirror superinterface) => (_reflectable
@@ -1156,7 +1193,8 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
     if (_supportsType(_reflectable.capabilities)) {
       return wrapTypeMirror(_variableMirror.type, _reflectable);
     }
-    throw new NoSuchCapabilityError("Attempt to get type without capability");
+    throw new NoSuchCapabilityError(
+        "Attempt to get type without `TypeCapability`");
   }
 
   @override
@@ -1164,8 +1202,8 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
     if (impliesReflectedType(_reflectable.capabilities)) {
       return _variableMirror.type.hasReflectedType;
     }
-    throw new NoSuchCapabilityError(
-        "Attempt to evaluate hasReflectedType without capability");
+    throw new NoSuchCapabilityError("Attempt to evaluate "
+        "hasReflectedType without `reflectedTypeCapability`");
   }
 
   @override
@@ -1174,7 +1212,7 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
       return _variableMirror.type.reflectedType;
     }
     throw new NoSuchCapabilityError(
-        "Attempt to get reflectedType without capability");
+        "Attempt to get reflectedType without `reflectedTypeCapability`");
   }
 
   @override
@@ -1274,6 +1312,10 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
 
   @override
   List<rm.TypeVariableMirror> get typeVariables {
+    if (!reflectableSupportsDeclarations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get typeVariables without `declarationsCapability`");
+    }
     return _typeMirror.typeVariables
         .map((dm.TypeVariableMirror typeVariableMirror) {
       return new _TypeVariableMirrorImpl(typeVariableMirror, _reflectable);
@@ -1859,6 +1901,13 @@ class _TypeAnnotationsFixedPoint extends FixedPoint<dm.ClassMirror> {
         }
         dm.TypeMirror typeMirror = declaration.returnType;
         if (typeMirror is dm.ClassMirror) yield typeMirror;
+      }
+    }
+    for (dm.TypeVariableMirror typeVariableMirror
+        in classMirror.typeVariables) {
+      dm.TypeMirror typeMirror = typeVariableMirror.upperBound;
+      if (typeMirror is dm.ClassMirror) {
+        yield typeMirror;
       }
     }
   }

@@ -607,11 +607,17 @@ class _ReflectorDomain {
     Enumerator<FieldElement> fields = new Enumerator<FieldElement>();
     Enumerator<ParameterElement> parameters =
         new Enumerator<ParameterElement>();
+    Enumerator<TypeParameterElement> typeParameters =
+        new Enumerator<TypeParameterElement>();
     Set<String> instanceGetterNames = new Set<String>();
     Set<String> instanceSetterNames = new Set<String>();
 
     // Library and class related collections.
     Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
+
+    // Class element for [Object], needed as implicit upper bound. Initialized
+    // if needed.
+    ClassElement objectClassElement = null;
 
     /// Adds a library domain for [library] to [libraries], relying on checks
     /// for importability and insertion into [importCollector] to have taken
@@ -634,14 +640,15 @@ class _ReflectorDomain {
       uncheckedAddLibrary(library);
     }
 
-    // Fill in [libraries], [members], [fields], [parameters],
-    // [instanceGetterNames], and [instanceSetterNames].
+    // Fill in [libraries], [typeParameters], [members], [fields],
+    // [parameters], [instanceGetterNames], and [instanceSetterNames].
     _libraries.items.forEach(uncheckedAddLibrary);
     classes.forEach((ClassElement classElement) {
       if (!libraries.items.any((_LibraryDomain libraryDomain) =>
           libraryDomain._libraryElement == classElement.library)) {
         addLibrary(classElement.library);
       }
+      classElement.typeParameters.forEach(typeParameters.add);
     });
     for (_ClassDomain classDomain in classes.domains) {
       // Gather the behavioral interface into [members]. Note that
@@ -693,26 +700,77 @@ class _ReflectorDomain {
       });
     }
 
-    // Find the offsets of fields and of methods and functions in members.
+    // Add classes used as bounds for type variables, if needed.
+    if (_capabilities._impliesTypes && _capabilities._impliesTypeAnnotations) {
+      void addClass(ClassElement classElement) {
+        classes.add(classElement);
+        if (!libraries.items.contains(classElement.library)) {
+          uncheckedAddLibrary(classElement.library);
+        }
+      }
+
+      bool hasObject = false;
+      bool mustHaveObject = false;
+      Set<ClassElement> classesToAdd = new Set<ClassElement>();
+      ClassElement anyClassElement;
+      for (ClassElement classElement in classes) {
+        if (classElement.type.isObject) {
+          hasObject = true;
+          break;
+        }
+        if (classElement.typeParameters.isNotEmpty) {
+          for (TypeParameterElement typeParameterElement
+              in classElement.typeParameters) {
+            if (typeParameterElement.bound == null) {
+              mustHaveObject = true;
+              anyClassElement = classElement;
+            } else {
+              classesToAdd.add(typeParameterElement.bound.element);
+            }
+          }
+        }
+      }
+      if (mustHaveObject && !hasObject) {
+        while (!anyClassElement.type.isObject) {
+          anyClassElement = anyClassElement.supertype.element;
+        }
+        objectClassElement = anyClassElement;
+        addClass(objectClassElement);
+      }
+      classesToAdd.forEach(addClass);
+    }
+
+    // Find the offsets of fields in members, and of methods and functions
+    // in members, and of type variables in type mirrors.
     int fieldsOffset = topLevelVariables.length;
     int methodsOffset = fieldsOffset + fields.length;
+    int typeParametersOffset = classes.length;
 
     // Generate code for creation of class mirrors.
-    String classMirrorsCode = _formatAsList(
-        "m.ClassMirror",
-        _capabilities._impliesTypes
-            ? classes.domains.map((_ClassDomain classDomain) =>
-                _classMirrorCode(
-                    classDomain,
-                    fields,
-                    fieldsOffset,
-                    methodsOffset,
-                    members,
-                    libraries,
-                    libraryMap,
-                    importCollector,
-                    logger))
-            : <String>[]);
+    Iterable<String> typeMirrorsList = () sync* {
+      if (_capabilities._impliesTypes) {
+        yield* classes.domains.map((_ClassDomain classDomain) =>
+            _classMirrorCode(
+                classDomain,
+                typeParameters,
+                fields,
+                fieldsOffset,
+                methodsOffset,
+                typeParametersOffset,
+                members,
+                libraries,
+                libraryMap,
+                importCollector,
+                logger));
+        yield* typeParameters.items.map(
+            (TypeParameterElement typeParameterElement) =>
+                _typeParameterMirrorCode(typeParameterElement, importCollector,
+                    logger, objectClassElement));
+      } else {
+        yield* <String>[];
+      }
+    }();
+    String classMirrorsCode = _formatAsList("m.TypeMirror", typeMirrorsList);
 
     // Generate code for creation of getter and setter closures.
     String gettersCode = _formatAsMap(instanceGetterNames.map(_gettingClosure));
@@ -835,11 +893,43 @@ class _ReflectorDomain {
         .where((PropertyAccessorElement accessor) => accessor.isSetter);
   }
 
+  String _typeParameterMirrorCode(
+      TypeParameterElement typeParameterElement,
+      _ImportCollector importCollector,
+      TransformLogger logger,
+      ClassElement objectClassElement) {
+    int upperBoundIndex = constants.NO_CAPABILITY_INDEX;
+    if (_capabilities._impliesTypeAnnotations) {
+      DartType bound = typeParameterElement.bound;
+      if (bound == null) {
+        // Missing bound should be reported as the semantic default: `Object`.
+        // We use an ugly hack to obtain the [ClassElement] for `Object`.
+        upperBoundIndex = classes.indexOf(objectClassElement);
+        assert(upperBoundIndex != null);
+      } else if (bound.isDynamic) {
+        // TODO(eernst) implement: Support for `dynamic` as a bound.
+        throw new UnimplementedError();
+      } else {
+        upperBoundIndex = classes.indexOf(typeParameterElement.bound.element);
+      }
+    }
+    int ownerIndex = classes.indexOf(typeParameterElement.enclosingElement);
+    // TODO(eernst) implement: Update when type variables support metadata.
+    String metadataCode =
+        _capabilities._supportsMetadata ? "<Object>[]" : "null";
+    return 'new r.TypeVariableMirrorImpl(r"${typeParameterElement.name}", '
+        'r"${_qualifiedTypeParameterName(typeParameterElement)}", '
+        '${_constConstructionCode(importCollector)}, '
+        '$upperBoundIndex, $ownerIndex, $metadataCode)';
+  }
+
   String _classMirrorCode(
       _ClassDomain classDomain,
+      Enumerator<TypeParameterElement> typeParameters,
       Enumerator<FieldElement> fields,
       int fieldsOffset,
       int methodsOffset,
+      int typeParametersOffset,
       Enumerator<ExecutableElement> members,
       Enumerator<_LibraryDomain> libraries,
       Map<LibraryElement, _LibraryDomain> libraryMap,
@@ -1025,13 +1115,25 @@ class _ReflectorDomain {
       }();
       String isCheckCode = isCheckList.join();
 
+      String typeParameterIndices = "null";
+      if (_capabilities._impliesDeclarations) {
+        int indexOf(TypeParameterElement typeParameter) =>
+            typeParameters.indexOf(typeParameter) + typeParametersOffset;
+        typeParameterIndices = _formatAsConstList(
+            'int',
+            classElement.typeParameters
+                .where(typeParameters.items.contains)
+                .map(indexOf));
+      }
+
       return 'new r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
           '${_constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
           '$constructorsCode, $ownerIndex, $mixinIndex, '
-          '$superinterfaceIndices, $classMetadataCode, $isCheckCode)';
+          '$superinterfaceIndices, $classMetadataCode, $isCheckCode, '
+          '$typeParameterIndices)';
     }
   }
 
@@ -3956,4 +4058,10 @@ String _qualifiedFunctionName(FunctionElement functionElement) {
   return functionElement == null
       ? "null"
       : "${functionElement.library.name}.${functionElement.name}";
+}
+
+String _qualifiedTypeParameterName(TypeParameterElement typeParameterElement) {
+  if (typeParameterElement == null) return "null";
+  return "${_qualifiedName(typeParameterElement.enclosingElement)}."
+      "${typeParameterElement.name}";
 }

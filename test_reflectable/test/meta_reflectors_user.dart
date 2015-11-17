@@ -123,16 +123,18 @@ runTests() {
     ClassMirror bMirror = reflector.reflectType(B);
     ClassMirror cMirror = reflector.reflectType(C);
     ClassMirror dMirror = reflector.reflectType(D);
-    expect(() => reflector.reflectType(M1), throwsANoSuchCapabilityException);
-    expect(() => reflector.reflectType(M2), throwsANoSuchCapabilityException);
-    expect(() => reflector.reflectType(M3), throwsANoSuchCapabilityException);
-    expect(() => bMirror.superclass.mixin, throwsANoSuchCapabilityException);
+    ClassMirror m1Mirror = reflector.reflectType(M1);
+    ClassMirror m2Mirror = reflector.reflectType(M2);
+    ClassMirror m3Mirror = reflector.reflectType(M3);
+    expect(reflector.reflectType(M1), m1Mirror);
+    expect(reflector.reflectType(M2), m2Mirror);
+    expect(reflector.reflectType(M3), m3Mirror);
+    expect(bMirror.superclass.mixin, m1Mirror);
     expect(bMirror.superclass.superclass, aMirror);
-    expect(() => cMirror.superclass.mixin, throwsANoSuchCapabilityException);
-    expect(() => cMirror.superclass.superclass.mixin,
-        throwsANoSuchCapabilityException);
-    expect(cMirror.superclass.superclass.superclass, bMirror);
-    expect(() => dMirror.mixin, throwsANoSuchCapabilityException);
+    expect(cMirror.superclass.mixin, m3Mirror);
+    expect(cMirror.superclass.superclass.mixin, m2Mirror);
+    expect(cMirror.superclass.superclass.superclass,  bMirror);
+    expect(dMirror.mixin, m1Mirror);
     expect(dMirror.superclass, aMirror);
   });
 }

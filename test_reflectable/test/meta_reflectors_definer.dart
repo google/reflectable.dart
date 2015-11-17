@@ -14,12 +14,14 @@ import "package:reflectable/reflectable.dart";
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(invokingCapability, declarationsCapability, libraryCapability);
+      : super(invokingCapability, declarationsCapability,
+            typeRelationsCapability, libraryCapability);
 }
 
 class Reflector2 extends Reflectable {
   const Reflector2()
-      : super(invokingCapability, metadataCapability, libraryCapability);
+      : super(invokingCapability, typeRelationsCapability, metadataCapability,
+            libraryCapability);
 }
 
 class ReflectorUpwardsClosed extends Reflectable {

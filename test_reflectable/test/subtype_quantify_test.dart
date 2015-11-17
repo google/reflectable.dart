@@ -10,7 +10,7 @@ import "package:unittest/unittest.dart";
 class Reflector extends Reflectable {
   const Reflector()
       : super(subtypeQuantifyCapability, instanceInvokeCapability,
-            typeCapability);
+            typeRelationsCapability);
 }
 
 const reflector = const Reflector();
