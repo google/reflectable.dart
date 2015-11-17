@@ -22,6 +22,17 @@ import 'fixed_point.dart';
 import 'reflectable_class_constants.dart' as reflectable_class_constants;
 import 'transformer_errors.dart' as errors;
 
+/// Specifiers for warnings that may be suppressed; `allWarnings` disables all
+/// warnings, and the remaining values are concerned with individual warnings.
+/// Remember to update the explanatory text in [_findSuppressWarnings] whenever
+/// this list is updated.
+enum WarningKind {
+  missingEntryPoint,
+  badSuperclass,
+  badNamePattern,
+  badMetadata
+}
+
 // Single source of instances of [Resolver], shared across multiple
 // invocations of `apply` to save memory.
 Resolvers _resolvers = new Resolvers(dartSdkDirectory);
@@ -2257,6 +2268,11 @@ class TransformerImplementation {
   TransformLogger _logger;
   Resolver _resolver;
   bool _formatted;
+  List<WarningKind> _suppressedWarnings;
+
+  bool _warningEnabled(WarningKind kind) {
+    return !_suppressedWarnings.contains(kind);
+  }
 
   /// Checks whether the given [type] from the target program is "our"
   /// class [Reflectable] by looking up the static field
@@ -2291,7 +2307,7 @@ class TransformerImplementation {
       // whether this could happen, but it is surely not the right
       // class, so we fall through.
     }
-    // Not a const field, cannot be the right class.
+    // Not a const field, or failed the test, cannot be the right class.
     return false;
   }
 
@@ -2402,10 +2418,16 @@ class TransformerImplementation {
     return null;
   }
 
-  _warn(String message, Element element) {
-    _logger.warning(message,
-        asset: _resolver.getSourceAssetId(element),
-        span: _resolver.getSourceSpan(element));
+  _warn(WarningKind kind, String message, [Element element]) {
+    if (_warningEnabled(kind)) {
+      if (element != null) {
+        _logger.warning(message,
+            asset: _resolver.getSourceAssetId(element),
+            span: _resolver.getSourceSpan(element));
+      } else {
+        _logger.warning(message);
+      }
+    }
   }
 
   /// Finds all GlobalQuantifyCapability and GlobalQuantifyMetaCapability
@@ -2441,7 +2463,8 @@ class TransformerImplementation {
               if (pattern == null) {
                 // TODO(sigurdm) implement: Create a span for the annotation
                 // rather than the import.
-                _warn("The classNamePattern must be a string", import);
+                _warn(WarningKind.badNamePattern,
+                    "The classNamePattern must be a string", import);
                 continue;
               }
               ClassElement reflector =
@@ -2452,6 +2475,7 @@ class TransformerImplementation {
                 String found =
                     reflector == null ? "" : " Found ${reflector.name}";
                 _warn(
+                    WarningKind.badSuperclass,
                     "The reflector must be a direct subclass of Reflectable." +
                         found,
                     import);
@@ -2472,6 +2496,7 @@ class TransformerImplementation {
                   value.fields["metadataType"].type.element != typeClass) {
                 // TODO(sigurdm) implement: Create a span for the annotation.
                 _warn(
+                    WarningKind.badMetadata,
                     "The metadata must be a Type. "
                     "Found ${value.fields["metadataType"].type.element.name}",
                     import);
@@ -2485,6 +2510,7 @@ class TransformerImplementation {
                 String found =
                     reflector == null ? "" : " Found ${reflector.name}";
                 _warn(
+                    WarningKind.badSuperclass,
                     "The reflector must be a direct subclass of Reflectable." +
                         found,
                     import);
@@ -2513,7 +2539,11 @@ class TransformerImplementation {
     final ClassElement classReflectable =
         _findReflectableClassElement(reflectableLibrary);
     // If class `Reflectable` is absent the transformation must be a no-op.
-    if (classReflectable == null) return null;
+    if (classReflectable == null) {
+      _logger.info("Ignoring entry point $entryPoint that does not "
+          "include the class `Reflectable`.");
+      return null;
+    }
 
     // The world will be built from the library arguments plus these two.
     final Map<ClassElement, _ReflectorDomain> domains =
@@ -2740,8 +2770,10 @@ class TransformerImplementation {
           constant.fields["(super)"].fields["namePattern"] == null ||
           constant.fields["(super)"].fields["namePattern"].toStringValue() ==
               null) {
-        // TODO(sigurdm) diagnostic: Better error-message.
-        _logger.warning("Could not extract namePattern.");
+        // TODO(eernst) implement: Add location info to message.
+        _warn(WarningKind.badNamePattern,
+            "Could not extract namePattern from capability.");
+        return "";
       }
       return constant.fields["(super)"].fields["namePattern"].toStringValue();
     }
@@ -2752,15 +2784,17 @@ class TransformerImplementation {
       if (constant.fields == null ||
           constant.fields["(super)"] == null ||
           constant.fields["(super)"].fields["metadataType"] == null) {
-        // TODO(sigurdm) diagnostic: Better error-message. We need a way
-        // to get a source location from a constant.
-        _logger.warning("Could not extract the metadata field.");
+        // TODO(eernst) implement: Add location info to message.
+        _warn(WarningKind.badMetadata,
+            "Could not extract metadata type from capability.");
         return null;
       }
       Object metadataFieldValue = constant.fields["(super)"].fields[
           "metadataType"].toTypeValue().element;
       if (metadataFieldValue is! ClassElement) {
-        _logger.warning("The metadataType field must be a Type object.");
+        // TODO(eernst) implement: Add location info to message.
+        _warn(WarningKind.badMetadata,
+            "Metadata specification in capability must be a `Type`.");
         return null;
       }
       return metadataFieldValue;
@@ -2958,9 +2992,10 @@ _initializeReflectable() {
   /// `package:reflectable/reflectable.dart` and instead provides a set of
   /// statically generated mirror classes.
   Future apply(AggregateTransform aggregateTransform, List<String> entryPoints,
-      bool formatted) async {
+      bool formatted, List<WarningKind> suppressedWarnings) async {
     _logger = aggregateTransform.logger;
     _formatted = formatted;
+    _suppressedWarnings = suppressedWarnings;
     // The type argument in the return type is omitted because the
     // documentation on barback and on transformers do not specify it.
 
@@ -2985,7 +3020,19 @@ _initializeReflectable() {
           (Asset asset) => asset.id.path.endsWith(entryPoint),
           orElse: () => null);
       if (entryPointAsset == null) {
-        aggregateTransform.logger.info("Missing entry point: $entryPoint");
+        if (_warningEnabled(WarningKind.missingEntryPoint)) {
+          String entryPointPath =
+              entryPoint.split('/').join(Platform.pathSeparator);
+          bool entryPointFileExists = await new File(entryPointPath).exists();
+          if (!entryPointFileExists) {
+            // We did not receive an asset for [entryPoint], and there is no
+            // corresponding file (so it is not just because we were invoked
+            // from `pub build test` and [entryPoint] is in `web`, or something
+            // similar). Announce the problem.
+            aggregateTransform.logger
+                .warning("Missing entry point: $entryPoint");
+          }
+        }
         continue;
       }
       Transform wrappedTransform =

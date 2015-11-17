@@ -15,6 +15,8 @@ class ReflectableTransformer extends AggregateTransformer
   BarbackSettings _settings;
   List<String> _entryPoints = <String>[];
   bool _formatted;
+  List<implementation.WarningKind> _suppressWarnings =
+      <implementation.WarningKind>[];
 
   /// Reports an error in a situation where we do not yet have
   /// a [Logger].
@@ -64,10 +66,61 @@ class ReflectableTransformer extends AggregateTransformer
     }
   }
 
+  List<implementation.WarningKind> _findSuppressWarnings(
+      suppressWarningsSettings) {
+    void fail(setting) {
+      _reportEarlyError("Encountered unknown value '$setting' for"
+          " the 'suppressWarnings' option.\n"
+          "Accepted values: true, false, missingEntryPoint, "
+          "badSuperclass, badNamePattern, badMetadata");
+    }
+
+    Iterable<implementation.WarningKind> helper(setting) sync* {
+      // With no settings, no warnings are suppressed; same for `false`.
+      if (setting == null || setting == false) return;
+      // Setting `true` means suppress them all.
+      if (setting == true) {
+        yield* implementation.WarningKind.values;
+      } else if (setting is String) {
+        switch (setting) {
+          case "missingEntryPoint":
+            yield implementation.WarningKind.missingEntryPoint;
+            break;
+          case "badSuperclass":
+            yield implementation.WarningKind.badSuperclass;
+            break;
+          case "badNamePattern":
+            yield implementation.WarningKind.badNamePattern;
+            break;
+          case "badMetadata":
+            yield implementation.WarningKind.badMetadata;
+            break;
+          default:
+            fail(setting);
+            return;
+        }
+      } else {
+        fail(setting);
+        return;
+      }
+    }
+
+    List<implementation.WarningKind> result = <implementation.WarningKind>[];
+    if (suppressWarningsSettings is Iterable) {
+      suppressWarningsSettings
+          .forEach((setting) => helper(setting).forEach(result.add));
+    } else {
+      result.addAll(helper(suppressWarningsSettings));
+    }
+    return new List<implementation.WarningKind>.unmodifiable(result);
+  }
+
   /// Creates new instance as required by Barback.
   ReflectableTransformer.asPlugin(this._settings) {
     _entryPoints = _findEntryPoints(_settings.configuration['entry_points']);
     _formatted = _findFormatted(_settings.configuration['formatted']);
+    _suppressWarnings =
+        _findSuppressWarnings(_settings.configuration['suppressWarnings']);
   }
 
   /// Return a [String] or [Future<String>] valued key for each
@@ -86,7 +139,7 @@ class ReflectableTransformer extends AggregateTransformer
   @override
   Future apply(AggregateTransform transform) {
     return new implementation.TransformerImplementation()
-        .apply(transform, _entryPoints, _formatted);
+        .apply(transform, _entryPoints, _formatted, _suppressWarnings);
   }
 
   @override
