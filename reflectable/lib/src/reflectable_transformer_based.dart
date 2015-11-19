@@ -201,7 +201,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
         other.reflectee == reflectee;
   }
 
-  int get hashCode => reflectee.hashCode ^ _reflector.hashCode;
+  int get hashCode => _reflector.hashCode ^ reflectee.hashCode;
 
   delegate(Invocation invocation) => _unsupported();
 
@@ -753,9 +753,10 @@ class TypeVariableMirrorImpl extends _DataCaching
   final ReflectableImpl _reflector;
 
   /// The index into [typeMirrors] of the upper bound of this type variable.
+  /// The value [null] encodes that the upper bound is [dynamic].
   final int _upperBoundIndex;
 
-  /// The index inte [typeMirrors] of the class that declares this type
+  /// The index into [typeMirrors] of the class that declares this type
   /// variable.
   final int _ownerIndex;
 
@@ -771,6 +772,7 @@ class TypeVariableMirrorImpl extends _DataCaching
 
   @override
   TypeMirror get upperBound {
+    if (_upperBoundIndex == null) return new DynamicMirrorImpl();
     if (_upperBoundIndex == NO_CAPABILITY_INDEX) {
       throw new NoSuchCapabilityError("Attempt to get `upperBound` from type "
           "variable mirror without capability.");
@@ -1342,12 +1344,6 @@ abstract class VariableMirrorBase extends _DataCaching
   }
 
   @override
-  bool operator ==(other) => _unsupported();
-
-  @override
-  int get hashCode => _unsupported();
-
-  @override
   String get simpleName => _name;
 
   @override
@@ -1381,6 +1377,11 @@ abstract class VariableMirrorBase extends _DataCaching
     }
     return _reflectedType;
   }
+
+  // Note that [operator ==] is redefined slightly differently in the two
+  // subtypes of this class, but they share this [hashCode] implementation.
+  @override
+  int get hashCode => simpleName.hashCode ^ owner.hashCode;
 }
 
 class VariableMirrorImpl extends VariableMirrorBase {
@@ -1412,6 +1413,13 @@ class VariableMirrorImpl extends VariableMirrorBase {
       List<Object> metadata)
       : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
             reflectedType, metadata);
+
+  // Note that the corresponding implementation of [hashCode] is inherited from
+  // [VariableMirrorBase].
+  @override
+  bool operator ==(other) => other is VariableMirrorImpl &&
+      other.simpleName == simpleName &&
+      other.owner == owner;
 }
 
 class ParameterMirrorImpl extends VariableMirrorBase
@@ -1449,6 +1457,13 @@ class ParameterMirrorImpl extends VariableMirrorBase
       this.defaultValue)
       : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
             reflectedType, metadata);
+
+  // Note that the corresponding implementation of [hashCode] is inherited from
+  // [VariableMirrorBase].
+  @override
+  bool operator ==(other) => other is ParameterMirrorImpl &&
+      other.simpleName == simpleName &&
+      other.owner == owner;
 }
 
 class DynamicMirrorImpl implements TypeMirror {

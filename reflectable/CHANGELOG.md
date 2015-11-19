@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.3.4
+
+* Several 'README.md' files updated to match the current status.
+* A couple of smaller unimplemented methods implemented.
+* Eliminates many of the 'Missing entry point' messages: If it is specified
+  that an entry point 'web/foo.dart' must be transformed, but no such asset
+  is provided to the transformer, then the warning is only emitted if the
+  file does not exist (with `pub build test`, 'web/foo.dart' is not provided
+  to the transformer, but that is not a problem).
+* Corrects the bug that `typeRelationsCapability` was sometimes not required
+  with certain operations (including `superclass`), even though the
+  documentation states that it is required. Similarly, a `TypeCapability` is
+  now required in a few extra cases where it should be required.
+* Correct the cyclic-dependency bug which previously made
+  'expanding_generics_test.dart' fail.
+* Adds support for enum classes.
+* Implement support for all the trivial parts of genericity: empty lists of
+  type arguments are now delivered rather than throwing `UnimplementedError`,
+  and static information like type variables (that is, formals) is supported.
+* Implement several missing class members, including `isEnum`, `isPrivate`,
+  `isOriginalDeclaration`, `originalDeclaration`.
+* Correct several bugs in the implementation of `LibraryMirror`.
+* Correct several bugs with `owner`.
+* Implement several features for top-level entities, especially variables.
+* Correct several incorrect type annotations (e.g., `List` required, but
+  only `Iterable` justified).
+* Implement simple code coverage support.
+
 ## 0.3.3
 
 * Update many DartDoc comments in 'capability.dart'.

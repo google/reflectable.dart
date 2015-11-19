@@ -70,9 +70,9 @@ class ReflectableTransformer extends AggregateTransformer
       suppressWarningsSettings) {
     void fail(setting) {
       _reportEarlyError("Encountered unknown value '$setting' for"
-          " the 'suppressWarnings' option.\n"
-          "Accepted values: true, false, missingEntryPoint, "
-          "badSuperclass, badNamePattern, badMetadata");
+          " the 'suppress_warnings' option.\n"
+          "Accepted values: true, false, missing_entry_point, "
+          "bad_superclass, bad_name_pattern, bad_metadata");
     }
 
     Iterable<implementation.WarningKind> helper(setting) sync* {
@@ -83,16 +83,16 @@ class ReflectableTransformer extends AggregateTransformer
         yield* implementation.WarningKind.values;
       } else if (setting is String) {
         switch (setting) {
-          case "missingEntryPoint":
+          case "missing_entry_point":
             yield implementation.WarningKind.missingEntryPoint;
             break;
-          case "badSuperclass":
+          case "bad_superclass":
             yield implementation.WarningKind.badSuperclass;
             break;
-          case "badNamePattern":
+          case "bad_name_pattern":
             yield implementation.WarningKind.badNamePattern;
             break;
-          case "badMetadata":
+          case "bad_metadata":
             yield implementation.WarningKind.badMetadata;
             break;
           default:

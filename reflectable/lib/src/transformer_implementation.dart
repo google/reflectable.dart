@@ -918,8 +918,9 @@ class _ReflectorDomain {
         upperBoundIndex = classes.indexOf(objectClassElement);
         assert(upperBoundIndex != null);
       } else if (bound.isDynamic) {
-        // TODO(eernst) implement: Support for `dynamic` as a bound.
-        throw new UnimplementedError();
+        // We use [null] to indicate that this bound is [dynamic] ([void]
+        // cannot be a bound, so the only special case is [dynamic]).
+        upperBoundIndex = null;
       } else {
         upperBoundIndex = classes.indexOf(typeParameterElement.bound.element);
       }
@@ -1353,7 +1354,7 @@ class _ReflectorDomain {
     int classMirrorIndex;
     if (_capabilities._impliesTypes) {
       if (descriptor & constants.dynamicAttribute != 0) {
-        // This parameter will report its type as `dynamic`, and it
+        // This parameter will report its type as [dynamic], and it
         // will never use `classMirrorIndex`.
         classMirrorIndex = null;
       } else if (descriptor & constants.classTypeAttribute != 0) {

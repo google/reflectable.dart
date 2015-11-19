@@ -1,6 +1,6 @@
 # Reflectable
 
-*Please note that parts of this package are still unimplemented.*
+*A listing of known limitations is given at the end of this page.*
 
 ## Introduction
 
@@ -42,7 +42,7 @@ For both modes, your code will not depend directly on `dart:mirrors`. In the
 untransformed mode there is an indirect dependency because the support for
 reflective features is implemented by delegation to mirror objects from
 `dart:mirrors`. In the transformed mode there is no dependency on `dart:mirrors`
-at all, because the transformer `reflectable` generates specialized, static code
+at all, because the reflectable transformer generates specialized, static code
 that supports the required reflective features.
 
 The use of dynamic reflection is supported if and only if the usage is covered
@@ -76,9 +76,10 @@ Only classes covered by a reflector `R` and their instances can be accessed
 reflectively using `R`, and that access is constrained by the capabilities
 passed as the superinitializer in the class of `R`. The basic case is when `R`
 is used as an annotation of a given class (as is the case with `A` above), but a
-class `C` can also be covered by a reflector `R` if a supertype `A` of `C` is
-annotated by a reflector which specifies that subtypes of `A` are covered as
-well.
+class `C` can also be covered by a reflector `R` because a supertype `A` of
+`C` is annotated by a reflector which specifies that subtypes of `A` are
+covered. There are several other indirect mechanisms in addition to subtype
+based coverage, as described in the [capability design document][1].
 
 As a result, the available universe of reflection related operations is so
 well-known at compile time that it is possible to specialize the support for
@@ -96,7 +97,7 @@ import 'package:reflectable/reflectable.dart';
 // Annotate with this class to enable reflection.
 class Reflector extends Reflectable {
   const Reflector()
-  : super(invokingCapability); // Request the capability to invoke methods.
+      : super(invokingCapability); // Request the capability to invoke methods.
 }
 
 const reflector = const Reflector();
@@ -126,7 +127,7 @@ You can directly run this code in untransformed mode, for instance using the
 Dart VM. To avoid the dependency on `dart:mirrors` and save space, you can
 transform the code using the transformer in this package.
 
-In order to do this, add the following to your `pubspec.yaml`:
+In order to do this, add the following to your 'pubspec.yaml':
 ```yaml
 dependencies:
   reflectable: any
@@ -135,59 +136,115 @@ transformers:
 - reflectable:
     entry_points:
       - web/main.dart # The path to your main file
-    formatted: true # Will run dartfmt to format the generated code.
+    formatted: true # Optional.
 ```
 
-And then run `pub build --mode=debug web` (you can omit `web` because that
-is the default). This will rename the file `web/main.dart` and generate a new
-file `build/web/main.dart` containing the data needed for
-reflection, and a main function that will initialize the
-reflection framework before running the original `main`. When you run this file,
-it is important that the package-root is set to `build/web/packages`,
-because the reflectable package itself is transformed to a
-version that uses the generated data, instead of using `dart:mirrors`.
+Now run `pub build --mode=debug web` to perform the transformation. This will
+rename the file `web/main.dart` and generate a new file `build/web/main.dart`.
+That file contains the data needed for  reflection, and a main function that
+will initialize the reflection framework before running the original `main`.
+When you run this file, it is important that the package-root is set to
+`build/web/packages`, because the reflectable package itself is transformed
+to a version that uses the generated data, instead of using `dart:mirrors`.
 
-For a more advanced example implementing the base of a serialization framework,
-please look into [serialize_test.dart][3] test and its [library][4].
+Some elements in this scenario are optional: In the `pub build..` command, you
+could omit the final argument when it is equal to `web`, because that is the
+default. You could also omit `--mode=debug` if you do not wish to inspect or
+use the generated Dart code (typically, that would be because you only need the
+final JavaScript output). In 'pubspec.yaml', the `formatted` option can be
+omitted, in which case the output from the transformer will skip the formatting
+step (saving time and space, but putting most of the generated code into one
+very long line). Finally, in 'pubspec.yaml' you can use one more option:
+'suppress_warnings'; e.g., you could specify
+'suppress_warnings: missing_entry_point' in order to suppress the warnings
+given in the situation where an entry point has been specified in
+'pubspec.yaml', but no corresponding library (aka 'asset') has been provided
+by `pub` to the transformer.
+
+For a more advanced example, you could look at [serialize_test.dart][3] and its
+[library][4], where the base of a serialization framework is implemented; or you
+could look at [meta_reflectors_test.dart][5] and the libraries it imports,
+which illustrates how reflectable can be used to dynamically make a choice
+among several kinds of reflection, and how to eliminate several kinds of static
+dependencies among libraries.
 
 [3]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/serialize_test.dart
 [4]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/lib/serialize.dart
+[5]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/meta_reflectors_test.dart
 
 ### Comparison with `dart:mirrors` with `MirrorsUsed` annotations
 
 A lot of the overhead of `dart:mirrors` can be mitigated by using a
-`MirrorsUsed` annotation, just as specifying capabilities of reflectable.
+suitable `MirrorsUsed` annotation, which has a similar purpose as the
+capabilities of reflectable. So why do we have both?
 
-One advantage of the reflectable approach is that the same restrictions are
-implemented both for running untransformed (on top of `dart:mirrors` in the VM)
-and transformed. So the behaviour will be the same on Dartium and the
-transformed code compiled with Dart2js.
+First, on some Dart platforms there is no support for reflection at all, in
+which case it is necessary to use an approach that offers execution without
+any built-in reflection mechanism, and the reflectable transformer does just
+that.
 
-Another advantage is that, where the interaction between two different
-`MirrorsUsed` annotations often is hard to predict, `Reflectable` allows for
-several separate mirror-systems (reflectors) with different capabilities. It
-means that for some reflection-targets used by one sub-system of the program
-(say, a serializer) detailed information can be generated, and only little
-information about those used by another.
+Even when there is support for reflection, it makes sense to use reflectable.
+In particular, the concepts and mechanisms embedded in the reflectable
+capabilities represent a significant further development and generalization
+of the approach used with `MirrorsUsed`, which means that the level of
+reflection support can be tailored more precisely.
 
+Another advantage of the reflectable approach is that the same restrictions are
+implemented both for running untransformed code (on top of `dart:mirrors`), and
+for running transformed code. The behaviour will thus be the same on Dartium
+and with code that is transformed and then compiled with Dart2js.
+
+Another advantage is that whereas the interaction between two different
+`MirrorsUsed` annotations often is hard to predict, reflectable allows for
+several separate mirror-systems (reflectors) with different capabilities.
+This means that for some reflection targets used by one sub-system of the
+program (say, a serializer) detailed information can be generated. Another
+sub-system with simpler requirements could then be supported by a much
+smaller amount of information.
 
 ## Known limitations
 
 Several parts of the library have not yet been implemented. In particular, the
-following parts are still missing:
+following parts are still incomplete:
 
-- Reflection on functions/closures.
-- Private members. There is currently no support for reflection on private
-  members, as this would require special support from the runtime for accessing
-  private names from other libraries.
-- uri's of libraries. The transformer framework does not give us access to good uri's of libraries, so these are
-  currently only partially supported (a unique uri is generated for each library, but it is not related to the location
-  of the file). 
-- Generic types (would require more runtime support for a useful implementation).
+- Reflection on functions/closures. We do not have the required primitives
+  to support this feature, so it is expected to remain unsupported for a while.
+
+- Private declarations. There is currently almost no support for reflection on
+  private declarations, as this would require special support from the runtime
+  for accessing private names from other libraries. As an example of a case
+  where there is some support, library mirrors can deliver class mirrors for
+  private classes, and `instanceMembers` includes public members inherited
+  from private superclasses. But in the vast majority of situations, private
+  declarations are not supported.
+
+- uri's of libraries. The transformer framework does not give us access to
+  good uri's of libraries, so these are currently only partially supported:
+  A unique uri containing the name given in the `library` directive (if any)
+  is generated for each library; this means that equality tests will work,
+  and the `toString()` of a uri will be somewhat human readable. But this kind
+  of uri does not give any information about the location of a corresponding
+  file on disk.
+
+- Type arguments of generic types are only supported in the simple cases. E.g.,
+  when it is known that a given list of actual type arguments is empty then
+  the empty list is returned. However, when a parameterized type has a
+  non-trivial list of actual type arguments then returning the actual type
+  arguments would require runtime support that does not currently exist.
+
+- The mirror methods `delegate`, `isAssignableTo`, `isSubtypeOf`, and
+  `libraryDependencies` have not yet been implemented with transformed
+  code.
+
+- When an attempt to invoke a method, getter, or setter fails, it is sometimes
+  not possible to distinguish the situation where the method is missing
+  (in which case `noSuchMethod` should be invoked) and the situation where the
+  method is present, but the requested capabilities do not provide access to
+  it (in which case a `NoSuchCapabilityError` should be thrown).
 
 ## Feature requests and bug reports
 
 Please file feature requests and bugs using the
-[github issue tracker for this repository][5].
+[github issue tracker for this repository][7].
 
-[5]: https://github.com/dart-lang/reflectable/issues
+[7]: https://github.com/dart-lang/reflectable/issues

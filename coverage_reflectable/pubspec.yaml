@@ -5,5 +5,4 @@ dependencies:
   observatory:
     path: /usr/local/google/home/eernst/devel/dart/work/sdk/runtime/observatory
   observe: any
-dependency_overrides:
-  analyzer: 0.26.1+14
+  analyzer: ">=0.26.0 <=0.26.1+14"
