@@ -84,6 +84,7 @@ read
 
 edit_version ../reflectable/pubspec.yaml $VERSION
 edit_version ../test_reflectable/pubspec.yaml $VERSION
+edit_version ../coverage_reflectable/pubspec.yaml $VERSION
 
 git diff HEAD
 

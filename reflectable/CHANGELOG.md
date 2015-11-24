@@ -2,6 +2,26 @@
 
 ## 0.3.4
 
+* **NB** Adds a non-trivial upper version constraint on analyzer in order to
+  require version 0.26.1+14 or older. This is necessary because newer versions
+  of analyzer have changed in ways that are incompatible with reflectable in
+  several ways. We expect to be able to allow using the newest version of
+  analyzer again soon.
+* Implements support for moving additional kinds of expressions (for
+  argument default values and metadata), esp. when they use a library
+  prefix (such as `@myLib.myMetadata`).
+* Adds test cases for previously untested capabilities
+  (`NewInstanceMetaCapability` and `TypingCapability`).
+* Fixes bug where pre-transform check would attempt to use `null` but should
+  instead throw `NoSuchCapabilityError`.
+* Adds missing checks in pre-transform code (e.g., checking that a
+  `LibraryCapability` is available when performing a top-level invocation).
+* Corrects inconsistency among the type hierarchies for pre/post-transform
+  capabilities (which caused the post-transform code to act incorrectly).
+* Corrects treatment of `TypingCapability`, adjusted it to include
+  `LibraryCapability`.
+* Introduces `UnreachableError` and adjusted error handling to throw this in
+  all cases where a location should never be reached.
 * Several 'README.md' files updated to match the current status.
 * A couple of smaller unimplemented methods implemented.
 * Eliminates many of the 'Missing entry point' messages: If it is specified

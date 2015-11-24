@@ -2,8 +2,8 @@ How to publish a new version:
 
 * Create a fresh git branch on 'master' to perform the publish operation.
 * Update `CHANGELOG.md`.
-* Update the version number in `reflectable/pubspec.yaml` and
-  `test_reflectable/pubspec.yaml`.
+* Update the version number of `pubspec.yaml` in `reflectable`,
+  `test_reflectable`, and `coverage_reflectable`.
 * Land the change. Commit message: "Bumping version to X.X.X"
 * Run `pub publish --dry-run` from `reflectable/`.
 * Run `pub publish` from `reflectable/`.
