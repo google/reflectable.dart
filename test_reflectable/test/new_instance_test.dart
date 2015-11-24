@@ -10,50 +10,89 @@ library test_reflectable.test.new_instance_test;
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 
-class MyReflectable extends Reflectable {
-  const MyReflectable() : super(newInstanceCapability);
+class Reflector extends Reflectable {
+  const Reflector() : super(newInstanceCapability);
 }
 
-const myReflectable = const MyReflectable();
+const reflector = const Reflector();
 
-@myReflectable
+class MetaReflector extends Reflectable {
+  const MetaReflector() : super(const NewInstanceMetaCapability(C));
+}
+
+const metaReflector = const MetaReflector();
+
+class C {
+  const C();
+}
+
+@reflector
+@metaReflector
 class A {
+  @C()
   A() : f = 42;
+
+  @C()
   A.positional(int x) : f = x - 42;
+
+  @C()
   A.optional(int x, int y, [int z = 1, w])
       : f = x + y + z * 42 + (w == null ? 10 : w);
+
+  @C()
   A.argNamed(int x, int y, {int z: 42, int p})
       : f = x + y - z - (p == null ? 10 : p);
+
+  A.noMeta(int x) : f = x + 42;
+
   int f = 0;
 }
 
-main() {
-  ClassMirror classMirror = myReflectable.reflectType(A);
-  test('newInstance unnamed constructor, no arguments', () {
+void performTests(String message, Reflectable reflector) {
+  ClassMirror classMirror = reflector.reflectType(A);
+  test('$message: newInstance unnamed constructor, no arguments', () {
     expect((classMirror.newInstance("", []) as A).f, 42);
   });
-  test('newInstance named constructor, simple argument list, one argument', () {
+  test(
+      '$message: newInstance named constructor, simple argument list, one argument',
+      () {
     expect((classMirror.newInstance("positional", [84]) as A).f, 42);
   });
-  test('newInstance optional arguments, all used', () {
+  test('$message: newInstance optional arguments, all used', () {
     expect((classMirror.newInstance("optional", [1, 2, 3, 4]) as A).f, 133);
   });
-  test('newInstance optional arguments, none used', () {
+  test('$message: newInstance optional arguments, none used', () {
     expect((classMirror.newInstance("optional", [1, 2]) as A).f, 55);
   });
-  test('newInstance optional arguments, some used', () {
+  test('$message: newInstance optional arguments, some used', () {
     expect((classMirror.newInstance("optional", [1, 2, 3]) as A).f, 139);
   });
-  test('newInstance named arguments, all used', () {
+  test('$message: newInstance named arguments, all used', () {
     expect((classMirror.newInstance("argNamed", [1, 2], {#z: 3, #p: 0}) as A).f,
         0);
   });
-  test('newInstance named arguments, some used', () {
+  test('$message: newInstance named arguments, some used', () {
     expect((classMirror.newInstance("argNamed", [1, 2], {#z: 3}) as A).f, -10);
     expect((classMirror.newInstance("argNamed", [1, 2], {#p: 3}) as A).f, -42);
   });
-  test('newInstance named arguments, unused', () {
+  test('$message: newInstance named arguments, unused', () {
     expect((classMirror.newInstance("argNamed", [1, 2]) as A).f, -49);
     expect((classMirror.newInstance("argNamed", [1, 2], {}) as A).f, -49);
+  });
+}
+
+final throwsNoCapability = throwsA(const isInstanceOf<NoSuchCapabilityError>());
+
+main() {
+  performTests('', reflector);
+  performTests('', metaReflector);
+
+  test('newInstance named constructor, no metadata, none required', () {
+    ClassMirror classMirror = reflector.reflectType(A);
+    expect((classMirror.newInstance("noMeta", [0]) as A).f, 42);
+  });
+  test('newInstance named constructor, no metadata, rejected', () {
+    ClassMirror classMirror = metaReflector.reflectType(A);
+    expect(() => classMirror.newInstance("noMeta", [0]), throwsNoCapability);
   });
 }

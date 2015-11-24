@@ -6,6 +6,7 @@ library test_reflectable.test.parameter_mirrors_test;
 
 import "package:unittest/unittest.dart";
 import "package:reflectable/reflectable.dart";
+import "parameter_mirrors_lib.dart" as lib;
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -22,7 +23,7 @@ class A {
   f1() {}
   f2(int a) {}
   f3(int a, [String b, @C() String c = "ten"]) {}
-  f4(int a, {A b, C c: const C()}) {}
+  f4(int a, {@lib.D(3) A b, C c: const C()}) {}
 }
 
 main() {
@@ -98,7 +99,7 @@ main() {
     expect(f4Parameters[1].simpleName, "b");
     expect(f4Parameters[1].qualifiedName,
         "test_reflectable.test.parameter_mirrors_test.A.f4.b");
-    expect(f4Parameters[1].metadata, []);
+    expect(f4Parameters[1].metadata, [const lib.D(3)]);
 
     expect(f4Parameters[2].isNamed, true);
     expect(f4Parameters[2].hasDefaultValue, true);

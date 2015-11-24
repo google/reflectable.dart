@@ -19,6 +19,7 @@ import 'package:path/path.dart' as path;
 import 'element_capability.dart' as ec;
 import 'encoding_constants.dart' as constants;
 import 'fixed_point.dart';
+import 'incompleteness.dart';
 import 'reflectable_class_constants.dart' as reflectable_class_constants;
 import 'transformer_errors.dart' as errors;
 
@@ -592,7 +593,7 @@ class _ReflectorDomain {
 
     String prefix = importCollector._getPrefix(constructor.library);
     return ('(${parameterParts.join(', ')}) => '
-        'new $prefix${_nameOfDeclaration(constructor)}'
+        'new $prefix${_nameOfConstructor(constructor)}'
         '(${argumentParts.join(", ")})');
   }
 
@@ -819,7 +820,7 @@ class _ReflectorDomain {
 
     // Generate code for creation of library mirrors.
     String librariesCode;
-    if (!_capabilities.supportsLibraries) {
+    if (!_capabilities._supportsLibraries) {
       librariesCode = "null";
     } else {
       librariesCode = _formatAsList("m.LibraryMirror",
@@ -890,7 +891,7 @@ class _ReflectorDomain {
     } else if (element.enclosingElement is CompilationUnitElement) {
       return _libraries.indexOf(element.enclosingElement.enclosingElement);
     }
-    throw new UnimplementedError("Unexpected kind of request for owner");
+    throw unreachableError("Unexpected kind of request for owner");
   }
 
   Iterable<ExecutableElement> _gettersOfLibrary(_LibraryDomain library) sync* {
@@ -1060,7 +1061,7 @@ class _ReflectorDomain {
     }
     if (mixinIndex == null) mixinIndex = constants.NO_CAPABILITY_INDEX;
 
-    int ownerIndex = _capabilities.supportsLibraries
+    int ownerIndex = _capabilities._supportsLibraries
         ? libraries.indexOf(libraryMap[classElement.library])
         : constants.NO_CAPABILITY_INDEX;
 
@@ -1325,7 +1326,7 @@ class _ReflectorDomain {
     // TODO(sigurdm) clarify: Find out how to get good uri's in a
     // transformer.
     String uriCode = (_capabilities._supportsUri ||
-            _capabilities.supportsLibraries)
+            _capabilities._supportsLibraries)
         ? 'Uri.parse(r"reflectable://$libraryIndex/$library")'
         : 'null';
 
@@ -1378,12 +1379,8 @@ class _ReflectorDomain {
       if (node == null) {
         metadataCode = "const []";
       } else {
-        NodeList<Annotation> annotations = node.metadata;
-        metadataCode = _formatAsConstList("Object",
-            annotations.map((Annotation annotation) {
-          return _extractAnnotationValue(
-              annotation, element.library, importCollector);
-        }));
+        metadataCode = _extractMetadataCode(
+            element, _resolver, importCollector, logger, _generatedLibraryId);
       }
     }
     FormalParameter parameterNode = element.computeNode();
@@ -2009,7 +2006,7 @@ class _Capabilities {
           element.isSynthetic) {
         return element.variable.constantValue;
       }
-      throw new UnimplementedError(
+      return unimplementedError(
           "Metadata has a not yet supported form: $elementAnnotation");
     });
   }
@@ -2121,12 +2118,12 @@ class _Capabilities {
 
   bool get _supportsMetadata {
     return _capabilities.any((ec.ReflectCapability capability) =>
-        capability == ec.metadataCapability);
+        capability is ec.MetadataCapability);
   }
 
   bool get _supportsUri {
     return _capabilities.any(
-        (ec.ReflectCapability capability) => capability == ec.uriCapability);
+        (ec.ReflectCapability capability) => capability is ec.UriCapability);
   }
 
   /// Returns [true] iff these [Capabilities] specify reflection support
@@ -2154,7 +2151,7 @@ class _Capabilities {
   /// will be included if `_impliesMixins`).
   bool get _impliesMixins {
     return _capabilities.any((ec.ReflectCapability capability) =>
-        capability == ec.typeRelationsCapability);
+        capability is ec.TypeRelationsCapability);
   }
 
   bool get _impliesReflectedType {
@@ -2177,7 +2174,7 @@ class _Capabilities {
         if (element is ClassElement) {
           result[element] = capability.excludeUpperBound;
         } else {
-          throw new ArgumentError("Unexpected kind of upper bound specified "
+          throw unreachableError("Unexpected kind of upper bound specified "
               "for a `SuperclassQuantifyCapability`: $element.");
         }
       }
@@ -2187,7 +2184,7 @@ class _Capabilities {
 
   bool get _impliesDeclarations {
     return _capabilities.any((ec.ReflectCapability capability) {
-      return capability == ec.declarationsCapability;
+      return capability is ec.DeclarationsCapability;
     });
   }
 
@@ -2213,9 +2210,9 @@ class _Capabilities {
         capability == ec.correspondingSetterQuantifyCapability);
   }
 
-  bool get supportsLibraries {
+  bool get _supportsLibraries {
     return _capabilities.any((ec.ReflectCapability capability) =>
-        capability == ec.libraryCapability);
+        capability is ec.LibraryCapability);
   }
 }
 
@@ -2579,7 +2576,7 @@ class TransformerImplementation {
     /// Adds [library] to the supported libraries of [reflector].
     void addLibrary(LibraryElement library, ClassElement reflector) {
       _ReflectorDomain domain = getReflectorDomain(reflector);
-      if (domain._capabilities.supportsLibraries) {
+      if (domain._capabilities._supportsLibraries) {
         assert(_isImportableLibrary(library, dataId, _resolver));
         importCollector._addLibrary(library);
         domain._libraries.add(library);
@@ -2802,23 +2799,23 @@ class TransformerImplementation {
     }
 
     switch (classElement.name) {
-      case "_NameCapability":
+      case "NameCapability":
         return ec.nameCapability;
-      case "_ClassifyCapability":
+      case "ClassifyCapability":
         return ec.classifyCapability;
-      case "_MetadataCapability":
+      case "MetadataCapability":
         return ec.metadataCapability;
-      case "_TypeRelationsCapability":
+      case "TypeRelationsCapability":
         return ec.typeRelationsCapability;
       case "_ReflectedTypeCapability":
         return ec.reflectedTypeCapability;
-      case "_LibraryCapability":
+      case "LibraryCapability":
         return ec.libraryCapability;
-      case "_DeclarationsCapability":
+      case "DeclarationsCapability":
         return ec.declarationsCapability;
-      case "_UriCapability":
+      case "UriCapability":
         return ec.uriCapability;
-      case "_LibraryDependenciesCapability":
+      case "LibraryDependenciesCapability":
         return ec.libraryDependenciesCapability;
       case "InstanceInvokeCapability":
         return new ec.InstanceInvokeCapability(extractNamePattern(constant));
@@ -2857,10 +2854,15 @@ class TransformerImplementation {
       case "_CorrespondingSetterQuantifyCapability":
         return ec.correspondingSetterQuantifyCapability;
       case "AdmitSubtypeCapability":
-        // TODO(eernst) feature:
-        throw new UnimplementedError("$classElement not yet supported!");
+        // TODO(eernst) implement: support for the admit subtype feature.
+        throw unimplementedError("AdmitSubtypeCapability not yet supported!");
       default:
-        throw new UnimplementedError("Unexpected capability $classElement");
+        // We have checked that [element] is declared in 'capability.dart',
+        // and it is a compile time error to use a non-const value in the
+        // superinitializer of a const constructor, and we have tested
+        // for all classes in that library which can provide a const value,
+        // so we should not reach this point.
+        throw unreachableError("Unexpected capability $classElement");
     }
   }
 
@@ -3268,13 +3270,10 @@ int _declarationDescriptor(ExecutableElement element) {
   return result;
 }
 
-String _nameOfDeclaration(ExecutableElement element) {
-  if (element is ConstructorElement) {
-    return element.name == ""
-        ? element.enclosingElement.name
-        : "${element.enclosingElement.name}.${element.name}";
-  }
-  return element.name;
+String _nameOfConstructor(ConstructorElement element) {
+  return element.name == ""
+      ? element.enclosingElement.name
+      : "${element.enclosingElement.name}.${element.name}";
 }
 
 String _formatAsList(String typeName, Iterable parts) =>
@@ -3411,26 +3410,6 @@ String _extractConstantCode(
   return helper(expression);
 }
 
-/// Returns a [String] containing code that will evaluate to the same
-/// value when evaluated as an expression in the generated file as the
-/// given [annotation] when attached as metadata to a declaration in
-/// the given [library].
-String _extractAnnotationValue(Annotation annotation, LibraryElement library,
-    _ImportCollector importCollector) {
-  String keywordCode = annotation.arguments != null ? "const " : "";
-  Identifier name = annotation.name;
-  String _nullIsEmpty(Object object) => object == null ? "" : "$object";
-  if (name is SimpleIdentifier) {
-    return "$keywordCode"
-        "${importCollector._getPrefix(library)}$name"
-        "${_nullIsEmpty(annotation.period)}"
-        "${_nullIsEmpty(annotation.constructorName)}"
-        "${_nullIsEmpty(annotation.arguments)}";
-  }
-  throw new UnimplementedError(
-      "Cannot move this annotation: $annotation, from library $library");
-}
-
 /// The names of the libraries that can be accessed with a 'dart:x' import uri.
 Set<String> sdkLibraryNames = new Set.from([
   "async",
@@ -3482,10 +3461,16 @@ String _extractMetadataCode(Element element, Resolver resolver,
   // in a [VariableDeclarationList] that is nested in a [FieldDeclaration]. The
   // metadata is stored on the [FieldDeclaration].
   //
-  // Similarly the `element.node` of a libraryElement is the identifier that
+  // Similarly, the `element.node` of a [TopLevelVariableElementImpl] is a
+  // [VariableDeclaration] nested in a [VariableDeclarationList] nested in a
+  // [TopLevelVariableDeclaration], which stores the metadata.
+  //
+  // Finally, the `element.node` of a libraryElement is the identifier that
   // forms its name. The parent's parent is the actual Library declaration that
   // contains the metadata.
-  if (element is FieldElement || element is LibraryElement) {
+  if (element is FieldElement ||
+      element is TopLevelVariableElementImpl ||
+      element is LibraryElement) {
     node = node.parent.parent;
   }
 
@@ -3520,9 +3505,20 @@ String _extractMetadataCode(Element element, Resolver resolver,
     String prefix = importCollector._getPrefix(library);
     if (annotationNode.arguments != null) {
       // A const constructor.
+      Identifier annotationName = annotationNode.name;
+      String name;
+      if (annotationName is SimpleIdentifier) {
+        name = "$annotationName";
+      } else if (annotationName is PrefixedIdentifier) {
+        name = "${annotationName.identifier}";
+        prefix = importCollector._getPrefix(annotationNode.element.library);
+      } else {
+        unimplementedError(
+            "This kind of metadata not yet supported: $annotationNode");
+      }
       String constructor = (annotationNode.constructorName == null)
-          ? "${annotationNode.name}"
-          : "${annotationNode.name}.${annotationNode.constructorName}";
+          ? "$name"
+          : "$name.${annotationNode.constructorName}";
       String arguments =
           annotationNode.arguments.arguments.map((Expression argument) {
         return _extractConstantCode(argument, element.library, importCollector,
@@ -3643,7 +3639,7 @@ Iterable<ParameterElement> _extractDeclaredParameters(
   return result;
 }
 
-/// Returns the accessors from the given [libraryElement], filtured such that
+/// Returns the accessors from the given [libraryElement], filtered such that
 /// the returned ones are the ones that are supported by [capabilities].
 Iterable<ExecutableElement> _extractLibraryAccessors(Resolver resolver,
     LibraryElement libraryElement, _Capabilities capabilities) sync* {
@@ -3862,10 +3858,10 @@ class MixinApplication implements ClassElement {
   @override
   bool get isSynthetic => declaredName == null;
 
-  // Note that the `InterfaceTypeImpl` may well call methods on this
-  // `MixinApplication` whose body is `_unImplemented()`, but it still provides
-  // a slightly better service than leaving this method `_unImplemented()`:
-  // We are allowed to take one more step, which may be enough.
+  // The `InterfaceTypeImpl` may well call methods on this `MixinApplication`
+  // whose body is unimplemented, but it still provides a slightly better
+  // service than leaving this method unimplemented. We are then allowed to
+  // take one more step, which may be enough.
   @override
   InterfaceType get type => new InterfaceTypeImpl(this);
 
@@ -3887,13 +3883,16 @@ class MixinApplication implements ClassElement {
 
   /// Returns true iff this class was declared using the syntax
   /// `class B = A with M;`, i.e., if it is an explicitly named mixin
-  /// application. We do not create instances of this class in that
-  /// case.
+  /// application.
   @override
   bool get isMixinApplication => declaredName != null;
 
   @override
   bool get isAbstract => !isMixinApplication || mixin.isAbstract;
+
+  // This seems to be the defined behaviour according to dart:mirrors.
+  @override
+  bool get isPrivate => false;
 
   @override
   bool get isEnum => false;
@@ -3919,174 +3918,179 @@ class MixinApplication implements ClassElement {
 
   toString() => "MixinApplication($superclass, $mixin)";
 
-  _unImplemented() => throw new UnimplementedError();
+  @override
+  List<PropertyAccessorElement> get accessors =>
+      throw unreachableError("accessors");
 
   @override
-  List<PropertyAccessorElement> get accessors => _unImplemented();
+  List<InterfaceType> get allSupertypes =>
+      throw unreachableError("allSuperTypes");
 
   @override
-  List<InterfaceType> get allSupertypes => _unImplemented();
+  List<ConstructorElement> get constructors =>
+      throw unreachableError("constructors");
 
   @override
-  List<ConstructorElement> get constructors => _unImplemented();
+  List<FieldElement> get fields => throw unreachableError("fields");
 
   @override
-  List<FieldElement> get fields => _unImplemented();
+  bool get hasNonFinalField => throw unreachableError("hasNonFinalField");
 
   @override
-  bool get hasNonFinalField => _unImplemented();
+  bool get hasReferenceToSuper => throw unreachableError("hasReferenceToSuper");
 
   @override
-  bool get hasReferenceToSuper => _unImplemented();
+  bool get hasStaticMember => throw unreachableError("hasStaticMember");
 
   @override
-  bool get hasStaticMember => _unImplemented();
+  bool get isOrInheritsProxy => throw unreachableError("isOrInheritsProxy");
 
   @override
-  bool get isOrInheritsProxy => _unImplemented();
+  bool get isProxy => throw unreachableError("isProxy");
 
   @override
-  bool get isProxy => _unImplemented();
+  bool get isTypedef => throw unreachableError("isTypedef");
 
   @override
-  bool get isTypedef => _unImplemented();
+  bool get isValidMixin => throw unreachableError("isValidMixin");
 
   @override
-  bool get isValidMixin => _unImplemented();
+  List<MethodElement> get methods => throw unreachableError("methods");
 
   @override
-  List<MethodElement> get methods => _unImplemented();
+  ConstructorElement get unnamedConstructor =>
+      throw unreachableError("unnamedConstructor");
 
   @override
-  ConstructorElement get unnamedConstructor => _unImplemented();
+  FieldElement getField(String name) => throw unreachableError("getField");
 
   @override
-  FieldElement getField(String name) => _unImplemented();
+  PropertyAccessorElement getGetter(String name) =>
+      throw unreachableError("getGetter");
 
   @override
-  PropertyAccessorElement getGetter(String name) => _unImplemented();
+  MethodElement getMethod(String name) => throw unreachableError("getMethod");
 
   @override
-  MethodElement getMethod(String name) => _unImplemented();
+  ConstructorElement getNamedConstructor(String name) =>
+      throw unreachableError("getNamedConstructor");
 
   @override
-  ConstructorElement getNamedConstructor(String name) => _unImplemented();
-
-  @override
-  PropertyAccessorElement getSetter(String name) => _unImplemented();
+  PropertyAccessorElement getSetter(String name) =>
+      throw unreachableError("getSetter");
 
   @override
   bool isSuperConstructorAccessible(ConstructorElement constructor) {
-    return _unImplemented();
+    throw unreachableError("isSuperConstructorAccessible");
   }
 
   @override
   MethodElement lookUpConcreteMethod(
       String methodName, LibraryElement library) {
-    return _unImplemented();
+    throw unreachableError("lookUpConcreteMethod");
   }
 
   @override
   PropertyAccessorElement lookUpGetter(
       String getterName, LibraryElement library) {
-    return _unImplemented();
+    throw unreachableError("lookUpGetter");
   }
 
   @override
   PropertyAccessorElement lookUpInheritedConcreteGetter(
       String getterName, LibraryElement library) {
-    return _unImplemented();
+    throw unreachableError("lookUpInheritedConcreteGetter");
   }
 
   @override
   MethodElement lookUpInheritedConcreteMethod(
       String methodName, LibraryElement library) {
-    return _unImplemented();
+    throw unreachableError("lookUpInheritedConcreteMethod");
   }
 
   @override
   PropertyAccessorElement lookUpInheritedConcreteSetter(
       String setterName, LibraryElement library) {
-    return _unImplemented();
+    throw unreachableError("lookUpInheritedConcreteSetter");
   }
 
   @override
   MethodElement lookUpInheritedMethod(
       String methodName, LibraryElement library) {
-    return _unImplemented();
+    throw unreachableError("lookUpInheritedMethod");
   }
 
   @override
   MethodElement lookUpMethod(String methodName, LibraryElement library) {
-    return _unImplemented();
+    throw unreachableError("lookUpMethod");
   }
 
   @override
   PropertyAccessorElement lookUpSetter(
       String setterName, LibraryElement library) {
-    return _unImplemented();
+    throw unreachableError("lookUpSetter");
   }
 
-  // This seems to be the defined behaviour according to dart:mirrors.
   @override
-  bool get isPrivate => false;
+  get context => throw unreachableError("context");
 
   @override
-  get context => _unImplemented();
+  Element get enclosingElement => throw unreachableError("enclosingElement");
 
   @override
-  Element get enclosingElement => _unImplemented();
+  int get id => throw unreachableError("id");
 
   @override
-  int get id => _unImplemented();
+  bool get isDeprecated => throw unreachableError("isDeprecated");
 
   @override
-  bool get isDeprecated => _unImplemented();
+  bool get isOverride => throw unreachableError("isOverride");
 
   @override
-  bool get isOverride => _unImplemented();
+  bool get isPublic => throw unreachableError("isPublic");
 
   @override
-  bool get isPublic => _unImplemented();
+  ElementKind get kind => throw unreachableError("kind");
 
   @override
-  ElementKind get kind => _unImplemented();
+  ElementLocation get location => throw unreachableError("location");
 
   @override
-  ElementLocation get location => _unImplemented();
+  int get nameOffset => throw unreachableError("nameOffset");
 
   @override
-  int get nameOffset => _unImplemented();
+  AstNode get node => throw unreachableError("node");
 
   @override
-  AstNode get node => _unImplemented();
+  get source => throw unreachableError("source");
 
   @override
-  get source => _unImplemented();
+  get docRange => throw unreachableError("docRange");
 
   @override
-  get docRange => _unImplemented();
+  CompilationUnit get unit => throw unreachableError("unit");
 
   @override
-  CompilationUnit get unit => _unImplemented();
+  accept(ElementVisitor visitor) => throw unreachableError("accept");
 
   @override
-  accept(ElementVisitor visitor) => _unImplemented();
+  String computeDocumentationComment() =>
+      throw unreachableError("computeDocumentationComment");
 
   @override
-  String computeDocumentationComment() => _unImplemented();
+  Element getAncestor(predicate) => throw unreachableError("getAncestor");
 
   @override
-  Element getAncestor(predicate) => _unImplemented();
+  String getExtendedDisplayName(String shortName) =>
+      throw unreachableError("getExtendedDisplayName");
 
   @override
-  String getExtendedDisplayName(String shortName) => _unImplemented();
+  bool isAccessibleIn(LibraryElement library) =>
+      throw unreachableError("isAccessibleIn");
 
   @override
-  bool isAccessibleIn(LibraryElement library) => _unImplemented();
-
-  @override
-  void visitChildren(ElementVisitor visitor) => _unImplemented();
+  void visitChildren(ElementVisitor visitor) =>
+      throw unreachableError("visitChildren");
 }
 
 bool _isSetterName(String name) => name.endsWith("=");

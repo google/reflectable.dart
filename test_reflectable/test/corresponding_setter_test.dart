@@ -4,6 +4,8 @@
 
 /// File being transformed by the reflectable transformer.
 /// Uses `correspondingSetterCapability` to get support for setters.
+@topLevelInvokeMetaReflector
+@topLevelInvokeFrReflector
 library test_reflectable.test.corresponding_setter_test;
 
 import 'package:unittest/unittest.dart';
@@ -30,6 +32,12 @@ class StaticInvokeMetaReflector extends Reflectable {
             const StaticInvokeMetaCapability(P));
 }
 
+class TopLevelInvokeMetaReflector extends Reflectable {
+  const TopLevelInvokeMetaReflector()
+      : super(correspondingSetterQuantifyCapability,
+            const TopLevelInvokeMetaCapability(P), libraryCapability);
+}
+
 class InvokingFrReflector extends Reflectable {
   const InvokingFrReflector()
       : super(correspondingSetterQuantifyCapability,
@@ -48,20 +56,30 @@ class StaticInvokeFrReflector extends Reflectable {
             const StaticInvokeCapability(methodRegExp));
 }
 
+class TopLevelInvokeFrReflector extends Reflectable {
+  const TopLevelInvokeFrReflector()
+      : super(correspondingSetterQuantifyCapability,
+            const TopLevelInvokeCapability(methodRegExp), libraryCapability);
+}
+
 const invokingMetaReflector = const InvokingMetaReflector();
 const instanceInvokeMetaReflector = const InstanceInvokeMetaReflector();
 const staticInvokeMetaReflector = const StaticInvokeMetaReflector();
+const topLevelInvokeMetaReflector = const TopLevelInvokeMetaReflector();
 const invokingFrReflector = const InvokingFrReflector();
 const instanceInvokeFrReflector = const InstanceInvokeFrReflector();
 const staticInvokeFrReflector = const StaticInvokeFrReflector();
+const topLevelInvokeFrReflector = const TopLevelInvokeFrReflector();
 
 final Map<Type, String> description = <Type, String>{
   InvokingMetaReflector: "Invoking",
   InstanceInvokeMetaReflector: "InstanceInvoke",
   StaticInvokeMetaReflector: "StaticInvoke",
+  TopLevelInvokeMetaReflector: "TopLevelInvoke",
   InvokingFrReflector: "InvokingFr",
   InstanceInvokeFrReflector: "InstanceInvokeFr",
-  StaticInvokeFrReflector: "StaticInvokeFr"
+  StaticInvokeFrReflector: "StaticInvokeFr",
+  TopLevelInvokeFrReflector: "TopLevelInvokeFr"
 };
 
 class P {
@@ -107,6 +125,15 @@ class B {
   static int field = 46;
 }
 
+int fooBarVariable = 41;
+
+@P()
+int get fooBar => 14;
+
+void set fooBar(int newValue) {
+  fooBarVariable = newValue;
+}
+
 Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
 Matcher isNoSuchCapabilityError = new isInstanceOf<NoSuchCapabilityError>();
 
@@ -138,7 +165,8 @@ void testInstance(Reflectable mirrorSystem, A reflectee, {bool broad: false}) {
 }
 
 void testStatic(Reflectable mirrorSystem, Type reflectee, void classResetter(),
-    int classGetter(), {bool broad: false}) {
+    int classGetter(),
+    {bool broad: false}) {
   test("Static invocation: ${description[mirrorSystem.runtimeType]}", () {
     classResetter();
     ClassMirror classMirror = mirrorSystem.reflectType(reflectee);
@@ -165,6 +193,17 @@ void testStatic(Reflectable mirrorSystem, Type reflectee, void classResetter(),
   });
 }
 
+void testTopLevel(Reflectable mirrorSystem) {
+  test("Top level invocation: ${description[mirrorSystem.runtimeType]}", () {
+    LibraryMirror libraryMirror = mirrorSystem
+        .findLibrary("test_reflectable.test.corresponding_setter_test");
+    expect(libraryMirror.invokeGetter("fooBar"), 14);
+    int oldValue = fooBarVariable;
+    libraryMirror.invokeSetter("fooBar=", oldValue + 1);
+    expect(fooBarVariable, oldValue + 1);
+  });
+}
+
 void main() {
   A a = new A();
   testInstance(invokingMetaReflector, a, broad: true);
@@ -179,4 +218,7 @@ void main() {
   testStatic(staticInvokeMetaReflector, B, reset, field, broad: true);
   testStatic(invokingFrReflector, B, reset, field);
   testStatic(staticInvokeFrReflector, B, reset, field);
+
+  testTopLevel(topLevelInvokeMetaReflector);
+  testTopLevel(topLevelInvokeFrReflector);
 }

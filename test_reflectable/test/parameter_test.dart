@@ -15,19 +15,28 @@ import 'package:unittest/unittest.dart';
 // TODO(eernst) implement: Avoid testing the same things twice in this test and
 // in 'parameter_mirrors_test.dart'.
 
-class MyReflectable extends Reflectable {
-  const MyReflectable()
+class Reflector extends Reflectable {
+  const Reflector()
       : super(typeAnnotationQuantifyCapability, invokingCapability,
             declarationsCapability);
 }
 
-const myReflectable = const MyReflectable();
+const reflector = const Reflector();
 
-@myReflectable
+class DeepReflector extends Reflectable {
+  const DeepReflector()
+      : super(typeAnnotationDeepQuantifyCapability, invokingCapability,
+            declarationsCapability);
+}
+
+const deepReflector = const DeepReflector();
+
+@reflector
+@deepReflector
 class MyClass {
   int arg0() => null;
   int arg1(int x) => null;
-  int arg2to4(MyClass x, int y, [MyReflectable z, w = 41.99999999]) => null;
+  int arg2to4(MyClass x, int y, [Reflector z, w = 41.99999999]) => null;
   int argNamed(int x, y, {num z}) => null;
 
   int operator +(int x) => null;
@@ -40,7 +49,7 @@ class MyClass {
   static int noArguments() => null;
   static int oneArgument(String x) => null;
   static int optionalArguments(MyClass x, double y,
-          [MyReflectable z, dynamic w = 42]) =>
+          [Reflector z, dynamic w = 42]) =>
       null;
   static int namedArguments(String x, List y, {String z: "4" + "2"}) => null;
 
@@ -48,10 +57,12 @@ class MyClass {
   static void set staticGetset(List list) {}
 }
 
+class UnrelatedClass {}
+
 final throwsNoCapability = throwsA(const isInstanceOf<NoSuchCapabilityError>());
 
-main() {
-  ClassMirror myClassMirror = myReflectable.reflectType(MyClass);
+void performTests(String message, Reflectable reflector) {
+  ClassMirror myClassMirror = reflector.reflectType(MyClass);
   Map<String, DeclarationMirror> declarations = myClassMirror.declarations;
 
   MethodMirror arg0Mirror = declarations["arg0"];
@@ -70,7 +81,7 @@ main() {
   MethodMirror staticGetsetMirror = declarations["staticGetset"];
   MethodMirror staticGetsetEqualsMirror = declarations["staticGetset="];
 
-  test('parameter list properties, instance methods', () {
+  test('$message reflector: parameter list properties, instance methods', () {
     expect(arg0Mirror.parameters.length, 0);
 
     expect(arg1Mirror.parameters.length, 1);
@@ -94,7 +105,7 @@ main() {
     expect(arg2to4Parameter1.type.reflectedType, int);
     expect(arg2to4Parameter2.isOptional, true);
     expect(arg2to4Parameter2.isNamed, false);
-    expect(arg2to4Parameter2.type.reflectedType, MyReflectable);
+    expect(arg2to4Parameter2.type.reflectedType, Reflector);
     expect(arg2to4Parameter3.isOptional, true);
     expect(arg2to4Parameter3.isNamed, false);
     expect(arg2to4Parameter3.type.reflectedType, dynamic);
@@ -116,7 +127,7 @@ main() {
     expect(argNamedParameter2.defaultValue, null);
   });
 
-  test('parameter list properties, operators', () {
+  test('$message reflector: parameter list properties, operators', () {
     expect(opPlusMirror.parameters.length, 1);
     ParameterMirror opPlusParameter0 = opPlusMirror.parameters[0];
     expect(opPlusParameter0.isOptional, false);
@@ -136,7 +147,8 @@ main() {
     expect(opBracketEqualsParameter1.type.reflectedType, dynamic);
   });
 
-  test('parameter list properties, getters and setters', () {
+  test('$message reflector: parameter list properties, getters and setters',
+      () {
     expect(getsetMirror.parameters.length, 0);
     expect(getsetEqualsMirror.parameters.length, 1);
     ParameterMirror getsetEqualsParameter0 = getsetEqualsMirror.parameters[0];
@@ -144,7 +156,7 @@ main() {
     expect(getsetEqualsParameter0.type.reflectedType, String);
   });
 
-  test('parameter list properties, static methods', () {
+  test('$message reflector: parameter list properties, static methods', () {
     expect(noArgumentsMirror.parameters.length, 0);
 
     expect(oneArgumentMirror.parameters.length, 1);
@@ -165,7 +177,7 @@ main() {
     expect(optionalArgumentsParameter1.type.reflectedType, double);
     expect(optionalArgumentsParameter2.isOptional, true);
     expect(optionalArgumentsParameter2.isNamed, false);
-    expect(optionalArgumentsParameter2.type.reflectedType, MyReflectable);
+    expect(optionalArgumentsParameter2.type.reflectedType, Reflector);
     expect(optionalArgumentsParameter3.isOptional, true);
     expect(optionalArgumentsParameter3.isNamed, false);
     expect(optionalArgumentsParameter3.type.reflectedType, dynamic);
@@ -192,7 +204,8 @@ main() {
     expect(namedArgumentsParameter2.defaultValue, "42");
   });
 
-  test('parameter list properties, getters and setters', () {
+  test('$message reflector: parameter list properties, getters and setters',
+      () {
     expect(staticGetsetMirror.parameters.length, 0);
     expect(staticGetsetEqualsMirror.parameters.length, 1);
     ParameterMirror staticGetsetEqualsParameter0 =
@@ -203,7 +216,7 @@ main() {
         "List");
   });
 
-  test("method return types", () {
+  test("$message reflector: method return types", () {
     expect(arg0Mirror.returnType.reflectedType, int);
     expect(arg1Mirror.returnType.reflectedType, int);
     expect(arg2to4Mirror.returnType.reflectedType, int);
@@ -223,5 +236,23 @@ main() {
     expect(
         staticGetsetMirror.returnType.originalDeclaration.simpleName, "List");
     expect(staticGetsetEqualsMirror.returnType.simpleName, "void");
+  });
+}
+
+main() {
+  performTests('Shallow', reflector);
+  performTests('Deep', deepReflector);
+
+  test('Type annotation coverage', () {
+    // A class used as a type annotation in [MyClass] is supported.
+    expect(reflector.reflectType(int), isNotNull);
+    expect(deepReflector.reflectType(int), isNotNull);
+    // A class used as a type annotation in a class used as a type annotation
+    // in [MyClass] is covered iff the reflector is transitive.
+    expect(() => reflector.reflectType(Pattern), throwsNoCapability);
+    expect(deepReflector.reflectType(Pattern), isNotNull);
+    // An unrelated class is unsupported.
+    expect(() => reflector.reflectType(UnrelatedClass), throwsNoCapability);
+    expect(() => deepReflector.reflectType(UnrelatedClass), throwsNoCapability);
   });
 }

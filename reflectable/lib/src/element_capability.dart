@@ -85,11 +85,11 @@ class NewInstanceMetaCapability extends MetadataQuantifiedCapability
       : super(metadataType);
 }
 
-const nameCapability = const _NameCapability();
+const nameCapability = const NameCapability();
 
-const classifyCapability = const _ClassifyCapability();
+const classifyCapability = const ClassifyCapability();
 
-const metadataCapability = const _MetadataCapability();
+const metadataCapability = const MetadataCapability();
 
 class TypeCapability implements ApiReflectCapability {
   const TypeCapability();
@@ -97,17 +97,17 @@ class TypeCapability implements ApiReflectCapability {
 
 const typeCapability = const TypeCapability();
 
-const typeRelationsCapability = const _TypeRelationsCapability();
+const typeRelationsCapability = const TypeRelationsCapability();
 
 const reflectedTypeCapability = const _ReflectedTypeCapability();
 
-const libraryCapability = const _LibraryCapability();
+const libraryCapability = const LibraryCapability();
 
-const declarationsCapability = const _DeclarationsCapability();
+const declarationsCapability = const DeclarationsCapability();
 
-const uriCapability = const _UriCapability();
+const uriCapability = const UriCapability();
 
-const libraryDependenciesCapability = const _LibraryDependenciesCapability();
+const libraryDependenciesCapability = const LibraryDependenciesCapability();
 
 class InvokingCapability extends NamePatternCapability
     implements
@@ -130,13 +130,13 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
 class TypingCapability
     implements
         TypeCapability, // Redundant, just included for readability.
-        _NameCapability,
-        _ClassifyCapability,
-        _MetadataCapability,
-        _TypeRelationsCapability,
-        _DeclarationsCapability,
-        _UriCapability,
-        _LibraryDependenciesCapability {
+        NameCapability,
+        ClassifyCapability,
+        MetadataCapability,
+        TypeRelationsCapability,
+        DeclarationsCapability,
+        UriCapability,
+        LibraryDependenciesCapability {
   const TypingCapability();
 }
 
@@ -191,40 +191,40 @@ class GlobalQuantifyMetaCapability extends ImportAttachedCapability {
       : super(reflector);
 }
 
-class _NameCapability implements TypeCapability {
-  const _NameCapability();
+class NameCapability implements TypeCapability {
+  const NameCapability();
 }
 
-class _ClassifyCapability implements TypeCapability {
-  const _ClassifyCapability();
+class ClassifyCapability implements TypeCapability {
+  const ClassifyCapability();
 }
 
-class _MetadataCapability implements TypeCapability {
-  const _MetadataCapability();
+class MetadataCapability implements TypeCapability {
+  const MetadataCapability();
 }
 
-class _TypeRelationsCapability implements TypeCapability {
-  const _TypeRelationsCapability();
+class TypeRelationsCapability implements TypeCapability {
+  const TypeRelationsCapability();
 }
 
-class _ReflectedTypeCapability implements _DeclarationsCapability {
+class _ReflectedTypeCapability implements DeclarationsCapability {
   const _ReflectedTypeCapability();
 }
 
-class _LibraryCapability implements ApiReflectCapability {
-  const _LibraryCapability();
+class LibraryCapability implements ApiReflectCapability {
+  const LibraryCapability();
 }
 
-class _DeclarationsCapability implements TypeCapability {
-  const _DeclarationsCapability();
+class DeclarationsCapability implements TypeCapability {
+  const DeclarationsCapability();
 }
 
-class _UriCapability implements ApiReflectCapability {
-  const _UriCapability();
+class UriCapability implements LibraryCapability {
+  const UriCapability();
 }
 
-class _LibraryDependenciesCapability implements ApiReflectCapability {
-  const _LibraryDependenciesCapability();
+class LibraryDependenciesCapability implements LibraryCapability {
+  const LibraryDependenciesCapability();
 }
 
 class _SubtypeQuantifyCapability implements ReflecteeQuantifyCapability {

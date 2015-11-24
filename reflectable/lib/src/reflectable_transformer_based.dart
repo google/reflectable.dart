@@ -11,6 +11,7 @@ import '../mirrors.dart';
 import '../reflectable.dart';
 import 'encoding_constants.dart' as constants;
 import 'encoding_constants.dart' show NO_CAPABILITY_INDEX;
+import 'incompleteness.dart';
 import 'reflectable_base.dart';
 
 bool get isTransformed => true;
@@ -30,8 +31,6 @@ Set<Reflectable> get reflectors => data.keys.toSet();
 // implements `structure in package:reflectable/mirrors.dart` using `extends`
 // and `with` clauses, such that the (un)implementation is inherited rather than
 // replicated wherever possible.
-
-_unsupported() => throw new UnimplementedError();
 
 /// Invokes a getter on an object.
 typedef Object _InvokerOfGetter(Object instance);
@@ -203,7 +202,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
 
   int get hashCode => _reflector.hashCode ^ reflectee.hashCode;
 
-  delegate(Invocation invocation) => _unsupported();
+  delegate(Invocation invocation) => unimplementedError("delegate");
 
   @override
   Object invokeGetter(String getterName) {
@@ -378,8 +377,12 @@ abstract class ClassMirrorImpl extends _DataCaching implements ClassMirror {
 
   Object newInstance(String constructorName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
-    return Function.apply(
-        _constructors["$constructorName"], positionalArguments, namedArguments);
+    Function constructor = _constructors["$constructorName"];
+    if (constructor == null) {
+      throw new NoSuchCapabilityError(
+          "Attempt to invoke constructor $constructorName without capability.");
+    }
+    return Function.apply(constructor, positionalArguments, namedArguments);
   }
 
   @override
@@ -451,11 +454,12 @@ abstract class ClassMirrorImpl extends _DataCaching implements ClassMirror {
 
   // TODO(eernst) feature: Implement `isAssignableTo`.
   @override
-  bool isAssignableTo(TypeMirror other) => _unsupported();
+  bool isAssignableTo(TypeMirror other) =>
+      throw unimplementedError("isAssignableTo");
 
   // TODO(eernst) feature: Implement `isSubTypeOf`.
   @override
-  bool isSubtypeOf(TypeMirror other) => _unsupported();
+  bool isSubtypeOf(TypeMirror other) => throw unimplementedError("isSubtypeOf");
 
   bool isSubclassOf(ClassMirror other) {
     if (other is FunctionTypeMirror) {
@@ -688,7 +692,7 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorImpl {
 
   // TODO(sigurdm) implement: Implement typeArguments.
   @override
-  List<TypeMirror> get typeArguments => _unsupported();
+  List<TypeMirror> get typeArguments => throw unimplementedError("typeArguments");
 
   @override
   List<TypeVariableMirror> get typeVariables =>
@@ -781,10 +785,11 @@ class TypeVariableMirrorImpl extends _DataCaching
   }
 
   @override
-  bool isAssignableTo(TypeMirror other) => _unsupported();
+  bool isAssignableTo(TypeMirror other) =>
+      throw unimplementedError("isAssignableTo");
 
   @override
-  bool isSubtypeOf(TypeMirror other) => _unsupported();
+  bool isSubtypeOf(TypeMirror other) => throw unimplementedError("isSubtypeOf");
 
   @override
   TypeMirror get originalDeclaration => this;
@@ -964,7 +969,8 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
 
   // TODO(sigurdm) implement: Need to implement this. Probably only when a given
   // capability is enabled.
-  List<LibraryDependencyMirror> get libraryDependencies => _unsupported();
+  List<LibraryDependencyMirror> get libraryDependencies =>
+      throw unimplementedError("libraryDependencies");
 }
 
 class MethodMirrorImpl extends _DataCaching implements MethodMirror {
@@ -1115,8 +1121,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
               _data.typeMirrors[_returnTypeIndex], null)
           : _data.typeMirrors[_returnTypeIndex];
     }
-    // TODO(eernst) implement: Support remaining kinds of types.
-    return _unsupported();
+    throw unreachableError("Unexpected kind of returnType");
   }
 
   @override
@@ -1362,8 +1367,7 @@ abstract class VariableMirrorBase extends _DataCaching
               _data.typeMirrors[_classMirrorIndex], null)
           : _data.typeMirrors[_classMirrorIndex];
     }
-    // TODO(eernst) implement: Support remaining kinds of types.
-    return _unsupported();
+    throw unreachableError("Unexpected kind of type");
   }
 
   @override
@@ -1533,8 +1537,8 @@ class VoidMirrorImpl implements TypeMirror {
   bool get hasReflectedType => false;
 
   @override
-  Type get reflectedType => throw new NoSuchCapabilityError(
-      "Attempt to get the reflected type of 'void'");
+  Type get reflectedType =>
+      throw new UnsupportedError("Attempt to get the reflected type of 'void'");
 
   @override
   String get simpleName => "void";
@@ -1627,7 +1631,7 @@ abstract class ReflectableImpl extends ReflectableBase
   LibraryMirror findLibrary(String libraryName) {
     if (data[this].libraryMirrors == null) {
       throw new NoSuchCapabilityError("Using 'findLibrary' without capability. "
-          "Try adding 'libraryCapability'.");
+          "Try adding `libraryCapability`.");
     }
     return data[this].libraryMirrors.singleWhere(
         (LibraryMirror mirror) => mirror.qualifiedName == libraryName);
@@ -1635,6 +1639,10 @@ abstract class ReflectableImpl extends ReflectableBase
 
   @override
   Map<Uri, LibraryMirror> get libraries {
+    if (data[this].libraryMirrors == null) {
+      throw new NoSuchCapabilityError("Using 'libraries' without capability. "
+          "Try adding `libraryCapability`.");
+    }
     Map<Uri, LibraryMirror> result = <Uri, LibraryMirror>{};
     for (LibraryMirror library in data[this].libraryMirrors) {
       result[library.uri] = library;

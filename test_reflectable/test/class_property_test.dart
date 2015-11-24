@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 // File being transformed by the reflectable transformer.
-// Uses `invoke` on top level entities.
+// Uses class properties such as `isEnum`, `isOriginalDeclaration`, etc.
 
 @reflector
 library test_reflectable.test.class_property_test;
