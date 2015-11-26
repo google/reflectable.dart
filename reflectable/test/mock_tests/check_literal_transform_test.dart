@@ -84,7 +84,7 @@ final _data = {
         const <int>[],
         null)
   ], <m.DeclarationMirror>[
-    new r.MethodMirrorImpl(r"", 64, 0, -1, prefix0.A, const <int>[],
+    new r.MethodMirrorImpl(r"", 64, 0, -1, prefix0.A, null, const <int>[],
         const prefix0.MyReflectable(), null)
   ], <m.ParameterMirror>[], const <Type>[
     prefix0.A

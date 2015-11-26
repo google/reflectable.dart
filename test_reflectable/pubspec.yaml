@@ -69,6 +69,7 @@ transformers:
       - test/multi_field_test.dart
       - test/class_property_test.dart
       - test/type_variable_test.dart
+      - test/dynamic_reflected_type_test.dart
     formatted: true
 - $dart2js:
     $include: []

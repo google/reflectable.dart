@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 // File being transformed by the reflectable transformer.
-// Uses `invoke`.
+// Uses `newInstance`.
 
 library test_reflectable.test.new_instance_test;
 

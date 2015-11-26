@@ -23,7 +23,7 @@ class AnalyzerSetup {
   AnalyzerSetup(this.context, this.sources);
 }
 
-/// Convert [sourcePath] into an absolute path.
+/// Converts [sourcePath] into an absolute path.
 String _normalizeSourcePath(String sourcePath) {
   if (sourcePath == null) throw new ArgumentError("sourcePath cannot be null");
   return new File(sourcePath).absolute.path;
@@ -104,7 +104,7 @@ AnalyzerSetup setupAnalyzer(String sourcePath,
     throw new ArgumentError("Analyzing a part");
   }
 
-  /// Gather libraries for analysis.
+  /// Gathers libraries for analysis.
   Set<Source> gatherLibrarySources(LibraryElement library) {
     Set<Source> sources = new Set<Source>();
     Set<CompilationUnitElement> units = new Set<CompilationUnitElement>();

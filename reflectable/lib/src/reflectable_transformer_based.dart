@@ -552,6 +552,12 @@ class NonGenericClassMirrorImpl extends ClassMirrorImpl {
   @override
   Type get reflectedType => _data.types[_classIndex];
 
+  @override
+  bool get hasDynamicReflectedType => true;
+
+  @override
+  Type get dynamicReflectedType => reflectedType;
+
   String toString() => "NonGenericClassMirrorImpl($qualifiedName)";
 }
 
@@ -571,6 +577,8 @@ class GenericClassMirrorImpl extends ClassMirrorImpl {
 
   final List<int> _typeVariableIndices;
 
+  final Type _dynamicReflectedType;
+
   GenericClassMirrorImpl(
       String simpleName,
       String qualifiedName,
@@ -589,7 +597,8 @@ class GenericClassMirrorImpl extends ClassMirrorImpl {
       List<int> superinterfaceIndices,
       List<Object> metadata,
       this._isGenericRuntimeTypeOf,
-      this._typeVariableIndices)
+      this._typeVariableIndices,
+      this._dynamicReflectedType)
       : super(
             simpleName,
             qualifiedName,
@@ -646,6 +655,12 @@ class GenericClassMirrorImpl extends ClassMirrorImpl {
         "from generic class '$qualifiedName'.");
   }
 
+  @override
+  bool get hasDynamicReflectedType => true;
+
+  @override
+  Type get dynamicReflectedType => _dynamicReflectedType;
+
   String toString() => "GenericClassMirrorImpl($qualifiedName)";
 }
 
@@ -692,7 +707,8 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorImpl {
 
   // TODO(sigurdm) implement: Implement typeArguments.
   @override
-  List<TypeMirror> get typeArguments => throw unimplementedError("typeArguments");
+  List<TypeMirror> get typeArguments =>
+      throw unimplementedError("typeArguments");
 
   @override
   List<TypeVariableMirror> get typeVariables =>
@@ -713,6 +729,13 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorImpl {
     throw new UnsupportedError("Cannot provide `reflectedType` of "
         "instance of generic type '$simpleName'.");
   }
+
+  @override
+  bool get hasDynamicReflectedType =>
+      _originalDeclaration.hasDynamicReflectedType;
+
+  @override
+  Type get dynamicReflectedType => _originalDeclaration.dynamicReflectedType;
 
   String toString() => "InstantiatedGenericClassMirrorImpl($qualifiedName)";
 }
@@ -990,6 +1013,13 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// The return type of this method.
   final Type _reflectedReturnType;
 
+  /// The return type of this method, erased to have `dynamic` for all
+  /// type arguments; a null value indicates that it is identical to
+  /// `reflectedReturnType` if that value is available they are equal; if
+  /// `reflectedReturnType` is unavailable then so is
+  /// `dynamicReflectedReturnType`.
+  final Type _dynamicReflectedReturnType;
+
   /// The indices of the [ParameterMirror]s describing the formal parameters
   /// of this method.
   final List<int> _parameterIndices;
@@ -1008,6 +1038,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
       this._ownerIndex,
       this._returnTypeIndex,
       this._reflectedReturnType,
+      this._dynamicReflectedReturnType,
       this._parameterIndices,
       this._reflector,
       this._metadata);
@@ -1138,6 +1169,17 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   }
 
   @override
+  bool get hasDynamicReflectedReturnType =>
+      _dynamicReflectedReturnType != null || hasReflectedReturnType;
+
+  @override
+  Type get dynamicReflectedReturnType {
+    return _dynamicReflectedReturnType != null
+        ? _dynamicReflectedReturnType
+        : reflectedReturnType;
+  }
+
+  @override
   String get simpleName => isConstructor
       ? (_name == '' ? "${owner.simpleName}" : "${owner.simpleName}.$_name")
       : _name;
@@ -1154,6 +1196,7 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
   final ReflectableImpl _reflector;
   final int _variableMirrorIndex;
   final Type _reflectedType;
+  final Type _dynamicReflectedType;
 
   /// Index of this [ImplicitAccessorMirrorImpl] in `_data.memberMirrors`.
   final int _selfIndex;
@@ -1162,7 +1205,7 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
       _data.memberMirrors[_variableMirrorIndex];
 
   ImplicitAccessorMirrorImpl(this._reflector, this._variableMirrorIndex,
-      this._reflectedType, this._selfIndex);
+      this._reflectedType, this._dynamicReflectedType, this._selfIndex);
 
   int get kind => constants.kindFromEncoding(_variableMirror._descriptor);
 
@@ -1224,13 +1267,21 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
   Type get reflectedReturnType => _variableMirror.reflectedType;
 
   @override
+  bool get hasDynamicReflectedReturnType =>
+      _variableMirror.hasDynamicReflectedType;
+
+  @override
+  Type get dynamicReflectedReturnType => _variableMirror.dynamicReflectedType;
+
+  @override
   String get source => null;
 }
 
 class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
   ImplicitGetterMirrorImpl(ReflectableImpl reflector, int variableMirrorIndex,
-      Type reflectedType, int selfIndex)
-      : super(reflector, variableMirrorIndex, reflectedType, selfIndex);
+      Type reflectedType, Type dynamicReflectedType, int selfIndex)
+      : super(reflector, variableMirrorIndex, reflectedType,
+            dynamicReflectedType, selfIndex);
 
   @override
   bool get isGetter => true;
@@ -1253,8 +1304,9 @@ class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
 
 class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
   ImplicitSetterMirrorImpl(ReflectableImpl reflector, int variableMirrorIndex,
-      Type reflectedType, int selfIndex)
-      : super(reflector, variableMirrorIndex, reflectedType, selfIndex);
+      Type reflectedType, Type dynamicReflectedType, int selfIndex)
+      : super(reflector, variableMirrorIndex, reflectedType,
+            dynamicReflectedType, selfIndex);
 
   @override
   bool get isGetter => false;
@@ -1283,6 +1335,7 @@ class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
           _variableMirror._reflector,
           _variableMirror._classMirrorIndex,
           _variableMirror._reflectedType,
+          _variableMirror._dynamicReflectedType,
           <Object>[],
           null)
     ];
@@ -1306,6 +1359,7 @@ abstract class VariableMirrorBase extends _DataCaching
   final ReflectableImpl _reflector;
   final int _classMirrorIndex;
   final Type _reflectedType;
+  final Type _dynamicReflectedType;
   final List<Object> _metadata;
 
   VariableMirrorBase(
@@ -1315,6 +1369,7 @@ abstract class VariableMirrorBase extends _DataCaching
       this._reflector,
       this._classMirrorIndex,
       this._reflectedType,
+      this._dynamicReflectedType,
       this._metadata);
 
   int get kind => constants.kindFromEncoding(_descriptor);
@@ -1382,6 +1437,14 @@ abstract class VariableMirrorBase extends _DataCaching
     return _reflectedType;
   }
 
+  @override
+  bool get hasDynamicReflectedType =>
+      _dynamicReflectedType != null || hasReflectedType;
+
+  @override
+  Type get dynamicReflectedType =>
+      _dynamicReflectedType != null ? _dynamicReflectedType : reflectedType;
+
   // Note that [operator ==] is redefined slightly differently in the two
   // subtypes of this class, but they share this [hashCode] implementation.
   @override
@@ -1414,9 +1477,10 @@ class VariableMirrorImpl extends VariableMirrorBase {
       ReflectableImpl reflectable,
       int classMirrorIndex,
       Type reflectedType,
+      Type dynamicReflectedType,
       List<Object> metadata)
       : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
-            reflectedType, metadata);
+            reflectedType, dynamicReflectedType, metadata);
 
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
@@ -1457,10 +1521,11 @@ class ParameterMirrorImpl extends VariableMirrorBase
       ReflectableImpl reflectable,
       int classMirrorIndex,
       Type reflectedType,
+      Type dynamicReflectedType,
       List<Object> metadata,
       this.defaultValue)
       : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
-            reflectedType, metadata);
+            reflectedType, dynamicReflectedType, metadata);
 
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
@@ -1538,7 +1603,7 @@ class VoidMirrorImpl implements TypeMirror {
 
   @override
   Type get reflectedType =>
-      throw new UnsupportedError("Attempt to get the reflected type of 'void'");
+      throw new UnsupportedError("Attempt to get the reflected type of `void`");
 
   @override
   String get simpleName => "void";

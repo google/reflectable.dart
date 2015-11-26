@@ -815,7 +815,7 @@ class _ReflectorDomain {
     // Generate code for listing [Type] instances.
     String typesCode =
         _formatAsConstList("Type", classes.map((ClassElement classElement) {
-      return _typeCodeOfClass(classElement, importCollector);
+      return _dynamicTypeCodeOfClass(classElement, importCollector);
     }));
 
     // Generate code for creation of library mirrors.
@@ -1139,6 +1139,10 @@ class _ReflectorDomain {
                 .map(indexOf));
       }
 
+      String dynamicReflectedTypeCode =
+          "${importCollector._getPrefix(classElement.library)}"
+          "${classElement.name}";
+
       return 'new r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
           '${_constConstructionCode(importCollector)}, '
@@ -1146,7 +1150,7 @@ class _ReflectorDomain {
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
           '$constructorsCode, $ownerIndex, $mixinIndex, '
           '$superinterfaceIndices, $classMetadataCode, $isCheckCode, '
-          '$typeParameterIndices)';
+          '$typeParameterIndices, $dynamicReflectedTypeCode)';
     }
   }
 
@@ -1169,17 +1173,23 @@ class _ReflectorDomain {
       String reflectedTypeCode = reflectedTypeRequested
           ? _typeCode(accessorElement.variable.type, importCollector)
           : "null";
+      String dynamicReflectedTypeCode = reflectedTypeRequested
+          ? _dynamicTypeCodeOrNull(
+              accessorElement.variable.type, importCollector)
+          : "null";
       // The `indexOf` is non-null: `accessorElement` came from `members`.
       int selfIndex = members.indexOf(accessorElement) + fields.length;
       if (accessorElement.isGetter) {
         return 'new r.ImplicitGetterMirrorImpl('
             '${_constConstructionCode(importCollector)}, '
-            '$variableMirrorIndex, $reflectedTypeCode, $selfIndex)';
+            '$variableMirrorIndex, $reflectedTypeCode, '
+            '$dynamicReflectedTypeCode, $selfIndex)';
       } else {
         assert(accessorElement.isSetter);
         return 'new r.ImplicitSetterMirrorImpl('
             '${_constConstructionCode(importCollector)}, '
-            '$variableMirrorIndex, $reflectedTypeCode, $selfIndex)';
+            '$variableMirrorIndex, $reflectedTypeCode, '
+            '$dynamicReflectedTypeCode, $selfIndex)';
       }
     } else {
       // [element] is a method, a function, or an explicitly declared
@@ -1194,14 +1204,17 @@ class _ReflectorDomain {
       String reflectedReturnTypeCode = element.returnType.isVoid
           ? "null"
           : _typeCode(element.returnType, importCollector);
+      String dynamicReflectedReturnTypeCode = element.returnType.isVoid
+          ? "null"
+          : _dynamicTypeCodeOrNull(element.returnType, importCollector);
       String metadataCode = _capabilities._supportsMetadata
           ? _extractMetadataCode(
               element, _resolver, importCollector, logger, _generatedLibraryId)
           : null;
       return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeCode, '
-          '$parameterIndicesCode, ${_constConstructionCode(importCollector)}, '
-          '$metadataCode)';
+          '$dynamicReflectedReturnTypeCode, $parameterIndicesCode, '
+          '${_constConstructionCode(importCollector)}, $metadataCode)';
     }
   }
 
@@ -1217,6 +1230,9 @@ class _ReflectorDomain {
     String reflectedTypeCode = reflectedTypeRequested
         ? _typeCode(element.type, importCollector)
         : "null";
+    String dynamicReflectedTypeCode = reflectedTypeRequested
+        ? _dynamicTypeCodeOrNull(element.type, importCollector)
+        : "null";
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
@@ -1228,7 +1244,8 @@ class _ReflectorDomain {
     }
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $reflectedTypeCode, $metadataCode)';
+        '$classMirrorIndex, $reflectedTypeCode, '
+        '$dynamicReflectedTypeCode, $metadataCode)';
   }
 
   String _fieldMirrorCode(
@@ -1242,6 +1259,9 @@ class _ReflectorDomain {
     String reflectedTypeCode = reflectedTypeRequested
         ? _typeCode(element.type, importCollector)
         : "null";
+    String dynamicReflectedTypeCode = reflectedTypeRequested
+        ? _dynamicTypeCodeOrNull(element.type, importCollector)
+        : "null";
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
@@ -1253,7 +1273,8 @@ class _ReflectorDomain {
     }
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $reflectedTypeCode, $metadataCode)';
+        '$classMirrorIndex, $reflectedTypeCode, '
+        '$dynamicReflectedTypeCode, $metadataCode)';
   }
 
   String _typeCode(DartType dartType, _ImportCollector importCollector) {
@@ -1262,19 +1283,140 @@ class _ReflectorDomain {
       return 'const r.FakeType(r"${_qualifiedName(owningClassElement)}.'
           '${dartType.element}")';
     }
-    return _typeCodeOfClass(dartType.element, importCollector);
+    return _typeCodeOfClass(dartType, importCollector);
   }
 
-  String _typeCodeOfClass(TypeDefiningElement typeDefiningElement,
+  /// Returns a string containing code that in the generated library will
+  /// evaluate to a [Type] value like the value we would have obtained by
+  /// evaluating the [typeDefiningElement] as an expression in the library
+  /// where it occurs, but with all type arguments erased to `dynamic`.
+  /// Furthermore, return "null" for non-generic classes (that is used to
+  /// avoid duplication of identical expressions). [importCollector] is used
+  /// to find the library prefixes needed in order to obtain values from other
+  /// libraries.
+  String _dynamicTypeCodeOrNull(
+      DartType dartType, _ImportCollector importCollector) {
+    if (dartType is InterfaceType) {
+      return dartType.typeArguments.isEmpty
+          ? "null"
+          : _dynamicTypeCodeOfClass(dartType.element, importCollector);
+    }
+    // Not an interface type, let `_dynamicTypeCodeOfClass` handle it.
+    return _dynamicTypeCodeOfClass(dartType.element, importCollector);
+  }
+
+  /// Returns true iff the given [type] is not and does not contain a type
+  /// variable.
+  bool _isTypeVariableFree(DartType type) {
+    if (type is TypeParameterType) return false;
+    if (type is InterfaceType) {
+      if (type.typeArguments.isEmpty) return true;
+      return type.typeArguments.every(_isTypeVariableFree);
+    }
+    // Possible kinds of types at this point (apart from several types
+    // indicating an error that we do not expect here): `BottomTypeImpl`,
+    // `DynamicTypeImpl`, `FunctionTypeImpl`, `VoidTypeImpl`. None of these
+    // have type variables.
+    return true;
+  }
+
+  /// Returns a string containing a type expression that in the generated
+  /// library will serve as a type argument with the same meaning as the
+  /// [classElement] has where it occurs. The [importCollector] is used to
+  /// find the library prefixes needed in order to obtain values from other
+  /// libraries.
+  String _typeCodeOfTypeArgument(
+      DartType dartType, _ImportCollector importCollector) {
+    fail() {
+      return unimplementedError(
+          "Attempt to generate code for an unsupported kind of type $dartType");
+    }
+
+    if (dartType.isDynamic) return "dynamic";
+    if (dartType is InterfaceType) {
+      ClassElement classElement = dartType.element;
+      if ((classElement is MixinApplication &&
+              classElement.declaredName == null) ||
+          classElement.isPrivate) {
+        throw fail();
+      }
+      String prefix = importCollector._getPrefix(classElement.library);
+      if (classElement.typeParameters.isEmpty) {
+        return "$prefix${classElement.name}";
+      } else {
+        if (dartType.typeArguments.every(_isTypeVariableFree)) {
+          String arguments = dartType.typeArguments
+              .map((DartType typeArgument) =>
+                  _typeCodeOfTypeArgument(typeArgument, importCollector))
+              .join(', ');
+          return "$prefix${classElement.name}<$arguments>";
+        } else {
+          throw fail();
+        }
+      }
+    } else {
+      throw fail();
+    }
+  }
+
+  /// Returns a string containing code that in the generated library will
+  /// evaluate to a [Type] value like the value we would have obtained by
+  /// evaluating the [typeDefiningElement] as an expression in the library
+  /// where it occurs. [importCollector] is used to find the library prefixes
+  /// needed in order to obtain values from other libraries.
+  String _typeCodeOfClass(DartType dartType, _ImportCollector importCollector) {
+    if (dartType.isDynamic) return "dynamic";
+    if (dartType is InterfaceType) {
+      ClassElement classElement = dartType.element;
+      if ((classElement is MixinApplication &&
+              classElement.declaredName == null) ||
+          classElement.isPrivate) {
+        return 'const r.FakeType(r"${_qualifiedName(classElement)}")';
+      }
+      String prefix = importCollector._getPrefix(classElement.library);
+      if (classElement.typeParameters.isEmpty) {
+        return "$prefix${classElement.name}";
+      } else {
+        if (dartType.typeArguments.every(_isTypeVariableFree)) {
+          return "const m.TypeValue"
+              "<${_typeCodeOfTypeArgument(dartType, importCollector)}>().type";
+        } else {
+          String arguments = dartType.typeArguments
+              .map((DartType typeArgument) => typeArgument.toString())
+              .join(', ');
+          return 'const r.FakeType('
+              'r"${_qualifiedName(classElement)}<$arguments>")';
+        }
+      }
+    } else {
+      throw unimplementedError(
+          "Attempt to generate code for an unsupported kind of type $dartType");
+    }
+  }
+
+  /// Returns a string containing code that in the generated library will
+  /// evaluate to a [Type] value like the value we would have obtained by
+  /// evaluating the [typeDefiningElement] as an expression in the library
+  /// where it occurs, except that all type arguments are stripped such
+  /// that we get the fully dynamic instantiation if it is a generic class.
+  /// [importCollector] is used to find the library prefixes needed in order
+  /// to obtain values from other libraries.
+  String _dynamicTypeCodeOfClass(TypeDefiningElement typeDefiningElement,
       _ImportCollector importCollector) {
-    if ((typeDefiningElement is MixinApplication &&
-            typeDefiningElement.declaredName == null) ||
-        typeDefiningElement.isPrivate) {
+    DartType type = typeDefiningElement.type;
+    if (type.isDynamic) return "dynamic";
+    if (type is InterfaceType) {
+      ClassElement classElement = type.element;
+      if ((classElement is MixinApplication &&
+              classElement.declaredName == null) ||
+          classElement.isPrivate) {
+        return 'const r.FakeType(r"${_qualifiedName(classElement)}")';
+      }
+      String prefix = importCollector._getPrefix(classElement.library);
+      return "$prefix${classElement.name}";
+    } else {
       return 'const r.FakeType(r"${_qualifiedName(typeDefiningElement)}")';
     }
-    if (typeDefiningElement.type.isDynamic) return "dynamic";
-    String prefix = importCollector._getPrefix(typeDefiningElement.library);
-    return "$prefix${typeDefiningElement.name}";
   }
 
   String _libraryMirrorCode(
@@ -1373,6 +1515,9 @@ class _ReflectorDomain {
     String reflectedTypeCode = reflectedTypeRequested
         ? _typeCode(element.type, importCollector)
         : "null";
+    String dynamicReflectedTypeCode = reflectedTypeRequested
+        ? _dynamicTypeCodeOrNull(element.type, importCollector)
+        : "null";
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
       FormalParameter node = element.computeNode();
@@ -1397,8 +1542,8 @@ class _ReflectorDomain {
     }
     return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $reflectedTypeCode, $metadataCode, '
-        '$defaultValueCode)';
+        '$classMirrorIndex, $reflectedTypeCode, $dynamicReflectedTypeCode, '
+        '$metadataCode, $defaultValueCode)';
   }
 }
 
@@ -2222,7 +2367,8 @@ class _ImportCollector {
   Map<LibraryElement, String> _mapping = <LibraryElement, String>{};
   int _count = 0;
 
-  /// Returns the prefix associated with [library].
+  /// Returns the prefix associated with [library]. Iff it is non-empty
+  /// it includes the period.
   String _getPrefix(LibraryElement library) {
     if (library.isDartCore) return "";
     String prefix = _mapping[library];

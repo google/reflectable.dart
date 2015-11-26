@@ -308,8 +308,27 @@ abstract class CombinatorMirror implements Mirror {
 }
 
 abstract class TypeMirror implements DeclarationMirror {
+
+  /// Returns true if this mirror reflects dynamic, a non-generic class or
+  /// typedef, or an instantiated generic class or typedef with support in
+  /// the execution mode. Otherwise, returns false.
+  ///
+  /// The notion of support in the execution mode reflects temporary
+  /// restrictions arising from the lack of runtime support for certain
+  /// operations. In particular, transformed code cannot produce the reflected
+  /// type for an instantiated generic class when one or more type arguments
+  /// are or contain type variables from an enclosing class. For instance,
+  /// `List<E>` could be used as the type annotation on a variable in the class
+  /// `List` itself, and a variable mirror for that method would then deliver
+  /// a type mirror for the annotation where `hasReflectedType` is false,
+  /// because of the lack of primitives to access the actual type argument of
+  /// that list.
   bool get hasReflectedType;
+
+  /// If [hasReflectedType] returns true, returns the corresponding [Type].
+  /// Otherwise, an [UnsupportedError] is thrown.
   Type get reflectedType;
+
   List<TypeVariableMirror> get typeVariables;
   List<TypeMirror> get typeArguments;
   bool get isOriginalDeclaration;
@@ -341,6 +360,33 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   Map<String, MethodMirror> get staticMembers;
 
   ClassMirror get mixin;
+
+  /// Returns true if this mirror reflects dynamic, a non-generic class or
+  /// typedef, or an instantiated generic class or typedef with support in
+  /// the execution mode. Otherwise, returns false.
+  ///
+  /// The notion of support in the execution mode reflects temporary
+  /// restrictions arising from the lack of runtime support for certain
+  /// operations. In particular, untransformed code cannot produce the
+  /// dynamic reflected type for a type mirror on an instantiated generic
+  /// class due to a lack of primitives for navigation among different
+  /// instantiations of the same generic class. For instance, with a given
+  /// [Type] representing `List<int>`, there is no support for obtaining
+  /// `List<dynamic>` because there are no primitives in 'dart:mirrors'
+  /// nor in the core libraries for applying a given generic class to any
+  /// given type arguments.
+  bool get hasDynamicReflectedType;
+
+  /// If [hasDynamicReflectedType] returns true, returns the [Type] object
+  /// representing the fully dynamic instantiation of this class if it is
+  /// generic, and return the [Type] object representing this class if it is
+  /// not generic. If [hasDynamicReflectedType] returns false it throws an
+  /// [UnsupportedError]. The fully dynamic instantiation of a generic class
+  /// `C` is the application of `C` to a type argument list of the appropriate
+  /// length where every argument is `dynamic`. For instance, the fully dynamic
+  /// instantiation of `List` and `Map` is `List<dynamic>` respectively
+  /// `Map<dynamic, dynamic>`.
+  Type get dynamicReflectedType;
 
   /**
    * Invokes the named constructor and returns the result.
@@ -447,8 +493,26 @@ abstract class TypedefMirror implements TypeMirror {
 
 abstract class MethodMirror implements DeclarationMirror {
   TypeMirror get returnType; // Possible RET: Type
+
+  /// Returns the value specified with `hasReflectedType` in [TypeMirror],
+  /// but for the return type given by the annotation of the method modeled
+  /// by this mirror.
   bool get hasReflectedReturnType;
+
+  /// If [hasReflectedReturnType] is true, returns the corresponding [Type].
+  /// Otherwise, an [UnsupportedError] is thrown.
   Type get reflectedReturnType;
+
+  /// Returns the value specified with `hasDynamicReflectedType` in
+  /// [ClassMirror], but for the return type given by the annotation of the
+  /// method modeled by this mirror.
+  bool get hasDynamicReflectedReturnType;
+
+  /// If [hasDynamicReflectedReturnType] is true, returns the corresponding
+  /// [Type] as specified for `dynamicReflectedType` in [ClassMirror].
+  /// Otherwise, an [UnsupportedError] is thrown.
+  Type get dynamicReflectedReturnType;
+
   String get source;
   List<ParameterMirror> get parameters;
   bool get isStatic;
@@ -469,8 +533,26 @@ abstract class MethodMirror implements DeclarationMirror {
 
 abstract class VariableMirror implements DeclarationMirror {
   TypeMirror get type; // Possible RET: Type
+
+  /// Returns the value specified with `hasReflectedType` in [TypeMirror],
+  /// but for the type given by the annotation of the variable modeled
+  /// by this mirror.
   bool get hasReflectedType;
+
+  /// If [hasReflectedType] is true, returns the corresponding [Type].
+  /// Otherwise, an [UnsupportedError] is thrown.
   Type get reflectedType;
+
+  /// Returns the value specified with `hasDynamicReflectedType` in
+  /// [ClassMirror], but for the type given by the annotation of the
+  /// variable modeled by this mirror.
+  bool get hasDynamicReflectedType;
+
+  /// If [hasDynamicReflectedType] is true, returns the corresponding
+  /// [Type] as specified for `dynamicReflectedType` in [ClassMirror].
+  /// Otherwise, an [UnsupportedError] is thrown.
+  Type get dynamicReflectedType;
+
   bool get isStatic;
   bool get isFinal;
   bool get isConst;
@@ -478,9 +560,6 @@ abstract class VariableMirror implements DeclarationMirror {
 }
 
 abstract class ParameterMirror implements VariableMirror {
-  TypeMirror get type; // Possible RET: Type
-  bool get hasReflectedType;
-  Type get reflectedType;
   bool get isOptional;
   bool get isNamed;
   bool get hasDefaultValue;
@@ -498,4 +577,9 @@ class Comment {
   final String trimmedText;
   final bool isDocComment;
   const Comment(this.text, this.trimmedText, this.isDocComment);
+}
+
+class TypeValue<E> {
+  const TypeValue();
+  Type get type => E;
 }

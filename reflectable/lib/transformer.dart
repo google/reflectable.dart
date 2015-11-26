@@ -123,7 +123,7 @@ class ReflectableTransformer extends AggregateTransformer
         _findSuppressWarnings(_settings.configuration['suppressWarnings']);
   }
 
-  /// Return a [String] or [Future<String>] valued key for each
+  /// Returns a [String] or [Future<String>] valued key for each
   /// primary asset that this transformer wishes to process, and
   /// null for assets that it wishes to ignore.  Primary assets
   /// with the same key are delivered to [apply] as a group.  In

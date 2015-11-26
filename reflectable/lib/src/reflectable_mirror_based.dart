@@ -798,6 +798,24 @@ class ClassMirrorImpl extends _TypeMirrorImpl
       : super(classMirror, reflectable) {}
 
   @override
+  bool get hasDynamicReflectedType => _classMirror.typeVariables.isEmpty;
+
+  @override
+  Type get dynamicReflectedType {
+    if (!hasDynamicReflectedType) {
+      /// We cannot hope to implement this based on 'dart:mirrors' for generic
+      /// classes, because there is no support for obtaining one instantiation
+      /// of a generic class based on a different one (we cannot obtain
+      /// `List<dynamic>` from `List<int>` or any such thing); and when
+      /// `isOriginalDeclaration` is true we do not have a `reflectedType` at
+      /// all.
+      throw new UnsupportedError(
+          "Attempt to get dynamicReflectedType on $_classMirror");
+    }
+    return reflectedType;
+  }
+
+  @override
   List<rm.TypeVariableMirror> get typeVariables {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
@@ -1056,6 +1074,13 @@ class _FunctionTypeMirrorImpl extends ClassMirrorImpl
       : super(functionTypeMirror, reflectable);
 
   @override
+  bool get hasDynamicReflectedType => false;
+
+  @override
+  Type get dynamicReflectedType => throw unimplementedError(
+      "Attempt to get dynamicReflectedType on a function type mirror");
+
+  @override
   rm.MethodMirror get callMethod {
     return new MethodMirrorImpl(_functionTypeMirror.callMethod, _reflectable);
   }
@@ -1157,6 +1182,34 @@ class MethodMirrorImpl extends _DeclarationMirrorImpl
     }
     throw new NoSuchCapabilityError(
         "Attempt to get reflectedReturnType without capability");
+  }
+
+  @override
+  bool get hasDynamicReflectedReturnType {
+    if (impliesReflectedType(_reflectable.capabilities)) {
+      return _methodMirror.returnType.typeVariables.isEmpty &&
+          _methodMirror.returnType.hasReflectedType;
+    }
+    throw new NoSuchCapabilityError("Attempt to get "
+        "hasDynamicReflectedReturnType without `reflectedTypeCapability`");
+  }
+
+  @override
+  Type get dynamicReflectedReturnType {
+    if (impliesReflectedType(_reflectable.capabilities)) {
+      if (_methodMirror.returnType.typeVariables.isEmpty) {
+        return _methodMirror.returnType.reflectedType;
+      } else {
+        // The value returned by `hasDynamicReflectedReturnType` is false, so
+        // even though this is unimplemented and may be implemented if we get
+        // the required runtime support, it is currently an `UnsupportedError`.
+        throw new UnsupportedError("Attempt to obtain the "
+            "dynamicReflectedReturnType of a generic type "
+            "${_methodMirror.returnType}");
+      }
+    }
+    throw new NoSuchCapabilityError("Attempt to get dynamicReflectedReturnType "
+        "without `reflectedTypeCapability`");
   }
 
   @override
@@ -1278,6 +1331,33 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
     }
     throw new NoSuchCapabilityError(
         "Attempt to get reflectedType without `reflectedTypeCapability`");
+  }
+
+  @override
+  bool get hasDynamicReflectedType {
+    if (impliesReflectedType(_reflectable.capabilities)) {
+      return _variableMirror.type.typeVariables.isEmpty &&
+          _variableMirror.type.hasReflectedType;
+    }
+    throw new NoSuchCapabilityError("Attempt to get hasDynamicReflectedType "
+        "without `reflectedTypeCapability`");
+  }
+
+  @override
+  Type get dynamicReflectedType {
+    if (impliesReflectedType(_reflectable.capabilities)) {
+      if (_variableMirror.type.typeVariables.isEmpty) {
+        return _variableMirror.type.reflectedType;
+      } else {
+        // The value returned by `hasDynamicReflectedReturnType` is false, so
+        // even though this is unimplemented and may be implemented if we get
+        // the required runtime support, it is currently an `UnsupportedError`.
+        throw new UnsupportedError("Attempt to obtain the dynamicReflectedType "
+            "of a generic type ${_variableMirror.type}");
+      }
+    }
+    throw new NoSuchCapabilityError("Attempt to get dynamicReflectedType "
+        "without `reflectedTypeCapability`");
   }
 
   @override

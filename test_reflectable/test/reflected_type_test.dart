@@ -39,8 +39,8 @@ class A {
       null;
   static int namedArguments(String x, List y, {String z: "4" + "2"}) => null;
 
-  static List get staticGetset => ["42"];
-  static void set staticGetset(List list) {}
+  static List<String> get staticGetset => ["42"];
+  static void set staticGetset(List<String> list) {}
 }
 
 final throwsNoCapability = throwsA(const isInstanceOf<NoSuchCapabilityError>());
@@ -143,7 +143,8 @@ main() {
     expect(staticGetsetEqualsMirror.parameters.length, 1);
     ParameterMirror staticGetsetEqualsParameter0 =
         staticGetsetEqualsMirror.parameters[0];
-    expect(staticGetsetEqualsParameter0.reflectedType, List);
+    expect(staticGetsetEqualsParameter0.reflectedType,
+        const TypeValue<List<String>>().type);
   });
 
   test('reflected return types, methods', () {
@@ -160,7 +161,8 @@ main() {
     expect(oneArgumentMirror.reflectedReturnType, int);
     expect(optionalArgumentsMirror.reflectedReturnType, int);
     expect(namedArgumentsMirror.reflectedReturnType, int);
-    expect(staticGetsetMirror.reflectedReturnType, List);
+    expect(staticGetsetMirror.reflectedReturnType,
+        const TypeValue<List<String>>().type);
     expect(staticGetsetEqualsMirror.hasReflectedReturnType, false);
   });
 }
