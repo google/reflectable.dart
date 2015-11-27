@@ -192,8 +192,17 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
       <ClassElement, _ClassDomain>{};
   final Map<ClassElement, MixinApplication> mixinApplicationSupers =
       <ClassElement, MixinApplication>{};
+  bool _unmodifiable = false;
 
   ClassElementEnhancedSet(this.reflectorDomain);
+
+  void makeUnmodifiable() {
+    // A very simple implementation, just enough to help spotting cases
+    // where modification happens even though it is known to be a bug:
+    // Check whether `_unmodifiable` is true whenever a mutating method
+    // is called.
+    _unmodifiable = true;
+  }
 
   @override
   Iterable map(f(ClassElement element)) => classElements.items.map(f);
@@ -299,6 +308,7 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
 
   @override
   bool add(ClassElement value) {
+    assert(!_unmodifiable);
     bool result = classElements.add(value);
     if (result) {
       assert(!elementToDomain.containsKey(value));
@@ -320,6 +330,7 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
 
   @override
   bool remove(Object value) {
+    assert(!_unmodifiable);
     bool result = classElements._contains(value);
     classElements._map.remove(value);
     if (result) {
@@ -389,6 +400,7 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
 
   @override
   void clear() {
+    assert(!_unmodifiable);
     classElements.clear();
     elementToDomain.clear();
   }
@@ -436,6 +448,23 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
   }
 
   Iterable<_ClassDomain> get domains => elementToDomain.values;
+}
+
+/// Used to bundle a [DartType] with information about whether it should be
+/// erased (such that, e.g., `List<int>` becomes `List`). The alternative would
+/// be to construct a new [InterfaceType] with all-dynamic type arguments in
+/// the cases where we need to have the erased type, but constructing such
+/// new analyzer data seems to transgress yet another privacy boundary of the
+/// analyzer, so we decided that we did not want to do that.
+class ErasableDartType {
+  final DartType dartType;
+  final bool erased;
+  ErasableDartType(this.dartType, {this.erased});
+  operator ==(other) => other is ErasableDartType &&
+      other.dartType == dartType &&
+      other.erased == erased;
+  int get hashCode => dartType.hashCode ^ erased.hashCode;
+  String toString() => "ErasableDartType($dartType, $erased)";
 }
 
 /// Information about the program parts that can be reflected by a given
@@ -621,6 +650,9 @@ class _ReflectorDomain {
         new Enumerator<ParameterElement>();
     Enumerator<TypeParameterElement> typeParameters =
         new Enumerator<TypeParameterElement>();
+    // Reflected types not in `classes`; appended to `ReflectorData.types`.
+    Enumerator<ErasableDartType> reflectedTypes =
+        new Enumerator<ErasableDartType>();
     Set<String> instanceGetterNames = new Set<String>();
     Set<String> instanceSetterNames = new Set<String>();
 
@@ -752,11 +784,16 @@ class _ReflectorDomain {
       classesToAdd.forEach(addClass);
     }
 
+    // From this point, [classes] must be kept immutable.
+    classes.makeUnmodifiable();
+
     // Find the offsets of fields in members, and of methods and functions
-    // in members, and of type variables in type mirrors.
-    int fieldsOffset = topLevelVariables.length;
-    int methodsOffset = fieldsOffset + fields.length;
-    int typeParametersOffset = classes.length;
+    // in members, of type variables in type mirrors, and of `reflectedTypes`
+    // in types.
+    final int fieldsOffset = topLevelVariables.length;
+    final int methodsOffset = fieldsOffset + fields.length;
+    final int typeParametersOffset = classes.length;
+    final int reflectedTypesOffset = typeParametersOffset;
 
     // Generate code for creation of class mirrors.
     Iterable<String> typeMirrorsList = () sync* {
@@ -770,6 +807,8 @@ class _ReflectorDomain {
                 methodsOffset,
                 typeParametersOffset,
                 members,
+                reflectedTypes,
+                reflectedTypesOffset,
                 libraries,
                 libraryMap,
                 importCollector,
@@ -794,16 +833,30 @@ class _ReflectorDomain {
     Iterable<String> topLevelVariablesList =
         topLevelVariables.items.map((TopLevelVariableElement element) {
       return _topLevelVariableMirrorCode(
-          element, importCollector, logger, reflectedTypeRequested);
+          element,
+          reflectedTypes,
+          reflectedTypesOffset,
+          importCollector,
+          logger,
+          reflectedTypeRequested);
     });
     Iterable<String> fieldsList = fields.items.map((FieldElement element) {
-      return _fieldMirrorCode(
-          element, importCollector, logger, reflectedTypeRequested);
+      return _fieldMirrorCode(element, reflectedTypes, reflectedTypesOffset,
+          importCollector, logger, reflectedTypeRequested);
     });
     Iterable<String> methodsList =
         members.items.map((ExecutableElement executableElement) {
-      return _methodMirrorCode(executableElement, topLevelVariables, fields,
-          members, parameters, importCollector, logger, reflectedTypeRequested);
+      return _methodMirrorCode(
+          executableElement,
+          topLevelVariables,
+          fields,
+          members,
+          reflectedTypes,
+          reflectedTypesOffset,
+          parameters,
+          importCollector,
+          logger,
+          reflectedTypeRequested);
     });
     Iterable<String> membersList = () sync* {
       yield* topLevelVariablesList;
@@ -812,11 +865,37 @@ class _ReflectorDomain {
     }();
     String membersCode = _formatAsList("m.DeclarationMirror", membersList);
 
+    // Generate code for creation of parameter mirrors.
+    Iterable<String> parametersList =
+    parameters.items.map((ParameterElement element) {
+      return _parameterMirrorCode(
+          element,
+          fields,
+          members,
+          reflectedTypes,
+          reflectedTypesOffset,
+          importCollector,
+          logger,
+          reflectedTypeRequested);
+    });
+    String parameterMirrorsCode =
+    _formatAsList("m.ParameterMirror", parametersList);
+
     // Generate code for listing [Type] instances.
-    String typesCode =
-        _formatAsConstList("Type", classes.map((ClassElement classElement) {
-      return _dynamicTypeCodeOfClass(classElement, importCollector);
-    }));
+    Iterable<String> typesCodeList = () sync* {
+      yield* classes.map((ClassElement classElement) {
+        return _dynamicTypeCodeOfClass(classElement, importCollector);
+      });
+      yield* reflectedTypes.items.map((ErasableDartType erasableDartType) {
+        if (erasableDartType.erased) {
+          return _dynamicTypeCodeOfClass(
+              erasableDartType.dartType.element, importCollector);
+        } else {
+          return _typeCodeOfClass(erasableDartType.dartType, importCollector);
+        }
+      });
+    }();
+    String typesCode = _formatAsList("Type", typesCodeList);
 
     // Generate code for creation of library mirrors.
     String librariesCode;
@@ -830,18 +909,9 @@ class _ReflectorDomain {
       }));
     }
 
-    // Generate code for creation of parameter mirrors.
-    Iterable<String> parametersList =
-        parameters.items.map((ParameterElement element) {
-      return _parameterMirrorCode(element, fields, members, importCollector,
-          logger, reflectedTypeRequested);
-    });
-    String parameterMirrorsCode =
-        _formatAsList("m.ParameterMirror", parametersList);
-
     return "new r.ReflectorData($classMirrorsCode, $membersCode, "
-        "$parameterMirrorsCode, $typesCode, $gettersCode, $settersCode, "
-        "$librariesCode)";
+        "$parameterMirrorsCode, $typesCode, $reflectedTypesOffset, "
+        "$gettersCode, $settersCode, $librariesCode)";
   }
 
   int _computeTypeIndexBase(
@@ -944,6 +1014,8 @@ class _ReflectorDomain {
       int methodsOffset,
       int typeParametersOffset,
       Enumerator<ExecutableElement> members,
+      Enumerator<ErasableDartType> reflectedTypes,
+      int reflectedTypesOffset,
       Enumerator<_LibraryDomain> libraries,
       Map<LibraryElement, _LibraryDomain> libraryMap,
       _ImportCollector importCollector,
@@ -1139,9 +1211,8 @@ class _ReflectorDomain {
                 .map(indexOf));
       }
 
-      String dynamicReflectedTypeCode =
-          "${importCollector._getPrefix(classElement.library)}"
-          "${classElement.name}";
+      int dynamicReflectedTypeIndex = _dynamicTypeCodeIndex(
+          classElement.type, classes, reflectedTypes, reflectedTypesOffset);
 
       return 'new r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
@@ -1150,7 +1221,7 @@ class _ReflectorDomain {
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
           '$constructorsCode, $ownerIndex, $mixinIndex, '
           '$superinterfaceIndices, $classMetadataCode, $isCheckCode, '
-          '$typeParameterIndices, $dynamicReflectedTypeCode)';
+          '$typeParameterIndices, $dynamicReflectedTypeIndex)';
     }
   }
 
@@ -1159,6 +1230,8 @@ class _ReflectorDomain {
       Enumerator<TopLevelVariableElement> topLevelVariables,
       Enumerator<FieldElement> fields,
       Enumerator<ExecutableElement> members,
+      Enumerator<ErasableDartType> reflectedTypes,
+      int reflectedTypesOffset,
       Enumerator<ParameterElement> parameters,
       _ImportCollector importCollector,
       TransformLogger logger,
@@ -1170,26 +1243,27 @@ class _ReflectorDomain {
       int variableMirrorIndex = variable is TopLevelVariableElement
           ? topLevelVariables.indexOf(variable)
           : fields.indexOf(variable);
-      String reflectedTypeCode = reflectedTypeRequested
-          ? _typeCode(accessorElement.variable.type, importCollector)
-          : "null";
-      String dynamicReflectedTypeCode = reflectedTypeRequested
-          ? _dynamicTypeCodeOrNull(
-              accessorElement.variable.type, importCollector)
-          : "null";
+      int reflectedTypeIndex = reflectedTypeRequested
+          ? _typeCodeIndex(accessorElement.variable.type, classes,
+              reflectedTypes, reflectedTypesOffset)
+          : constants.NO_CAPABILITY_INDEX;
+      int dynamicReflectedTypeIndex = reflectedTypeRequested
+          ? _dynamicTypeCodeIndex(accessorElement.variable.type, classes,
+              reflectedTypes, reflectedTypesOffset)
+          : constants.NO_CAPABILITY_INDEX;
       // The `indexOf` is non-null: `accessorElement` came from `members`.
       int selfIndex = members.indexOf(accessorElement) + fields.length;
       if (accessorElement.isGetter) {
         return 'new r.ImplicitGetterMirrorImpl('
             '${_constConstructionCode(importCollector)}, '
-            '$variableMirrorIndex, $reflectedTypeCode, '
-            '$dynamicReflectedTypeCode, $selfIndex)';
+            '$variableMirrorIndex, $reflectedTypeIndex, '
+            '$dynamicReflectedTypeIndex, $selfIndex)';
       } else {
         assert(accessorElement.isSetter);
         return 'new r.ImplicitSetterMirrorImpl('
             '${_constConstructionCode(importCollector)}, '
-            '$variableMirrorIndex, $reflectedTypeCode, '
-            '$dynamicReflectedTypeCode, $selfIndex)';
+            '$variableMirrorIndex, $reflectedTypeIndex, '
+            '$dynamicReflectedTypeIndex, $selfIndex)';
       }
     } else {
       // [element] is a method, a function, or an explicitly declared
@@ -1201,25 +1275,29 @@ class _ReflectorDomain {
           element.parameters.map((ParameterElement parameterElement) {
         return parameters.indexOf(parameterElement);
       }));
-      String reflectedReturnTypeCode = element.returnType.isVoid
-          ? "null"
-          : _typeCode(element.returnType, importCollector);
-      String dynamicReflectedReturnTypeCode = element.returnType.isVoid
-          ? "null"
-          : _dynamicTypeCodeOrNull(element.returnType, importCollector);
+      int reflectedReturnTypeIndex = element.returnType.isVoid
+          ? constants.NO_CAPABILITY_INDEX
+          : _typeCodeIndex(element.returnType, classes, reflectedTypes,
+              reflectedTypesOffset);
+      int dynamicReflectedReturnTypeIndex = element.returnType.isVoid
+          ? constants.NO_CAPABILITY_INDEX
+          : _dynamicTypeCodeIndex(element.returnType, classes, reflectedTypes,
+              reflectedTypesOffset);
       String metadataCode = _capabilities._supportsMetadata
           ? _extractMetadataCode(
               element, _resolver, importCollector, logger, _generatedLibraryId)
           : null;
       return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
-          '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeCode, '
-          '$dynamicReflectedReturnTypeCode, $parameterIndicesCode, '
+          '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, '
+          '$dynamicReflectedReturnTypeIndex, $parameterIndicesCode, '
           '${_constConstructionCode(importCollector)}, $metadataCode)';
     }
   }
 
   String _topLevelVariableMirrorCode(
       TopLevelVariableElement element,
+      Enumerator<ErasableDartType> reflectedTypes,
+      int reflectedTypesOffset,
       _ImportCollector importCollector,
       TransformLogger logger,
       bool reflectedTypeRequested) {
@@ -1227,12 +1305,14 @@ class _ReflectorDomain {
     int ownerIndex =
         _libraries.indexOf(element.enclosingElement.enclosingElement);
     int classMirrorIndex = _computeVariableTypeIndex(element, descriptor);
-    String reflectedTypeCode = reflectedTypeRequested
-        ? _typeCode(element.type, importCollector)
-        : "null";
-    String dynamicReflectedTypeCode = reflectedTypeRequested
-        ? _dynamicTypeCodeOrNull(element.type, importCollector)
-        : "null";
+    int reflectedTypeIndex = reflectedTypeRequested
+        ? _typeCodeIndex(
+            element.type, classes, reflectedTypes, reflectedTypesOffset)
+        : constants.NO_CAPABILITY_INDEX;
+    int dynamicReflectedTypeIndex = reflectedTypeRequested
+        ? _dynamicTypeCodeIndex(
+            element.type, classes, reflectedTypes, reflectedTypesOffset)
+        : constants.NO_CAPABILITY_INDEX;
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
@@ -1244,24 +1324,28 @@ class _ReflectorDomain {
     }
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $reflectedTypeCode, '
-        '$dynamicReflectedTypeCode, $metadataCode)';
+        '$classMirrorIndex, $reflectedTypeIndex, '
+        '$dynamicReflectedTypeIndex, $metadataCode)';
   }
 
   String _fieldMirrorCode(
       FieldElement element,
+      Enumerator<ErasableDartType> reflectedTypes,
+      int reflectedTypesOffset,
       _ImportCollector importCollector,
       TransformLogger logger,
       bool reflectedTypeRequested) {
     int descriptor = _fieldDescriptor(element);
     int ownerIndex = classes.indexOf(element.enclosingElement);
     int classMirrorIndex = _computeVariableTypeIndex(element, descriptor);
-    String reflectedTypeCode = reflectedTypeRequested
-        ? _typeCode(element.type, importCollector)
-        : "null";
-    String dynamicReflectedTypeCode = reflectedTypeRequested
-        ? _dynamicTypeCodeOrNull(element.type, importCollector)
-        : "null";
+    int reflectedTypeIndex = reflectedTypeRequested
+        ? _typeCodeIndex(
+            element.type, classes, reflectedTypes, reflectedTypesOffset)
+        : constants.NO_CAPABILITY_INDEX;
+    int dynamicReflectedTypeIndex = reflectedTypeRequested
+        ? _dynamicTypeCodeIndex(
+            element.type, classes, reflectedTypes, reflectedTypesOffset)
+        : constants.NO_CAPABILITY_INDEX;
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
@@ -1273,36 +1357,73 @@ class _ReflectorDomain {
     }
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $reflectedTypeCode, '
-        '$dynamicReflectedTypeCode, $metadataCode)';
+        '$classMirrorIndex, $reflectedTypeIndex, '
+        '$dynamicReflectedTypeIndex, $metadataCode)';
   }
 
-  String _typeCode(DartType dartType, _ImportCollector importCollector) {
-    if (dartType is TypeParameterType) {
-      ClassElement owningClassElement = dartType.element.enclosingElement;
-      return 'const r.FakeType(r"${_qualifiedName(owningClassElement)}.'
-          '${dartType.element}")';
-    }
-    return _typeCodeOfClass(dartType, importCollector);
-  }
-
-  /// Returns a string containing code that in the generated library will
-  /// evaluate to a [Type] value like the value we would have obtained by
-  /// evaluating the [typeDefiningElement] as an expression in the library
-  /// where it occurs, but with all type arguments erased to `dynamic`.
-  /// Furthermore, return "null" for non-generic classes (that is used to
-  /// avoid duplication of identical expressions). [importCollector] is used
-  /// to find the library prefixes needed in order to obtain values from other
-  /// libraries.
-  String _dynamicTypeCodeOrNull(
-      DartType dartType, _ImportCollector importCollector) {
+  /// Returns the index into `ReflectorData.types` of the [Type] object
+  /// corresponding to [dartType]. It may refer to a covered class, in which
+  /// case [classes] is used to find it, or it may be outside the set of
+  /// covered classes, in which case [reflectedTypes] may already contain it;
+  /// otherwise it is not represented anywhere so far, and it is added to
+  /// [reflectedTypes]; [reflectedTypesOffset] is used to adjust the index
+  /// as computed by [reflectedTypes], because the elements in there will be
+  /// added to `ReflectorData.types` after the elements of [classes] have been
+  /// added.
+  int _typeCodeIndex(DartType dartType, ClassElementEnhancedSet classes,
+      Enumerator<ErasableDartType> reflectedTypes, int reflectedTypesOffset) {
+    // The type `dynamic` is handled via the `dynamicAttribute` bit.
+    if (dartType.isDynamic) return null;
     if (dartType is InterfaceType) {
-      return dartType.typeArguments.isEmpty
-          ? "null"
-          : _dynamicTypeCodeOfClass(dartType.element, importCollector);
+      if (dartType.typeArguments.isEmpty) {
+        // A plain, non-generic class, may be handled already.
+        ClassElement classElement = dartType.element;
+        if (classes.contains(classElement)) {
+          return classes.indexOf(classElement);
+        }
+      }
+      // An instantiation of a generic class, or a non-generic class which is
+      // not present in `classes`: Use `reflectedTypes`, possibly adding it.
+      ErasableDartType erasableDartType =
+          new ErasableDartType(dartType, erased: false);
+      reflectedTypes.add(erasableDartType);
+      return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
     }
-    // Not an interface type, let `_dynamicTypeCodeOfClass` handle it.
-    return _dynamicTypeCodeOfClass(dartType.element, importCollector);
+    // We only handle the kinds of types already covered above.
+    return constants.NO_CAPABILITY_INDEX;
+  }
+
+  /// Returns the index into `ReflectorData.types` of the [Type] object
+  /// corresponding to the fully dynamic instantiation of [dartType]. The
+  /// fully dynamic instantiation replaces any existing type arguments by
+  /// `dynamic`; for a non-generic class it makes no difference. This erased
+  /// [Type] object may refer to a covered class, in which case [classes] is
+  /// used to find it, or it may be outside the set of covered classes, in
+  /// which case [reflectedTypes] may already contain it; otherwise it is not
+  /// represented anywhere so far, and it is added to [reflectedTypes];
+  /// [reflectedTypesOffset] is used to adjust the index as computed by
+  /// [reflectedTypes], because the elements in there will be added to
+  /// `ReflectorData.types` after the elements of [classes] have been added.
+  int _dynamicTypeCodeIndex(DartType dartType, ClassElementEnhancedSet classes,
+      Enumerator<ErasableDartType> reflectedTypes, int reflectedTypesOffset) {
+    // The type `dynamic` is handled via the `dynamicAttribute` bit.
+    if (dartType.isDynamic) return null;
+    if (dartType is InterfaceType) {
+      ClassElement classElement = dartType.element;
+      if (classes.contains(classElement)) {
+        return classes.indexOf(classElement);
+      }
+      // [dartType] is not present in `classes`, so we must use `reflectedTypes`
+      // and iff it has type arguments we must specify that it should be erased
+      // (if there are no type arguments we will use "not erased": erasure
+      // makes no difference and we don't want to have two identical copies).
+      ErasableDartType erasableDartType = new ErasableDartType(dartType,
+          erased: dartType.typeArguments.isNotEmpty);
+      reflectedTypes.add(erasableDartType);
+      return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
+    }
+    // We only handle the kinds of types already covered above.
+    return constants.NO_CAPABILITY_INDEX;
   }
 
   /// Returns true iff the given [type] is not and does not contain a type
@@ -1489,6 +1610,8 @@ class _ReflectorDomain {
       ParameterElement element,
       Enumerator<FieldElement> fields,
       Enumerator<ExecutableElement> members,
+      Enumerator<ErasableDartType> reflectedTypes,
+      int reflectedTypesOffset,
       _ImportCollector importCollector,
       TransformLogger logger,
       bool reflectedTypeRequested) {
@@ -1512,12 +1635,14 @@ class _ReflectorDomain {
     } else {
       classMirrorIndex = constants.NO_CAPABILITY_INDEX;
     }
-    String reflectedTypeCode = reflectedTypeRequested
-        ? _typeCode(element.type, importCollector)
-        : "null";
-    String dynamicReflectedTypeCode = reflectedTypeRequested
-        ? _dynamicTypeCodeOrNull(element.type, importCollector)
-        : "null";
+    int reflectedTypeIndex = reflectedTypeRequested
+        ? _typeCodeIndex(
+            element.type, classes, reflectedTypes, reflectedTypesOffset)
+        : constants.NO_CAPABILITY_INDEX;
+    int dynamicReflectedTypeIndex = reflectedTypeRequested
+        ? _dynamicTypeCodeIndex(
+            element.type, classes, reflectedTypes, reflectedTypesOffset)
+        : constants.NO_CAPABILITY_INDEX;
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
       FormalParameter node = element.computeNode();
@@ -1542,7 +1667,7 @@ class _ReflectorDomain {
     }
     return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $reflectedTypeCode, $dynamicReflectedTypeCode, '
+        '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
         '$metadataCode, $defaultValueCode)';
   }
 }

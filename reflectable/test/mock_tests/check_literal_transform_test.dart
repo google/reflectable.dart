@@ -65,30 +65,36 @@ main() {
 }
 
 final _data = {
-  const prefix0.MyReflectable(): new r.ReflectorData(<m.TypeMirror>[
-    new r.NonGenericClassMirrorImpl(
-        r"A",
-        r".A",
-        7,
-        0,
-        const prefix0.MyReflectable(),
-        const <int>[-1],
-        const <int>[],
-        const <int>[],
-        -1,
-        {},
-        {},
-        {r"": () => new prefix0.A()},
-        -1,
-        0,
-        const <int>[],
-        null)
-  ], <m.DeclarationMirror>[
-    new r.MethodMirrorImpl(r"", 64, 0, -1, prefix0.A, null, const <int>[],
-        const prefix0.MyReflectable(), null)
-  ], <m.ParameterMirror>[], const <Type>[
-    prefix0.A
-  ], {}, {}, null)
+  const prefix0.MyReflectable(): new r.ReflectorData(
+      <m.TypeMirror>[
+        new r.NonGenericClassMirrorImpl(
+            r"A",
+            r".A",
+            7,
+            0,
+            const prefix0.MyReflectable(),
+            const <int>[-1],
+            const <int>[],
+            const <int>[],
+            -1,
+            {},
+            {},
+            {r"": () => new prefix0.A()},
+            -1,
+            0,
+            const <int>[],
+            null)
+      ],
+      <m.DeclarationMirror>[
+        new r.MethodMirrorImpl(r"", 64, 0, -1, 0, 0, const <int>[],
+            const prefix0.MyReflectable(), null)
+      ],
+      <m.ParameterMirror>[],
+      <Type>[prefix0.A],
+      1,
+      {},
+      {},
+      null)
 };
 
 _initializeReflectable() {

@@ -388,6 +388,15 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// `Map<dynamic, dynamic>`.
   Type get dynamicReflectedType;
 
+  /// Returns `hasReflectedType || hasDynamicReflectedType`.
+  bool get hasBestEffortReflectedType;
+
+  /// If [hasBestEffortReflectedType] returns true, returns [reflectedType] if
+  /// it is available, otherwise returns [hasDynamicReflectedType]. If
+  /// [hasBestEffortReflectedType] returns false it throws an
+  /// [UnsupportedError].
+  Type get bestEffortReflectedType;
+
   /**
    * Invokes the named constructor and returns the result.
    *

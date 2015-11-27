@@ -816,6 +816,14 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   }
 
   @override
+  bool get hasBestEffortReflectedType =>
+      hasReflectedType || hasDynamicReflectedType;
+
+  @override
+  Type get bestEffortReflectedType =>
+      hasReflectedType ? reflectedType : dynamicReflectedType;
+
+  @override
   List<rm.TypeVariableMirror> get typeVariables {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
@@ -1316,13 +1324,9 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
   }
 
   @override
-  bool get hasReflectedType {
-    if (impliesReflectedType(_reflectable.capabilities)) {
-      return _variableMirror.type.hasReflectedType;
-    }
-    throw new NoSuchCapabilityError("Attempt to evaluate "
-        "hasReflectedType without `reflectedTypeCapability`");
-  }
+  bool get hasReflectedType =>
+      impliesReflectedType(_reflectable.capabilities) &&
+          _variableMirror.type.hasReflectedType;
 
   @override
   Type get reflectedType {
@@ -1334,14 +1338,10 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
   }
 
   @override
-  bool get hasDynamicReflectedType {
-    if (impliesReflectedType(_reflectable.capabilities)) {
-      return _variableMirror.type.typeVariables.isEmpty &&
+  bool get hasDynamicReflectedType =>
+      impliesReflectedType(_reflectable.capabilities) &&
+          _variableMirror.type.typeVariables.isEmpty &&
           _variableMirror.type.hasReflectedType;
-    }
-    throw new NoSuchCapabilityError("Attempt to get hasDynamicReflectedType "
-        "without `reflectedTypeCapability`");
-  }
 
   @override
   Type get dynamicReflectedType {

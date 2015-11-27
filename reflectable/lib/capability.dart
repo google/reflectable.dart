@@ -233,9 +233,9 @@ class TypeRelationsCapability implements TypeCapability {
 /// Shorthand for `const TypeRelationsCapability()`.
 const typeRelationsCapability = const TypeRelationsCapability();
 
-/// Gives support support for the method `reflectedType`
-/// on `VariableMirror` and  `ParameterMirror`, and `reflectedReturnType`
-/// on `MethodMirror`.
+/// Gives support for the method `reflectedType` on `VariableMirror` and
+/// `ParameterMirror`, and for the method `reflectedReturnType` on
+/// `MethodMirror`.
 const reflectedTypeCapability = const _ReflectedTypeCapability();
 
 /// Gives support for library-mirrors.
