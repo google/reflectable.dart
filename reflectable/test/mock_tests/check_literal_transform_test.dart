@@ -97,7 +97,7 @@ final _data = {
       null)
 };
 
-const _memberSymbolMap = null;
+final _memberSymbolMap = null;
 
 _initializeReflectable() {
   if (!isTransformed) {
