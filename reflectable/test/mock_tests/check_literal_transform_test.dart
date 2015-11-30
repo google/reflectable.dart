@@ -97,6 +97,8 @@ final _data = {
       null)
 };
 
+const _memberSymbolMap = null;
+
 _initializeReflectable() {
   if (!isTransformed) {
     throw new UnsupportedError(
@@ -105,6 +107,7 @@ _initializeReflectable() {
         "'build/.../packages'.");
   }
   r.data = _data;
+  r.memberSymbolMap = _memberSymbolMap;
 }
 """
   }

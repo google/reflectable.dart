@@ -307,10 +307,17 @@ bool reflectableSupportsDeclaration(
   return _checkWithGetter(reflectable, name, helper);
 }
 
-/// Returns true if [reflectable] supports types.
+/// Returns true iff [reflectable] supports types.
 bool reflectableSupportsType(ReflectableImpl reflectable) {
   bool predicate(ApiReflectCapability capability) =>
       capability is TypeCapability;
+  return reflectable.hasCapability(predicate);
+}
+
+/// Returns true iff [reflectable] supports delegation.
+bool reflectableSupportsDelegate(ReflectableImpl reflectable) {
+  bool predicate(ApiReflectCapability capability) =>
+      capability == delegateCapability;
   return reflectable.hasCapability(predicate);
 }
 
@@ -772,7 +779,18 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
   int get hashCode => _instanceMirror.hashCode;
 
   @override
-  delegate(Invocation invocation) => _instanceMirror.delegate(invocation);
+  delegate(Invocation invocation) {
+    if (!reflectableSupportsDelegate(_reflectable) ||
+        !reflectableSupportsInstanceInvoke(
+            _reflectable,
+            dm.MirrorSystem.getName(invocation.memberName),
+            _instanceMirror.type)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to `delegate` without `delegateCapability`, or without "
+          "capability to invoke the given method.");
+    }
+    return _instanceMirror.delegate(invocation);
+  }
 
   get _receiver => _instanceMirror.reflectee;
 

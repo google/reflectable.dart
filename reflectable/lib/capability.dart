@@ -180,7 +180,7 @@ class NameCapability implements TypeCapability {
   const NameCapability();
 }
 
-/// Shorthand for `const NameCapability`.
+/// Shorthand for `const NameCapability()`.
 const nameCapability = const NameCapability();
 
 /// Gives support for classification predicates such as `isPrivate`, `isStatic`
@@ -220,7 +220,7 @@ class TypeCapability implements ApiReflectCapability {
   const TypeCapability();
 }
 
-/// Shorthand for `const TypeCapability`.
+/// Shorthand for `const TypeCapability()`.
 const typeCapability = const TypeCapability();
 
 /// Gives support for: `typeVariables`, `typeArguments`,
@@ -331,7 +331,14 @@ class TypingCapability
   const TypingCapability();
 }
 
+/// Shorthand for `const TypingCapability()`.
 const typingCapability = const TypingCapability();
+
+/// Capability instance giving support for the `delegate` method on instance
+/// mirrors when it leads to invocation of a method where instance invocation
+/// is supported. Also implies support for translation of [Symbol]s of covered
+/// members to their corresponding [String]s.
+const delegateCapability = const _DelegateCapability();
 
 // ---------- Reflectee quantification oriented capability classes.
 
@@ -479,6 +486,10 @@ class GlobalQuantifyMetaCapability extends ImportAttachedCapability {
 
 class _ReflectedTypeCapability implements DeclarationsCapability {
   const _ReflectedTypeCapability();
+}
+
+class _DelegateCapability extends ApiReflectCapability {
+  const _DelegateCapability();
 }
 
 class _SubtypeQuantifyCapability implements ReflecteeQuantifyCapability {

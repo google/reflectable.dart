@@ -154,6 +154,13 @@ Map<Reflectable, ReflectorData> data =
         "Did you forget to add the main file to the "
         "reflectable transformer's entry_points in pubspec.yaml?");
 
+/// This mapping translates symbols to strings for the covered members.
+/// It will be initialized in the generated code.
+Map<Symbol, String> memberSymbolMap =
+    throw new StateError("Reflectable has not been initialized. "
+        "Did you forget to add the main file to the "
+        "reflectable transformer's entry_points in pubspec.yaml?");
+
 abstract class _DataCaching {
   // TODO(eernst) clarify: When we have some substantial pieces of code using
   // reflectable, perform some experiments to detect how useful it is to have
@@ -216,7 +223,26 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
 
   int get hashCode => _reflector.hashCode ^ reflectee.hashCode;
 
-  delegate(Invocation invocation) => unimplementedError("delegate");
+  @override
+  delegate(Invocation invocation) {
+    if (memberSymbolMap == null) {
+      throw new NoSuchCapabilityError(
+          "Attempt to `delegate` without `delegateCapability");
+    }
+    String memberName = memberSymbolMap[invocation.memberName];
+    if (memberName == null) {
+      // TODO(eernst) clarify: We might have no capability, or no such method.
+      return noSuchMethod(invocation);
+    }
+    if (invocation.isGetter) {
+      return this.invokeGetter(memberName);
+    } else if (invocation.isSetter) {
+      return this.invokeSetter(memberName, invocation.positionalArguments[0]);
+    } else {
+      return this.invoke(memberName, invocation.positionalArguments,
+          invocation.namedArguments);
+    }
+  }
 
   @override
   Object invokeGetter(String getterName) {

@@ -46,6 +46,11 @@ class ReflectionWorld {
   final LibraryElement entryPointLibrary;
   final _ImportCollector importCollector;
 
+  /// Used to collect the names of covered members during `generateCode`, then
+  /// used by `generateSymbolMap` to generate code for a mapping from symbols
+  /// to the corresponding strings.
+  final Set<String> memberNames = new Set<String>();
+
   ReflectionWorld(this.resolver, this.generatedLibraryId, this.reflectors,
       this.reflectableLibrary, this.entryPointLibrary, this.importCollector);
 
@@ -128,6 +133,23 @@ class ReflectionWorld {
       return "${reflector._constConstructionCode(importCollector)}: "
           "$reflectorCode";
     }));
+  }
+
+  /// Returns code which defines a mapping from symbols for covered members
+  /// to the corresponding strings. Note that the data needed for doing this
+  /// is collected during the execution of `generateCode`, which means that
+  /// this method must be called after `generateCode`.
+  String generateSymbolMap() {
+    if (reflectors.any((_ReflectorDomain reflector) =>
+        reflector._capabilities._impliesMemberSymbols)) {
+      // Generate the mapping when requested, even if it is empty.
+      String mapping = _formatAsMap(
+          memberNames.map((String name) => 'const Symbol(r"$name"): r"$name"'));
+      return "$mapping";
+    } else {
+      // The value `null` unambiguously indicates lack of capability.
+      return "null";
+    }
   }
 }
 
@@ -787,6 +809,12 @@ class _ReflectorDomain {
     // From this point, [classes] must be kept immutable.
     classes.makeUnmodifiable();
 
+    // Record the names of covered members, if requested.
+    if (_capabilities._impliesMemberSymbols) {
+      members.items.forEach((ExecutableElement executableElement) =>
+          _world.memberNames.add(executableElement.name));
+    }
+
     // Find the offsets of fields in members, and of methods and functions
     // in members, of type variables in type mirrors, and of `reflectedTypes`
     // in types.
@@ -867,7 +895,7 @@ class _ReflectorDomain {
 
     // Generate code for creation of parameter mirrors.
     Iterable<String> parametersList =
-    parameters.items.map((ParameterElement element) {
+        parameters.items.map((ParameterElement element) {
       return _parameterMirrorCode(
           element,
           fields,
@@ -879,7 +907,7 @@ class _ReflectorDomain {
           reflectedTypeRequested);
     });
     String parameterMirrorsCode =
-    _formatAsList("m.ParameterMirror", parametersList);
+        _formatAsList("m.ParameterMirror", parametersList);
 
     // Generate code for listing [Type] instances.
     Iterable<String> typesCodeList = () sync* {
@@ -2458,6 +2486,12 @@ class _Capabilities {
     });
   }
 
+  bool get _impliesMemberSymbols {
+    return _capabilities.any((ec.ReflectCapability capability) {
+      return capability == ec.delegateCapability;
+    });
+  }
+
   bool get _impliesTypes {
     return _capabilities.any((ec.ReflectCapability capability) {
       return capability is ec.TypeCapability;
@@ -3112,6 +3146,8 @@ class TransformerImplementation {
         return new ec.InvokingMetaCapability(extractMetaData(constant));
       case "TypingCapability":
         return new ec.TypingCapability();
+      case "_DelegateCapability":
+        return ec.delegateCapability;
       case "_SubtypeQuantifyCapability":
         return ec.subtypeQuantifyCapability;
       case "SuperclassQuantifyCapability":
@@ -3243,7 +3279,9 @@ main($args) {
   return original.main($args);
 }
 
-final _data = ${code};
+final _data = $code;
+
+final _memberSymbolMap = ${world.generateSymbolMap()};
 
 _initializeReflectable() {
   if (!isTransformed) {
@@ -3253,6 +3291,7 @@ _initializeReflectable() {
         "'build/.../packages'.");
   }
   r.data = _data;
+  r.memberSymbolMap = _memberSymbolMap;
 }
 """;
     if (_formatted) {
