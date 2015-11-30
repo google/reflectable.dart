@@ -9,7 +9,7 @@
 /// be specific to the particular entry point 'meta_reflectors_test.dart' and
 /// its transitive closure, but there is no dependency from them to any of the
 /// libraries introducing or using reflectable reflection.
-library test_reflectable.test.meta_reflectors_share;
+library test_reflectable.test.meta_reflectors_domain;
 
 class P {
   const P();

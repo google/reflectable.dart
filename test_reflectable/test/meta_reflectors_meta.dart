@@ -9,7 +9,7 @@
 /// classes are independent of the particular entry point 'reflectors_test.dart'
 /// and its transitive closure, it could be in a third-party package only
 /// depending on reflectable.
-library test_reflectable.test.meta_reflectors_scoping;
+library test_reflectable.test.meta_reflectors_meta;
 
 @GlobalQuantifyCapability(r"^reflectable.reflectable.Reflectable$",
     const AllReflectorsMetaReflector())

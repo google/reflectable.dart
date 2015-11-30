@@ -6,7 +6,7 @@
 // Uses a declaration from the original main file (this one)
 // in an expression that will be copied in generated code.
 
-library test_reflectable.test.invoker_test;
+library test_reflectable.test.original_prefix_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';

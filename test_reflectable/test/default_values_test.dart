@@ -5,7 +5,7 @@
 // File being transformed by the reflectable transformer.
 // Uses default values.
 
-library test_reflectable.test.new_instance_default_values_test;
+library test_reflectable.test.default_values_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';

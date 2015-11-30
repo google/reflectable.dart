@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library test_reflectable.test.metadata_name_clash_lib;
+library test_reflectable.test.name_clash_lib;
 
 import "package:reflectable/reflectable.dart";
 

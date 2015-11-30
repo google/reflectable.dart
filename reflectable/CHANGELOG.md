@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.4.0
+
+* Changes the representation of reflected types such that duplication of
+  `Type` expressions is avoided (by using indices into a shared list).
+* Adds methods `dynamicReflectedType` and `hasDynamicReflectedType` to several
+  mirror classes, yielding the erased version of the reflected type (for
+  `List<int>` it would return `List<dynamic>`, i.e., `List`). This method is
+  capable of returning a result in some cases where `reflectedType` fails.
+* Corrects the behavior of methods `reflectedType` and `hasReflectedType`, such
+  that `reflectedType` returns an instantiated generic class when that is
+  appropriate, and `hasReflectedType` returns false in some cases where it
+  used to return true, because the correct instantiated generic class cannot
+  be obtained.
+* Adds method `bestEffortReflectedType` which will use `reflectedType` and
+  `dynamicReflectedType` to obtain a reflected type if at all possible (though
+  with a less precise specification, because it may be one or the other). Adds
+  method `hasBestEffortReflectedType` to go with it. This pair of methods
+  resembles the 0.3.3 and earlier semantics of `reflectedType`.
+
+The version number is stepped up to 0.4.0 because `reflectedType` behaves
+differently now than it did in 0.3.3 and earlier, which turned out to break
+some programs. In some cases the best reaction may be to replace invocations
+of `reflectedType` and `hasReflectedType` by the corresponding "best effort"
+methods, but it may also be better to use both the `reflectedType` and the
+`dynamicReflectedType` method pairs, taking the precise semantics into
+account when using the returned result.
+
+Note that version 0.3.4 also deals with `reflectedType` in a stricter way
+than 0.3.3 and earlier versions, but at that point the changes were
+considered to be bug fixes or implementations of missing features.
+
 ## 0.3.4
 
 * **NB** Adds a non-trivial upper version constraint on analyzer in order to

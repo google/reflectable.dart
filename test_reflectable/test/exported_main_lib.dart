@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library test_reflectable.exported_main_lib;
+library test_reflectable.test.exported_main_lib;
 
 import "package:unittest/unittest.dart";
 
