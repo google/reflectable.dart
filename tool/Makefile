@@ -33,6 +33,7 @@ get:
 check:
 	@./makein Checking $(RTOOLS) check
 	@./makein Checking $(TTOOLS) check
+	@./grep_debug
 	@./grep_todos --check-consistency
 	@./grep_todos --find-unknown-category
 

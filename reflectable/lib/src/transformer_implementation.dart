@@ -1202,6 +1202,9 @@ class _ReflectorDomain {
       // `implements` this [classElement].
       Iterable<String> isCheckList = () sync* {
         if (classElement.isPrivate ||
+            classElement.isAbstract ||
+            (classElement is MixinApplication &&
+                !classElement.isMixinApplication) ||
             !_isImportable(classElement, _generatedLibraryId, _resolver)) {
           yield "(o) => false";
         } else {
@@ -1213,6 +1216,9 @@ class _ReflectorDomain {
                 _world.subtypes[classElement] ?? <ClassElement>[];
             for (ClassElement subtype in subtypes) {
               if (subtype.isPrivate ||
+                  subtype.isAbstract ||
+                  (subtype is MixinApplication &&
+                      !subtype.isMixinApplication) ||
                   !_isImportable(subtype, _generatedLibraryId, _resolver)) {
                 yield* helper(subtype);
               } else {

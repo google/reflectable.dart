@@ -1,0 +1,49 @@
+#!/bin/bash --norc
+
+# Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+# source code is governed by a BSD-style license that can be found in
+# the LICENSE file.
+
+# This runs a `grep` command searching for occurrences of 'DEBUG'
+# and 'HERE!', which are used as temporary markers during development
+# but should never occur in code landed on github.
+
+show_section () {
+  echo "---------------------------------------- $1"
+}
+
+function run_find {
+  find ../reflectable ../test_reflectable . \
+    \( -name \*.dart -o -name Makefile -o -name pubspec.yaml \) \
+    ! -path '*/packages/*' ! -path '*/.pub/*'
+}
+
+function run_grep {
+  egrep "DEBUG|HERE!" $(run_find) || true
+}
+
+function help {
+  echo "Usage: $0 [--help|-h]"
+  echo "Purpose: Reveal occurrences of temporary elements in code."
+}
+
+function parse_args {
+  while [ -n "$1" ]; do
+    case $1 in
+      (--help|-h) help; exit 0;;
+      (*) help; echo "$0: Argument '$1' not understood. Exiting."; exit -1;;
+    esac
+  done
+}
+
+function main {
+  original_dir=$(pwd)
+  # No matter how this script exits, go back do the original working directory.
+  trap 'cd $original_dir' EXIT
+
+  parse_args "$@"
+  show_section "Temporary code elements search"
+  run_grep
+}
+
+main "$@"

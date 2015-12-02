@@ -618,9 +618,10 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
   /// O is an instance of C<X1..Xk>. We can perform this check by checking that
   /// O is an instance of C<dynamic .. dynamic>, and O is not an instance
   /// of any of Dj<dynamic .. dynamic> for j in {1..n}, where D1..Dn is the
-  /// complete set of classes in the current program which are direct
-  /// subinterfaces of C (i.e., classes which directly `extends` or `implements`
-  /// C). The check is implemented by this function.
+  /// complete set of classes in the current program which are direct,
+  /// non-abstract subinterfaces of C (i.e., classes which directly `extends`
+  /// or `implements` C, or their subtypes again in case they are abstract).
+  /// The check is implemented by this function.
   final InstanceChecker _isGenericRuntimeTypeOf;
 
   final List<int> _typeVariableIndices;
@@ -1488,7 +1489,7 @@ abstract class VariableMirrorBase extends _DataCaching
   Type get reflectedType {
     if (_isDynamic) return dynamic;
     if (_reflectedTypeIndex == NO_CAPABILITY_INDEX) {
-      throw new NoSuchCapabilityError(
+      throw new UnsupportedError(
           "Attempt to get reflectedType without capability (of '$_name')");
     }
     return _data.types[_reflectedTypeIndex];

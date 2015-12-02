@@ -1351,7 +1351,7 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
     if (impliesReflectedType(_reflectable.capabilities)) {
       return _variableMirror.type.reflectedType;
     }
-    throw new NoSuchCapabilityError(
+    throw new UnsupportedError(
         "Attempt to get reflectedType without `reflectedTypeCapability`");
   }
 
