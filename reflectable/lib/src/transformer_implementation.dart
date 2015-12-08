@@ -489,6 +489,39 @@ class ErasableDartType {
   String toString() => "ErasableDartType($dartType, $erased)";
 }
 
+/// Models the shape of a parameter list, which enables invocation to detect
+/// mismatches such that we can raise a suitable no-such-method error.
+class ParameterListShape {
+  final int numberOfPositionalParameters;
+  final int numberOfOptionalPositionalParameters;
+  final Set<String> namesOfNamedParameters;
+
+  const ParameterListShape(this.numberOfPositionalParameters,
+      this.numberOfOptionalPositionalParameters, this.namesOfNamedParameters);
+
+  bool operator ==(other) => other is ParameterListShape
+      ? numberOfPositionalParameters == other.numberOfPositionalParameters &&
+          numberOfOptionalPositionalParameters ==
+              other.numberOfOptionalPositionalParameters &&
+          namesOfNamedParameters
+              .difference(other.namesOfNamedParameters)
+              .isEmpty
+      : false;
+
+  int get hashCode => numberOfPositionalParameters.hashCode ^
+      numberOfOptionalPositionalParameters.hashCode;
+
+  String get code {
+    String names = "null";
+    if (namesOfNamedParameters.isNotEmpty) {
+      Iterable<String> symbols = namesOfNamedParameters.map((name) => "#$name");
+      names = "const ${_formatAsDynamicList(symbols)}";
+    }
+    return "const [$numberOfPositionalParameters, "
+        "$numberOfOptionalPositionalParameters, $names]";
+  }
+}
+
 /// Information about the program parts that can be reflected by a given
 /// Reflector.
 class _ReflectorDomain {
@@ -642,10 +675,15 @@ class _ReflectorDomain {
       argumentParts.add(namedArguments);
     }
 
+    String doRunArgument = "b";
+    while (parameterNames.contains(doRunArgument)) {
+      doRunArgument = doRunArgument + "b";
+    }
+
     String prefix = importCollector._getPrefix(constructor.library);
-    return ('(${parameterParts.join(', ')}) => '
-        'new $prefix${_nameOfConstructor(constructor)}'
-        '(${argumentParts.join(", ")})');
+    return ('($doRunArgument) => (${parameterParts.join(', ')}) => '
+        '$doRunArgument ? new $prefix${_nameOfConstructor(constructor)}'
+        '(${argumentParts.join(", ")}) : null');
   }
 
   /// The code of the const-construction of this reflector.
@@ -668,8 +706,6 @@ class _ReflectorDomain {
 
     // Class related collections.
     Enumerator<FieldElement> fields = new Enumerator<FieldElement>();
-    Enumerator<ParameterElement> parameters =
-        new Enumerator<ParameterElement>();
     Enumerator<TypeParameterElement> typeParameters =
         new Enumerator<TypeParameterElement>();
     // Reflected types not in `classes`; appended to `ReflectorData.types`.
@@ -680,6 +716,12 @@ class _ReflectorDomain {
 
     // Library and class related collections.
     Enumerator<ExecutableElement> members = new Enumerator<ExecutableElement>();
+    Enumerator<ParameterElement> parameters =
+        new Enumerator<ParameterElement>();
+    Enumerator<ParameterListShape> parameterListShapes =
+        new Enumerator<ParameterListShape>();
+    Map<ExecutableElement, ParameterListShape> parameterListShapeOf =
+        <ExecutableElement, ParameterListShape>{};
 
     // Class element for [Object], needed as implicit upper bound. Initialized
     // if needed.
@@ -743,6 +785,22 @@ class _ReflectorDomain {
       // [ClassMirror].
       classDomain._declaredFields.forEach(fields.add);
 
+      // Ensure that we include variables corresponding to the implicit
+      // accessors that we have included into `members`.
+      members.items.forEach((ExecutableElement element) {
+        if (element is PropertyAccessorElement && element.isSynthetic) {
+          PropertyInducingElement variable = element.variable;
+          if (variable is FieldElement) {
+            fields.add(variable);
+          } else if (variable is TopLevelVariableElement) {
+            topLevelVariables.add(variable);
+          } else {
+            throw unimplementedError(
+                "This kind of variable is not yet supported");
+          }
+        }
+      });
+
       // Gather all getter and setter names based on [instanceMembers],
       // including both explicitly declared ones, implicitly generated ones
       // for fields, and the implicitly generated ones that correspond to
@@ -782,6 +840,7 @@ class _ReflectorDomain {
       for (ClassElement classElement in classes) {
         if (classElement.type.isObject) {
           hasObject = true;
+          objectClassElement = classElement;
           break;
         }
         if (classElement.typeParameters.isNotEmpty) {
@@ -815,6 +874,25 @@ class _ReflectorDomain {
           _world.memberNames.add(executableElement.name));
     }
 
+    // Record the method parameter list shapes, if requested.
+    if (_capabilities._impliesParameterListShapes) {
+      members.items.forEach((ExecutableElement element) {
+        int count = 0;
+        int optionalCount = 0;
+        Set<String> names = new Set<String>();
+        for (ParameterElement parameter in element.parameters) {
+          ParameterKind kind = parameter.parameterKind;
+          if (kind != ParameterKind.NAMED) count++;
+          if (kind == ParameterKind.POSITIONAL) optionalCount++;
+          if (kind == ParameterKind.NAMED) names.add(parameter.name);
+        }
+        ParameterListShape shape =
+            new ParameterListShape(count, optionalCount, names);
+        parameterListShapes.add(shape);
+        parameterListShapeOf[element] = shape;
+      });
+    }
+
     // Find the offsets of fields in members, and of methods and functions
     // in members, of type variables in type mirrors, and of `reflectedTypes`
     // in types.
@@ -825,7 +903,7 @@ class _ReflectorDomain {
 
     // Generate code for creation of class mirrors.
     Iterable<String> typeMirrorsList = () sync* {
-      if (_capabilities._impliesTypes) {
+      if (_capabilities._impliesTypes || _capabilities._impliesInstanceInvoke) {
         yield* classes.domains.map((_ClassDomain classDomain) =>
             _classMirrorCode(
                 classDomain,
@@ -835,6 +913,8 @@ class _ReflectorDomain {
                 methodsOffset,
                 typeParametersOffset,
                 members,
+                parameterListShapes,
+                parameterListShapeOf,
                 reflectedTypes,
                 reflectedTypesOffset,
                 libraries,
@@ -932,14 +1012,26 @@ class _ReflectorDomain {
     } else {
       librariesCode = _formatAsList("m.LibraryMirror",
           libraries.items.map((_LibraryDomain library) {
-        return _libraryMirrorCode(library, libraries.indexOf(library), members,
-            topLevelVariables, methodsOffset, importCollector, logger);
+        return _libraryMirrorCode(
+            library,
+            libraries.indexOf(library),
+            members,
+            parameterListShapes,
+            parameterListShapeOf,
+            topLevelVariables,
+            methodsOffset,
+            importCollector,
+            logger);
       }));
     }
 
+    String parameterListShapesCode = _formatAsDynamicList(parameterListShapes
+        .items.map((ParameterListShape shape) => shape.code));
+
     return "new r.ReflectorData($classMirrorsCode, $membersCode, "
         "$parameterMirrorsCode, $typesCode, $reflectedTypesOffset, "
-        "$gettersCode, $settersCode, $librariesCode)";
+        "$gettersCode, $settersCode, $librariesCode, "
+        "$parameterListShapesCode)";
   }
 
   int _computeTypeIndexBase(
@@ -1012,6 +1104,7 @@ class _ReflectorDomain {
     if (_capabilities._impliesTypeAnnotations) {
       DartType bound = typeParameterElement.bound;
       if (bound == null) {
+        assert(objectClassElement != null);
         // Missing bound should be reported as the semantic default: `Object`.
         // We use an ugly hack to obtain the [ClassElement] for `Object`.
         upperBoundIndex = classes.indexOf(objectClassElement);
@@ -1042,6 +1135,8 @@ class _ReflectorDomain {
       int methodsOffset,
       int typeParametersOffset,
       Enumerator<ExecutableElement> members,
+      Enumerator<ParameterListShape> parameterListShapes,
+      Map<ExecutableElement, ParameterListShape> parameterListShapeOf,
       Enumerator<ErasableDartType> reflectedTypes,
       int reflectedTypesOffset,
       Enumerator<_LibraryDomain> libraries,
@@ -1110,17 +1205,21 @@ class _ReflectorDomain {
 
     ClassElement classElement = classDomain._classElement;
     ClassElement superclass = classes.superclassOf(classElement);
-    // [Object]'s superclass is reported as `null`: it does not exist and
-    // hence we cannot decide whether it's supported or unsupported; by
-    // convention we make it supported and report it in the same way as
-    // 'dart:mirrors'. Other superclasses use `NO_CAPABILITY_INDEX` to
-    // indicate missing support.
-    String superclassIndex = (classElement is! MixinApplication &&
-            classElement.type.isObject)
-        ? "null"
-        : (classes.contains(superclass))
-            ? "${classes.indexOf(superclass)}"
-            : "${constants.NO_CAPABILITY_INDEX}";
+
+    String superclassIndex = "${constants.NO_CAPABILITY_INDEX}";
+    if (_capabilities._impliesTypeRelations) {
+      // [Object]'s superclass is reported as `null`: it does not exist and
+      // hence we cannot decide whether it's supported or unsupported.; by
+      // convention we make it supported and report it in the same way as
+      // 'dart:mirrors'. Other superclasses use `NO_CAPABILITY_INDEX` to
+      // indicate missing support.
+      superclassIndex = (classElement is! MixinApplication &&
+              classElement.type.isObject)
+          ? "null"
+          : (classes.contains(superclass))
+              ? "${classes.indexOf(superclass)}"
+              : "${constants.NO_CAPABILITY_INDEX}";
+    }
 
     String constructorsCode;
     if (classElement is MixinApplication || classElement.isAbstract) {
@@ -1182,6 +1281,23 @@ class _ReflectorDomain {
 
     int classIndex = classes.indexOf(classElement);
 
+    String parameterListShapesCode = "null";
+    if (_capabilities._impliesParameterListShapes) {
+      Iterable<ExecutableElement> membersList = () sync* {
+        yield* classDomain._instanceMembers;
+        yield* classDomain._staticMembers;
+      }();
+      parameterListShapesCode =
+          _formatAsMap(membersList.map((ExecutableElement element) {
+        ParameterListShape shape = parameterListShapeOf[element];
+        assert(
+            shape != null); // Every method must have its shape in `..shapeOf`.
+        int index = parameterListShapes.indexOf(shape);
+        assert(index != null); // Every shape must be in `..Shapes`.
+        return 'r"${element.name}": $index';
+      }));
+    }
+
     if (classElement.typeParameters.isEmpty) {
       return 'new r.NonGenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
@@ -1189,7 +1305,8 @@ class _ReflectorDomain {
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
           '$constructorsCode, $ownerIndex, $mixinIndex, '
-          '$superinterfaceIndices, $classMetadataCode)';
+          '$superinterfaceIndices, $classMetadataCode, '
+          '$parameterListShapesCode)';
     } else {
       // We are able to match up a given instance with a given generic type
       // by checking that the instance `is` an instance of the fully dynamic
@@ -1254,7 +1371,8 @@ class _ReflectorDomain {
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
           '$constructorsCode, $ownerIndex, $mixinIndex, '
-          '$superinterfaceIndices, $classMetadataCode, $isCheckCode, '
+          '$superinterfaceIndices, $classMetadataCode, '
+          '$parameterListShapesCode, $isCheckCode, '
           '$typeParameterIndices, $dynamicReflectedTypeIndex)';
     }
   }
@@ -1277,16 +1395,19 @@ class _ReflectorDomain {
       int variableMirrorIndex = variable is TopLevelVariableElement
           ? topLevelVariables.indexOf(variable)
           : fields.indexOf(variable);
+      assert(variableMirrorIndex != null);
       int reflectedTypeIndex = reflectedTypeRequested
           ? _typeCodeIndex(accessorElement.variable.type, classes,
               reflectedTypes, reflectedTypesOffset)
           : constants.NO_CAPABILITY_INDEX;
+      // Do not check `reflectedTypeIndex != null`, null means dynamic.
       int dynamicReflectedTypeIndex = reflectedTypeRequested
           ? _dynamicTypeCodeIndex(accessorElement.variable.type, classes,
               reflectedTypes, reflectedTypesOffset)
           : constants.NO_CAPABILITY_INDEX;
-      // The `indexOf` is non-null: `accessorElement` came from `members`.
+      // Do not check `dynamicReflectedTypeIndex != null`, null means dynamic.
       int selfIndex = members.indexOf(accessorElement) + fields.length;
+      assert(selfIndex != null);
       if (accessorElement.isGetter) {
         return 'new r.ImplicitGetterMirrorImpl('
             '${_constConstructionCode(importCollector)}, '
@@ -1578,6 +1699,8 @@ class _ReflectorDomain {
       _LibraryDomain libraryDomain,
       int libraryIndex,
       Enumerator<ExecutableElement> members,
+      Enumerator<ParameterListShape> parameterListShapes,
+      Map<ExecutableElement, ParameterListShape> parameterListShapeOf,
       Enumerator<TopLevelVariableElement> variables,
       int methodsOffset,
       _ImportCollector importCollector,
@@ -1635,9 +1758,23 @@ class _ReflectorDomain {
       metadataCode = "null";
     }
 
+    String parameterListShapesCode = "null";
+    if (_capabilities._impliesParameterListShapes) {
+      parameterListShapesCode = _formatAsMap(
+          libraryDomain._declarations.map((ExecutableElement element) {
+        ParameterListShape shape = parameterListShapeOf[element];
+        assert(
+            shape != null); // Every method must have its shape in `..shapeOf`.
+        int index = parameterListShapes.indexOf(shape);
+        assert(index != null); // Every shape must be in `..Shapes`.
+        return 'r"${element.name}": $index';
+      }));
+    }
+
     return 'new r.LibraryMirrorImpl(r"${library.name}", $uriCode, '
         '${_constConstructionCode(importCollector)}, '
-        '$declarationsCode, $gettersCode, $settersCode, $metadataCode)';
+        '$declarationsCode, $gettersCode, $settersCode, $metadataCode, '
+        '$parameterListShapesCode)';
   }
 
   String _parameterMirrorCode(
@@ -1699,10 +1836,14 @@ class _ReflectorDomain {
           _generatedLibraryId,
           _resolver);
     }
+    String parameterSymbolCode = descriptor & constants.namedAttribute != 0
+        ? "#${element.name}"
+        : "null";
+
     return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
-        '$metadataCode, $defaultValueCode)';
+        '$metadataCode, $defaultValueCode, $parameterSymbolCode)';
   }
 }
 
@@ -2453,11 +2594,22 @@ class _Capabilities {
   /// been used for mixin application for an included class must themselves
   /// be included (if you have `class B extends A with M ..` then the class `M`
   /// will be included if `_impliesMixins`).
-  bool get _impliesMixins {
+  bool get _impliesMixins => _impliesTypeRelations;
+
+  /// Returns [true] iff these [Capabilities] specify that classes which have
+  /// been used for mixin application for an included class must themselves
+  /// be included (if you have `class B extends A with M ..` then the class `M`
+  /// will be included if `_impliesMixins`).
+  bool get _impliesTypeRelations {
     return _capabilities.any((ec.ReflectCapability capability) =>
         capability is ec.TypeRelationsCapability);
   }
 
+  /// Returns [true] iff these [Capabilities] specify that type annotations
+  /// modeled by mirrors should also get support for their base level [Type]
+  /// values, e.g., they should support `myVariableMirror.reflectedType`.
+  /// The relevant kinds of mirrors are variable mirrors, parameter mirrors,
+  /// and (for the return type) method mirrors.
   bool get _impliesReflectedType {
     return _capabilities.any((ec.ReflectCapability capability) =>
         capability == ec.reflectedTypeCapability);
@@ -2498,9 +2650,32 @@ class _Capabilities {
     });
   }
 
+  bool get _impliesParameterListShapes {
+    // TODO(eernst) implement: Choose a semantics for this; maybe we generate
+    // the shapes if it is requested by a new capability (such that the user
+    // gets to make the space/time trade off), in addition to the cases where
+    // we cannot avoid them (which is when we do not have any class mirrors).
+    return true;
+  }
+
   bool get _impliesTypes {
     return _capabilities.any((ec.ReflectCapability capability) {
       return capability is ec.TypeCapability;
+    });
+  }
+
+  /// Returns true iff `_capabilities` contain any of the types of capability
+  /// which are concerned with instance method invocation. The purpose of
+  /// this predicate is to determine whether it is required to have class
+  /// mirrors for instance invocation support. Note that it does not include
+  /// `newInstance..` capabilities nor `staticInvoke..` capabilities, because
+  /// they are simply absent if there are no class mirrors (so we cannot call
+  /// them and then get a "cannot do this without a class mirror" error in the
+  /// implementation).
+  bool get _impliesInstanceInvoke {
+    return _capabilities.any((ec.ReflectCapability capability) {
+      return capability is ec.InstanceInvokeCapability ||
+          capability is ec.InstanceInvokeMetaCapability;
     });
   }
 
@@ -3166,9 +3341,9 @@ class TransformerImplementation {
             transitive: constant.fields["transitive"].toBoolValue());
       case "_CorrespondingSetterQuantifyCapability":
         return ec.correspondingSetterQuantifyCapability;
-      case "AdmitSubtypeCapability":
+      case "_AdmitSubtypeCapability":
         // TODO(eernst) implement: support for the admit subtype feature.
-        throw unimplementedError("AdmitSubtypeCapability not yet supported!");
+        throw unimplementedError("_AdmitSubtypeCapability not yet supported!");
       default:
         // We have checked that [element] is declared in 'capability.dart',
         // and it is a compile time error to use a non-const value in the
@@ -3228,7 +3403,7 @@ class TransformerImplementation {
       NodeList<Expression> arguments = superInvocation.argumentList.arguments;
       return new _Capabilities(arguments.map(capabilityOfExpression).toList());
     }
-    assert(superInvocation.constructorName == "fromList");
+    assert(superInvocation.constructorName.name == "fromList");
 
     // Subcase: `super.fromList(const <..>[..])`.
     NodeList<Expression> arguments = superInvocation.argumentList.arguments;
@@ -3781,7 +3956,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
   // [VariableDeclaration] nested in a [VariableDeclarationList] nested in a
   // [TopLevelVariableDeclaration], which stores the metadata.
   //
-  // Finally, the `element.node` of a libraryElement is the identifier that
+  // Finally, the `element.node` of a [LibraryElement] is the identifier that
   // forms its name. The parent's parent is the actual Library declaration that
   // contains the metadata.
   if (element is FieldElement ||
@@ -3790,8 +3965,18 @@ String _extractMetadataCode(Element element, Resolver resolver,
     node = node.parent.parent;
   }
 
-  AnnotatedNode annotatedNode = node;
-  for (Annotation annotationNode in annotatedNode.metadata) {
+  List<Object> metadata;
+  // We can obtain the `metadata` via two methods in unrelated classes.
+  if (node is AnnotatedNode) {
+    // One source is an annotated node, which includes most declarations
+    // and directives.
+    metadata = node.metadata;
+  } else {
+    // Insist that the only other source is a formal parameter.
+    FormalParameter formalParameter = node;
+    metadata = formalParameter.metadata;
+  }
+  for (Annotation annotationNode in metadata) {
     // TODO(sigurdm) diagnostic: Emit a warning/error if the element is not
     // in the global public scope of the library.
     if (annotationNode.element == null) {
@@ -3829,7 +4014,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
         name = "${annotationName.identifier}";
         prefix = importCollector._getPrefix(annotationNode.element.library);
       } else {
-        unimplementedError(
+        throw unimplementedError(
             "This kind of metadata not yet supported: $annotationNode");
       }
       String constructor = (annotationNode.constructorName == null)

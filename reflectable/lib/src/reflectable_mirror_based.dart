@@ -588,28 +588,35 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
         _reflectable,
         _libraryMirror,
         memberName,
-        declaration.metadata,
+        declaration?.metadata,
         _getMetadataLibraryFactory(_libraryMirror))) {
-      throw new NoSuchInvokeCapabilityError(
+      throw reflectableNoSuchMethodError(
           _receiver, memberName, positionalArguments, namedArguments);
     }
-    return _libraryMirror
-        .invoke(new Symbol(memberName), positionalArguments, namedArguments)
-        .reflectee;
+    try {
+      return _libraryMirror
+          .invoke(new Symbol(memberName), positionalArguments, namedArguments)
+          .reflectee;
+    } on NoSuchMethodError catch (_) {
+      throw reflectableNoSuchMethodError(
+          _receiver, memberName, positionalArguments, namedArguments);
+    }
   }
 
   @override
   Object invokeGetter(String getterName) {
-    if (!reflectableSupportsTopLevelInvoke(
-        _reflectable,
-        _libraryMirror,
-        getterName,
-        _libraryMirror.declarations[new Symbol(getterName)].metadata,
-        null)) {
-      throw new NoSuchInvokeCapabilityError(_receiver, getterName, [], null);
+    dm.DeclarationMirror declaration =
+        _libraryMirror.declarations[new Symbol(getterName)];
+    if (!reflectableSupportsTopLevelInvoke(_reflectable, _libraryMirror,
+        getterName, declaration?.metadata, null)) {
+      throw reflectableNoSuchGetterError(_receiver, getterName, [], null);
     }
     Symbol getterNameSymbol = new Symbol(getterName);
-    return _libraryMirror.getField(getterNameSymbol).reflectee;
+    try {
+      return _libraryMirror.getField(getterNameSymbol).reflectee;
+    } on NoSuchMethodError catch (_) {
+      throw reflectableNoSuchGetterError(_receiver, getterName, [], null);
+    }
   }
 
   @override
@@ -622,12 +629,15 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
         _reflectable,
         _libraryMirror,
         setterName,
-        declaration.metadata,
+        declaration?.metadata,
         _getMetadataLibraryFactory(_libraryMirror))) {
-      throw new NoSuchInvokeCapabilityError(
-          _receiver, setterName, [value], null);
+      throw reflectableNoSuchSetterError(_receiver, setterName, [value], null);
     }
-    return _libraryMirror.setField(getterNameSymbol, value).reflectee;
+    try {
+      return _libraryMirror.setField(getterNameSymbol, value).reflectee;
+    } on NoSuchMethodError catch (_) {
+      throw reflectableNoSuchSetterError(_receiver, setterName, [], null);
+    }
   }
 
   @override
@@ -741,11 +751,16 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
     if (reflectableSupportsInstanceInvoke(
         _reflectable, memberName, _instanceMirror.type)) {
       Symbol memberNameSymbol = new Symbol(memberName);
-      return _instanceMirror
-          .invoke(memberNameSymbol, positionalArguments, namedArguments)
-          .reflectee;
+      try {
+        return _instanceMirror
+            .invoke(memberNameSymbol, positionalArguments, namedArguments)
+            .reflectee;
+      } on NoSuchMethodError catch (_) {
+        throw reflectableNoSuchMethodError(
+            _receiver, memberName, positionalArguments, namedArguments);
+      }
     }
-    throw new NoSuchInvokeCapabilityError(
+    throw reflectableNoSuchMethodError(
         _receiver, memberName, positionalArguments, namedArguments);
   }
 
@@ -754,9 +769,13 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
     if (reflectableSupportsInstanceInvoke(
         _reflectable, fieldName, _instanceMirror.type)) {
       Symbol fieldNameSymbol = new Symbol(fieldName);
-      return _instanceMirror.getField(fieldNameSymbol).reflectee;
+      try {
+        return _instanceMirror.getField(fieldNameSymbol).reflectee;
+      } on NoSuchMethodError catch (_) {
+        throw reflectableNoSuchGetterError(_receiver, fieldName, [], null);
+      }
     }
-    throw new NoSuchInvokeCapabilityError(_receiver, fieldName, [], null);
+    throw reflectableNoSuchGetterError(_receiver, fieldName, [], null);
   }
 
   @override
@@ -765,9 +784,14 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
         _reflectable, setterName, _instanceMirror.type)) {
       String getterName = _setterToGetter(setterName);
       Symbol getterNameSymbol = new Symbol(getterName);
-      return _instanceMirror.setField(getterNameSymbol, value).reflectee;
+      try {
+        return _instanceMirror.setField(getterNameSymbol, value).reflectee;
+      } on NoSuchMethodError catch (_) {
+        throw reflectableNoSuchSetterError(
+            _receiver, setterName, [value], null);
+      }
     }
-    throw new NoSuchInvokeCapabilityError(_receiver, setterName, [value], null);
+    throw reflectableNoSuchSetterError(_receiver, setterName, [value], null);
   }
 
   @override
@@ -999,13 +1023,19 @@ class ClassMirrorImpl extends _TypeMirrorImpl
       [Map<Symbol, dynamic> namedArguments]) {
     if (!reflectableSupportsConstructorInvoke(
         _reflectable, _classMirror, constructorName)) {
-      throw new NoSuchInvokeCapabilityError(
+      throw reflectableNoSuchMethodError(
           _classMirror, constructorName, positionalArguments, namedArguments);
     }
     Symbol constructorNameSymbol = new Symbol(constructorName);
-    return _classMirror
-        .newInstance(constructorNameSymbol, positionalArguments, namedArguments)
-        .reflectee;
+    try {
+      return _classMirror
+          .newInstance(
+              constructorNameSymbol, positionalArguments, namedArguments)
+          .reflectee;
+    } on NoSuchMethodError catch (_) {
+      throw reflectableNoSuchMethodError(
+          _classMirror, constructorName, positionalArguments, namedArguments);
+    }
   }
 
   @override
@@ -1017,11 +1047,16 @@ class ClassMirrorImpl extends _TypeMirrorImpl
     if (reflectableSupportsStaticInvoke(_reflectable, memberName, metadata,
         _getMetadataClassFactory(_classMirror))) {
       Symbol memberNameSymbol = new Symbol(memberName);
-      return _classMirror
-          .invoke(memberNameSymbol, positionalArguments, namedArguments)
-          .reflectee;
+      try {
+        return _classMirror
+            .invoke(memberNameSymbol, positionalArguments, namedArguments)
+            .reflectee;
+      } on NoSuchMethodError catch (_) {
+        throw reflectableNoSuchMethodError(
+            _receiver, memberName, positionalArguments, namedArguments);
+      }
     }
-    throw new NoSuchInvokeCapabilityError(
+    throw reflectableNoSuchMethodError(
         _receiver, memberName, positionalArguments, namedArguments);
   }
 
@@ -1030,9 +1065,13 @@ class ClassMirrorImpl extends _TypeMirrorImpl
     if (reflectableSupportsStaticInvoke(_reflectable, name,
         _classMirror.declarations[new Symbol(name)]?.metadata)) {
       Symbol getterNameSymbol = new Symbol(name);
-      return _classMirror.getField(getterNameSymbol).reflectee;
+      try {
+        return _classMirror.getField(getterNameSymbol).reflectee;
+      } on NoSuchMethodError catch (_) {
+        throw reflectableNoSuchGetterError(_receiver, name, [], null);
+      }
     }
-    throw new NoSuchInvokeCapabilityError(_receiver, name, [], null);
+    throw reflectableNoSuchGetterError(_receiver, name, [], null);
   }
 
   @override
@@ -1043,9 +1082,13 @@ class ClassMirrorImpl extends _TypeMirrorImpl
         _reflectable, name, metadata, _getMetadataClassFactory(_classMirror))) {
       String getterName = _setterToGetter(name);
       Symbol getterNameSymbol = new Symbol(getterName);
-      return _classMirror.setField(getterNameSymbol, value).reflectee;
+      try {
+        return _classMirror.setField(getterNameSymbol, value).reflectee;
+      } on NoSuchMethodError catch (_) {
+        throw reflectableNoSuchSetterError(_receiver, name, [value], null);
+      }
     }
-    throw new NoSuchInvokeCapabilityError(_receiver, name, [value], null);
+    throw reflectableNoSuchSetterError(_receiver, name, [value], null);
   }
 
   @override
@@ -1073,9 +1116,13 @@ class ClassMirrorImpl extends _TypeMirrorImpl
     Symbol memberNameSymbol = new Symbol(memberName);
     Function helper(Object o) {
       dm.InstanceMirror receiverMirror = dm.reflect(o);
-      dm.InstanceMirror memberMirror =
-          receiverMirror.getField(memberNameSymbol);
-      return memberMirror.reflectee;
+      try {
+        dm.InstanceMirror memberMirror =
+            receiverMirror.getField(memberNameSymbol);
+        return memberMirror.reflectee;
+      } on NoSuchMethodError catch (_) {
+        throw reflectableNoSuchGetterError(_receiver, memberName, [], null);
+      }
     }
     return helper;
   }
@@ -1447,6 +1494,10 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
 
   @override
   bool isAssignableTo(rm.TypeMirror other) {
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `isAssignableTo` without `typeRelationsCapability`.");
+    }
     return _typeMirror.isAssignableTo(unwrapTypeMirror(other));
   }
 
@@ -1455,6 +1506,10 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
 
   @override
   bool isSubtypeOf(rm.TypeMirror other) {
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `isSubtypeOf` without `typeRelationsCapability`.");
+    }
     return _typeMirror.isSubtypeOf(unwrapTypeMirror(other));
   }
 
@@ -1610,10 +1665,20 @@ class _VoidMirrorImpl implements rm.TypeMirror {
   @override
   TypeMirror get originalDeclaration => this;
 
+  // TODO(eernst) implement: We ought to check for the capability, which
+  // means that we should have a `_reflector`, and then we should throw a
+  // [NoSuchCapabilityError] if there is no `typeRelationsCapability`.
+  // However, it seems near-benign to omit the check and give the correct
+  // reply in all cases.
   @override
   bool isSubtypeOf(TypeMirror other) =>
       other.hasReflectedType && other.reflectedType == dynamic;
 
+  // TODO(eernst) implement: We ought to check for the capability, which
+  // means that we should have a `_reflector`, and then we should throw a
+  // [NoSuchCapabilityError] if there is no `typeRelationsCapability`.
+  // However, it seems near-benign to omit the check and give the correct
+  // reply in all cases.
   @override
   bool isAssignableTo(TypeMirror other) => isSubtypeOf(other);
 

@@ -125,3 +125,16 @@ abstract class Reflectable extends implementation.ReflectableImpl
 
 /// Returns true if the transformed version is running, false otherwise.
 bool get isTransformed => implementation.isTransformed;
+
+/// Used to describe the invocation when a no-such-method situation arises.
+/// We need to use this variant of the standard `Invocation` class, because
+/// we have no access to the [Symbol] for the `memberName`.
+abstract class StringInvocation {
+  String get memberName;
+  List get positionalArguments;
+  Map<Symbol, dynamic> get namedArguments;
+  bool get isMethod;
+  bool get isGetter;
+  bool get isSetter;
+  bool get isAccessor => isGetter || isSetter;
+}

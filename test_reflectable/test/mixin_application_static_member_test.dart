@@ -9,7 +9,8 @@ import "package:unittest/unittest.dart";
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(invokingCapability, declarationsCapability, libraryCapability);
+      : super(invokingCapability, declarationsCapability, libraryCapability,
+            typeRelationsCapability);
 }
 
 @Reflector()
@@ -23,8 +24,7 @@ class A {
 }
 
 @Reflector()
-class B extends A with M {
-}
+class B extends A with M {}
 
 Matcher throwsANoSuchCapabilityException =
     throwsA(const isInstanceOf<NoSuchCapabilityError>());

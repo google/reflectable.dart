@@ -96,6 +96,16 @@ class ReflectorData {
   /// return value.
   final Map<String, _InvokerOfSetter> setters;
 
+  /// List of parameter list shapes. Each entry is a list containing data on
+  /// one shape of parameter list. The same shape is shared, e.g., by methods
+  /// like `void foo(int a, [String b])` and `List bar(x, [y])` because the
+  /// shape is independent of type annotations and names, and only describes
+  /// the number and kind of parameters. It is represented as a list containing
+  /// three elements: An `int` specifying the number of positional parameters,
+  /// an `int` describing the number of optional positional parameters, and a
+  /// `List` containing `Symbol` values for the names of named parameters.
+  final List<List> parameterListShapes;
+
   Map<Type, ClassMirror> _typeToClassMirrorCache;
 
   ReflectorData(
@@ -106,7 +116,8 @@ class ReflectorData {
       this.supportedClassCount,
       this.getters,
       this.setters,
-      this.libraryMirrors);
+      this.libraryMirrors,
+      this.parameterListShapes);
 
   /// Returns a class-mirror for the given [type].
   ///
@@ -184,33 +195,62 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   _InstanceMirrorImpl(this.reflectee, this._reflector) {
     _type = _data.classMirrorForInstance(reflectee);
     if (_type == null) {
-      // We may not have a `TypeCapability`, in which case we need to check
-      // whether there is support based on the stored types.
+      // If there is no `TypeCapability` and also no `InstanceInvokeCapability`
+      // then can do almost nothing. Nevertheless, we can still offer a
+      // mirror; at least, it can return its [reflectee], which is also the
+      // only thing the given capabilities will justify. However, we should
+      // not offer an instance mirror (even such a very weak one) for a
+      // completely unsupported class, so we still insist that the runtime
+      // type of the reflectee is known.
       if (!_data.types.contains(reflectee.runtimeType)) {
-        // No chance: this is an instance of an unsupported type.
         throw new NoSuchCapabilityError(
             "Reflecting on un-marked type '${reflectee.runtimeType}'");
       }
     }
   }
 
-  ClassMirror _type;
+  bool get _supportsType => _reflector._hasTypeCapability;
 
-  ClassMirror get type => _type;
+  ClassMirrorBase _type;
+
+  ClassMirror get type {
+    if (!_supportsType) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `type` without `TypeCapability`.");
+    }
+    return _type;
+  }
 
   Object invoke(String methodName, List<Object> positionalArguments,
       [Map<Symbol, Object> namedArguments]) {
-    Function methodTearer = _data.getters[methodName];
-    if (methodTearer != null) {
-      return Function.apply(
-          methodTearer(reflectee), positionalArguments, namedArguments);
+    void fail() {
+      // It could be a method that exists but the given capabilities rejected
+      // it, it could be a method that does not exist at all, or it could be
+      // a non-conforming argument list shape. In all cases we consider the
+      // invocation to be a capability violation.
+      throw reflectableNoSuchMethodError(
+          reflectee, methodName, positionalArguments, namedArguments);
     }
-    // TODO(eernst) clarify: Do we want to invoke noSuchMethod here when
-    // we have a capability matching the name, but there really is no such
-    // method. And how will we construct the symbol for the Invoke instance
-    // we pass to `noSuchMethod`?
-    throw new NoSuchInvokeCapabilityError(
-        reflectee, methodName, positionalArguments, namedArguments);
+
+    // Obtain the tear-off closure for the method that we will invoke.
+    Function methodTearer = _data.getters[methodName];
+    // If not found then we definitely have a no-such-method event.
+    if (methodTearer == null) fail();
+    // The tear-off exists, but we may still call it incorrectly, so we need
+    // to check its parameter list shape.
+    if (_type == null) {
+      // There is no information about the parameter list shape, so we should
+      // never generate code that brings us to this location: Every kind of
+      // invocation capability should force at least some level of class mirror
+      // support.
+      throw unreachableError("Attempt to `invoke` without class mirrors");
+    }
+    if (!_type._checkInstanceParameterListShape(
+        methodName, positionalArguments.length, namedArguments?.keys)) {
+      fail();
+    }
+    return Function.apply(
+        methodTearer(reflectee), positionalArguments, namedArguments);
   }
 
   bool get hasReflectee => true;
@@ -225,18 +265,47 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
 
   @override
   delegate(Invocation invocation) {
+    fail() {
+      StringInvocationKind kind = invocation.isGetter
+          ? StringInvocationKind.getter
+          : (invocation.isSetter
+              ? StringInvocationKind.setter
+              : StringInvocationKind.method);
+      // TODO(eernst) implement: Pass the de-minified `memberName` string, if
+      // get support for translating arbitrary symbols to strings (the caller
+      // could use `new Symbol(..)` so we cannot assume that this symbol is
+      // known).
+      throw reflectableNoSuchInvokableError(
+          reflectee,
+          "${invocation.memberName}",
+          invocation.positionalArguments,
+          invocation.namedArguments,
+          kind);
+    }
+
     if (memberSymbolMap == null) {
       throw new NoSuchCapabilityError(
           "Attempt to `delegate` without `delegateCapability");
     }
     String memberName = memberSymbolMap[invocation.memberName];
     if (memberName == null) {
-      // TODO(eernst) clarify: We might have no capability, or no such method.
-      return noSuchMethod(invocation);
+      // No such `memberName`. It could be a method that exists but the given
+      // capabilities rejected it, or it could be a method that does not exist
+      // at all. In both cases we consider the invocation to be a capability
+      // violation.
+      fail();
     }
     if (invocation.isGetter) {
+      if (invocation.positionalArguments.isNotEmpty ||
+          invocation.namedArguments.isNotEmpty) {
+        fail();
+      }
       return this.invokeGetter(memberName);
     } else if (invocation.isSetter) {
+      if (invocation.positionalArguments.length != 1 ||
+          invocation.namedArguments.isNotEmpty) {
+        fail();
+      }
       return this.invokeSetter(memberName, invocation.positionalArguments[0]);
     } else {
       return this.invoke(memberName, invocation.positionalArguments,
@@ -250,7 +319,11 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
     if (getter != null) {
       return getter(reflectee);
     }
-    throw new NoSuchInvokeCapabilityError(reflectee, getterName, [], {});
+    // No such `getter`. It could be a method that exists but the given
+    // capabilities rejected it, or it could be a method that does not exist
+    // at all. In both cases we consider the invocation to be a capability
+    // violation.
+    throw reflectableNoSuchMethodError(reflectee, getterName, [], {});
   }
 
   @override
@@ -261,7 +334,11 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
     if (setter != null) {
       return setter(reflectee, value);
     }
-    throw new NoSuchInvokeCapabilityError(reflectee, setterName, [value], {});
+    // No such `setter`. It could be a method that exists but the given
+    // capabilities rejected it, or it could be a method that does not exist
+    // at all. In both cases we consider the invocation to be a capability
+    // violation.
+    throw reflectableNoSuchMethodError(reflectee, setterName, [value], {});
   }
 }
 
@@ -328,6 +405,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   final Map<String, _StaticGetter> _getters;
   final Map<String, _StaticSetter> _setters;
   final Map<String, Function> _constructors;
+  final Map<String, int> _parameterListShapes;
 
   ClassMirrorBase(
       this.simpleName,
@@ -345,7 +423,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       this._ownerIndex,
       this._mixinIndex,
       this._superinterfaceIndices,
-      this._metadata);
+      this._metadata,
+      this._parameterListShapes);
 
   bool get isAbstract => (_descriptor & constants.abstractAttribute != 0);
 
@@ -415,33 +494,126 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     return _data.typeMirrors[_mixinIndex];
   }
 
+  bool _checkParameterListShape(
+      String methodName,
+      int numberOfPositionalArguments,
+      Iterable<Symbol> namedArgumentNames,
+      Map<String, MethodMirror> methodMirrorProvider) {
+    bool checkUsingShape(List parameterListShape,
+        int numberOfPositionalArguments, Iterable<Symbol> namedArgumentNames) {
+      assert(parameterListShape.length == 3);
+      int numberOfPositionalParameters = parameterListShape[0];
+      int numberOfOptionalPositionalParameters = parameterListShape[1];
+      List<Symbol> namesOfNamedParameters = parameterListShape[2];
+      // The length of the positional part of the argument list must be
+      // within bounds.
+      if (numberOfPositionalArguments <
+              numberOfPositionalParameters -
+                  numberOfOptionalPositionalParameters ||
+          numberOfPositionalArguments > numberOfPositionalParameters) {
+        return false;
+      }
+      // It is always OK to make a call without named arguments.
+      if (namedArgumentNames == null || namedArgumentNames.isEmpty) return true;
+      // We do have named arguments; check that they are all known.
+      return namesOfNamedParameters == null
+          ? false
+          : namedArgumentNames
+              .every((Symbol name) => namesOfNamedParameters.contains(name));
+    }
+
+    if (_parameterListShapes != null) {
+      // We have the ready-to-use parameter list shape information; we check
+      // for that first because it is preferred over the slower computation
+      // based on declaration mirror traversal. Check whether [methodName]
+      // is known.
+      int shapeIndex = _parameterListShapes[methodName];
+      // If [methodName] is unknown then there exists such a method in the
+      // program, but not in the receiver class/instance; hence, the check has
+      // failed.
+      if (shapeIndex == null) return false;
+      // There exists a method of the specified name, now check whether the
+      // invocation received an argument list that it supports. It is a bug if
+      // `shapeIndex` is out of range for `parameterListShapes`, but if that
+      // happens the built-in range check will catch it.
+      return checkUsingShape(_data.parameterListShapes[shapeIndex],
+          numberOfPositionalArguments, namedArgumentNames);
+    } else {
+      // Without ready-to-use parameter list shape information we must compute
+      // the shape from declaration mirrors.
+      MethodMirror methodMirror = methodMirrorProvider[methodName];
+      // If [methodName] is unknown to the [methodProvider] then there exists
+      // such a method in the program, but not in the receiver class/instance;
+      // hence, the check has failed.
+      if (methodMirror == null) return false;
+      if (methodMirror is ImplicitGetterMirrorImpl) {
+        return numberOfPositionalArguments == 0 &&
+            (namedArgumentNames == null || namedArgumentNames.isEmpty);
+      } else if (methodMirror is ImplicitSetterMirrorImpl) {
+        return numberOfPositionalArguments == 1 &&
+            (namedArgumentNames == null || namedArgumentNames.isEmpty);
+      }
+      // We do not expect other kinds of method mirrors than the accessors and
+      // `MethodMirrorImpl`
+      MethodMirrorImpl methodMirrorImpl = methodMirror;
+      // Let the [methodMirrorImpl] check it based on declaration mirrors.
+      return methodMirrorImpl._argumentListShapeIsAppropriate(
+          numberOfPositionalArguments, namedArgumentNames);
+    }
+  }
+
+  bool _checkInstanceParameterListShape(String methodName,
+      int numberOfPositionalArguments, Iterable<Symbol> namedArgumentNames) {
+    return _checkParameterListShape(methodName, numberOfPositionalArguments,
+        namedArgumentNames, instanceMembers);
+  }
+
+  bool _checkStaticParameterListShape(String methodName,
+      int numberOfPositionalArguments, Iterable<Symbol> namedArgumentNames) {
+    return _checkParameterListShape(methodName, numberOfPositionalArguments,
+        namedArgumentNames, staticMembers);
+  }
+
   Object newInstance(String constructorName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
-    Function constructor = _constructors["$constructorName"];
-    if (constructor == null) {
-      throw new NoSuchCapabilityError(
-          "Attempt to invoke constructor $constructorName without capability.");
+    void fail() {
+      Type type = hasReflectedType ? reflectedType : null;
+      throw reflectableNoSuchMethodError(
+          type, constructorName, positionalArguments, namedArguments);
     }
-    return Function.apply(constructor, positionalArguments, namedArguments);
+
+    Function constructor = _constructors["$constructorName"];
+    if (constructor == null) fail();
+    try {
+      Function.apply(constructor(false), positionalArguments, namedArguments);
+    } on NoSuchMethodError {
+      fail();
+    }
+    return Function.apply(
+        constructor(true), positionalArguments, namedArguments);
   }
 
   @override
   Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
-    _StaticGetter getter = _getters[memberName];
-    if (getter == null) {
-      throw new NoSuchInvokeCapabilityError(
+    fail() {
+      throw reflectableNoSuchMethodError(
           reflectedType, memberName, positionalArguments, namedArguments);
     }
-    return Function.apply(
-        _getters[memberName](), positionalArguments, namedArguments);
+    _StaticGetter getter = _getters[memberName];
+    if (getter == null) fail();
+    if (!_checkStaticParameterListShape(
+        memberName, positionalArguments.length, namedArguments?.keys)) {
+      fail();
+    }
+    return Function.apply(getter(), positionalArguments, namedArguments);
   }
 
   @override
   Object invokeGetter(String getterName) {
     _StaticGetter getter = _getters[getterName];
     if (getter == null) {
-      throw new NoSuchInvokeCapabilityError(reflectedType, getterName, [], {});
+      throw reflectableNoSuchMethodError(reflectedType, getterName, [], {});
     }
     return getter();
   }
@@ -452,7 +624,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
         _isSetterName(name) ? name : _getterNameToSetterName(name);
     _StaticSetter setter = _setters[setterName];
     if (setter == null) {
-      throw new NoSuchInvokeCapabilityError(
+      throw reflectableNoSuchMethodError(
           reflectedType, setterName, [value], {});
     }
     return setter(value);
@@ -487,30 +659,63 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   Function invoker(String memberName) {
     Function getter = _data.getters[memberName];
     if (getter == null) {
-      throw new NoSuchInvokeCapabilityError(reflectedType, memberName, [], {});
+      throw reflectableNoSuchMethodError(reflectedType, memberName, [], {});
     }
     return getter;
   }
 
-  // TODO(eernst) feature: Implement `isAssignableTo`.
   @override
   bool isAssignableTo(TypeMirror other) =>
-      throw unimplementedError("isAssignableTo");
+      isSubtypeOf(other) || other.isSubtypeOf(this);
 
-  // TODO(eernst) feature: Implement `isSubTypeOf`.
   @override
-  bool isSubtypeOf(TypeMirror other) => throw unimplementedError("isSubtypeOf");
+  bool isSubtypeOf(TypeMirror other) {
+    if (_superclassIndex == NO_CAPABILITY_INDEX) {
+      // There is no way to get access to `superinterfaces` if we do not have
+      // access to `superclass`, and vice versa.
+      throw new NoSuchCapabilityError(
+          "Attempt to get `isSubtypeOf` without `typeRelationsCapability`.");
+    }
+    return _isSubtypeOf(other);
+  }
+
+  bool _isSubtypeOf(TypeMirror other) {
+    // Decision reached due to reflexivity?
+    if (other == this) return true;
+    // Decision reached because hierarchy has been exhausted?
+    if (superclass == null) return false;
+    // Decision reached because it is the mixin which is a supertype.
+    if (mixin != this) {
+      // This class was created by application of `mixin` to a superclass.
+      if (other == mixin) return true;
+    }
+    // Recursively test hierarchy over `superclass`.
+    if (superclass._isSubtypeOf(other)) return true;
+    // Recursively test hierarchy over remaining direct supertypes.
+    return superinterfaces
+        .any((ClassMirrorBase classMirror) => classMirror._isSubtypeOf(other));
+  }
 
   bool isSubclassOf(ClassMirror other) {
+    if (_superclassIndex == NO_CAPABILITY_INDEX) {
+      // There is no way to get access to `superinterfaces` if we do not have
+      // access to `superclass`, and vice versa.
+      throw new NoSuchCapabilityError(
+          "Attempt to get `isSubclassOf` without `typeRelationsCapability`.");
+    }
+    return _isSubclassOf(other);
+  }
+
+  bool _isSubclassOf(ClassMirror other) {
     if (other is FunctionTypeMirror) {
       return false;
     }
-    if (other is ClassMirror && other.reflectedType == reflectedType) {
+    if (other is ClassMirror && this == other) {
       return true;
     } else if (superclass == null) {
       return false;
     } else {
-      return superclass.isSubclassOf(other);
+      return superclass._isSubclassOf(other);
     }
   }
 
@@ -524,12 +729,12 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     return _data.libraryMirrors[_ownerIndex];
   }
 
-  ClassMirror get superclass {
-    if (_superclassIndex == null) return null; // Superclass of [Object].
+  ClassMirrorBase get superclass {
     if (_superclassIndex == NO_CAPABILITY_INDEX) {
       throw new NoSuchCapabilityError(
           "Requesting mirror on un-marked class, superclass of '$simpleName'");
     }
+    if (_superclassIndex == null) return null; // Superclass of [Object].
     return _data.typeMirrors[_superclassIndex];
   }
 
@@ -540,10 +745,6 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   @override
   Type get bestEffortReflectedType =>
       hasReflectedType ? reflectedType : dynamicReflectedType;
-
-  // Because we take care to only ever create one instance for each
-  // type/reflector-combination we can rely on the default `hashCode` and `==`
-  // operations for all concrete subclasses of this class.
 }
 
 class NonGenericClassMirrorImpl extends ClassMirrorBase {
@@ -563,7 +764,8 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
       int ownerIndex,
       int mixinIndex,
       List<int> superinterfaceIndices,
-      List<Object> metadata)
+      List<Object> metadata,
+      Map<String, int> parameterListShapes)
       : super(
             simpleName,
             qualifiedName,
@@ -580,7 +782,8 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
             ownerIndex,
             mixinIndex,
             superinterfaceIndices,
-            metadata);
+            metadata,
+            parameterListShapes);
 
   @override
   List<TypeMirror> get typeArguments => <TypeMirror>[];
@@ -605,6 +808,10 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
 
   @override
   Type get dynamicReflectedType => reflectedType;
+
+  // Because we take care to only ever create one instance for each
+  // type/reflector-combination we can rely on the default `hashCode` and `==`
+  // operations.
 
   String toString() => "NonGenericClassMirrorImpl($qualifiedName)";
 }
@@ -645,6 +852,7 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
       int mixinIndex,
       List<int> superinterfaceIndices,
       List<Object> metadata,
+      Map<String, int> parameterListShapes,
       this._isGenericRuntimeTypeOf,
       this._typeVariableIndices,
       this._dynamicReflectedTypeIndex)
@@ -664,7 +872,8 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
             ownerIndex,
             mixinIndex,
             superinterfaceIndices,
-            metadata);
+            metadata,
+            parameterListShapes);
 
   @override
   List<TypeMirror> get typeArguments => <TypeMirror>[];
@@ -710,6 +919,10 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
   @override
   Type get dynamicReflectedType => _data.types[_dynamicReflectedTypeIndex];
 
+  // Because we take care to only ever create one instance for each
+  // type/reflector-combination we can rely on the default `hashCode` and `==`
+  // operations.
+
   String toString() => "GenericClassMirrorImpl($qualifiedName)";
 }
 
@@ -734,6 +947,7 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
       int mixinIndex,
       List<int> superinterfaceIndices,
       List<Object> metadata,
+      Map<String, int> parameterListShapes,
       this._originalDeclaration,
       this._reflectedType)
       : super(
@@ -752,7 +966,8 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
             ownerIndex,
             mixinIndex,
             superinterfaceIndices,
-            metadata);
+            metadata,
+            parameterListShapes);
 
   // TODO(sigurdm) implement: Implement typeArguments.
   @override
@@ -788,6 +1003,46 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
   @override
   Type get dynamicReflectedType => _originalDeclaration.dynamicReflectedType;
 
+  bool operator ==(other) {
+    // The same object twice: Were obtained in the same context, must model the
+    // same type, are equal.
+    if (identical(other, this)) return true;
+    // Other than the reflexive case, we only consider my own class.
+    if (other is InstantiatedGenericClassMirrorImpl) {
+      if (originalDeclaration != other.originalDeclaration) return false;
+      if (_reflectedType != null && other._reflectedType != null) {
+        return _reflectedType == other._reflectedType;
+      } else {
+        // There is no `_reflectedType` for one, the other, or both, so at
+        // least one of class mirrors is existential (in the sense that we
+        // know that it stands for an instantiated generic class, but we
+        // have no way to obtain its actual type arguments). This means that
+        // they may or may not stand for the same type.
+        // TODO(eernst) clarify: What is the correct semantics actually here?
+        // We could return `false`, indicating that the equality is not known
+        // to hold (this is similar to what static analysis does for types:
+        // "the value of this expression may not be of type T" so it does not
+        // get type T in the subsequent analysis steps). We could also insist
+        // that both `true` and `false` must be precise, and "maybe" must give
+        // rise to an exception. We choose to return `false` because knowledge
+        // that two types are equal may be relied upon when doing something
+        // specific, whereas knowledge that two types are (maybe) unequal is
+        // much more likely to cause some strategy to be dropped and turning
+        // to the next possible strategy.
+        return false;
+      }
+    } else {
+      // This object is never equal to an instance which is not an
+      // [InstantiatedGenericClassMirrorImpl].
+      return false;
+    }
+  }
+
+  // Note that this will equip some instances with the same [hashCode] even
+  // though they are not equal according to `operator ==`, namely the ones
+  // where both have no `_reflectedType`. This does not compromise correctness.
+  int get hashCode => originalDeclaration.hashCode ^ _reflectedType.hashCode;
+
   String toString() => "InstantiatedGenericClassMirrorImpl($qualifiedName)";
 }
 
@@ -813,6 +1068,7 @@ InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
       genericClassMirror._mixinIndex,
       genericClassMirror._superinterfaceIndices,
       genericClassMirror._metadata,
+      genericClassMirror._parameterListShapes,
       genericClassMirror,
       reflectedType);
 }
@@ -863,7 +1119,7 @@ class TypeVariableMirrorImpl extends _DataCaching
       throw unimplementedError("isAssignableTo");
 
   @override
-  bool isSubtypeOf(TypeMirror other) => throw unimplementedError("isSubtypeOf");
+  bool isSubtypeOf(TypeMirror other) => upperBound.isSubtypeOf(other);
 
   @override
   TypeMirror get originalDeclaration => this;
@@ -917,9 +1173,6 @@ class TypeVariableMirrorImpl extends _DataCaching
 }
 
 class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
-  LibraryMirrorImpl(this.simpleName, this.uri, this._reflector,
-      this._declarationIndices, this.getters, this.setters, this._metadata);
-
   final ReflectableImpl _reflector;
 
   /// A list of the indices in [ReflectorData.memberMirrors] of the
@@ -940,6 +1193,18 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
 
   final Map<String, _StaticGetter> getters;
   final Map<String, _StaticSetter> setters;
+
+  final Map<String, int> _parameterListShapes;
+
+  LibraryMirrorImpl(
+      this.simpleName,
+      this.uri,
+      this._reflector,
+      this._declarationIndices,
+      this.getters,
+      this.setters,
+      this._metadata,
+      this._parameterListShapes);
 
   Map<String, DeclarationMirror> _declarations;
 
@@ -973,13 +1238,81 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
     return _declarations;
   }
 
+  bool _checkParameterListShape(String memberName,
+      int numberOfPositionalArguments, Iterable<Symbol> namedArgumentNames) {
+    bool checkUsingShape(List parameterListShape,
+        int numberOfPositionalArguments, Iterable<Symbol> namedArgumentNames) {
+      assert(parameterListShape.length == 3);
+      int numberOfPositionalParameters = parameterListShape[0];
+      int numberOfOptionalPositionalParameters = parameterListShape[1];
+      List<Symbol> namesOfNamedParameters = parameterListShape[2];
+      if (numberOfPositionalArguments <
+              numberOfPositionalParameters -
+                  numberOfOptionalPositionalParameters ||
+          numberOfPositionalArguments > numberOfPositionalParameters) {
+        return false;
+      }
+      if (namedArgumentNames == null) return true;
+      return namedArgumentNames
+          .every((Symbol name) => namesOfNamedParameters.contains(name));
+    }
+
+    if (_parameterListShapes != null) {
+      // We have the ready-to-use parameter list shape information; we check
+      // for that first because it is preferred over the slower computation
+      // based on declaration mirror traversal. Check whether [methodName]
+      // is known.
+      int shapeIndex = _parameterListShapes[memberName];
+      // If [methodName] is unknown then there exists such a method in the
+      // program, but not in the receiver class/instance; hence, the check has
+      // failed.
+      if (shapeIndex == null) return false;
+      // There exists a method of the specified name, now check whether the
+      // invocation received an argument list that it supports. It is a bug if
+      // `shapeIndex` is out of range for `parameterListShapes`, but if that
+      // happens the built-in range check will catch it.
+      return checkUsingShape(_data.parameterListShapes[shapeIndex],
+          numberOfPositionalArguments, namedArgumentNames);
+    } else {
+      // Without ready-to-use parameter list shape information we must compute
+      // the shape from declaration mirrors.
+      DeclarationMirror declarationMirror = declarations[memberName];
+      // If [memberName] is unknown then there exists such a member in the
+      // program, but it is not in this library; the member may also be a
+      // non-method; in these cases the the check has failed.
+      if (declarationMirror == null || declarationMirror is! MethodMirror) {
+        return false;
+      }
+      MethodMirror methodMirror = declarationMirror;
+      if (methodMirror is ImplicitGetterMirrorImpl) {
+        return numberOfPositionalArguments == 0 &&
+            (namedArgumentNames == null || namedArgumentNames.isEmpty);
+      } else if (methodMirror is ImplicitSetterMirrorImpl) {
+        return numberOfPositionalArguments == 1 &&
+            (namedArgumentNames == null || namedArgumentNames.isEmpty);
+      }
+      // We do not expect other kinds of method mirrors than the accessors and
+      // `MethodMirrorImpl`
+      MethodMirrorImpl methodMirrorImpl = methodMirror;
+      // Let the [methodMirrorImpl] check it based on declaration mirrors.
+      return methodMirrorImpl._argumentListShapeIsAppropriate(
+          numberOfPositionalArguments, namedArgumentNames);
+    }
+  }
+
   @override
   Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
-    _StaticGetter getter = getters[memberName];
-    if (getter == null) {
-      throw new NoSuchInvokeCapabilityError(
+    fail() {
+      throw reflectableNoSuchMethodError(
           null, memberName, positionalArguments, namedArguments);
+    }
+
+    _StaticGetter getter = getters[memberName];
+    if (getter == null) fail();
+    if (!_checkParameterListShape(
+        memberName, positionalArguments.length, namedArguments?.keys)) {
+      fail();
     }
     return Function.apply(getter(), positionalArguments, namedArguments);
   }
@@ -988,7 +1321,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   Object invokeGetter(String getterName) {
     _StaticGetter getter = getters[getterName];
     if (getter == null) {
-      throw new NoSuchInvokeCapabilityError(null, getterName, [], {});
+      throw reflectableNoSuchMethodError(null, getterName, [], {});
     }
     return getter();
   }
@@ -999,7 +1332,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
         _isSetterName(name) ? name : _getterNameToSetterName(name);
     _StaticSetter setter = setters[setterName];
     if (setter == null) {
-      throw new NoSuchInvokeCapabilityError(null, setterName, [value], {});
+      throw reflectableNoSuchMethodError(null, setterName, [value], {});
     }
     return setter(value);
   }
@@ -1078,8 +1411,8 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// The [Reflectable] associated with this mirror.
   final ReflectableImpl _reflector;
 
-  /// A cache of the metadata of the mirrored method. The empty list means
-  /// no metadata, null means that [_reflector] does not have
+  /// The metadata of the mirrored method. The empty list means no metadata,
+  /// null means that [_reflector] does not have
   /// [metadataCapability].
   final List<Object> _metadata;
 
@@ -1240,6 +1573,75 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   @override
   String get source => null;
 
+  void _setupParameterListInfo() {
+    _numberOfPositionalParameters = 0;
+    _numberOfOptionalPositionalParameters = 0;
+    _namesOfNamedParameters = new Set<Symbol>();
+    for (ParameterMirrorImpl parameterMirror in parameters) {
+      if (parameterMirror.isNamed) {
+        _namesOfNamedParameters.add(parameterMirror._nameSymbol);
+      } else {
+        _numberOfPositionalParameters++;
+        if (parameterMirror.isOptional) {
+          _numberOfOptionalPositionalParameters++;
+        }
+      }
+    }
+  }
+
+  /// Returns the number of positional parameters of this method; computed
+  /// from the given parameter mirrors, then cached.
+  int get numberOfPositionalParameters {
+    if (_numberOfPositionalParameters != null) {
+      return _numberOfPositionalParameters;
+    }
+    _setupParameterListInfo();
+    return _numberOfPositionalParameters;
+  }
+
+  /// Cache for the number of positional parameters of this method; `null`
+  /// means not yet cached.
+  int _numberOfPositionalParameters;
+
+  /// Returns the number of optional positional parameters of this method;
+  /// computed from the given parameter mirrors, then cached.
+  int get numberOfOptionalPositionalParameters {
+    if (_numberOfOptionalPositionalParameters != null) {
+      return _numberOfOptionalPositionalParameters;
+    }
+    _setupParameterListInfo();
+    return _numberOfOptionalPositionalParameters;
+  }
+
+  /// Cache for the number of optional positional parameters of this method;
+  /// `null` means not yet cached.
+  int _numberOfOptionalPositionalParameters;
+
+  /// Returns the [Set] of [Symbol]s used for named parameters of this method;
+  /// computed based on the given parameter mirrors, then cached.
+  Set<Symbol> get namesOfNamedParameters {
+    if (_namesOfNamedParameters != null) return _namesOfNamedParameters;
+    _setupParameterListInfo();
+    return _namesOfNamedParameters;
+  }
+
+  /// Cache for the set of symbols used for named parameters for this method;
+  /// `null` means not yet cached.
+  Set<Symbol> _namesOfNamedParameters;
+
+  bool _argumentListShapeIsAppropriate(
+      int numberOfPositionalArguments, Iterable<Symbol> namedArgumentNames) {
+    if (numberOfPositionalArguments <
+            numberOfPositionalParameters -
+                numberOfOptionalPositionalParameters ||
+        numberOfPositionalArguments > numberOfPositionalParameters) {
+      return false;
+    }
+    if (namedArgumentNames == null) return true;
+    return namedArgumentNames
+        .every((Symbol name) => namesOfNamedParameters.contains(name));
+  }
+
   @override
   String toString() => "MethodMirrorImpl($qualifiedName)";
 }
@@ -1394,6 +1796,7 @@ class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
           _variableMirror._reflectedTypeIndex,
           _variableMirror._dynamicReflectedTypeIndex,
           <Object>[],
+          null,
           null)
     ];
   }
@@ -1555,6 +1958,9 @@ class ParameterMirrorImpl extends VariableMirrorBase
   @override
   final defaultValue;
 
+  /// Symbol for the name of this parameter, if named; otherwise null.
+  final Symbol _nameSymbol;
+
   @override
   bool get isStatic => (_descriptor & constants.staticAttribute != 0);
 
@@ -1583,7 +1989,8 @@ class ParameterMirrorImpl extends VariableMirrorBase
       int reflectedTypeIndex,
       int dynamicReflectedTypeIndex,
       List<Object> metadata,
-      this.defaultValue)
+      this.defaultValue,
+      this._nameSymbol)
       : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
             reflectedTypeIndex, dynamicReflectedTypeIndex, metadata);
 
@@ -1630,9 +2037,19 @@ class DynamicMirrorImpl implements TypeMirror {
   @override
   SourceLocation get location => null;
 
+  // TODO(eernst) implement: We ought to check for the capability, which
+  // means that we should have a `_reflector`, and then we should throw a
+  // [NoSuchCapabilityError] if there is no `typeRelationsCapability`.
+  // However, it seems near-benign to omit the check and give the correct
+  // reply in all cases.
   @override
   bool isSubtypeOf(TypeMirror other) => true;
 
+  // TODO(eernst) implement: We ought to check for the capability, which
+  // means that we should have a `_reflector`, and then we should throw a
+  // [NoSuchCapabilityError] if there is no `typeRelationsCapability`.
+  // However, it seems near-benign to omit the check and give the correct
+  // reply in all cases.
   @override
   bool isAssignableTo(TypeMirror other) => true;
 
@@ -1683,10 +2100,20 @@ class VoidMirrorImpl implements TypeMirror {
   @override
   SourceLocation get location => null;
 
+  // TODO(eernst) implement: We ought to check for the capability, which
+  // means that we should have a `supportsTypeRelations` bool, and then we
+  // should throw a [NoSuchCapabilityError] if it is not true.
+  // However, it seems near-benign to omit the check and give the correct
+  // reply in all cases.
   // TODO(eernst) clarify: check the spec!
   @override
   bool isSubtypeOf(TypeMirror other) => other is DynamicMirrorImpl;
 
+  // TODO(eernst) implement: We ought to check for the capability, which
+  // means that we should have a `supportsTypeRelations` bool, and then we
+  // should throw a [NoSuchCapabilityError] if it is not true.
+  // However, it seems near-benign to omit the check and give the correct
+  // reply in all cases.
   // TODO(eernst) clarify: check the spec!
   @override
   bool isAssignableTo(TypeMirror other) => other is DynamicMirrorImpl;

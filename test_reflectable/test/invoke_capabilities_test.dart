@@ -27,8 +27,7 @@ class StaticInvokeReflector extends r.Reflectable {
 }
 
 class InvokingFrReflector extends r.Reflectable {
-  const InvokingFrReflector()
-      : super(const c.InvokingCapability(methodRegExp));
+  const InvokingFrReflector() : super(const c.InvokingCapability(methodRegExp));
 }
 
 class InstanceInvokeFrReflector extends r.Reflectable {
@@ -86,9 +85,11 @@ class B {
   static void set setFoo(int x) {
     field = x;
   }
+
   static void set setFoobar(int x) {
     field = x;
   }
+
   static int field = 46;
   static void reset() {
     field = 46;
@@ -105,9 +106,11 @@ class BImplementer implements A {
   void set setFoo(int x) {
     field = x + 100;
   }
+
   void set setFoobar(int x) {
     field = x + 100;
   }
+
   int field = 146;
   void reset() {
     field = 146;
@@ -151,12 +154,13 @@ void testInstance(r.Reflectable mirrorSystem, A reflectee,
     expect(instanceMirror.invokeSetter("setFoobar=", 100), 100);
     expect(reflectee.field, 100);
     expect(() => instanceMirror.invoke("nonExisting", []),
-        broad ? throwsNoSuchMethodError : throwsNoSuchCapabilityError);
+        throwsNoSuchCapabilityError);
   });
 }
 
 void testStatic(r.Reflectable mirrorSystem, Type reflectee,
-    void classResetter(), int classGetter(), {bool broad: false}) {
+    void classResetter(), int classGetter(),
+    {bool broad: false}) {
   test("Static invocation: ${description[mirrorSystem.runtimeType]}", () {
     classResetter();
     r.ClassMirror classMirror = mirrorSystem.reflectType(reflectee);
@@ -189,7 +193,7 @@ void testStatic(r.Reflectable mirrorSystem, Type reflectee,
     expect(classMirror.invokeSetter("setFoobar=", 100), 100);
     expect(classGetter(), 100);
     expect(() => classMirror.invoke("nonExisting", []),
-        broad ? throwsNoSuchMethodError : throwsNoSuchCapabilityError);
+        throwsNoSuchCapabilityError);
   });
 }
 

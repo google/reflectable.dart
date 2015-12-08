@@ -521,23 +521,42 @@ class _NoSuchCapabilityErrorImpl extends Error
   toString() => _message;
 }
 
+enum StringInvocationKind { method, getter, setter }
+
+class _StringInvocation extends StringInvocation {
+  final String memberName;
+  final List positionalArguments;
+  final Map<Symbol, dynamic> namedArguments;
+  final StringInvocationKind kind;
+  bool isMethod;
+  bool isGetter;
+  bool isSetter;
+
+  _StringInvocation(this.memberName, this.positionalArguments,
+      this.namedArguments, this.kind);
+}
+
 /// Thrown when a method is invoked via a reflectable, but the reflectable
 /// doesn't have the capabilities to invoke it.
-///
-/// TODO(eernst) implement: The intended semantics is to throw this only when
-/// the required capabilities are not present, but there currently are cases
-/// where it might be thrown if the method doesn't exist (issue #30).
-class NoSuchInvokeCapabilityError extends Error
+class ReflectableNoSuchMethodError extends Error
     implements NoSuchCapabilityError {
-  Object receiver;
-  String memberName;
-  List positionalArguments;
-  Map<Symbol, dynamic> namedArguments;
-  List existingArgumentNames;
+  final Object receiver;
+  final String memberName;
+  final List positionalArguments;
+  final Map<Symbol, dynamic> namedArguments;
+  final List existingArgumentNames;
+  final StringInvocationKind kind;
 
-  NoSuchInvokeCapabilityError(this.receiver, this.memberName,
-      this.positionalArguments, this.namedArguments,
-      [this.existingArgumentNames = null]);
+  ReflectableNoSuchMethodError(
+      this.receiver,
+      this.memberName,
+      this.positionalArguments,
+      this.namedArguments,
+      this.kind,
+      this.existingArgumentNames);
+
+  get invocation => new _StringInvocation(
+      memberName, positionalArguments, namedArguments, kind);
 
   toString() {
     String description =
@@ -552,4 +571,51 @@ class NoSuchInvokeCapabilityError extends Error
     }
     return description;
   }
+}
+
+dynamic reflectableNoSuchInvokableError(
+    Object receiver,
+    String memberName,
+    List positionalArguments,
+    Map<Symbol, dynamic> namedArguments,
+    StringInvocationKind kind,
+    [List existingArgumentNames = null]) {
+  throw new ReflectableNoSuchMethodError(receiver, memberName,
+      positionalArguments, namedArguments, kind, existingArgumentNames);
+}
+
+dynamic reflectableNoSuchMethodError(Object receiver, String memberName,
+    List positionalArguments, Map<Symbol, dynamic> namedArguments,
+    [List existingArgumentNames = null]) {
+  throw new ReflectableNoSuchMethodError(
+      receiver,
+      memberName,
+      positionalArguments,
+      namedArguments,
+      StringInvocationKind.method,
+      existingArgumentNames);
+}
+
+dynamic reflectableNoSuchGetterError(Object receiver, String memberName,
+    List positionalArguments, Map<Symbol, dynamic> namedArguments,
+    [List existingArgumentNames = null]) {
+  throw new ReflectableNoSuchMethodError(
+      receiver,
+      memberName,
+      positionalArguments,
+      namedArguments,
+      StringInvocationKind.getter,
+      existingArgumentNames);
+}
+
+dynamic reflectableNoSuchSetterError(Object receiver, String memberName,
+    List positionalArguments, Map<Symbol, dynamic> namedArguments,
+    [List existingArgumentNames = null]) {
+  throw new ReflectableNoSuchMethodError(
+      receiver,
+      memberName,
+      positionalArguments,
+      namedArguments,
+      StringInvocationKind.setter,
+      existingArgumentNames);
 }

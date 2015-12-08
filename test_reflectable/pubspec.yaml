@@ -72,6 +72,8 @@ transformers:
       - test/dynamic_reflected_type_test.dart
       - test/delegate_test.dart
       - test/generic_mixin_test.dart
+      - test/subtype_test.dart
+      - test/no_such_method_test.dart
     formatted: true
 - $dart2js:
     $include: []

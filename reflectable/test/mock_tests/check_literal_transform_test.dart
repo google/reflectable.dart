@@ -79,11 +79,12 @@ final _data = {
             -1,
             {},
             {},
-            {r"": () => new prefix0.A()},
+            {r"": (b) => () => b ? new prefix0.A() : null},
             -1,
             0,
             const <int>[],
-            null)
+            null,
+            {})
       ],
       <m.DeclarationMirror>[
         new r.MethodMirrorImpl(r"", 64, 0, -1, 0, 0, const <int>[],
@@ -94,7 +95,10 @@ final _data = {
       1,
       {},
       {},
-      null)
+      null,
+      [
+        const [0, 0, null]
+      ])
 };
 
 final _memberSymbolMap = null;
