@@ -74,6 +74,7 @@ transformers:
       - test/generic_mixin_test.dart
       - test/subtype_test.dart
       - test/no_such_method_test.dart
+      - test/inherited_variable_test.dart
     formatted: true
 - $dart2js:
     $include: []
