@@ -44,6 +44,7 @@
 library reflectable.capability;
 
 import 'reflectable.dart';
+import 'src/incompleteness.dart';
 
 /// A [ReflectCapability] of a reflectable mirror specifies the kinds of
 /// reflective operations that are supported for instances of the
@@ -559,8 +560,26 @@ class ReflectableNoSuchMethodError extends Error
       memberName, positionalArguments, namedArguments, kind);
 
   toString() {
-    String description =
-        "NoSuchCapabilityError: no capability to invoke '$memberName'\n"
+    String kindName;
+    switch (kind) {
+      case StringInvocationKind.getter:
+        kindName = "getter";
+        break;
+      case StringInvocationKind.setter:
+        kindName = "setter";
+        break;
+      case StringInvocationKind.method:
+        kindName = "method";
+        break;
+      default:
+        // Reaching this point is a bug, so we ought to do this:
+        // `throw unreachableError("Unexpected StringInvocationKind value");`
+        // but it is a bit harsh to raise an exception because of a slightly
+        // imprecise diagnostic message, so we use a default instead.
+        kindName = "";
+    }
+    String description = "NoSuchCapabilityError: no capability to invoke the "
+        "$kindName '$memberName'\n"
         "Receiver: $receiver\n"
         "Arguments: $positionalArguments\n";
     if (namedArguments != null) {

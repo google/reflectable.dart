@@ -557,7 +557,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       // `MethodMirrorImpl`
       MethodMirrorImpl methodMirrorImpl = methodMirror;
       // Let the [methodMirrorImpl] check it based on declaration mirrors.
-      return methodMirrorImpl._argumentListShapeIsAppropriate(
+      return methodMirrorImpl._isArgumentListShapeAppropriate(
           numberOfPositionalArguments, namedArgumentNames);
     }
   }
@@ -1295,7 +1295,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
       // `MethodMirrorImpl`
       MethodMirrorImpl methodMirrorImpl = methodMirror;
       // Let the [methodMirrorImpl] check it based on declaration mirrors.
-      return methodMirrorImpl._argumentListShapeIsAppropriate(
+      return methodMirrorImpl._isArgumentListShapeAppropriate(
           numberOfPositionalArguments, namedArgumentNames);
     }
   }
@@ -1592,10 +1592,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// Returns the number of positional parameters of this method; computed
   /// from the given parameter mirrors, then cached.
   int get numberOfPositionalParameters {
-    if (_numberOfPositionalParameters != null) {
-      return _numberOfPositionalParameters;
-    }
-    _setupParameterListInfo();
+    if (_numberOfPositionalParameters == null) _setupParameterListInfo();
     return _numberOfPositionalParameters;
   }
 
@@ -1606,10 +1603,9 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// Returns the number of optional positional parameters of this method;
   /// computed from the given parameter mirrors, then cached.
   int get numberOfOptionalPositionalParameters {
-    if (_numberOfOptionalPositionalParameters != null) {
-      return _numberOfOptionalPositionalParameters;
+    if (_numberOfOptionalPositionalParameters == null) {
+      _setupParameterListInfo();
     }
-    _setupParameterListInfo();
     return _numberOfOptionalPositionalParameters;
   }
 
@@ -1620,8 +1616,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// Returns the [Set] of [Symbol]s used for named parameters of this method;
   /// computed based on the given parameter mirrors, then cached.
   Set<Symbol> get namesOfNamedParameters {
-    if (_namesOfNamedParameters != null) return _namesOfNamedParameters;
-    _setupParameterListInfo();
+    if (_namesOfNamedParameters == null) _setupParameterListInfo();
     return _namesOfNamedParameters;
   }
 
@@ -1629,7 +1624,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// `null` means not yet cached.
   Set<Symbol> _namesOfNamedParameters;
 
-  bool _argumentListShapeIsAppropriate(
+  bool _isArgumentListShapeAppropriate(
       int numberOfPositionalArguments, Iterable<Symbol> namedArgumentNames) {
     if (numberOfPositionalArguments <
             numberOfPositionalParameters -

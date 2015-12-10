@@ -161,7 +161,7 @@ void main() {
   test("Can't reflect unnanotated", () {
     expect(instanceReflector.canReflect(new C()), false);
     expect(instanceReflector.canReflectType(C), false);
-    expect(() => instanceReflector.reflect(new C()),
-        throwsNoSuchCapabilityError);
+    expect(
+        () => instanceReflector.reflect(new C()), throwsNoSuchCapabilityError);
   });
 }
