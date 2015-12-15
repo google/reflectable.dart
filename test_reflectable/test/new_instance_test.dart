@@ -81,7 +81,8 @@ void performTests(String message, Reflectable reflector) {
   });
 }
 
-final throwsNoCapability = throwsA(const isInstanceOf<NoSuchCapabilityError>());
+final throwsReflectableNoMethod =
+    throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
   performTests('', reflector);
@@ -93,6 +94,7 @@ main() {
   });
   test('newInstance named constructor, no metadata, rejected', () {
     ClassMirror classMirror = metaReflector.reflectType(A);
-    expect(() => classMirror.newInstance("noMeta", [0]), throwsNoCapability);
+    expect(() => classMirror.newInstance("noMeta", [0]),
+        throwsReflectableNoMethod);
   });
 }

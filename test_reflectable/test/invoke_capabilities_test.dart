@@ -117,8 +117,11 @@ class BImplementer implements A {
   }
 }
 
-Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
-Matcher isNoSuchCapabilityError = new isInstanceOf<c.NoSuchCapabilityError>();
+Matcher throwsNoCapability =
+    throwsA(new isInstanceOf<c.NoSuchCapabilityError>());
+
+Matcher throwsReflectableNoMethod =
+    throwsA(new isInstanceOf<c.ReflectableNoSuchMethodError>());
 
 void testInstance(r.Reflectable mirrorSystem, A reflectee,
     {bool broad: false}) {
@@ -130,7 +133,7 @@ void testInstance(r.Reflectable mirrorSystem, A reflectee,
     } else {
       expect(() {
         instanceMirror.invoke("foo", []);
-      }, throwsNoSuchCapabilityError);
+      }, throwsReflectableNoMethod);
     }
     expect(instanceMirror.invoke("foobar", []), 43);
     if (broad) {
@@ -138,7 +141,7 @@ void testInstance(r.Reflectable mirrorSystem, A reflectee,
     } else {
       expect(() {
         instanceMirror.invokeGetter("getFoo");
-      }, throwsNoSuchCapabilityError);
+      }, throwsReflectableNoMethod);
     }
     expect(instanceMirror.invokeGetter("getFoobar"), 45);
     expect(reflectee.field, 46);
@@ -148,13 +151,13 @@ void testInstance(r.Reflectable mirrorSystem, A reflectee,
     } else {
       expect(() {
         instanceMirror.invokeSetter("setFoo=", 100);
-      }, throwsNoSuchCapabilityError);
+      }, throwsReflectableNoMethod);
       expect(reflectee.field, 46);
     }
     expect(instanceMirror.invokeSetter("setFoobar=", 100), 100);
     expect(reflectee.field, 100);
     expect(() => instanceMirror.invoke("nonExisting", []),
-        throwsNoSuchCapabilityError);
+        throwsReflectableNoMethod);
   });
 }
 
@@ -169,7 +172,7 @@ void testStatic(r.Reflectable mirrorSystem, Type reflectee,
     } else {
       expect(() {
         classMirror.invoke("foo", []);
-      }, throwsNoSuchCapabilityError);
+      }, throwsReflectableNoMethod);
     }
     expect(classMirror.invoke("foobar", []), 43);
     if (broad) {
@@ -177,7 +180,7 @@ void testStatic(r.Reflectable mirrorSystem, Type reflectee,
     } else {
       expect(() {
         classMirror.invokeGetter("getFoo");
-      }, throwsNoSuchCapabilityError);
+      }, throwsReflectableNoMethod);
     }
     expect(classMirror.invokeGetter("getFoobar"), 45);
     expect(B.field, 46);
@@ -187,13 +190,13 @@ void testStatic(r.Reflectable mirrorSystem, Type reflectee,
     } else {
       expect(() {
         classMirror.invokeSetter("setFoo=", 100);
-      }, throwsNoSuchCapabilityError);
+      }, throwsReflectableNoMethod);
       expect(classGetter(), 46);
     }
     expect(classMirror.invokeSetter("setFoobar=", 100), 100);
     expect(classGetter(), 100);
-    expect(() => classMirror.invoke("nonExisting", []),
-        throwsNoSuchCapabilityError);
+    expect(
+        () => classMirror.invoke("nonExisting", []), throwsReflectableNoMethod);
   });
 }
 
@@ -201,17 +204,17 @@ void testReflect(r.Reflectable mirrorSystem, B reflectee) {
   test("Can't reflect instance of subclass of annotated class", () {
     expect(() {
       mirrorSystem.reflect(new BSubclass());
-    }, throwsNoSuchCapabilityError);
+    }, throwsNoCapability);
   });
   test("Can't reflect instance of subtype of annotated class", () {
     expect(() {
       mirrorSystem.reflect(new BImplementer());
-    }, throwsNoSuchCapabilityError);
+    }, throwsNoCapability);
   });
   test("Can't reflect instance of unnanotated class", () {
     expect(() {
       mirrorSystem.reflect(new Object());
-    }, throwsNoSuchCapabilityError);
+    }, throwsNoCapability);
   });
 }
 

@@ -76,8 +76,8 @@ class B {
   }
 }
 
-Matcher throwsNoCapability =
-    throwsA(const isInstanceOf<NoSuchCapabilityError>());
+Matcher throwsReflectableNoMethod =
+    throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
   A a = new A();
@@ -88,27 +88,28 @@ main() {
   test('Delegate method, no arguments', () {
     expect(b.arg0(), a.arg0());
     expect(bName.arg0(), a.arg0());
-    expect(() => bMeta.arg0(), throwsNoCapability);
+    expect(() => bMeta.arg0(), throwsReflectableNoMethod);
   });
   test('Delegate method, positional arguments', () {
     expect(b.arg1(42), a.arg1(42));
     expect(b.arg2to4(a, 43), a.arg2to4(a, 43));
     expect(b.arg2to4(a, 44, reflector), a.arg2to4(a, 44, reflector));
     expect(b.arg2to4(a, 45, reflector, 0), a.arg2to4(a, 45, reflector, 0));
-    expect(() => bName.arg1(46), throwsNoCapability);
-    expect(() => bName.arg2to4(a, 47), throwsNoCapability);
-    expect(() => bName.arg2to4(a, 48, reflector), throwsNoCapability);
-    expect(() => bName.arg2to4(a, 49, reflector, 0), throwsNoCapability);
+    expect(() => bName.arg1(46), throwsReflectableNoMethod);
+    expect(() => bName.arg2to4(a, 47), throwsReflectableNoMethod);
+    expect(() => bName.arg2to4(a, 48, reflector), throwsReflectableNoMethod);
+    expect(() => bName.arg2to4(a, 49, reflector, 0), throwsReflectableNoMethod);
     expect(bMeta.arg1(50), a.arg1(50));
-    expect(() => bMeta.arg2to4(a, 51), throwsNoCapability);
-    expect(() => bMeta.arg2to4(a, 52, reflector), throwsNoCapability);
-    expect(() => bMeta.arg2to4(a, 53, reflector, 0), throwsNoCapability);
+    expect(() => bMeta.arg2to4(a, 51), throwsReflectableNoMethod);
+    expect(() => bMeta.arg2to4(a, 52, reflector), throwsReflectableNoMethod);
+    expect(() => bMeta.arg2to4(a, 53, reflector, 0), throwsReflectableNoMethod);
   });
   test('Delegate method, positional and named arguments', () {
     expect(b.argNamed(54, b), a.argNamed(54, b));
     expect(b.argNamed(55, b, z: 3.1415926), a.argNamed(55, b, z: 3.1415926));
-    expect(() => bName.argNamed(56, b), throwsNoCapability);
-    expect(() => bName.argNamed(57, b, z: 3.1415926), throwsNoCapability);
+    expect(() => bName.argNamed(56, b), throwsReflectableNoMethod);
+    expect(
+        () => bName.argNamed(57, b, z: 3.1415926), throwsReflectableNoMethod);
     expect(bMeta.argNamed(58, b), a.argNamed(58, b));
     expect(
         bMeta.argNamed(59, b, z: 3.1415926), a.argNamed(59, b, z: 3.1415926));
@@ -119,13 +120,13 @@ main() {
     b[62] = 63;
     expect(b[62], 63);
     expect(a[62], 63);
-    expect(() => bName + 64, throwsNoCapability);
-    expect(() => bName[62], throwsNoCapability);
-    expect(() => bName[65] = 66, throwsNoCapability);
+    expect(() => bName + 64, throwsReflectableNoMethod);
+    expect(() => bName[62], throwsReflectableNoMethod);
+    expect(() => bName[65] = 66, throwsReflectableNoMethod);
     expect(a[65], 63);
-    expect(() => bMeta + 66, throwsNoCapability);
+    expect(() => bMeta + 66, throwsReflectableNoMethod);
     expect(bMeta[65], a[65]);
-    expect(() => bMeta[66] = 67, throwsNoCapability);
+    expect(() => bMeta[66] = 67, throwsReflectableNoMethod);
     expect(a[66], 63);
   });
   test('Delegate getter and setter', () {
@@ -134,7 +135,7 @@ main() {
     expect(b.getset, 61);
     expect(a.getset, 61);
     expect(bMeta.getset, a.getset);
-    expect(() => bMeta.getset = 62, throwsNoCapability);
+    expect(() => bMeta.getset = 62, throwsReflectableNoMethod);
     expect(a.getset, 61);
   });
 }

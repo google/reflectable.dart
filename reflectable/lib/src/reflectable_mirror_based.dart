@@ -965,14 +965,27 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
 
   @override
   delegate(Invocation invocation) {
-    if (!reflectableSupportsDelegate(_reflectable) ||
-        !reflectableSupportsInstanceInvoke(
-            _reflectable,
-            dm.MirrorSystem.getName(invocation.memberName),
-            _instanceMirror.type)) {
+    if (!reflectableSupportsDelegate(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to `delegate` without `delegateCapability`, or without "
-          "capability to invoke the given method.");
+          "Attempt to `delegate` without `delegateCapability`.");
+    }
+    if (!reflectableSupportsInstanceInvoke(_reflectable,
+        dm.MirrorSystem.getName(invocation.memberName), _instanceMirror.type)) {
+      StringInvocationKind kind;
+      if (invocation.isMethod) {
+        kind = StringInvocationKind.method;
+      } else if (invocation.isGetter) {
+        kind = StringInvocationKind.getter;
+      } else {
+        assert(invocation.isSetter);
+        kind = StringInvocationKind.setter;
+      }
+      throw reflectableNoSuchInvokableError(
+          _instanceMirror.reflectee,
+          dm.MirrorSystem.getName(invocation.memberName),
+          invocation.positionalArguments,
+          invocation.namedArguments,
+          kind);
     }
     return _instanceMirror.delegate(invocation);
   }

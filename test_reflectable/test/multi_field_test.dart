@@ -46,8 +46,8 @@ class B {
   static int notK, notL;
 }
 
-Matcher isNoSuchCapabilityError = new isInstanceOf<NoSuchCapabilityError>();
-Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
+final Matcher throwsReflectableNoMethod =
+    throwsA(new isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
   A theA = new A();
@@ -67,14 +67,12 @@ main() {
     expect(bInstanceMirror.invokeGetter("j"), 42 - (theB.i * (theB.j - 2)));
     expect(bClassMirror.invokeGetter("k"), 294);
     expect(bClassMirror.invokeGetter("l"), 343);
-    expect(() => bInstanceMirror.invokeGetter("notI"),
-        throwsNoSuchCapabilityError);
-    expect(() => bInstanceMirror.invokeGetter("notJ"),
-        throwsNoSuchCapabilityError);
     expect(
-        () => bClassMirror.invokeGetter("notK"), throwsNoSuchCapabilityError);
+        () => bInstanceMirror.invokeGetter("notI"), throwsReflectableNoMethod);
     expect(
-        () => bClassMirror.invokeGetter("notL"), throwsNoSuchCapabilityError);
+        () => bInstanceMirror.invokeGetter("notJ"), throwsReflectableNoMethod);
+    expect(() => bClassMirror.invokeGetter("notK"), throwsReflectableNoMethod);
+    expect(() => bClassMirror.invokeGetter("notL"), throwsReflectableNoMethod);
   });
 
   test('multiple declarations with one type annotation, write', () {

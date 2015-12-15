@@ -57,8 +57,11 @@ set setter(x) => p = x + 1;
 @Test()
 get getter => "10";
 
-final throwsANoSuchCapabilityError =
+final Matcher throwsNoCapability =
     throwsA(const isInstanceOf<NoSuchCapabilityError>());
+
+final Matcher throwsReflectableNoMethod =
+    throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
   test('invoke function, getter', () {
@@ -68,8 +71,8 @@ main() {
     expect(libraryMirror.invoke('myFunction', []), 'hello');
     expect(
         Function.apply(libraryMirror.invokeGetter('myFunction'), []), 'hello');
-    expect(() => libraryMirror.invokeGetter("getter"),
-        throwsANoSuchCapabilityError);
+    expect(
+        () => libraryMirror.invokeGetter("getter"), throwsReflectableNoMethod);
     MethodMirror myFunctionMirror = libraryMirror.declarations["myFunction"];
     expect(myFunctionMirror.owner, libraryMirror);
   });
@@ -100,11 +103,11 @@ main() {
     expect(setterMirror.owner, libraryMirror);
   });
   test("No libraryCapability", () {
-    expect(() => reflector3.reflectType(D).owner, throwsANoSuchCapabilityError);
+    expect(() => reflector3.reflectType(D).owner, throwsNoCapability);
     expect(
         () => reflector3
             .findLibrary("test_reflectable.test.libraries_test")
             .owner,
-        throwsANoSuchCapabilityError);
+        throwsNoCapability);
   });
 }

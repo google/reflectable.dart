@@ -28,8 +28,8 @@ class B extends A with M {
   static staticFoo(x) => x + 3;
 }
 
-Matcher throwsANoSuchCapabilityException =
-    throwsA(const isInstanceOf<NoSuchCapabilityError>());
+Matcher throwsReflectableNoMethod =
+    throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
   test("Mixin-application invoke", () {
@@ -37,7 +37,7 @@ main() {
     expect(typeMirror is ClassMirror, true);
     ClassMirror classMirror = typeMirror;
     expect(() => classMirror.superclass.invoke("staticFoo", [10]),
-        throwsANoSuchCapabilityException);
+        throwsReflectableNoMethod);
   });
   test("Mixin-application static member", () {
     TypeMirror typeMirror = const Reflector().reflectType(B);

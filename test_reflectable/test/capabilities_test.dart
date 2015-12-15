@@ -97,8 +97,10 @@ class BImplementer implements B {
   int includedByInvokeInBBase() => 48;
 }
 
-Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
-Matcher isNoSuchCapabilityError = new isInstanceOf<c.NoSuchCapabilityError>();
+Matcher throwsNoCapability =
+    throwsA(new isInstanceOf<c.NoSuchCapabilityError>());
+Matcher throwsReflectableNoMethod =
+    throwsA(new isInstanceOf<c.ReflectableNoSuchMethodError>());
 
 void testDynamic(B o, String description) {
   test("Dynamic invocation $description", () {
@@ -107,15 +109,15 @@ void testDynamic(B o, String description) {
     r.InstanceMirror instanceMirror = instanceReflector.reflect(o);
     expect(instanceMirror.invoke("foo", []), 42);
     expect(instanceMirror.invoke("boo", []), 47);
-    expect(() => instanceMirror.invoke("bar", []), throwsNoSuchCapabilityError);
+    expect(() => instanceMirror.invoke("bar", []), throwsReflectableNoMethod);
     expect(instanceMirror.invokeGetter("getFoo"), 44);
-    expect(() => instanceMirror.invokeGetter("getBar"),
-        throwsNoSuchCapabilityError);
+    expect(
+        () => instanceMirror.invokeGetter("getBar"), throwsReflectableNoMethod);
     expect(o.field, 46);
     expect(instanceMirror.invokeSetter("setFoo=", 100), 100);
     expect(o.field, 100);
     expect(() => instanceMirror.invokeSetter("setBar=", 100),
-        throwsNoSuchCapabilityError);
+        throwsReflectableNoMethod);
     expect(instanceMirror.invoke("includedByInvokeInBBase", []), 49);
   });
 }
@@ -124,15 +126,14 @@ void main() {
   test("Static invocation", () {
     r.ClassMirror classMirror = staticReflector.reflectType(A);
     expect(classMirror.invoke("foo", []), 42);
-    expect(() => classMirror.invoke("bar", []), throwsNoSuchCapabilityError);
+    expect(() => classMirror.invoke("bar", []), throwsReflectableNoMethod);
     expect(classMirror.invokeGetter("getFoo"), 44);
-    expect(
-        () => classMirror.invokeGetter("getBar"), throwsNoSuchCapabilityError);
+    expect(() => classMirror.invokeGetter("getBar"), throwsReflectableNoMethod);
     expect(A.field, 46);
     expect(classMirror.invokeSetter("setFoo=", 100), 100);
     expect(A.field, 100);
     expect(() => classMirror.invokeSetter("setBar=", 100),
-        throwsNoSuchCapabilityError);
+        throwsReflectableNoMethod);
     expect(classMirror.declarations.keys,
         ["foo", "setFoo=", "getFoo", "boo"].toSet());
     expect(classMirror.invoke("boo", []), 47);
@@ -147,21 +148,20 @@ void main() {
   test("Can't reflect subclass of annotated", () {
     expect(instanceReflector.canReflect(new BSubclass()), false);
     expect(instanceReflector.canReflectType(BSubclass), false);
-    expect(() => instanceReflector.reflect(new BSubclass()),
-        throwsNoSuchCapabilityError);
+    expect(
+        () => instanceReflector.reflect(new BSubclass()), throwsNoCapability);
   });
 
   test("Can't reflect subtype of annotated", () {
     expect(instanceReflector.canReflect(new BImplementer()), false);
     expect(instanceReflector.canReflectType(BImplementer), false);
     expect(() => instanceReflector.reflect(new BImplementer()),
-        throwsNoSuchCapabilityError);
+        throwsNoCapability);
   });
 
   test("Can't reflect unnanotated", () {
     expect(instanceReflector.canReflect(new C()), false);
     expect(instanceReflector.canReflectType(C), false);
-    expect(
-        () => instanceReflector.reflect(new C()), throwsNoSuchCapabilityError);
+    expect(() => instanceReflector.reflect(new C()), throwsNoCapability);
   });
 }

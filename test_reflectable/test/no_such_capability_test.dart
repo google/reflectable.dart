@@ -18,8 +18,8 @@ const myReflectable = const MyReflectable();
 @myReflectable
 class A {}
 
-Matcher throwsNoCapability =
-    throwsA(const isInstanceOf<r.NoSuchCapabilityError>());
+Matcher throwsReflectableNoMethod =
+    throwsA(const isInstanceOf<r.ReflectableNoSuchMethodError>());
 
 main() {
   test('reflect', () {
@@ -31,11 +31,12 @@ main() {
         throwsA(const isInstanceOf<r.ReflectableNoSuchMethodError>()));
     // When we have the capability we get the NoSuchMethodError, not
     // NoSuchCapabilityError.
-    expect(() => instanceMirror.invoke("nonExisting", []), throwsNoCapability);
+    expect(() => instanceMirror.invoke("nonExisting", []),
+        throwsReflectableNoMethod);
 
     // When we have the capability we get the NoSuchMethodError, not
     // NoSuchCapabilityError.
     expect(
-        () => classMirror.invoke("nonExisting", []), throwsNoCapability);
+        () => classMirror.invoke("nonExisting", []), throwsReflectableNoMethod);
   });
 }

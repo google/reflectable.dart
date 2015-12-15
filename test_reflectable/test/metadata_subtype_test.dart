@@ -52,11 +52,11 @@ class C {
   static int staticBar() => 24.0.ceil();
 
   // Does not have the required metadata.
-  static int staticBaz() => int.parse(" 2" "4 ".substring(1,2));
+  static int staticBaz() => int.parse(" 2" "4 ".substring(1, 2));
 }
 
-Matcher throwsANoSuchCapabilityException =
-    throwsA(const isInstanceOf<NoSuchCapabilityError>());
+final Matcher throwsReflectableNoMethod =
+    throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
   ClassMirror classMirror = myReflectable.reflectType(C);
@@ -73,11 +73,10 @@ main() {
   test("Proper subtypes as metadata, invocation", () {
     expect(instanceMirror.invoke('foo', []), 24);
     expect(instanceMirror.invoke('bar', []), 24);
-    expect(() => instanceMirror.invoke('baz', []),
-        throwsANoSuchCapabilityException);
+    expect(() => instanceMirror.invoke('baz', []), throwsReflectableNoMethod);
     expect(classMirror.invoke('staticFoo', []), 24);
     expect(classMirror.invoke('staticBar', []), 24);
-    expect(() => classMirror.invoke('staticBaz', []),
-        throwsANoSuchCapabilityException);
+    expect(
+        () => classMirror.invoke('staticBaz', []), throwsReflectableNoMethod);
   });
 }

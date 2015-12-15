@@ -54,7 +54,7 @@ class Foo3Base {
 }
 
 @myReflectable3
-class Foo3 extends Foo3Base{
+class Foo3 extends Foo3Base {
   var a = 1;
   @Bar()
   var b = 2;
@@ -63,6 +63,9 @@ class Foo3 extends Foo3Base{
   y(int n) => "Hello $n";
   var z;
 }
+
+final Matcher throwsReflectableNoMethod =
+    throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
   test("invokingCapability", () {
@@ -83,26 +86,22 @@ main() {
   test('InstanceInvokeCapability("x")', () {
     Foo2 foo = new Foo2();
     InstanceMirror fooMirror = myReflectable2.reflect(foo);
-    expect(() => fooMirror.invokeGetter("a"),
-        throwsA(const isInstanceOf<NoSuchCapabilityError>()));
-    expect(() => fooMirror.invokeSetter("a", 11),
-        throwsA(const isInstanceOf<NoSuchCapabilityError>()));
+    expect(() => fooMirror.invokeGetter("a"), throwsReflectableNoMethod);
+    expect(() => fooMirror.invokeSetter("a", 11), throwsReflectableNoMethod);
     expect(fooMirror.invokeGetter("b"), 2);
     expect(fooMirror.invokeSetter("b", 12), 12);
     expect(fooMirror.invokeGetter("b"), 12);
 
     expect(myReflectable2.reflect(new Foo2()).invoke("x", []), 42);
     expect(() => myReflectable2.reflect(new Foo2()).invoke("y", [3]),
-        throwsA(const isInstanceOf<NoSuchCapabilityError>()));
+        throwsReflectableNoMethod);
   });
 
   test("InstanceInvokeMetaCapability(Bar)", () {
     Foo3 foo = new Foo3();
     InstanceMirror fooMirror = myReflectable3.reflect(foo);
-    expect(() => fooMirror.invokeGetter("a"),
-        throwsA(const isInstanceOf<NoSuchCapabilityError>()));
-    expect(() => fooMirror.invokeSetter("a", 11),
-        throwsA(const isInstanceOf<NoSuchCapabilityError>()));
+    expect(() => fooMirror.invokeGetter("a"), throwsReflectableNoMethod);
+    expect(() => fooMirror.invokeSetter("a", 11), throwsReflectableNoMethod);
     expect(fooMirror.invokeGetter("b"), 2);
     expect(fooMirror.invokeSetter("b", 12), 12);
     expect(fooMirror.invokeGetter("b"), 12);
@@ -111,7 +110,7 @@ main() {
     expect(fooMirror.invokeGetter("c"), 13);
 
     expect(() => myReflectable3.reflect(new Foo3()).invoke("x", []),
-        throwsA(const isInstanceOf<NoSuchCapabilityError>()));
+        throwsReflectableNoMethod);
     expect(myReflectable3.reflect(new Foo3()).invoke("y", [3]), "Hello 3");
   });
 }

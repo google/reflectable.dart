@@ -134,8 +134,8 @@ void set fooBar(int newValue) {
   fooBarVariable = newValue;
 }
 
-Matcher throwsNoSuchCapabilityError = throwsA(isNoSuchCapabilityError);
-Matcher isNoSuchCapabilityError = new isInstanceOf<NoSuchCapabilityError>();
+Matcher throwsReflectableNoMethod =
+    throwsA(new isInstanceOf<ReflectableNoSuchMethodError>());
 
 void testInstance(Reflectable mirrorSystem, A reflectee, {bool broad: false}) {
   test("Instance invocation: ${description[mirrorSystem.runtimeType]}", () {
@@ -146,7 +146,7 @@ void testInstance(Reflectable mirrorSystem, A reflectee, {bool broad: false}) {
     } else {
       expect(() {
         instanceMirror.invokeGetter("foo");
-      }, throwsNoSuchCapabilityError);
+      }, throwsReflectableNoMethod);
     }
     expect(instanceMirror.invokeGetter("foobar"), 45);
     expect(reflectee.field, 46);
@@ -156,7 +156,7 @@ void testInstance(Reflectable mirrorSystem, A reflectee, {bool broad: false}) {
     } else {
       expect(() {
         instanceMirror.invokeSetter("foo=", 100);
-      }, throwsNoSuchCapabilityError);
+      }, throwsReflectableNoMethod);
       expect(reflectee.field, 46);
     }
     expect(instanceMirror.invokeSetter("foobar=", 100), 100);
@@ -175,7 +175,7 @@ void testStatic(Reflectable mirrorSystem, Type reflectee, void classResetter(),
     } else {
       expect(() {
         classMirror.invokeGetter("foo");
-      }, throwsNoSuchCapabilityError);
+      }, throwsReflectableNoMethod);
     }
     expect(classMirror.invokeGetter("foobar"), 45);
     expect(B.field, 46);
@@ -185,7 +185,7 @@ void testStatic(Reflectable mirrorSystem, Type reflectee, void classResetter(),
     } else {
       expect(() {
         classMirror.invokeSetter("foo=", 100);
-      }, throwsNoSuchCapabilityError);
+      }, throwsReflectableNoMethod);
       expect(classGetter(), 46);
     }
     expect(classMirror.invokeSetter("foobar=", 100), 100);
