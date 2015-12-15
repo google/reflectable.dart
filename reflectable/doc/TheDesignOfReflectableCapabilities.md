@@ -684,6 +684,43 @@ identical to the semantics of having the given *`reflector`* attached
 directly to each of those classes whose metadata includes an instance of
 type *`MetadataClass`* or a subtype thereof.
 
+### Included Members and No Such Method
+
+In general, coverage is based on a bottom-up semantics: With a given set
+of capabilities, the set of covered classes and the set of covered
+members inside them is computed as a query over the given program. This
+is a bottom-up semantics because it sets out from the empty coverage and
+then extends the coverage with concrete elements that do exist in your
+program.
+
+Consider a member in a covered class. If it does *not match* the coverage
+criteria (its name does not match a given regular expression and it does
+not have any of the requested types of metadata), it has the *same status
+as* a class name or member name for which there does *not exist* any
+declaration at all. When invoking methods with a given actual list `L` of
+arguments, the method is considered to be non-existing even if there is a
+declaration of a method with the specified name, if its formal parameter
+list does not admit an invocation using `L` as the actual arguments. For
+instance, even if `void foo(int i)` exists, it is a no-such-method event
+if we encounter the invocation `foo(0, bar: true)`.
+
+The crucial difference between this semantics and the semantics
+associated with no-such-method events for a native Dart invocation is
+that the method in question may be missing entirely, or it may be denied
+coverage, because the given capabilities are too strict. Hence, in order
+to enable programmers to handle the no-such-method situations properly
+for a reflectable invocation, we treat these situations differently from
+the way a native no-such-method situation is treated. Whereas a native
+invocation failure causes `noSuchMethod` to be invoked on the same
+receiver with an `Invocation` argument that describes the selector and
+the arguments, the reflectable invocation failure causes a
+`ReflectableNoSuchMethodError` to be thrown. This type of exception
+contains a `StringInvocation` which specifies the same information about
+the invocation as an `Invocation`, except that its `memberName` is a
+string rather than a symbol. Programmers may catch this invocation and
+react in whatever way is appropriate in the context, e.g., by calling
+their own variant of `noSuchMethod`.
+
 ### Completely or Partially Mirrored Instances?
 
 Traditionally, it is assumed that reflective access to an instance, a
@@ -770,17 +807,17 @@ privacy overriding mechanism.
 
 #### Considerations around Admitting Subtypes
 
-When a *`targetMetadata`* on the form *`apiSelection*`* is attached to a
-given class `C`, the effect is that reflection support is provided for
-the class `C` and for instances of `C`. However, that support can be
+When a *`targetMetadata`* on the form *`apiSelection`*&#42; is attached
+to a given class `C`, the effect is that reflection support is provided
+for the class `C` and for instances of `C`. However, that support can be
 extended to give partial reflection support for instances of subtypes of
 `C` in a way that does not incur further costs in terms of program size:
 A mirror generated for instances of class `C` can have a `reflectee` (the
 object being mirrored by that mirror) whose type is a proper subtype of
-`C`. A *`targetMetadata`* on the form `admitSubtype(`*`apiSelection*`*`)` is
-used to specify exactly this: It enables an instance mirror to hold a
-reflectee which is an instance of a proper subtype of the type that the
-mirror was generated for.
+`C`. A *`targetMetadata`* on the form
+`admitSubtype(`*`apiSelection`*&#42;`)` is used to specify exactly this:
+It enables an instance mirror to hold a reflectee which is an instance of
+a proper subtype of the type that the mirror was generated for.
 
 The question arises which instance mirror to use for a given object *O*
 with runtime type `D` which is given as an argument to the operation
