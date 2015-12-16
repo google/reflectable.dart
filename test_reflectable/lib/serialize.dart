@@ -9,7 +9,8 @@ import "package:reflectable/reflectable.dart";
 
 class Serializable extends Reflectable {
   const Serializable()
-      : super(instanceInvokeCapability, const NewInstanceCapability(r"^$"));
+      : super(instanceInvokeCapability, const NewInstanceCapability(r"^$"),
+            declarationsCapability);
 }
 
 /// Serializes instances of classes marked with a `Serializable`
@@ -36,11 +37,16 @@ class Serializer {
   /// represented by [classMirror].
   List<String> _getPublicFieldNames(ClassMirror classMirror) {
     Map<String, MethodMirror> instanceMembers = classMirror.instanceMembers;
-    return instanceMembers.values.where((MethodMirror method) {
-      return method.isGetter && method.isSynthetic &&
-          // Check that the setter also exists.
-          instanceMembers[method.simpleName + '='] != null && !method.isPrivate;
-    }).map((MethodMirror method) => method.simpleName).toList();
+    return instanceMembers.values
+        .where((MethodMirror method) {
+          return method.isGetter &&
+              method.isSynthetic &&
+              // Check that the setter also exists.
+              instanceMembers[method.simpleName + '='] != null &&
+              !method.isPrivate;
+        })
+        .map((MethodMirror method) => method.simpleName)
+        .toList();
   }
 
   Map<String, dynamic> serialize(Object o) {

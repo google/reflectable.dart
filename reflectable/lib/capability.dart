@@ -44,7 +44,6 @@
 library reflectable.capability;
 
 import 'reflectable.dart';
-import 'src/incompleteness.dart';
 
 /// A [ReflectCapability] of a reflectable mirror specifies the kinds of
 /// reflective operations that are supported for instances of the

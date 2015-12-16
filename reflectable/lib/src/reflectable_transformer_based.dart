@@ -342,6 +342,8 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   }
 }
 
+typedef MethodMirror MethodMirrorProvider(String methodName);
+
 abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   /// The reflector which represents the mirror system that this
   /// mirror belongs to.
@@ -458,6 +460,10 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   Map<String, MethodMirror> get instanceMembers {
     if (_instanceMembers == null) {
+      if (_instanceMemberIndices == null) {
+        throw new NoSuchCapabilityError(
+            "Requesting instanceMembers without `declarationsCapability`.");
+      }
       Map<String, MethodMirror> result = <String, MethodMirror>{};
       for (int instanceMemberIndex in _instanceMemberIndices) {
         DeclarationMirror declarationMirror =
@@ -474,6 +480,10 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   Map<String, MethodMirror> get staticMembers {
     if (_staticMembers == null) {
+      if (_staticMemberIndices == null) {
+        throw new NoSuchCapabilityError(
+            "Requesting instanceMembers without `declarationsCapability`.");
+      }
       Map<String, MethodMirror> result = <String, MethodMirror>{};
       for (int staticMemberIndex in _staticMemberIndices) {
         DeclarationMirror declarationMirror =
@@ -498,7 +508,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       String methodName,
       int numberOfPositionalArguments,
       Iterable<Symbol> namedArgumentNames,
-      Map<String, MethodMirror> methodMirrorProvider) {
+      MethodMirrorProvider methodMirrorProvider) {
     bool checkUsingShape(List parameterListShape,
         int numberOfPositionalArguments, Iterable<Symbol> namedArgumentNames) {
       assert(parameterListShape.length == 3);
@@ -541,7 +551,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     } else {
       // Without ready-to-use parameter list shape information we must compute
       // the shape from declaration mirrors.
-      MethodMirror methodMirror = methodMirrorProvider[methodName];
+      MethodMirror methodMirror = methodMirrorProvider(methodName);
       // If [methodName] is unknown to the [methodProvider] then there exists
       // such a method in the program, but not in the receiver class/instance;
       // hence, the check has failed.
@@ -565,13 +575,13 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   bool _checkInstanceParameterListShape(String methodName,
       int numberOfPositionalArguments, Iterable<Symbol> namedArgumentNames) {
     return _checkParameterListShape(methodName, numberOfPositionalArguments,
-        namedArgumentNames, instanceMembers);
+        namedArgumentNames, (String name) => instanceMembers[name]);
   }
 
   bool _checkStaticParameterListShape(String methodName,
       int numberOfPositionalArguments, Iterable<Symbol> namedArgumentNames) {
     return _checkParameterListShape(methodName, numberOfPositionalArguments,
-        namedArgumentNames, staticMembers);
+        namedArgumentNames, (String name) => staticMembers[name]);
   }
 
   Object newInstance(String constructorName, List positionalArguments,

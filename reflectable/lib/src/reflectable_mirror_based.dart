@@ -893,9 +893,9 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
       // but there may not be a method with the requested name.
       Symbol memberNameSymbol = new Symbol(memberName);
       rm.TypeMirror typeMirror = _rawType;
-      if (typeMirror is! rm.ClassMirror) throw fail();
-      rm.ClassMirror classMirror = typeMirror;
-      rm.MethodMirror declaration = classMirror.instanceMembers[memberName];
+      if (typeMirror is! ClassMirrorImpl) throw fail();
+      ClassMirrorImpl classMirror = typeMirror;
+      rm.MethodMirror declaration = classMirror._rawInstanceMembers[memberName];
       if (declaration == null) throw fail();
       MethodMirrorImpl methodMirror = declaration;
       if (declaration.isConstructor) throw fail();
@@ -1097,7 +1097,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   Map<String, rm.DeclarationMirror> get declarations {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get declarations without capability");
+          "Attempt to get declarations without `declarationsCapability`.");
     }
     return _rawDeclarations;
   }
@@ -1178,6 +1178,14 @@ class ClassMirrorImpl extends _TypeMirrorImpl
 
   @override
   Map<String, rm.MethodMirror> get instanceMembers {
+    if (!reflectableSupportsDeclarations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get instanceMembers without `declarationsCapability`.");
+    }
+    return _rawInstanceMembers;
+  }
+
+  Map<String, rm.DeclarationMirror> get _rawInstanceMembers {
     // TODO(sigurdm) implement: Only expose members that are allowed
     // by the capabilities of the reflectable.
     Map<Symbol, dm.MethodMirror> members = _classMirror.instanceMembers;
@@ -1188,6 +1196,14 @@ class ClassMirrorImpl extends _TypeMirrorImpl
 
   @override
   Map<String, rm.MethodMirror> get staticMembers {
+    if (!reflectableSupportsDeclarations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get staticMembers without `declarationsCapability`.");
+    }
+    return _rawStaticMembers;
+  }
+
+  Map<String, rm.MethodMirror> get _rawStaticMembers {
     // TODO(sigurdm) implement: Only expose members that are allowed by the
     // capabilities of the reflectable.
     Map<Symbol, dm.MethodMirror> members = _classMirror.staticMembers;

@@ -482,7 +482,8 @@ class ErasableDartType {
   final DartType dartType;
   final bool erased;
   ErasableDartType(this.dartType, {this.erased});
-  operator ==(other) => other is ErasableDartType &&
+  operator ==(other) =>
+      other is ErasableDartType &&
       other.dartType == dartType &&
       other.erased == erased;
   int get hashCode => dartType.hashCode ^ erased.hashCode;
@@ -508,7 +509,8 @@ class ParameterListShape {
               .isEmpty
       : false;
 
-  int get hashCode => numberOfPositionalParameters.hashCode ^
+  int get hashCode =>
+      numberOfPositionalParameters.hashCode ^
       numberOfOptionalPositionalParameters.hashCode;
 
   String get code {
@@ -553,7 +555,8 @@ class _ReflectorDomain {
       }
       if (_capabilities._impliesUpwardsClosure) {
         new _SuperclassFixedPoint(_capabilities._upwardsClosureBounds,
-            _capabilities._impliesMixins).expand(_classes);
+                _capabilities._impliesMixins)
+            .expand(_classes);
       } else {
         // Even without an upwards closure we cover some superclasses, namely
         // mixin applications where the class applied as a mixin is covered (it
@@ -742,8 +745,8 @@ class _ReflectorDomain {
     /// Used to add a library domain for [library] to [libraries], checking
     /// that it is importable and registering it with [importCollector].
     void addLibrary(LibraryElement library) {
-      if (!_isImportableLibrary(
-          library, _generatedLibraryId, _resolver)) return;
+      if (!_isImportableLibrary(library, _generatedLibraryId, _resolver))
+        return;
       importCollector._addLibrary(library);
       uncheckedAddLibrary(library);
     }
@@ -952,42 +955,47 @@ class _ReflectorDomain {
       return _fieldMirrorCode(element, reflectedTypes, reflectedTypesOffset,
           importCollector, logger, reflectedTypeRequested);
     });
-    Iterable<String> methodsList =
-        members.items.map((ExecutableElement executableElement) {
-      return _methodMirrorCode(
-          executableElement,
-          topLevelVariables,
-          fields,
-          members,
-          reflectedTypes,
-          reflectedTypesOffset,
-          parameters,
-          importCollector,
-          logger,
-          reflectedTypeRequested);
-    });
-    Iterable<String> membersList = () sync* {
-      yield* topLevelVariablesList;
-      yield* fieldsList;
-      yield* methodsList;
-    }();
-    String membersCode = _formatAsList("m.DeclarationMirror", membersList);
+    String membersCode = "null";
+    if (_capabilities._impliesDeclarations) {
+      Iterable<String> methodsList =
+          members.items.map((ExecutableElement executableElement) {
+        return _methodMirrorCode(
+            executableElement,
+            topLevelVariables,
+            fields,
+            members,
+            reflectedTypes,
+            reflectedTypesOffset,
+            parameters,
+            importCollector,
+            logger,
+            reflectedTypeRequested);
+      });
+      Iterable<String> membersList = () sync* {
+        yield* topLevelVariablesList;
+        yield* fieldsList;
+        yield* methodsList;
+      }();
+      membersCode = _formatAsList("m.DeclarationMirror", membersList);
+    }
 
     // Generate code for creation of parameter mirrors.
-    Iterable<String> parametersList =
-        parameters.items.map((ParameterElement element) {
-      return _parameterMirrorCode(
-          element,
-          fields,
-          members,
-          reflectedTypes,
-          reflectedTypesOffset,
-          importCollector,
-          logger,
-          reflectedTypeRequested);
-    });
-    String parameterMirrorsCode =
-        _formatAsList("m.ParameterMirror", parametersList);
+    String parameterMirrorsCode = "null";
+    if (_capabilities._impliesDeclarations) {
+      Iterable<String> parametersList =
+          parameters.items.map((ParameterElement element) {
+        return _parameterMirrorCode(
+            element,
+            fields,
+            members,
+            reflectedTypes,
+            reflectedTypesOffset,
+            importCollector,
+            logger,
+            reflectedTypeRequested);
+      });
+      parameterMirrorsCode = _formatAsList("m.ParameterMirror", parametersList);
+    }
 
     // Generate code for listing [Type] instances.
     Iterable<String> typesCodeList = () sync* {
@@ -1026,7 +1034,8 @@ class _ReflectorDomain {
     }
 
     String parameterListShapesCode = _formatAsDynamicList(parameterListShapes
-        .items.map((ParameterListShape shape) => shape.code));
+        .items
+        .map((ParameterListShape shape) => shape.code));
 
     return "new r.ReflectorData($classMirrorsCode, $membersCode, "
         "$parameterMirrorsCode, $typesCode, $reflectedTypesOffset, "
@@ -1182,26 +1191,32 @@ class _ReflectorDomain {
 
     // All instance members belong to the behavioral interface, so they
     // also get an offset of `fields.length`.
-    String instanceMembersCode = _formatAsConstList("int",
-        classDomain._instanceMembers.map((ExecutableElement element) {
-      // TODO(eernst) implement: The "magic" default constructor has
-      // index: NO_CAPABILITY_INDEX; adjust this when support for it has
-      // been implemented.
-      int index = members.indexOf(element);
-      return index == null
-          ? constants.NO_CAPABILITY_INDEX
-          : index + methodsOffset;
-    }));
+    String instanceMembersCode = "null";
+    if (_capabilities._impliesDeclarations) {
+      instanceMembersCode = _formatAsConstList("int",
+          classDomain._instanceMembers.map((ExecutableElement element) {
+        // TODO(eernst) implement: The "magic" default constructor has
+        // index: NO_CAPABILITY_INDEX; adjust this when support for it has
+        // been implemented.
+        int index = members.indexOf(element);
+        return index == null
+            ? constants.NO_CAPABILITY_INDEX
+            : index + methodsOffset;
+      }));
+    }
 
     // All static members belong to the behavioral interface, so they
     // also get an offset of `fields.length`.
-    String staticMembersCode = _formatAsConstList("int",
-        classDomain._staticMembers.map((ExecutableElement element) {
-      int index = members.indexOf(element);
-      return index == null
-          ? constants.NO_CAPABILITY_INDEX
-          : index + methodsOffset;
-    }));
+    String staticMembersCode = "null";
+    if (_capabilities._impliesDeclarations) {
+      staticMembersCode = _formatAsConstList("int",
+          classDomain._staticMembers.map((ExecutableElement element) {
+        int index = members.indexOf(element);
+        return index == null
+            ? constants.NO_CAPABILITY_INDEX
+            : index + methodsOffset;
+      }));
+    }
 
     ClassElement classElement = classDomain._classElement;
     ClassElement superclass = classes.superclassOf(classElement);
@@ -1213,12 +1228,12 @@ class _ReflectorDomain {
       // convention we make it supported and report it in the same way as
       // 'dart:mirrors'. Other superclasses use `NO_CAPABILITY_INDEX` to
       // indicate missing support.
-      superclassIndex = (classElement is! MixinApplication &&
-              classElement.type.isObject)
-          ? "null"
-          : (classes.contains(superclass))
-              ? "${classes.indexOf(superclass)}"
-              : "${constants.NO_CAPABILITY_INDEX}";
+      superclassIndex =
+          (classElement is! MixinApplication && classElement.type.isObject)
+              ? "null"
+              : (classes.contains(superclass))
+                  ? "${classes.indexOf(superclass)}"
+                  : "${constants.NO_CAPABILITY_INDEX}";
     }
 
     String constructorsCode;
@@ -1745,10 +1760,10 @@ class _ReflectorDomain {
 
     // TODO(sigurdm) clarify: Find out how to get good uri's in a
     // transformer.
-    String uriCode = (_capabilities._supportsUri ||
-            _capabilities._supportsLibraries)
-        ? 'Uri.parse(r"reflectable://$libraryIndex/$library")'
-        : 'null';
+    String uriCode =
+        (_capabilities._supportsUri || _capabilities._supportsLibraries)
+            ? 'Uri.parse(r"reflectable://$libraryIndex/$library")'
+            : 'null';
 
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -1763,10 +1778,9 @@ class _ReflectorDomain {
       parameterListShapesCode = _formatAsMap(
           libraryDomain._declarations.map((ExecutableElement element) {
         ParameterListShape shape = parameterListShapeOf[element];
-        assert(
-            shape != null); // Every method must have its shape in `..shapeOf`.
+        assert(shape != null); // Every method has a shape in `..shapeOf`.
         int index = parameterListShapes.indexOf(shape);
-        assert(index != null); // Every shape must be in `..Shapes`.
+        assert(index != null); // Every shape is in `..Shapes`.
         return 'r"${element.name}": $index';
       }));
     }
@@ -2651,11 +2665,13 @@ class _Capabilities {
   }
 
   bool get _impliesParameterListShapes {
-    // TODO(eernst) implement: Choose a semantics for this; maybe we generate
-    // the shapes if it is requested by a new capability (such that the user
-    // gets to make the space/time trade off), in addition to the cases where
-    // we cannot avoid them (which is when we do not have any class mirrors).
-    return true;
+    // If we have a capability for declarations then we also have it for
+    // types, and in that case the strategy where we traverse the parameter
+    // mirrors to gather the argument list shape (and cache it in the method
+    // mirror) will work. It may be a bit slower, but we have a general
+    // preference for space over time in this library: Reflection will never
+    // be full speed.
+    return !_impliesDeclarations;
   }
 
   bool get _impliesTypes {
@@ -2687,7 +2703,7 @@ class _Capabilities {
   bool get _impliesTypeAnnotationClosure {
     return _capabilities.any((ec.ReflectCapability capability) =>
         capability is ec.TypeAnnotationQuantifyCapability &&
-            capability.transitive == true);
+        capability.transitive == true);
   }
 
   bool get _impliesCorrespondingSetters {
@@ -3273,8 +3289,10 @@ class TransformerImplementation {
             "Could not extract metadata type from capability.");
         return null;
       }
-      Object metadataFieldValue = constant.fields["(super)"].fields[
-          "metadataType"].toTypeValue().element;
+      Object metadataFieldValue = constant
+          .fields["(super)"].fields["metadataType"]
+          .toTypeValue()
+          .element;
       if (metadataFieldValue is! ClassElement) {
         // TODO(eernst) implement: Add location info to message.
         _warn(WarningKind.badMetadata,
@@ -4267,15 +4285,18 @@ _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
         domain);
   }
 
-  List<FieldElement> declaredFieldsOfClass = _extractDeclaredFields(
-      domain._resolver, type, domain._capabilities).toList();
-  List<MethodElement> declaredMethodsOfClass = _extractDeclaredMethods(
-      domain._resolver, type, domain._capabilities).toList();
+  List<FieldElement> declaredFieldsOfClass =
+      _extractDeclaredFields(domain._resolver, type, domain._capabilities)
+          .toList();
+  List<MethodElement> declaredMethodsOfClass =
+      _extractDeclaredMethods(domain._resolver, type, domain._capabilities)
+          .toList();
   List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
       _extractAccessors(domain._resolver, type, domain._capabilities).toList();
   List<ConstructorElement> declaredConstructorsOfClass =
       _extractDeclaredConstructors(
-          domain._resolver, type.library, type, domain._capabilities).toList();
+              domain._resolver, type.library, type, domain._capabilities)
+          .toList();
   List<ParameterElement> declaredParametersOfClass = _extractDeclaredParameters(
       declaredMethodsOfClass,
       declaredConstructorsOfClass,

@@ -13,8 +13,7 @@ import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 
 class Reflector extends Reflectable {
-  const Reflector()
-      : super(instanceInvokeCapability, metadataCapability, nameCapability);
+  const Reflector() : super(instanceInvokeCapability, declarationsCapability);
 }
 
 const reflector = const Reflector();
