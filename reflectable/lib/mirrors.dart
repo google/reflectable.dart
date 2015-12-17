@@ -389,12 +389,14 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   Type get dynamicReflectedType;
 
   /// Returns `hasReflectedType || hasDynamicReflectedType`.
+  @deprecated
   bool get hasBestEffortReflectedType;
 
-  /// If [hasBestEffortReflectedType] returns true, returns [reflectedType] if
+  /// If hasBestEffortReflectedType returns true, returns [reflectedType] if
   /// it is available, otherwise returns [hasDynamicReflectedType]. If
-  /// [hasBestEffortReflectedType] returns false it throws an
+  /// hasBestEffortReflectedType returns false it throws an
   /// [UnsupportedError].
+  @deprecated
   Type get bestEffortReflectedType;
 
   /**

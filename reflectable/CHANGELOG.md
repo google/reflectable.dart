@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.5.0
+
+* **Breaking:** The methods `hasBestEffortReflectedType` and
+  `bestEffortReflectedType` are now deprecated. They will be removed in the
+  next published version.
+* **Breaking:** Implements a new semantics for no-such-method situations: When
+  a reflectable invocation (`invoke`, `invokeGetter`, `invokeSetter`,
+  `newInstance`, `delegate`) fails due to an unknown selector or an argument
+  list with the wrong shape, a `ReflectableNoSuchMethodError` is thrown. (In
+  particular, `noSuchMethod` is *not* invoked, and no `NoSuchMethodError` is
+  thrown). For more details, please consult the [capability design document][1]
+  near occurrences of 'no-such-method'.
+* Fixes issue 51, which is concerned with coverage of getters/setters for
+  variables inherited from non-covered classes.
+* **Breaking:** Changes coverage such that it requires a
+  `SuperclassQuantifyCapability` in order to include support for an 
+  anonymous mixin application (like `A with M` in `class B extends A with M..`).
+  Such mixin applications used to be included even without the
+  `SuperclassQuantifyCapability`, but that was an anomaly.
+* **Breaking:** Changes the semantics of `superclass` to strictly follow the
+  documentation: It is now required to have a `TypeRelationsCapability` in 
+  order to perform `superclass`, even in the cases where this yields a mixin
+  application.
+* **Breaking:** Changes the semantics of `instanceMembers` and `staticMembers`
+  to strictly follow the documentation: It is now required to have a
+  `DeclarationsCapability` in order to perform these methods.
+* **Breaking**: Eliminates the non-trivial upper bound on the version of the
+  `analyzer` package (because the constant evaluation issue has been resolved).
+  The analyzer dependency is now '^0.27.0'. Switches to `code_transformers`
+  version '^0.3.0'.
+* Updates the [capability design document][1] to document the new treatment of
+  no-such-method situations.
+* Implements `isSubtypeOf` and `isAssignableTo` for type mirrors.
+* Fixes issue 48, which is about wrong code generation involving mixin 
+  applications.
+* Implements `delegate` on instance mirrors, and adds a `delegateCapability`
+  to enable it. The reason why this requires a separate capability is that
+  the cost of storing maps between strings and symbols needed by `delegate`
+  is non-trivial.
+* Changes code generation to avoid generating code for some unused mirrors.
+* Fixes bug which prevented recognition of some forms of metadata during
+  metadata based capability checking.
+
+[1]: https://github.com/dart-lang/reflectable/blob/master/reflectable/doc/TheDesignOfReflectableCapabilities.md
+
 ## 0.4.0
 
 * Changes the representation of reflected types such that duplication of

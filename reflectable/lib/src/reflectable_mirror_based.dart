@@ -1031,10 +1031,12 @@ class ClassMirrorImpl extends _TypeMirrorImpl
     return reflectedType;
   }
 
+  @deprecated
   @override
   bool get hasBestEffortReflectedType =>
       hasReflectedType || hasDynamicReflectedType;
 
+  @deprecated
   @override
   Type get bestEffortReflectedType =>
       hasReflectedType ? reflectedType : dynamicReflectedType;

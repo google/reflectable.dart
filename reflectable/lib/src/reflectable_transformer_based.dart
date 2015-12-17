@@ -748,10 +748,12 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     return _data.typeMirrors[_superclassIndex];
   }
 
+  @deprecated
   @override
   bool get hasBestEffortReflectedType =>
       hasReflectedType || hasDynamicReflectedType;
 
+  @deprecated
   @override
   Type get bestEffortReflectedType =>
       hasReflectedType ? reflectedType : dynamicReflectedType;
