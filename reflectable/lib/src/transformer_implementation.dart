@@ -2464,6 +2464,11 @@ class _Capabilities {
           element.isGetter &&
           element.isSynthetic) {
         return element.variable.constantValue;
+      } else if (element is ConstructorElementImpl) {
+        DartType dartType = element.returnType;
+        if (dartType is InterfaceType) {
+          return new DartObjectImpl.validWithUnknownValue(dartType);
+        }
       }
       return unimplementedError(
           "Metadata has a not yet supported form: $elementAnnotation");
@@ -2803,9 +2808,12 @@ class TransformerImplementation {
         return idField.constantValue.toStringValue() ==
             reflectable_class_constants.id;
       }
-      // idResult == null: analyzer/.../element.dart does not specify
-      // whether this could happen, but it is surely not the right
-      // class, so we fall through.
+      // idResult == null: analyzer/.../element.dart specifies that this can
+      // occur "if this variable is not a 'const' variable, if it does not
+      // have an initializer, or if the compilation unit containing the
+      // variable has not been resolved". The third case should not occur with
+      // the approach we use to obtain a `LibraryElement`, so it is not the
+      // right declaration we are looking at.
     }
     // Not a const field, or failed the test, cannot be the right class.
     return false;
@@ -2895,7 +2903,14 @@ class TransformerImplementation {
       // `isConst` as well.
       if (variable is ConstTopLevelVariableElementImpl) {
         EvaluationResultImpl result = variable.evaluationResult;
-        if (result.value == null) return null; // Errors during evaluation.
+        // Handle errors during evaluation. In general `evaluationResult` is
+        // null for (1) non-const variables, (2) variables without an
+        // initializer, and (3) unresolved libraries; (3) should not occur
+        // because of the approach we use to get the resolver; we will not
+        // see (1) because we have checked the type of `variable`; and (2)
+        // would mean that the value is actually null, which we will also
+        // reject as irrelevant.
+        if (result?.value == null) return null;
         bool isOk = checkInheritance(result.value.type, focusClass.type);
         return isOk ? result.value.type.element : null;
       } else {
@@ -3139,7 +3154,7 @@ class TransformerImplementation {
 
       for (ElementAnnotationImpl metadatum in metadata) {
         EvaluationResultImpl evaluation = metadatum.evaluationResult;
-        DartObject value = evaluation.value;
+        DartObject value = evaluation?.value;
 
         // Test if the type of this metadata is associated with any reflectors
         // via GlobalQuantifyMetaCapability.
@@ -3561,6 +3576,9 @@ _initializeReflectable() {
 
       LibraryElement entryPointLibrary =
           _resolver.getLibrary(entryPointAsset.id);
+      if (const bool.fromEnvironment("reflectable.print.entry.point")) {
+        print("Starting transformation of '$entryPoint'.");
+      }
 
       ReflectionWorld world = _computeWorld(
           reflectableLibrary, entryPointLibrary, entryPointAsset.id);
@@ -4471,9 +4489,6 @@ class MixinApplication implements ClassElement {
   bool get isProxy => throw unreachableError("isProxy");
 
   @override
-  bool get isTypedef => throw unreachableError("isTypedef");
-
-  @override
   bool get isValidMixin => throw unreachableError("isValidMixin");
 
   @override
@@ -4579,9 +4594,6 @@ class MixinApplication implements ClassElement {
 
   @override
   int get nameOffset => throw unreachableError("nameOffset");
-
-  @override
-  AstNode get node => throw unreachableError("node");
 
   @override
   get source => throw unreachableError("source");

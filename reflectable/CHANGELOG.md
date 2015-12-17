@@ -126,9 +126,9 @@ considered to be bug fixes or implementations of missing features.
 
 ## 0.3.0
 
-* Add support for type annotation quantification (this is a breaking change: we
-  used to do that implicitly, but that is expensive and now it is only available
-  on request).
+* **Breaking**: Add support for type annotation quantification. This is a 
+  breaking change: we used to do that implicitly, but that is expensive, and
+  now it is only available on request.
 * Change the way the set of supported classes are computed.
 * Fix crash when transforming certain dart:html classes.
 * Fix memory leak from the transformer.
@@ -143,9 +143,9 @@ considered to be bug fixes or implementations of missing features.
 
 ## 0.2.0
 
-* Enforces the use of a `TypeCapability` as specified in the design document,
-  and makes it a supertype of several other capabilities such that it is
-  automatically included with, e.g., `declarationsCapability`.
+* **Breaking:** Enforces the use of a `TypeCapability` as specified in the
+  design document, and makes it a supertype of several other capabilities such
+  that it is automatically included with, e.g., `declarationsCapability`.
 * Fixed homepage link in pubspec
 * Fix several bug with mixins in the transformer.
 * Add `excludeUpperBound` flag to `SuperClassQuantifyCapability`.

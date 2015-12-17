@@ -4,5 +4,9 @@
 
 build/*: SkipByDesign # Nothing relies on getting built.
 
+# Prevent execution of non-test files with name *_test.dart in packages.
+test/packages: SkipByDesign
+test/mock_tests/packages: SkipByDesign
+
 [ $runtime != vm ]
 test/mock_tests/*: SkipByDesign # Use dart:io.
