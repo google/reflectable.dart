@@ -131,16 +131,28 @@ checkTransform(List maps) async {
   expect(declaringTransform.outputs, new Set.from(expectedOutputs.keys));
   expect(declaringTransform.consumed, new Set.from([]));
 
+  testApply(ReflectableTransformer transformer) async {
+    await transformer.apply(transform);
+    Map<String, String> outputs = await transform.outputMap();
+    expect(transform.messages.isEmpty, true);
+    expect(outputs.length, expectedOutputs.length);
+    outputs.forEach((key, value) {
+      // The error message is nicer when the strings are compared separately
+      // instead of comparing Maps.
+      expect(value, expectedOutputs[key]);
+    });
+  }
+
   // Test `apply`.
-  await transformer.apply(transform);
-  Map<String, String> outputs = await transform.outputMap();
-  expect(transform.messages.isEmpty, true);
-  expect(outputs.length, expectedOutputs.length);
-  outputs.forEach((key, value) {
-    // The error message is nicer when the strings are compared separately
-    // instead of comparing Maps.
-    expect(value, expectedOutputs[key]);
-  });
+  await testApply(transformer);
+
+  // Test that transformation tolerates a duplicate entry point.
+  ReflectableTransformer duplicateTransformer =
+      new ReflectableTransformer.asPlugin(new BarbackSettings({
+    "entry_points": ["main.dart", "main.dart"],
+    "formatted": true,
+  }, BarbackMode.RELEASE));
+  await testApply(duplicateTransformer);
 }
 
 main() async {

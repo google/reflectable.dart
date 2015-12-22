@@ -33,7 +33,6 @@ transformers:
       - test/new_instance_default_values_test.dart
       - test/capabilities_test.dart
       - test/basic_test.dart
-      - test/member_capability_test.dart
       - test/no_such_capability_test.dart
       - test/invoke_capabilities_test.dart
       - test/global_quantify_test.dart

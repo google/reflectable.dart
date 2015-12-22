@@ -3571,6 +3571,9 @@ _initializeReflectable() {
       if (reflectableLibrary == null) {
         // Stop and do not consumePrimary, i.e., let the original source
         // pass through without changes.
+        wrappedTransform.logger
+            .info("Ignoring entry point $entryPoint that does not include the "
+                "library 'package:reflectable/reflectable.dart'");
         continue;
       }
 

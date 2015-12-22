@@ -35,7 +35,7 @@ class ReflectableTransformer extends AggregateTransformer
   /// Checks and interprets the given list of entry points,
   /// given via [_settings].
   List<String> _findEntryPoints(entryPointSettings) {
-    List<String> entryPoints = <String>[];
+    Set<String> entryPoints = new Set<String>();
     if (entryPointSettings == null) {
       _reportEarlyInfo("No entry points, nothing to do.");
     }
@@ -52,7 +52,7 @@ class ReflectableTransformer extends AggregateTransformer
     }
 
     addToEntryPoints(entryPointSettings);
-    return entryPoints;
+    return entryPoints.toList();
   }
 
   bool _findFormatted(formattedSettings) {
