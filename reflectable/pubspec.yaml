@@ -4,19 +4,19 @@ description: >
   reflection to a transformer generated specialization with the same
   behavior. The generated code does not use dynamic reflection and thus
   improves the performance of (esp. dart2js) generated code.
-version: 0.5.0
+version: 0.5.1
 author: The Dart Team <dart@google.com>
 homepage: https://www.github.com/dart-lang/reflectable
 environment:
-  sdk: ">=1.12.0 <2.0.0"
+  sdk: '>=1.12.0 <2.0.0'
 dependencies:
-  analyzer: '^0.27.0'
-  barback: '^0.15.0'
-  code_transformers: '^0.3.0'
-  dart_style: '^0.2.0'
-  logging: '^0.11.0'
+  analyzer: 0.27.1 # Temporary constraint: avoid issue with 0.27.1+1.
+  barback: ^0.15.0
+  code_transformers: ^0.3.0
+  dart_style: ^0.2.0
+  logging: ^0.11.0
 dev_dependencies:
-  unittest: '^0.11.0'
+  unittest: ^0.11.0
 transformers:
 - reflectable/src/transform_import:
     $include: lib/reflectable.dart

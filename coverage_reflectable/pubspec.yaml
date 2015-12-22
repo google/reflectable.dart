@@ -1,5 +1,5 @@
 name: coverage_reflectable
-version: 0.5.0
+version: 0.5.1
 description: A simple console application.
 dependencies:
   observatory:

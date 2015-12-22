@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0+1
+
+* Changes the version constraint on analyzer to 0.27.1, to avoid an issue with
+  version 0.27.1+1 which breaks all reflectable transformations. Note that this
+  is a tight constraint (just one version allowed), but currently all other
+  versions above 0.27.0 will fail so there is no point in trying them.
+* Bug fix: The transformer now treats the entry points as a set such that
+  duplicates are eliminated; duplicates of entry points are not useful, and
+  they can trigger an infinite loop if present.
+
 ## 0.5.0
 
 * **Breaking:** The methods `hasBestEffortReflectedType` and
