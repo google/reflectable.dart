@@ -232,15 +232,8 @@ following parts are still incomplete:
   non-trivial list of actual type arguments then returning the actual type
   arguments would require runtime support that does not currently exist.
 
-- The mirror methods `delegate`, `isAssignableTo`, `isSubtypeOf`, and
-  `libraryDependencies` have not yet been implemented with transformed
-  code.
-
-- When an attempt to invoke a method, getter, or setter fails, it is sometimes
-  not possible to distinguish the situation where the method is missing
-  (in which case `noSuchMethod` should be invoked) and the situation where the
-  method is present, but the requested capabilities do not provide access to
-  it (in which case a `NoSuchCapabilityError` should be thrown).
+- The mirror method `libraryDependencies` has not yet been implemented with
+  transformed code.
 
 ## Feature requests and bug reports
 

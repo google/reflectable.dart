@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0+1
+## 0.5.1
 
 * Changes the version constraint on analyzer to 0.27.1, to avoid an issue with
   version 0.27.1+1 which breaks all reflectable transformations. Note that this
