@@ -323,7 +323,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
     // capabilities rejected it, or it could be a method that does not exist
     // at all. In both cases we consider the invocation to be a capability
     // violation.
-    throw reflectableNoSuchMethodError(reflectee, getterName, [], {});
+    throw reflectableNoSuchGetterError(reflectee, getterName, [], {});
   }
 
   @override
@@ -338,7 +338,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
     // capabilities rejected it, or it could be a method that does not exist
     // at all. In both cases we consider the invocation to be a capability
     // violation.
-    throw reflectableNoSuchMethodError(reflectee, setterName, [value], {});
+    throw reflectableNoSuchSetterError(reflectee, setterName, [value], {});
   }
 }
 
@@ -588,7 +588,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       [Map<Symbol, dynamic> namedArguments]) {
     void fail() {
       Type type = hasReflectedType ? reflectedType : null;
-      throw reflectableNoSuchMethodError(
+      throw reflectableNoSuchConstructorError(
           type, constructorName, positionalArguments, namedArguments);
     }
 
@@ -623,7 +623,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   Object invokeGetter(String getterName) {
     _StaticGetter getter = _getters[getterName];
     if (getter == null) {
-      throw reflectableNoSuchMethodError(reflectedType, getterName, [], {});
+      throw reflectableNoSuchGetterError(reflectedType, getterName, [], {});
     }
     return getter();
   }
@@ -634,7 +634,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
         _isSetterName(name) ? name : _getterNameToSetterName(name);
     _StaticSetter setter = _setters[setterName];
     if (setter == null) {
-      throw reflectableNoSuchMethodError(
+      throw reflectableNoSuchSetterError(
           reflectedType, setterName, [value], {});
     }
     return setter(value);
@@ -669,7 +669,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   Function invoker(String memberName) {
     Function getter = _data.getters[memberName];
     if (getter == null) {
-      throw reflectableNoSuchMethodError(reflectedType, memberName, [], {});
+      throw reflectableNoSuchGetterError(reflectedType, memberName, [], {});
     }
     return getter;
   }
@@ -1333,7 +1333,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   Object invokeGetter(String getterName) {
     _StaticGetter getter = getters[getterName];
     if (getter == null) {
-      throw reflectableNoSuchMethodError(null, getterName, [], {});
+      throw reflectableNoSuchGetterError(null, getterName, [], {});
     }
     return getter();
   }
@@ -1344,7 +1344,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
         _isSetterName(name) ? name : _getterNameToSetterName(name);
     _StaticSetter setter = setters[setterName];
     if (setter == null) {
-      throw reflectableNoSuchMethodError(null, setterName, [value], {});
+      throw reflectableNoSuchSetterError(null, setterName, [value], {});
     }
     return setter(value);
   }

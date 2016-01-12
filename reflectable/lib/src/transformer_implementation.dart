@@ -617,6 +617,30 @@ class _ReflectorDomain {
 
     List<String> namedParameterNames = type.namedParameterTypes.keys.toList();
 
+    // Special casing the `List` default constructor.
+    //
+    // After a bit of hesitation, we decided to special case `dart.core.List`.
+    // The issue is that the default constructor for `List` has a representation
+    // which is platform dependent and which is reflected imprecisely by the
+    // analyzer model: The analyzer data claims that it is external, and that
+    // its optional `length` argument has no default value. But it actually has
+    // two different default values, one on the vm and one in dart2js generated
+    // code. We handle this special case by ensuring that `length` is passed if
+    // it differs from `null`, and otherwise we perform the invocation of the
+    // constructor with no arguments; this will suppress the error in the case
+    // where the caller specifies an explicit `null` argument, but otherwise
+    // faithfully reproduce the behavior of non-reflective code, and that is
+    // probably the closest we can get. We could specify a different default
+    // argument (say, "Hello, world!") and then test for that value, but that
+    // would suppress an error in a very-hard-to-explain case, so that's safer
+    // in a sense, but too weird.
+    if (constructor.library.isDartCore &&
+        constructor.enclosingElement.name == "List" &&
+        constructor.name == "") {
+      return "(b) => ([length]) => "
+          "b ? (length == null ? new List() : new List(length)) : null";
+    }
+
     String positionals = new Iterable.generate(
         requiredPositionalCount, (int i) => parameterNames[i]).join(", ");
 
@@ -1237,11 +1261,15 @@ class _ReflectorDomain {
     }
 
     String constructorsCode;
-    if (classElement is MixinApplication || classElement.isAbstract) {
+    if (classElement is MixinApplication) {
       constructorsCode = 'const {}';
     } else {
       constructorsCode = _formatAsMap(
-          classDomain._constructors.map((ConstructorElement constructor) {
+          classDomain._constructors.where((ConstructorElement constructor) {
+            if (constructor.isFactory) return true;
+            ClassElement enclosing = constructor.enclosingElement;
+            return !enclosing.isAbstract;
+          }).map((ConstructorElement constructor) {
         String code = _constructorCode(constructor, importCollector, logger);
         return 'r"${constructor.name}": $code';
       }));

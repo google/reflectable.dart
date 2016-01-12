@@ -6,5 +6,9 @@
 test/packages: SkipByDesign
 build/test/packages: SkipByDesign
 
+[ $runtime == vm ]
+test/new_instance_html_test: SkipByDesign # imports 'dart:html'.
+build/test/new_instance_html_test: SkipByDesign # imports 'dart:html'.
+
 [ $compiler == dart2js ]
 test/*_test: skip # Some needed mirror features not implemented by dart2js.

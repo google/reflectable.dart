@@ -74,6 +74,9 @@ transformers:
       - test/subtype_test.dart
       - test/no_such_method_test.dart
       - test/inherited_variable_test.dart
+      - test/new_instance_optional_arguments_test.dart
+      - test/new_instance_native_test.dart
+      - test/new_instance_html_test.dart
     formatted: true
 - $dart2js:
     $include: []

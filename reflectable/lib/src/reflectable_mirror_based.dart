@@ -595,7 +595,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   Map<String, rm.DeclarationMirror> get declarations {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get declarations without capability");
+          "Attempt to get declarations without `declarationsCapability`");
     }
     return _rawDeclarations;
   }
@@ -1223,7 +1223,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   Object newInstance(String constructorName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
     fail() {
-      throw reflectableNoSuchMethodError(
+      throw reflectableNoSuchConstructorError(
           _classMirror, constructorName, positionalArguments, namedArguments);
     }
 
