@@ -42,7 +42,7 @@ class A {
 class B {
   @c int i = 7, j = 7;
   int notI, notJ;
-  @c static int k = 294, l = 343;
+  @C() static int k = 294, l = 343;
   static int notK, notL;
 }
 

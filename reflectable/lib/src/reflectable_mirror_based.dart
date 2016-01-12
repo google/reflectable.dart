@@ -177,7 +177,7 @@ bool impliesTypeAnnotations(List<ReflectCapability> capabilities) {
 bool impliesTypeAnnotationClosure(List<ReflectCapability> capabilities) {
   return capabilities.any((ReflectCapability capability) =>
       capability is TypeAnnotationQuantifyCapability &&
-          capability.transitive == true);
+      capability.transitive == true);
 }
 
 bool impliesMixins(List<ReflectCapability> capabilities) {
@@ -431,9 +431,8 @@ bool _supportsLibrary(
 
 /// Cache for the status of each library relative to each reflector: Does
 /// this reflector cover that library?
-final Map<Reflectable,
-        Map<dm.LibraryMirror, bool>> _reflectableLibraryCoverage =
-    <Reflectable, Map<dm.LibraryMirror, bool>>{};
+final Map<Reflectable, Map<dm.LibraryMirror, bool>>
+    _reflectableLibraryCoverage = <Reflectable, Map<dm.LibraryMirror, bool>>{};
 
 /// Returns true iff [name] can be invoked as a top level function.
 ///
@@ -1067,7 +1066,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   rm.ClassMirror get superclass {
     if (!reflectableSupportsTypeRelations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get superinterfaces without `typeRelationsCapability`");
+          "Attempt to get superclass without `typeRelationsCapability`");
     }
     dm.ClassMirror sup = _classMirror.superclass;
     if (sup == null) return null; // For `Object`, do as `dm`.
@@ -1083,7 +1082,8 @@ class ClassMirrorImpl extends _TypeMirrorImpl
     List<dm.ClassMirror> superinterfaces = _classMirror.superinterfaces;
     return superinterfaces
         .where((dm.ClassMirror superinterface) => (_reflectable
-            ._supportedClasses.contains(superinterface.originalDeclaration)))
+            ._supportedClasses
+            .contains(superinterface.originalDeclaration)))
         .map((dm.TypeMirror superinterface) {
       return wrapTypeMirror(superinterface, _reflectable);
     }).toList();
@@ -1760,7 +1760,7 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
   @override
   bool get hasReflectedType =>
       impliesReflectedType(_reflectable.capabilities) &&
-          _variableMirror.type.hasReflectedType;
+      _variableMirror.type.hasReflectedType;
 
   @override
   Type get reflectedType {
@@ -1774,8 +1774,8 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
   @override
   bool get hasDynamicReflectedType =>
       impliesReflectedType(_reflectable.capabilities) &&
-          _variableMirror.type.typeVariables.isEmpty &&
-          _variableMirror.type.hasReflectedType;
+      _variableMirror.type.typeVariables.isEmpty &&
+      _variableMirror.type.hasReflectedType;
 
   @override
   Type get dynamicReflectedType {
@@ -2327,7 +2327,8 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
       }
       if (impliesUpwardsClosure(capabilities)) {
         new _SuperclassesFixedPoint(extractUpwardsClosureBounds(capabilities),
-            impliesMixins(capabilities)).expand(result);
+                impliesMixins(capabilities))
+            .expand(result);
       } else {
         // Even without the upwards closure, we wish to support some
         // superclasses, namely mixin applications where the class

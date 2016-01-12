@@ -18,7 +18,7 @@ import 'package:unittest/unittest.dart';
 class Reflector extends Reflectable {
   const Reflector()
       : super(typeAnnotationQuantifyCapability, invokingCapability,
-            declarationsCapability);
+            declarationsCapability, reflectedTypeCapability);
 }
 
 const reflector = const Reflector();
@@ -26,10 +26,12 @@ const reflector = const Reflector();
 class DeepReflector extends Reflectable {
   const DeepReflector()
       : super(typeAnnotationDeepQuantifyCapability, invokingCapability,
-            declarationsCapability);
+            declarationsCapability, reflectedTypeCapability);
 }
 
 const deepReflector = const DeepReflector();
+
+class C {}
 
 @reflector
 @deepReflector
@@ -53,8 +55,8 @@ class MyClass {
       null;
   static int namedArguments(String x, List y, {String z: "4" + "2"}) => null;
 
-  static List get staticGetset => ["42"];
-  static void set staticGetset(List list) {}
+  static List<List<List<C>>> get staticGetset => [];
+  static void set staticGetset(List<List<List<C>>> list) {}
 }
 
 class UnrelatedClass {}
@@ -191,12 +193,14 @@ void performTests(String message, Reflectable reflector) {
         namedArgumentsMirror.parameters[1];
     ParameterMirror namedArgumentsParameter2 =
         namedArgumentsMirror.parameters[2];
+    TypeMirror namedArgumentsType1 = namedArgumentsParameter1.type;
+    TypeMirror namedArgumentsClass1 = namedArgumentsType1.originalDeclaration;
     expect(namedArgumentsParameter0.isOptional, false);
     expect(namedArgumentsParameter0.type.reflectedType, String);
     expect(namedArgumentsParameter1.isOptional, false);
-    expect(namedArgumentsParameter1.type.isOriginalDeclaration, false);
-    expect(
-        namedArgumentsParameter1.type.originalDeclaration.simpleName, "List");
+    expect(namedArgumentsType1.isOriginalDeclaration, false);
+    expect(namedArgumentsType1.hasReflectedType, true);
+    expect(namedArgumentsClass1.simpleName, "List");
     expect(namedArgumentsParameter2.isOptional, true);
     expect(namedArgumentsParameter2.isNamed, true);
     expect(namedArgumentsParameter2.type.reflectedType, String);
@@ -210,10 +214,10 @@ void performTests(String message, Reflectable reflector) {
     expect(staticGetsetEqualsMirror.parameters.length, 1);
     ParameterMirror staticGetsetEqualsParameter0 =
         staticGetsetEqualsMirror.parameters[0];
+    TypeMirror staticGetsetEqualsType0 = staticGetsetEqualsParameter0.type;
     expect(staticGetsetEqualsParameter0.isOptional, false);
-    expect(staticGetsetEqualsParameter0.type.isOriginalDeclaration, false);
-    expect(staticGetsetEqualsParameter0.type.originalDeclaration.simpleName,
-        "List");
+    expect(staticGetsetEqualsType0.isOriginalDeclaration, false);
+    expect(staticGetsetEqualsType0.originalDeclaration.simpleName, "List");
   });
 
   test("$message reflector: method return types", () {
@@ -228,13 +232,14 @@ void performTests(String message, Reflectable reflector) {
     expect(opBracketEqualsMirror.returnType.simpleName, "void");
     expect(getsetMirror.returnType.reflectedType, String);
     expect(getsetEqualsMirror.returnType.simpleName, "void");
+    expect(getsetEqualsMirror.returnType.hasReflectedType, false);
     expect(noArgumentsMirror.returnType.reflectedType, int);
     expect(oneArgumentMirror.returnType.reflectedType, int);
     expect(optionalArgumentsMirror.returnType.reflectedType, int);
     expect(namedArgumentsMirror.returnType.reflectedType, int);
-    expect(staticGetsetMirror.returnType.isOriginalDeclaration, false);
-    expect(
-        staticGetsetMirror.returnType.originalDeclaration.simpleName, "List");
+    TypeMirror staticGetsetReturnType = staticGetsetMirror.returnType;
+    expect(staticGetsetReturnType.isOriginalDeclaration, false);
+    expect(staticGetsetReturnType.originalDeclaration.simpleName, "List");
     expect(staticGetsetEqualsMirror.returnType.simpleName, "void");
   });
 }

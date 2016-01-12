@@ -43,7 +43,9 @@ class A {
   A.argNamed(int x, int y, {int z: 42, int p})
       : f = x + y - z - (p == null ? 10 : p);
 
-  A.noMeta(int x) : f = x + 42;
+  // Note that the parameter name `b` is used here in order to test the
+  // handling of name clashes for `isCheckCode`, so please do not change it.
+  A.noMeta(int b) : f = b + 42;
 
   int f = 0;
 }
@@ -85,8 +87,8 @@ final throwsReflectableNoMethod =
     throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
-  performTests('', reflector);
-  performTests('', metaReflector);
+  performTests('reflector', reflector);
+  performTests('metaReflector', metaReflector);
 
   test('newInstance named constructor, no metadata, none required', () {
     ClassMirror classMirror = reflector.reflectType(A);

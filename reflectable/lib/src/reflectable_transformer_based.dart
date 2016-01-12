@@ -1474,7 +1474,8 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   bool get isGetter => kind == constants.getter;
 
   @override
-  bool get isOperator => isRegularMethod &&
+  bool get isOperator =>
+      isRegularMethod &&
       ["+", "-", "*", "/", "[", "<", ">", "=", "~", "%"].contains(_name[0]);
 
   @override
@@ -1568,7 +1569,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   @override
   bool get hasDynamicReflectedReturnType =>
       _dynamicReflectedReturnTypeIndex != NO_CAPABILITY_INDEX ||
-          hasReflectedReturnType;
+      hasReflectedReturnType;
 
   @override
   Type get dynamicReflectedReturnType {
@@ -1786,8 +1787,8 @@ class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
     if (_variableMirror.isPrivate) descriptor |= constants.privateAttribute;
     descriptor |= constants.syntheticAttribute;
     if (_variableMirror._isDynamic) descriptor |= constants.dynamicAttribute;
-    if (_variableMirror._isClassType) descriptor |=
-        constants.classTypeAttribute;
+    if (_variableMirror._isClassType)
+      descriptor |= constants.classTypeAttribute;
     return descriptor;
   }
 
@@ -1886,7 +1887,8 @@ abstract class VariableMirrorBase extends _DataCaching
     if (_isClassType) {
       return _isGenericType
           ? _createInstantiatedGenericClass(
-              _data.typeMirrors[_classMirrorIndex], null)
+              _data.typeMirrors[_classMirrorIndex],
+              hasReflectedType ? reflectedType : null)
           : _data.typeMirrors[_classMirrorIndex];
     }
     throw unreachableError("Unexpected kind of type");
@@ -1955,7 +1957,8 @@ class VariableMirrorImpl extends VariableMirrorBase {
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
   @override
-  bool operator ==(other) => other is VariableMirrorImpl &&
+  bool operator ==(other) =>
+      other is VariableMirrorImpl &&
       other.simpleName == simpleName &&
       other.owner == owner;
 }
@@ -2004,7 +2007,8 @@ class ParameterMirrorImpl extends VariableMirrorBase
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
   @override
-  bool operator ==(other) => other is ParameterMirrorImpl &&
+  bool operator ==(other) =>
+      other is ParameterMirrorImpl &&
       other.simpleName == simpleName &&
       other.owner == owner;
 }

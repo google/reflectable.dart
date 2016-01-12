@@ -6,6 +6,10 @@
 test/packages: SkipByDesign
 build/test/packages: SkipByDesign
 
+[ $compiler != dart2analyzer ]
+test/mixin_application_test: RuntimeError # sdk/issues/25344
+build/test/mixin_application_test: RuntimeError # `typeArguments` unimplemented
+
 [ $runtime == vm ]
 test/new_instance_html_test: SkipByDesign # imports 'dart:html'.
 build/test/new_instance_html_test: SkipByDesign # imports 'dart:html'.

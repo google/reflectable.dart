@@ -1366,6 +1366,12 @@ class _ReflectorDomain {
             (classElement is MixinApplication &&
                 !classElement.isMixinApplication) ||
             !_isImportable(classElement, _generatedLibraryId, _resolver)) {
+          // Note that this location is dead code until we get support for
+          // anonymous mixin applications using type arguments as generic
+          // classes (currently, no classes will pass the tests above). See
+          // https://github.com/dart-lang/sdk/issues/25344 for more details.
+          // However, the result that we will return is well-defined, because
+          // no object can be an instance of an anonymous mixin application.
           yield "(o) => false";
         } else {
           String prefix = importCollector._getPrefix(classElement.library);
@@ -1473,14 +1479,16 @@ class _ReflectorDomain {
           element.parameters.map((ParameterElement parameterElement) {
         return parameters.indexOf(parameterElement);
       }));
-      int reflectedReturnTypeIndex = element.returnType.isVoid
-          ? constants.NO_CAPABILITY_INDEX
-          : _typeCodeIndex(element.returnType, classes, reflectedTypes,
-              reflectedTypesOffset);
-      int dynamicReflectedReturnTypeIndex = element.returnType.isVoid
-          ? constants.NO_CAPABILITY_INDEX
-          : _dynamicTypeCodeIndex(element.returnType, classes, reflectedTypes,
-              reflectedTypesOffset);
+      int reflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
+      if (!element.returnType.isVoid && reflectedTypeRequested) {
+        reflectedReturnTypeIndex = _typeCodeIndex(
+            element.returnType, classes, reflectedTypes, reflectedTypesOffset);
+      }
+      int dynamicReflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
+      if (!element.returnType.isVoid && reflectedTypeRequested) {
+        dynamicReflectedReturnTypeIndex = _dynamicTypeCodeIndex(
+            element.returnType, classes, reflectedTypes, reflectedTypesOffset);
+      }
       String metadataCode = _capabilities._supportsMetadata
           ? _extractMetadataCode(
               element, _resolver, importCollector, logger, _generatedLibraryId)
@@ -1587,7 +1595,8 @@ class _ReflectorDomain {
       reflectedTypes.add(erasableDartType);
       return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
     }
-    // We only handle the kinds of types already covered above.
+    // We only handle the kinds of types already covered above. In particular,
+    // we cannot produce code to return a value for `void`.
     return constants.NO_CAPABILITY_INDEX;
   }
 
@@ -1690,6 +1699,16 @@ class _ReflectorDomain {
       if ((classElement is MixinApplication &&
               classElement.declaredName == null) ||
           classElement.isPrivate) {
+        // The test for an anonymous mixin application above may be dead code:
+        // Currently no test uses an anonymous mixin application to reach this
+        // point. But code coverage is not easy to achieve in this case:
+        // An anonymous mixin application cannot be the type of an instance,
+        // and it cannot be denoted by an expression and hence it cannot be a
+        // type annotation.
+        //
+        // However, if the situation should arise the following approach will
+        // work for the anonymous mixin application as well as for the private
+        // class.
         return 'const r.FakeType(r"${_qualifiedName(classElement)}")';
       }
       String prefix = importCollector._getPrefix(classElement.library);
@@ -1734,6 +1753,11 @@ class _ReflectorDomain {
       String prefix = importCollector._getPrefix(classElement.library);
       return "$prefix${classElement.name}";
     } else {
+      // This may be dead code: There is no test which reaches this point,
+      // and it is not obvious how we could encounter any [type] which is not
+      // an [InterfaceType], given that it is a member of `classes`. However,
+      // the following treatment is benign, and nicer than crashing if there
+      // is some exception that we have overlooked.
       return 'const r.FakeType(r"${_qualifiedName(typeDefiningElement)}")';
     }
   }
@@ -2173,10 +2197,6 @@ class _LibraryDomain {
       this._accessors,
       this._reflectorDomain);
 
-  String get _simpleName {
-    return _libraryElement.name;
-  }
-
   /// Returns the declared methods, accessors and constructors in
   /// [_classElement]. Note that this includes synthetic getters and
   /// setters, and omits fields; in other words, it provides the
@@ -2396,16 +2416,11 @@ class _ClassDomain {
     return "ClassDomain($_classElement)";
   }
 
-  bool operator ==(Object other) {
-    if (other is _ClassDomain) {
-      return _classElement == other._classElement &&
-          _reflectorDomain == other._reflectorDomain;
-    } else {
-      return false;
-    }
-  }
+  bool operator ==(Object other) =>
+      throw unimplementedError("== on _ClassDomain not in use");
 
-  int get hashCode => _classElement.hashCode ^ _reflectorDomain.hashCode;
+  int get hashCode =>
+      throw unimplementedError("hashCode on _ClassDomain not in use");
 }
 
 /// A wrapper around a list of Capabilities.
@@ -2804,6 +2819,9 @@ class TransformerImplementation {
   List<WarningKind> _suppressedWarnings;
 
   bool _warningEnabled(WarningKind kind) {
+    // TODO(eernst) implement: No test reaches this point.
+    // The mock_tests should be extended to exercise all warnings and errors
+    // that the transformer can encounter.
     return !_suppressedWarnings.contains(kind);
   }
 
