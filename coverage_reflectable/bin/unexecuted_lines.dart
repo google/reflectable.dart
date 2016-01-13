@@ -68,14 +68,19 @@ Future main(List<String> args) async {
   isolate.resume();
   String oldSource = null, source = null;
   Set<int> unexecutedLines = new Set<int>();
+
+  void showAndClearUnexecutedLines(String source) {
+    for (int lineNumber in unexecutedLines.toList()..sort()) {
+      print("$source:$lineNumber");
+    }
+    unexecutedLines.clear();
+  }
+
   for (var elm in coverage) {
     source = elm['source'];
     if (source.startsWith("package:reflectable")) {
       if (source != oldSource) {
-        if (unexecutedLines.isNotEmpty) {
-          print("$oldSource: ${unexecutedLines.toList()..sort()}");
-          unexecutedLines.clear();
-        }
+        showAndClearUnexecutedLines(oldSource);
         oldSource = source;
       }
       List<int> hits = elm['hits'];
@@ -87,8 +92,5 @@ Future main(List<String> args) async {
       }
     }
   }
-  if (source != null && unexecutedLines.isNotEmpty) {
-    print("$source: ${unexecutedLines.toList()..sort()}");
-    unexecutedLines.clear();
-  }
+  if (source != null) showAndClearUnexecutedLines(source);
 }

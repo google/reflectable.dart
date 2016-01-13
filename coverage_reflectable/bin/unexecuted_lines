@@ -13,6 +13,14 @@ export DART_VM_OPTIONS
 ( cd $BUILD_DIR; pub build --mode=debug test ) & sleep 1
 
 dart --checked ./unexecuted_lines.dart $VM_PORT >$OUTPUT_FILE
-echo "Output is stored in: $OUTPUT_FILE"
+echo "Raw output is stored in: $OUTPUT_FILE"
 echo
-cat $OUTPUT_FILE
+
+cat $OUTPUT_FILE | while read line; do
+  if [[ "$line" =~ "package:reflectable/" ]]; then true; else continue; fi
+  tmp=${line#*/}
+  filePath=${tmp%%:*}
+  lineNumber=${line##*:}
+  code=$(tail --lines=+$lineNumber ../../reflectable/lib/$filePath | head -1)
+  echo "$line: $code"
+done
