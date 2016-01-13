@@ -117,42 +117,46 @@ _initializeReflectable() {
 checkTransform(List maps) async {
   Map<String, String> inputs = maps[0];
   Map<String, String> expectedOutputs = maps[1];
-  TestAggregateTransform transform = new TestAggregateTransform(inputs);
-  ReflectableTransformer transformer =
-      new ReflectableTransformer.asPlugin(new BarbackSettings({
-    "entry_points": ["main.dart"],
-    "formatted": true,
-  }, BarbackMode.RELEASE));
 
-  // Test `declareOutputs`.
-  TestDeclaringTransform declaringTransform =
-      new TestDeclaringTransform(inputs);
-  await transformer.declareOutputs(declaringTransform);
-  expect(declaringTransform.outputs, new Set.from(expectedOutputs.keys));
-  expect(declaringTransform.consumed, new Set.from([]));
+  for (String inputName in inputs.keys) {
+    String inputContents = inputs[inputName];
+    TestTransform transform = new TestTransform(inputName, inputContents);
+    ReflectableTransformer transformer =
+        new ReflectableTransformer.asPlugin(new BarbackSettings({
+      "entry_points": ["main.dart"],
+      "formatted": true,
+    }, BarbackMode.RELEASE));
 
-  testApply(ReflectableTransformer transformer) async {
-    await transformer.apply(transform);
-    Map<String, String> outputs = await transform.outputMap();
-    expect(transform.messages.isEmpty, true);
-    expect(outputs.length, expectedOutputs.length);
-    outputs.forEach((key, value) {
-      // The error message is nicer when the strings are compared separately
-      // instead of comparing Maps.
-      expect(value, expectedOutputs[key]);
-    });
+    // Test `declareOutputs`.
+    TestDeclaringTransform declaringTransform =
+        new TestDeclaringTransform(inputName);
+    await transformer.declareOutputs(declaringTransform);
+    expect(declaringTransform.outputs, new Set.from(expectedOutputs.keys));
+    expect(declaringTransform.consumed, false);
+
+    testApply(ReflectableTransformer transformer) async {
+      await transformer.apply(transform);
+      Map<String, String> outputs = await transform.outputMap();
+      expect(transform.messages.isEmpty, true);
+      expect(outputs.length, expectedOutputs.length);
+      outputs.forEach((key, value) {
+        // The error message is nicer when the strings are compared separately
+        // instead of comparing Maps.
+        expect(value, expectedOutputs[key]);
+      });
+    }
+
+    // Test `apply`.
+    await testApply(transformer);
+
+    // Test that transformation tolerates a duplicate entry point.
+    ReflectableTransformer duplicateTransformer =
+        new ReflectableTransformer.asPlugin(new BarbackSettings({
+      "entry_points": ["main.dart", "main.dart"],
+      "formatted": true,
+    }, BarbackMode.RELEASE));
+    await testApply(duplicateTransformer);
   }
-
-  // Test `apply`.
-  await testApply(transformer);
-
-  // Test that transformation tolerates a duplicate entry point.
-  ReflectableTransformer duplicateTransformer =
-      new ReflectableTransformer.asPlugin(new BarbackSettings({
-    "entry_points": ["main.dart", "main.dart"],
-    "formatted": true,
-  }, BarbackMode.RELEASE));
-  await testApply(duplicateTransformer);
 }
 
 main() async {

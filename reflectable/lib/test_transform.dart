@@ -24,11 +24,14 @@ class MessageRecord {
 /// A transform that gets its main inputs from a [Map] from path to [String].
 /// If an input is not found there it will be looked up in [packageRoot].
 /// [packageRoot] should use the system path-separator.
-class TestAggregateTransform implements AggregateTransform {
-  final Map<String, String> files;
+class TestTransform implements Transform {
+  final String fileName;
+  final String fileContents;
   final List<Asset> outputs = <Asset>[];
   final Map<AssetId, Asset> assets = <AssetId, Asset>{};
-  final Set<AssetId> consumed = new Set<AssetId>();
+  Asset _primaryAsset;
+  AssetId _primaryAssetId;
+  bool consumed = false;
   String packageRoot;
 
   final List<MessageRecord> messages = <MessageRecord>[];
@@ -37,37 +40,33 @@ class TestAggregateTransform implements AggregateTransform {
     messages.add(new MessageRecord(id, level, message, span));
   }
 
-  TestAggregateTransform(this.files, [String packageRoot]) {
+  TestTransform(this.fileName, this.fileContents, [String packageRoot]) {
     this.packageRoot =
         packageRoot == null ? io.Platform.packageRoot : packageRoot;
-    files.forEach((String description, String content) {
-      AssetId assetId = new AssetId.parse(description);
-      assets[assetId] = new Asset.fromString(assetId, content);
-    });
+    _primaryAssetId = new AssetId.parse(fileName);
+    _primaryAsset = new Asset.fromString(_primaryAssetId, fileContents);
+    assets[_primaryAssetId] = _primaryAsset;
   }
 
+  @override
   TransformLogger get logger => new TransformLogger(logFunction);
 
-  String get key => null;
-  String get package => null;
-
   /// The stream of primary inputs that will be processed by this transform.
-  Stream<Asset> get primaryInputs => new Stream.fromIterable(assets.values);
+  @override
+  Asset get primaryInput => _primaryAsset;
 
   /// Gets the asset for an input [id].
   ///
   /// If an input with [id] cannot be found, it will throw an
   /// [AssetNotFoundException].
+  @override
   Future<Asset> getInput(AssetId id) async {
     Asset content = assets[id];
     if (content != null) return content;
     String pathWithoutLib =
         id.path.split('/').skip(1).join(io.Platform.pathSeparator);
-    String path = [
-      packageRoot,
-      id.package,
-      pathWithoutLib
-    ].join(io.Platform.pathSeparator);
+    String path = [packageRoot, id.package, pathWithoutLib]
+        .join(io.Platform.pathSeparator);
     io.File file = new io.File(path);
     if (!(await file.exists())) {
       throw new AssetNotFoundException(id);
@@ -75,17 +74,19 @@ class TestAggregateTransform implements AggregateTransform {
     return new Asset.fromFile(id, file);
   }
 
+  @override
   Future<String> readInputAsString(AssetId id, {Encoding encoding}) async {
     return (await getInput(id)).readAsString(encoding: encoding);
   }
 
+  @override
   Stream<List<int>> readInput(AssetId id) {
     throw new UnimplementedError();
   }
 
-  Future<bool> hasInput(AssetId id) async {
-    return files.containsKey(id.path);
-  }
+  @override
+  Future<bool> hasInput(AssetId id) async =>
+      new Future<bool>.value(fileName == id.path);
 
   /// Stores [output] as an output created by this transformation.
   ///
@@ -103,29 +104,21 @@ class TestAggregateTransform implements AggregateTransform {
     return result;
   }
 
-  void consumePrimary(AssetId id) {
-    if (!assets.containsKey(id)) {
-      throw new StateError(
-          "$id can't be consumed because it's not a primary input.");
-    }
-    consumed.add(id);
+  void consumePrimary() {
+    consumed = true;
   }
 }
 
-class TestDeclaringTransform implements DeclaringAggregateTransform {
+class TestDeclaringTransform implements DeclaringTransform {
   Set<String> outputs = new Set<String>();
-  Set<String> assets = new Set<String>();
-  Set<String> consumed = new Set<String>();
+  String asset;
+  bool consumed = false;
 
-  TestDeclaringTransform(Map<String, String> files) {
-    files.forEach((String description, String content) {
-      assets.add(description);
-    });
-  }
+  TestDeclaringTransform(this.asset);
 
   @override
-  void consumePrimary(AssetId id) {
-    consumed.add(id.toString());
+  void consumePrimary() {
+    consumed = true;
   }
 
   @override
@@ -134,17 +127,8 @@ class TestDeclaringTransform implements DeclaringAggregateTransform {
   }
 
   @override
-  String get key => null;
-
-  @override
   TransformLogger get logger => null;
 
   @override
-  String get package => null;
-
-  @override
-  Stream<AssetId> get primaryIds {
-    return new Stream.fromIterable(
-        assets.map((String a) => new AssetId.parse(a)));
-  }
+  AssetId get primaryId => new AssetId.parse(asset);
 }

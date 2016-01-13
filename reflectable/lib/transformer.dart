@@ -10,8 +10,8 @@ import 'package:barback/barback.dart';
 import 'package:logging/logging.dart';
 import 'src/transformer_implementation.dart' as implementation;
 
-class ReflectableTransformer extends AggregateTransformer
-    implements DeclaringAggregateTransformer {
+class ReflectableTransformer extends Transformer
+    implements DeclaringTransformer {
   BarbackSettings _settings;
   List<String> _entryPoints = <String>[];
   bool _formatted;
@@ -123,40 +123,25 @@ class ReflectableTransformer extends AggregateTransformer
         _findSuppressWarnings(_settings.configuration['suppressWarnings']);
   }
 
-  /// Returns a [String] or [Future<String>] valued key for each
-  /// primary asset that this transformer wishes to process, and
-  /// null for assets that it wishes to ignore.  Primary assets
-  /// with the same key are delivered to [apply] as a group.  In
-  /// this transformer we handle the grouping later, so everything
-  /// is in the same group.
-  String classifyPrimary(AssetId id) {
-    return _entryPoints.any((entryPoint) => id.path.endsWith(entryPoint))
-        ? "ReflectableTransformed"
-        : null;
-  }
-
   /// Performs the transformation.
   @override
-  Future apply(AggregateTransform transform) {
+  Future apply(Transform transform) {
     return new implementation.TransformerImplementation()
         .apply(transform, _entryPoints, _formatted, _suppressWarnings);
   }
 
   @override
-  declareOutputs(DeclaringAggregateTransform transform) async {
-    List<AssetId> ids = await transform.primaryIds.toList();
+  declareOutputs(DeclaringTransform transform) async {
+    AssetId id = await transform.primaryId;
     _entryPoints.forEach((String entryPoint) {
-      AssetId id = ids.firstWhere((AssetId id) => id.path.endsWith(entryPoint),
-          orElse: () => null);
-      if (id == null) {
-        // There is no such entry point; however, we do not need to emit
-        // any diagnostic messages, this is done by `apply` in
-        // `TransformerImplementation`.
-        return;
+      if (id.path.endsWith(entryPoint)) {
+        transform.declareOutput(id);
+        AssetId dataId = id.changeExtension("_reflectable_original_main.dart");
+        transform.declareOutput(dataId);
       }
-      transform.declareOutput(id);
-      AssetId dataId = id.changeExtension("_reflectable_original_main.dart");
-      transform.declareOutput(dataId);
+      // Otherwise there is no such entry point; however, we do not need to
+      // emit any diagnostic messages, this is done by `apply` in
+      // `TransformerImplementation`.
     });
   }
 }

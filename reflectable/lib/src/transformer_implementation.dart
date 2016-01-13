@@ -5,9 +5,7 @@
 library reflectable.src.transformer_implementation;
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer' as developer;
-import 'dart:io';
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/element.dart';
@@ -1266,10 +1264,10 @@ class _ReflectorDomain {
     } else {
       constructorsCode = _formatAsMap(
           classDomain._constructors.where((ConstructorElement constructor) {
-            if (constructor.isFactory) return true;
-            ClassElement enclosing = constructor.enclosingElement;
-            return !enclosing.isAbstract;
-          }).map((ConstructorElement constructor) {
+        if (constructor.isFactory) return true;
+        ClassElement enclosing = constructor.enclosingElement;
+        return !enclosing.isAbstract;
+      }).map((ConstructorElement constructor) {
         String code = _constructorCode(constructor, importCollector, logger);
         return 'r"${constructor.name}": $code';
       }));
@@ -3564,87 +3562,54 @@ _initializeReflectable() {
   /// Performs the transformation which eliminates all imports of
   /// `package:reflectable/reflectable.dart` and instead provides a set of
   /// statically generated mirror classes.
-  Future apply(AggregateTransform aggregateTransform, List<String> entryPoints,
-      bool formatted, List<WarningKind> suppressedWarnings) async {
-    _logger = aggregateTransform.logger;
+  Future apply(Transform transform, List<String> entryPoints, bool formatted,
+      List<WarningKind> suppressedWarnings) async {
+    _logger = transform.logger;
     _formatted = formatted;
     _suppressedWarnings = suppressedWarnings;
     // The type argument in the return type is omitted because the
     // documentation on barback and on transformers do not specify it.
 
-    List<Asset> assets = await aggregateTransform.primaryInputs.toList();
+    Asset asset = await transform.primaryInput;
+    assert(asset != null); // Every transform has a primary asset.
 
-    if (assets.isEmpty) {
-      // It is not an error to have nothing to transform.
-      _logger.info("Nothing to transform");
-      // Terminate with a non-failing status code to the OS.
-      exit(0);
-    }
-
-    // TODO(eernst) algorithm: Build a mapping from entry points to assets by
-    // iterating over `assets` and doing a binary search on a sorted
-    // list of entry points: if A is the number of assets and E is the
-    // number of entry points (note: E < A, and E == 1 could be quite
-    // common), this would cost O(A*log(E)), whereas the current
-    // approach costs O(A*E). OK, it's log(E)+epsilon, not 0 when E == 1.
     for (String entryPoint in entryPoints) {
-      // Find the asset corresponding to [entryPoint]
-      Asset entryPointAsset = assets.firstWhere(
-          (Asset asset) => asset.id.path.endsWith(entryPoint),
-          orElse: () => null);
-      if (entryPointAsset == null) {
-        if (_warningEnabled(WarningKind.missingEntryPoint)) {
-          String entryPointPath =
-              entryPoint.split('/').join(Platform.pathSeparator);
-          bool entryPointFileExists = await new File(entryPointPath).exists();
-          if (!entryPointFileExists) {
-            // We did not receive an asset for [entryPoint], and there is no
-            // corresponding file (so it is not just because we were invoked
-            // from `pub build test` and [entryPoint] is in `web`, or something
-            // similar). Announce the problem.
-            aggregateTransform.logger
-                .warning("Missing entry point: $entryPoint");
-          }
-        }
+      if (!asset.id.path.endsWith(entryPoint)) {
+        // `asset` does not correspond to this `entryPoint`.
         continue;
       }
-      Transform wrappedTransform =
-          new _AggregateTransformWrapper(aggregateTransform, entryPointAsset);
 
-      _resolver = await _resolvers.get(wrappedTransform);
+      _resolver = await _resolvers.get(transform);
       LibraryElement reflectableLibrary =
           _resolver.getLibraryByName("reflectable.reflectable");
       if (reflectableLibrary == null) {
         // Stop and do not consumePrimary, i.e., let the original source
         // pass through without changes.
-        wrappedTransform.logger
-            .info("Ignoring entry point $entryPoint that does not include the "
-                "library 'package:reflectable/reflectable.dart'");
+        _logger.info("Ignoring entry point $entryPoint that does not "
+            "include the library 'package:reflectable/reflectable.dart'");
         continue;
       }
 
-      LibraryElement entryPointLibrary =
-          _resolver.getLibrary(entryPointAsset.id);
+      LibraryElement entryPointLibrary = _resolver.getLibrary(asset.id);
       if (const bool.fromEnvironment("reflectable.print.entry.point")) {
         print("Starting transformation of '$entryPoint'.");
       }
 
-      ReflectionWorld world = _computeWorld(
-          reflectableLibrary, entryPointLibrary, entryPointAsset.id);
+      ReflectionWorld world =
+          _computeWorld(reflectableLibrary, entryPointLibrary, asset.id);
       if (world == null) continue;
 
-      String source = await entryPointAsset.readAsString();
+      String source = await asset.readAsString();
       AssetId originalEntryPointId =
-          entryPointAsset.id.changeExtension("_reflectable_original_main.dart");
+          asset.id.changeExtension("_reflectable_original_main.dart");
       // Rename the original entry-point.
-      aggregateTransform
-          .addOutput(new Asset.fromString(originalEntryPointId, source));
+      transform.addOutput(new Asset.fromString(originalEntryPointId, source));
 
       String originalEntryPointFilename =
           path.basename(originalEntryPointId.path);
 
       if (entryPointLibrary.entryPoint == null) {
-        aggregateTransform.logger.info(
+        _logger.info(
             "Entry point: $entryPoint has no member called `main`. Skipping.");
         continue;
       }
@@ -3652,10 +3617,9 @@ _initializeReflectable() {
       // Generate a new file with the name of the entry-point, whose main
       // initializes the reflection data, and calls the main from
       // [originalEntryPointId].
-      String newEntryPoint = _generateNewEntryPoint(
-          world, entryPointAsset.id, originalEntryPointFilename);
-      aggregateTransform
-          .addOutput(new Asset.fromString(entryPointAsset.id, newEntryPoint));
+      String newEntryPoint =
+          _generateNewEntryPoint(world, asset.id, originalEntryPointFilename);
+      transform.addOutput(new Asset.fromString(asset.id, newEntryPoint));
       _resolver.release();
     }
     if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
@@ -3663,29 +3627,6 @@ _initializeReflectable() {
       developer.debugger();
     }
   }
-}
-
-/// Wrapper of `AggregateTransform` of type `Transform`, allowing us to
-/// get a `Resolver` for a given `AggregateTransform` with a given
-/// selection of a primary entry point.
-/// TODO(eernst) future: We will just use this temporarily; code_transformers
-/// may be enhanced to support a variant of Resolvers.get that takes an
-/// [AggregateTransform] and an [Asset] rather than a [Transform], in
-/// which case we can drop this class and use that method.
-class _AggregateTransformWrapper implements Transform {
-  final AggregateTransform _aggregateTransform;
-  final Asset primaryInput;
-  _AggregateTransformWrapper(this._aggregateTransform, this.primaryInput);
-  TransformLogger get logger => _aggregateTransform.logger;
-  Future<Asset> getInput(AssetId id) => _aggregateTransform.getInput(id);
-  Future<String> readInputAsString(AssetId id, {Encoding encoding}) {
-    return _aggregateTransform.readInputAsString(id, encoding: encoding);
-  }
-
-  Stream<List<int>> readInput(AssetId id) => _aggregateTransform.readInput(id);
-  Future<bool> hasInput(AssetId id) => _aggregateTransform.hasInput(id);
-  void addOutput(Asset output) => _aggregateTransform.addOutput(output);
-  void consumePrimary() => _aggregateTransform.consumePrimary(primaryInput.id);
 }
 
 bool _accessorIsntImplicitGetterOrSetter(PropertyAccessorElement accessor) {
