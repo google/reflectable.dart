@@ -16,7 +16,10 @@ import 'reflectable_base.dart';
 
 bool get isTransformed => true;
 
-/// Returns the set of reflectors in the current program.
+/// Returns the set of reflectors in the current program. Note that it only
+/// returns reflectors matching something---a reflector that does not match
+/// anything is not even given a mapping in `data`. This makes sense because
+/// a reflector that does not match anything is rather useless.
 Set<Reflectable> get reflectors => data.keys.toSet();
 
 // Mirror classes with default implementations of all methods, to be used as
@@ -183,6 +186,10 @@ abstract class _DataCaching {
   ReflectorData get _data {
     if (_dataCache == null) {
       _dataCache = data[_reflector];
+      // We should never call this method except from a mirror, and we should
+      // never have a mirror unless it has a reflector, so it should never be
+      // null.
+      assert(_dataCache != null);
     }
     return _dataCache;
   }
@@ -2192,22 +2199,37 @@ abstract class ReflectableImpl extends ReflectableBase
 
   @override
   LibraryMirror findLibrary(String libraryName) {
-    if (data[this].libraryMirrors == null) {
+    ReflectorData reflectorData = data[this];
+    if (reflectorData.libraryMirrors == null) {
       throw new NoSuchCapabilityError("Using 'findLibrary' without capability. "
           "Try adding `libraryCapability`.");
     }
-    return data[this].libraryMirrors.singleWhere(
-        (LibraryMirror mirror) => mirror.qualifiedName == libraryName);
+    // The specification says that an exception shall be thrown if there
+    // is anything other than one library with a matching name.
+    int matchCount = 0;
+    LibraryMirror matchingLibrary = null;
+    for (LibraryMirror libraryMirror in reflectorData.libraryMirrors) {
+      if (libraryMirror.qualifiedName == libraryName) {
+        matchCount++;
+        matchingLibrary = libraryMirror;
+      }
+    }
+    switch (matchCount) {
+      case 0: throw new ArgumentError("No such library: $libraryName");
+      case 1: return matchingLibrary;
+      default: throw new ArgumentError("Ambiguous library name: $libraryName");
+    }
   }
 
   @override
   Map<Uri, LibraryMirror> get libraries {
-    if (data[this].libraryMirrors == null) {
+    ReflectorData reflectorData = data[this];
+    if (reflectorData.libraryMirrors == null) {
       throw new NoSuchCapabilityError("Using 'libraries' without capability. "
           "Try adding `libraryCapability`.");
     }
     Map<Uri, LibraryMirror> result = <Uri, LibraryMirror>{};
-    for (LibraryMirror library in data[this].libraryMirrors) {
+    for (LibraryMirror library in reflectorData.libraryMirrors) {
       result[library.uri] = library;
     }
     return new UnmodifiableMapView(result);
@@ -2215,8 +2237,7 @@ abstract class ReflectableImpl extends ReflectableBase
 
   @override
   Iterable<ClassMirror> get annotatedClasses {
-    return new List<ClassMirror>.unmodifiable(data[this]
-        .typeMirrors
+    return new List<ClassMirror>.unmodifiable(data[this].typeMirrors
         .where((TypeMirror typeMirror) => typeMirror is ClassMirror));
   }
 }

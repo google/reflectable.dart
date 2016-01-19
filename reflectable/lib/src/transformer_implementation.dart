@@ -29,7 +29,9 @@ enum WarningKind {
   missingEntryPoint,
   badSuperclass,
   badNamePattern,
-  badMetadata
+  badMetadata,
+  badReflectorClass,
+  unusedReflector
 }
 
 // Single source of instances of [Resolver], shared across multiple
@@ -125,12 +127,14 @@ class ReflectionWorld {
   /// is used to report diagnostic messages, and [dataId] specifies the
   /// asset where the generated code will be stored.
   String generateCode(TransformLogger logger) {
-    return _formatAsMap(reflectors.map((_ReflectorDomain reflector) {
+    Iterable<String> reflectorsCode =
+        reflectors.map((_ReflectorDomain reflector) {
       String reflectorCode =
           reflector._generateCode(this, importCollector, logger);
       return "${reflector._constConstructionCode(importCollector)}: "
           "$reflectorCode";
-    }));
+    });
+    return _formatAsMap(reflectorsCode);
   }
 
   /// Returns code which defines a mapping from symbols for covered members
@@ -3085,6 +3089,72 @@ class TransformerImplementation {
     }
   }
 
+  /// Returns true iff [potentialReflectorClass] is a proper reflector class,
+  /// which means that it is a direct subclass of [Reflectable], which must be
+  /// provided as [reflectableClass], and it has a single nameless constructor
+  /// that does not take any arguments. In case we extend this list of
+  /// general reflector well-formedness requirements, this is the method to
+  /// update accordingly. The rest of the transformer can then rely on every
+  /// reflector class to be well-formed, and just have assertions rather than
+  /// emitting error messages about it.
+  bool _isReflectorClass(
+      ClassElement potentialReflectorClass, ClassElement reflectableClass) {
+    if (potentialReflectorClass == reflectableClass) return false;
+    InterfaceType potentialReflectorType = potentialReflectorClass.type;
+    InterfaceType reflectableType = reflectableClass.type;
+    if (!_isSubclassOf(potentialReflectorType, reflectableType)) {
+      // Not a subclass of [classReflectable] at all.
+      return false;
+    }
+    if (!_isDirectSubclassOf(potentialReflectorType, reflectableType) &&
+        potentialReflectorType != reflectableType) {
+      // Instance of [classReflectable], or of indirect subclass
+      // of [classReflectable]: Not supported, warn about having such a class
+      // at all, even though we don't know for sure it is used as a reflector.
+      _warn(
+          WarningKind.badReflectorClass,
+          "An indirect subclass of `Reflectable` will not work as a reflector."
+          "\nIt is not recommended to have such a class at all.",
+          potentialReflectorClass);
+      return false;
+    }
+
+    void constructorFail() {
+      _logger.error("A reflector class must have exactly one "
+          "constructor which is `const`, has \n"
+          "the empty name, takes zero arguments, and "
+          "uses at most one superinitializer.\n"
+          "Please correct $potentialReflectorClass to match this.");
+      // If this method is changed such that it returns, call sites should
+      // have `return false;` added after the call.
+    }
+
+    if (potentialReflectorClass.constructors.length != 1) {
+      // We "own" the direct subclasses of `Reflectable` so when they are
+      // malformed as reflector classes we raise an error.
+      constructorFail();
+    }
+    ConstructorElement constructor = potentialReflectorClass.constructors[0];
+    if (constructor.parameters.isNotEmpty || !constructor.isConst) {
+      // We still "own" `potentialReflectorClass`.
+      constructorFail();
+    }
+    ConstructorDeclaration constructorDeclarationNode =
+        constructor.computeNode();
+    NodeList<ConstructorInitializer> initializers =
+        constructorDeclarationNode.initializers;
+    if (initializers.length > 1) {
+      constructorFail();
+    }
+
+    // Do we care about type parameters? We don't expect any, but if someone
+    // thinks they are incredibly useful in a case that we haven't foreseen
+    // then we might as well allow it. It should work. Hence, no checks.
+
+    // A direct subclass of [classReflectable], all OK.
+    return true;
+  }
+
   /// Returns a [ReflectionWorld] instantiated with all the reflectors seen by
   /// [_resolver] and all classes annotated by them. The [reflectableLibrary]
   /// must be the element representing 'package:reflectable/reflectable.dart',
@@ -3097,6 +3167,8 @@ class TransformerImplementation {
       LibraryElement entryPoint, AssetId dataId) {
     final ClassElement classReflectable =
         _findReflectableClassElement(reflectableLibrary);
+    final Set<ClassElement> allReflectors = new Set<ClassElement>();
+
     // If class `Reflectable` is absent the transformation must be a no-op.
     if (classReflectable == null) {
       _logger.info("Ignoring entry point $entryPoint that does not "
@@ -3251,12 +3323,17 @@ class TransformerImplementation {
               in getReflectors(_qualifiedName(type), type.metadata)) {
             addClassDomain(type, reflector);
           }
+          if (!allReflectors.contains(type) &&
+              _isReflectorClass(type, classReflectable)) {
+            allReflectors.add(type);
+          }
         }
         for (ClassElement type in unit.enums) {
           for (ClassElement reflector
               in getReflectors(_qualifiedName(type), type.metadata)) {
             addClassDomain(type, reflector);
           }
+          // An enum is never a reflector class, hence no `_isReflectorClass`.
         }
         for (FunctionElement function in unit.functions) {
           for (ClassElement reflector in getReflectors(
@@ -3268,6 +3345,17 @@ class TransformerImplementation {
           }
         }
       }
+    }
+
+    Set<ClassElement> usedReflectors = new Set<ClassElement>();
+    for (_ReflectorDomain domain in domains.values) {
+      usedReflectors.add(domain._reflector);
+    }
+    for (ClassElement reflector in allReflectors.difference(usedReflectors)) {
+      _warn(WarningKind.unusedReflector,
+          "This reflector does not match anything", reflector);
+      // Ensure that there is an empty domain for `reflector` in `domains`.
+      getReflectorDomain(reflector);
     }
 
     // Create the world and tie the knot: A [ReflectionWorld] refers to all its
@@ -3436,17 +3524,13 @@ class TransformerImplementation {
   _Capabilities _capabilitiesOf(
       LibraryElement capabilityLibrary, ClassElement reflector) {
     List<ConstructorElement> constructors = reflector.constructors;
-    // The superinitializer must be unique, so there must be 1 constructor.
+    // Well-formedness for each reflector class should be checked by
+    // `_isReflectorClass`, so we do not report errors here, we just
+    // assert. We use one assert per check such that a failing assert will
+    // be as informative as possible.
     assert(constructors.length == 1);
     ConstructorElement constructorElement = constructors[0];
-    // It can only be a const constructor, because this class has been
-    // used for metadata; it is a bug in the transformer if not.
-    // It must also be a default constructor.
     assert(constructorElement.isConst);
-    // TODO(eernst) clarify: Ensure that some other location in this
-    // transformer checks that the reflector class constructor is indeed a
-    // default constructor, such that this can be a mere assertion rather than
-    // a user-oriented error report.
     assert(constructorElement.isDefaultConstructor);
 
     ConstructorDeclaration constructorDeclarationNode =
@@ -3462,7 +3546,6 @@ class TransformerImplementation {
       // it here.
       return new _Capabilities(<ec.ReflectCapability>[]);
     }
-    // TODO(eernst) clarify: Ensure again that this can be a mere assertion.
     assert(initializers.length == 1);
 
     // Main case: the initializer is exactly one element. We must

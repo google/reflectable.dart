@@ -77,6 +77,7 @@ transformers:
       - test/new_instance_optional_arguments_test.dart
       - test/new_instance_native_test.dart
       - test/new_instance_html_test.dart
+      - test/unused_reflector_test.dart
     formatted: true
 - $dart2js:
     $include: []

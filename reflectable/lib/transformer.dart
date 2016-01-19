@@ -95,6 +95,12 @@ class ReflectableTransformer extends Transformer
           case "bad_metadata":
             yield implementation.WarningKind.badMetadata;
             break;
+          case "bad_reflector_class":
+            yield implementation.WarningKind.badReflectorClass;
+            break;
+          case "unused_reflector":
+            yield implementation.WarningKind.unusedReflector;
+            break;
           default:
             fail(setting);
             return;
