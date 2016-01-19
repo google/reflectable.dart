@@ -1596,6 +1596,12 @@ class _ReflectorDomain {
           new ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
       return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
+    } else if (dartType is FunctionType &&
+        dartType.element is FunctionTypeAliasElement) {
+      ErasableDartType erasableDartType =
+      new ErasableDartType(dartType, erased: false);
+      reflectedTypes.add(erasableDartType);
+      return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
     }
     // We only handle the kinds of types already covered above. In particular,
     // we cannot produce code to return a value for `void`.
@@ -1628,6 +1634,12 @@ class _ReflectorDomain {
       // makes no difference and we don't want to have two identical copies).
       ErasableDartType erasableDartType = new ErasableDartType(dartType,
           erased: dartType.typeArguments.isNotEmpty);
+      reflectedTypes.add(erasableDartType);
+      return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
+    } else if (dartType is FunctionType &&
+        dartType.element is FunctionTypeAliasElement) {
+      ErasableDartType erasableDartType =
+          new ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
       return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
     }
@@ -1684,6 +1696,11 @@ class _ReflectorDomain {
           throw fail();
         }
       }
+    } else if (dartType is FunctionType &&
+        dartType.element is FunctionTypeAliasElement) {
+      FunctionTypeAliasElement element = dartType.element;
+      String prefix = importCollector._getPrefix(element.library);
+      return "$prefix${element.name}";
     } else {
       throw fail();
     }
@@ -1728,6 +1745,11 @@ class _ReflectorDomain {
               'r"${_qualifiedName(classElement)}<$arguments>")';
         }
       }
+    } else if (dartType is FunctionType &&
+        dartType.element is FunctionTypeAliasElement) {
+      FunctionTypeAliasElement element = dartType.element;
+      String prefix = importCollector._getPrefix(element.library);
+      return "$prefix${element.name}";
     } else {
       throw unimplementedError(
           "Attempt to generate code for an unsupported kind of type $dartType");

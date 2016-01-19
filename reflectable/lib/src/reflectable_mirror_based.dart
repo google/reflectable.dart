@@ -1013,7 +1013,9 @@ class ClassMirrorImpl extends _TypeMirrorImpl
       : super(classMirror, reflectable) {}
 
   @override
-  bool get hasDynamicReflectedType => _classMirror.typeVariables.isEmpty;
+  bool get hasDynamicReflectedType =>
+      _classMirror.typeVariables.isEmpty &&
+      _classMirror is! dm.FunctionTypeMirror;
 
   @override
   Type get dynamicReflectedType {
@@ -1558,6 +1560,7 @@ class MethodMirrorImpl extends _DeclarationMirrorImpl
   bool get hasDynamicReflectedReturnType {
     if (impliesReflectedType(_reflectable.capabilities)) {
       return _methodMirror.returnType.typeVariables.isEmpty &&
+          _methodMirror.returnType is! dm.FunctionTypeMirror &&
           _methodMirror.returnType.hasReflectedType;
     }
     throw new NoSuchCapabilityError("Attempt to get "
@@ -1760,6 +1763,7 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
   @override
   bool get hasReflectedType =>
       impliesReflectedType(_reflectable.capabilities) &&
+      _variableMirror.type is! dm.FunctionTypeMirror &&
       _variableMirror.type.hasReflectedType;
 
   @override
@@ -1775,12 +1779,15 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
   bool get hasDynamicReflectedType =>
       impliesReflectedType(_reflectable.capabilities) &&
       _variableMirror.type.typeVariables.isEmpty &&
+      _variableMirror.type is! dm.FunctionTypeMirror &&
       _variableMirror.type.hasReflectedType;
 
   @override
   Type get dynamicReflectedType {
     if (impliesReflectedType(_reflectable.capabilities)) {
-      if (_variableMirror.type.typeVariables.isEmpty) {
+      if (_variableMirror.type.typeVariables.isEmpty &&
+          _variableMirror is! dm.FunctionTypeMirror &&
+          _variableMirror.type.hasReflectedType) {
         return _variableMirror.type.reflectedType;
       } else {
         // The value returned by `hasDynamicReflectedReturnType` is false, so
@@ -1859,7 +1866,8 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
       : super(typeMirror, reflectable);
 
   @override
-  bool get hasReflectedType => _typeMirror.hasReflectedType;
+  bool get hasReflectedType =>
+      _typeMirror is! dm.FunctionTypeMirror && _typeMirror.hasReflectedType;
 
   @override
   bool isAssignableTo(rm.TypeMirror other) {
