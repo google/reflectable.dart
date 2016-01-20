@@ -8,9 +8,5 @@ build/*: SkipByDesign # Nothing relies on getting built.
 test/packages: SkipByDesign
 test/mock_tests/packages: SkipByDesign
 
-# The mock tests have a conflict with the dev.5.0 tools, and we do
-# not know exactly which version of the compiler/analyzer it uses.
-test/mock_tests: Fail, Pass
-
 [ $runtime != vm ]
 test/mock_tests/*: SkipByDesign # Use dart:io.

@@ -43,6 +43,20 @@ class TestTransform implements Transform {
   TestTransform(this.fileName, this.fileContents, [String packageRoot]) {
     this.packageRoot =
         packageRoot == null ? io.Platform.packageRoot : packageRoot;
+    // The semantics of `io.Platform.packageRoot` suddenly changed from version
+    // dart-sdk-1.14.0-dev.4.0 to .5.0: It used to be passed on from the
+    // command line arguments directly, but starting from .5.0 it is being
+    // interpreted: If it is a relative path then it is turned into an absolute
+    // path, and an absolute path is in turn changed into a 'file://' uri.
+    // If [packageRoot] is a 'file://' uri then we reduce it to a path.
+    Uri uri;
+    try {
+      uri = Uri.parse(this.packageRoot);
+      this.packageRoot = uri.path;
+    } on FormatException catch (_) {
+      // No problem, now we just know that `packageRoot` is not a well-formed
+      // uri; it should then be a path.
+    }
     _primaryAssetId = new AssetId.parse(fileName);
     _primaryAsset = new Asset.fromString(_primaryAssetId, fileContents);
     assets[_primaryAssetId] = _primaryAsset;
