@@ -207,8 +207,18 @@ smaller amount of information.
 Several parts of the library have not yet been implemented. In particular, the
 following parts are still incomplete:
 
+- It is not supported to use reflectable in untransformed mode (that is the
+  mode where reflectable uses 'dart:mirrors' internally) with dart2js.
+  The reason for this is that some features in 'dart:mirrors' have not been
+  implemented in dart2js.
+
 - Reflection on functions/closures. We do not have the required primitives
   to support this feature, so it is expected to remain unsupported for a while.
+  There is support for one case: When a function type is given a name with
+  `typedef` it is possible to use that name as a type annotation, say, on a
+  method parameter or as a return type, and then `reflectedTypeCapability`
+  will make it possible to get a corresponding `reflectedType` and
+  `dynamicReflectedType`.
 
 - Private declarations. There is currently almost no support for reflection on
   private declarations, as this would require special support from the runtime
