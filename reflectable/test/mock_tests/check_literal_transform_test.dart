@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Dart project authors.  Please see the AUTHORS file
+// Copyright (c) 2016, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
@@ -6,10 +6,10 @@ library reflectable.check_literal_transform_test;
 
 /// Test the literal output of the transformation for a few simple cases.
 
+import 'package:barback/barback.dart';
 import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";
 import "package:unittest/unittest.dart";
-import 'package:barback/src/transformer/barback_settings.dart';
 
 var useReflect = [
   {
@@ -137,6 +137,30 @@ checkTransform(List maps) async {
     testApply(ReflectableTransformer transformer) async {
       await transformer.apply(transform);
       Map<String, String> outputs = await transform.outputMap();
+      if (transform.messages.isNotEmpty) {
+        // It is very difficult to detect what went wrong if, say, package-bots
+        // fail here, so we print the messages so that they will be in the log.
+        for (MessageRecord messageRecord in transform.messages) {
+          String level = null;
+          switch (messageRecord.level) {
+            case LogLevel.INFO:
+              level = "Info";
+              break;
+            case LogLevel.FINE:
+              level = "Fine";
+              break;
+            case LogLevel.WARNING:
+              level = "Warning";
+              break;
+            case LogLevel.ERROR:
+              level = "Error";
+              break;
+          }
+          assert(level != null);
+          print("[$level from check_literal_transform_test]:\n"
+              "${messageRecord.message}");
+        }
+      }
       expect(transform.messages.isEmpty, true);
       expect(outputs.length, expectedOutputs.length);
       outputs.forEach((key, value) {

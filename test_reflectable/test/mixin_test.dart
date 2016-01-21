@@ -20,6 +20,12 @@ class Reflector2 extends Reflectable {
             libraryCapability);
 }
 
+class Reflector3 extends Reflectable {
+  const Reflector3()
+      : super(invokingCapability, declarationsCapability, libraryCapability,
+            typeCapability);
+}
+
 class ReflectorUpwardsClosed extends Reflectable {
   const ReflectorUpwardsClosed()
       : super(superclassQuantifyCapability, invokingCapability,
@@ -87,6 +93,18 @@ class C extends B with M2, M3 {}
 @ReflectorUpwardsClosedToA()
 @ReflectorUpwardsClosedUntilA()
 class D = A with M1;
+
+class M4 {}
+
+@Reflector3()
+class M5 {}
+
+class M6 {}
+
+class AA {}
+
+@Reflector()
+class BB extends AA with M4, M5, M6 {}
 
 testReflector(Reflectable reflector, String desc) {
   test("Mixin, $desc", () {
@@ -241,5 +259,9 @@ main() {
         "test_reflectable.test.mixin_test.M3");
     expect(cMirror.qualifiedName, "test_reflectable.test.mixin_test.C");
     expect(dMirror.qualifiedName, "test_reflectable.test.mixin_test.D");
+  });
+  test("Mixins, some covered and some uncovered", () {
+    expect(
+        const Reflector().reflectType(BB), const isInstanceOf<ClassMirror>());
   });
 }

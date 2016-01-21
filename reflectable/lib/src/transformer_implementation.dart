@@ -1,4 +1,4 @@
-// (c) 2015, the Dart Team. All rights reserved. Use of this
+// Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
@@ -131,7 +131,7 @@ class ReflectionWorld {
         reflectors.map((_ReflectorDomain reflector) {
       String reflectorCode =
           reflector._generateCode(this, importCollector, logger);
-      return "${reflector._constConstructionCode(importCollector)}: "
+      return "${reflector._constConstructionCode(importCollector, logger)}: "
           "$reflectorCode";
     });
     return _formatAsMap(reflectorsCode);
@@ -711,13 +711,17 @@ class _ReflectorDomain {
 
     String prefix = importCollector._getPrefix(constructor.library);
     return ('($doRunArgument) => (${parameterParts.join(', ')}) => '
-        '$doRunArgument ? new $prefix${_nameOfConstructor(constructor)}'
+        '$doRunArgument ? new $prefix${_nameOfConstructor(constructor, logger)}'
         '(${argumentParts.join(", ")}) : null');
   }
 
   /// The code of the const-construction of this reflector.
-  String _constConstructionCode(_ImportCollector importCollector) {
+  String _constConstructionCode(
+      _ImportCollector importCollector, TransformLogger logger) {
     String prefix = importCollector._getPrefix(_reflector.library);
+    if (_isPrivateName(_reflector.name)) {
+      logger.error("Cannot access private name `${_reflector.name}`");
+    }
     return "const $prefix${_reflector.name}()";
   }
 
@@ -1158,7 +1162,7 @@ class _ReflectorDomain {
         _capabilities._supportsMetadata ? "<Object>[]" : "null";
     return 'new r.TypeVariableMirrorImpl(r"${typeParameterElement.name}", '
         'r"${_qualifiedTypeParameterName(typeParameterElement)}", '
-        '${_constConstructionCode(importCollector)}, '
+        '${_constConstructionCode(importCollector, logger)}, '
         '$upperBoundIndex, $ownerIndex, $metadataCode)';
   }
 
@@ -1286,12 +1290,13 @@ class _ReflectorDomain {
         classDomain._accessors.where((PropertyAccessorElement element) =>
             element.isStatic && element.isGetter)
       ].expand((x) => x).map((ExecutableElement element) =>
-          _staticGettingClosure(importCollector, classElement, element.name)));
+          _staticGettingClosure(
+              importCollector, classElement, element.name, logger)));
       staticSettersCode = _formatAsMap(classDomain._accessors
           .where((PropertyAccessorElement element) =>
               element.isStatic && element.isSetter)
           .map((PropertyAccessorElement element) => _staticSettingClosure(
-              importCollector, classElement, element.name)));
+              importCollector, classElement, element.name, logger)));
     }
 
     int mixinIndex;
@@ -1346,7 +1351,7 @@ class _ReflectorDomain {
     if (classElement.typeParameters.isEmpty) {
       return 'new r.NonGenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
-          '${_constConstructionCode(importCollector)}, '
+          '${_constConstructionCode(importCollector, logger)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
           '$constructorsCode, $ownerIndex, $mixinIndex, '
@@ -1418,7 +1423,7 @@ class _ReflectorDomain {
 
       return 'new r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
-          '${_constConstructionCode(importCollector)}, '
+          '${_constConstructionCode(importCollector, logger)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
           '$constructorsCode, $ownerIndex, $mixinIndex, '
@@ -1461,13 +1466,13 @@ class _ReflectorDomain {
       assert(selfIndex != null);
       if (accessorElement.isGetter) {
         return 'new r.ImplicitGetterMirrorImpl('
-            '${_constConstructionCode(importCollector)}, '
+            '${_constConstructionCode(importCollector, logger)}, '
             '$variableMirrorIndex, $reflectedTypeIndex, '
             '$dynamicReflectedTypeIndex, $selfIndex)';
       } else {
         assert(accessorElement.isSetter);
         return 'new r.ImplicitSetterMirrorImpl('
-            '${_constConstructionCode(importCollector)}, '
+            '${_constConstructionCode(importCollector, logger)}, '
             '$variableMirrorIndex, $reflectedTypeIndex, '
             '$dynamicReflectedTypeIndex, $selfIndex)';
       }
@@ -1498,7 +1503,7 @@ class _ReflectorDomain {
       return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, '
           '$dynamicReflectedReturnTypeIndex, $parameterIndicesCode, '
-          '${_constConstructionCode(importCollector)}, $metadataCode)';
+          '${_constConstructionCode(importCollector, logger)}, $metadataCode)';
     }
   }
 
@@ -1531,7 +1536,7 @@ class _ReflectorDomain {
       metadataCode = null;
     }
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
-        '$ownerIndex, ${_constConstructionCode(importCollector)}, '
+        '$ownerIndex, ${_constConstructionCode(importCollector, logger)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
         '$dynamicReflectedTypeIndex, $metadataCode)';
   }
@@ -1564,7 +1569,7 @@ class _ReflectorDomain {
       metadataCode = null;
     }
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
-        '$ownerIndex, ${_constConstructionCode(importCollector)}, '
+        '$ownerIndex, ${_constConstructionCode(importCollector, logger)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
         '$dynamicReflectedTypeIndex, $metadataCode)';
   }
@@ -1599,7 +1604,7 @@ class _ReflectorDomain {
     } else if (dartType is FunctionType &&
         dartType.element is FunctionTypeAliasElement) {
       ErasableDartType erasableDartType =
-      new ErasableDartType(dartType, erased: false);
+          new ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
       return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
     }
@@ -1747,6 +1752,9 @@ class _ReflectorDomain {
       }
     } else if (dartType is FunctionType &&
         dartType.element is FunctionTypeAliasElement) {
+      if (dartType.element.isPrivate) {
+        return 'const r.FakeType(r"${_qualifiedName(dartType.element)}")';
+      }
       FunctionTypeAliasElement element = dartType.element;
       String prefix = importCollector._getPrefix(element.library);
       return "$prefix${element.name}";
@@ -1800,12 +1808,14 @@ class _ReflectorDomain {
 
     String gettersCode = _formatAsMap(
         _gettersOfLibrary(libraryDomain).map((ExecutableElement getter) {
-      return _topLevelGettingClosure(importCollector, library, getter.name);
+      return _topLevelGettingClosure(
+          importCollector, library, getter.name, logger);
     }));
 
     String settersCode = _formatAsMap(
         _settersOfLibrary(libraryDomain).map((PropertyAccessorElement setter) {
-      return topLevelSettingClosure(importCollector, library, setter.name);
+      return topLevelSettingClosure(
+          importCollector, library, setter.name, logger);
     }));
 
     // Fields go first in [memberMirrors], so they will get the
@@ -1862,7 +1872,7 @@ class _ReflectorDomain {
     }
 
     return 'new r.LibraryMirrorImpl(r"${library.name}", $uriCode, '
-        '${_constConstructionCode(importCollector)}, '
+        '${_constConstructionCode(importCollector, logger)}, '
         '$declarationsCode, $gettersCode, $settersCode, $metadataCode, '
         '$parameterListShapesCode)';
   }
@@ -1931,7 +1941,7 @@ class _ReflectorDomain {
         : "null";
 
     return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
-        '$ownerIndex, ${_constConstructionCode(importCollector)}, '
+        '$ownerIndex, ${_constConstructionCode(importCollector, logger)}, '
         '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
         '$metadataCode, $defaultValueCode, $parameterSymbolCode)';
   }
@@ -2148,39 +2158,57 @@ String _settingClosure(String setterName) {
 
 // Auxiliary function used by `_generateCode`.
 String _staticGettingClosure(_ImportCollector importCollector,
-    ClassElement classElement, String getterName) {
+    ClassElement classElement, String getterName, TransformLogger logger) {
   String className = classElement.name;
   String prefix = importCollector._getPrefix(classElement.library);
   // Operators cannot be static.
+  if (_isPrivateName(getterName)) {
+    logger.error("Cannot access private name $getterName");
+  }
+  if (_isPrivateName(className)) {
+    logger.error("Cannot access private name $className");
+  }
   return 'r"${getterName}": () => $prefix$className.$getterName';
 }
 
 // Auxiliary function used by `_generateCode`.
 String _staticSettingClosure(_ImportCollector importCollector,
-    ClassElement classElement, String setterName) {
+    ClassElement classElement, String setterName, TransformLogger logger) {
   assert(setterName.substring(setterName.length - 1) == "=");
   // The [setterName] includes the "=", remove it.
   String name = setterName.substring(0, setterName.length - 1);
   String className = classElement.name;
   String prefix = importCollector._getPrefix(classElement.library);
+  if (_isPrivateName(setterName)) {
+    logger.error("Cannot access private name $setterName");
+  }
+  if (_isPrivateName(className)) {
+    logger.error("Cannot access private name $className");
+  }
   return 'r"$setterName": (value) => $prefix$className.$name = value';
 }
 
 // Auxiliary function used by `_generateCode`.
 String _topLevelGettingClosure(_ImportCollector importCollector,
-    LibraryElement library, String getterName) {
+    LibraryElement library, String getterName, TransformLogger logger) {
   String prefix = importCollector._getPrefix(library);
   // Operators cannot be top-level.
+  if (_isPrivateName(getterName)) {
+    logger.error("Cannot access private name $getterName");
+  }
   return 'r"${getterName}": () => $prefix$getterName';
 }
 
 // Auxiliary function used by `_generateCode`.
 String topLevelSettingClosure(_ImportCollector importCollector,
-    LibraryElement library, String setterName) {
+    LibraryElement library, String setterName, TransformLogger logger) {
   assert(setterName.substring(setterName.length - 1) == "=");
   // The [setterName] includes the "=", remove it.
   String name = setterName.substring(0, setterName.length - 1);
   String prefix = importCollector._getPrefix(library);
+  if (_isPrivateName(name)) {
+    logger.error("Cannot access private name $name");
+  }
   return 'r"$setterName": (value) => $prefix$name = value';
 }
 
@@ -3401,11 +3429,22 @@ class TransformerImplementation {
     EvaluationResult evaluated =
         _resolver.evaluateConstant(containingLibrary, expression);
 
-    if (!evaluated.isValid) {
-      _logger.error("Invalid constant $expression in capability-list.");
+    if (evaluated == null || !evaluated.isValid) {
+      _logger.error("Invalid constant `$expression` in capability list.");
+      // We do not terminate immediately at `_logger.error` so we need to
+      // return something that will not generate too much noise for the
+      // receiver.
+      return ec.invokingCapability; // Error default.
     }
 
     DartObjectImpl constant = evaluated.value;
+
+    if (constant == null) {
+      // This could be because it is an argument to a `const` constructor,
+      // but we do not support that.
+      _logger.error("Unsupported constant `$expression` in capability list.");
+      return ec.invokingCapability; // Error default.
+    }
 
     ParameterizedType dartType = constant.type;
     // We insist that the type must be a class, and we insist that it must
@@ -3422,6 +3461,7 @@ class TransformerImplementation {
         _logger.error(errors.applyTemplate(
             errors.SUPER_ARGUMENT_NON_CLASS, {"type": dartType.displayName}));
       }
+      return ec.invokingCapability; // Error default.
     }
     ClassElement classElement = dartType.element;
     if (classElement.library != capabilityLibrary) {
@@ -3429,6 +3469,7 @@ class TransformerImplementation {
           errors.applyTemplate(errors.SUPER_ARGUMENT_WRONG_LIBRARY,
               {"library": capabilityLibrary, "element": classElement}),
           span: _resolver.getSourceSpan(classElement));
+      return ec.invokingCapability; // Error default.
     }
 
     /// Extracts the namePattern String from an instance of a subclass of
@@ -3892,10 +3933,14 @@ int _declarationDescriptor(ExecutableElement element) {
   return result;
 }
 
-String _nameOfConstructor(ConstructorElement element) {
-  return element.name == ""
+String _nameOfConstructor(ConstructorElement element, TransformLogger logger) {
+  String name = element.name == ""
       ? element.enclosingElement.name
       : "${element.enclosingElement.name}.${element.name}";
+  if (_isPrivateName(name)) {
+    logger.error("Cannot access private name $name");
+  }
+  return name;
 }
 
 String _formatAsList(String typeName, Iterable parts) =>
@@ -3937,6 +3982,10 @@ String _extractConstantCode(
       return "const ${_formatAsMap(elements)}";
     } else if (expression is InstanceCreationExpression) {
       String constructor = expression.constructorName.toSource();
+      if (_isPrivateName(constructor)) {
+        logger.error("Cannot access private name $constructor, "
+            "needed for expression $expression");
+      }
       LibraryElement libraryOfConstructor = expression.staticElement.library;
       if (_isImportableLibrary(
           libraryOfConstructor, generatedLibraryId, resolver)) {
@@ -3949,6 +3998,10 @@ String _extractConstantCode(
           return helper(argument);
         }).join(", ");
         // TODO(sigurdm) feature: Type arguments.
+        if (_isPrivateName(constructor)) {
+          logger.error("Cannot access private name $constructor, "
+              "needed for expression $expression");
+        }
         return "const $prefix$constructor($arguments)";
       } else {
         logger.error("Cannot access library $libraryOfConstructor, "
@@ -3975,6 +4028,10 @@ String _extractConstantCode(
           Element enclosingElement = element.enclosingElement;
           if (enclosingElement is ClassElement) {
             prefix += "${enclosingElement.name}.";
+          }
+          if (_isPrivateName(element.name)) {
+            logger.error("Cannot access private name ${element.name}, "
+                "needed for expression $expression");
           }
           return "$prefix${element.name}";
         } else {
@@ -4156,9 +4213,15 @@ String _extractMetadataCode(Element element, Resolver resolver,
         return _extractConstantCode(argument, element.library, importCollector,
             logger, dataId, resolver);
       }).join(", ");
+      if (_isPrivateName(constructor)) {
+        logger.error("Cannot access private name $constructor");
+      }
       metadataParts.add("const $prefix$constructor($arguments)");
     } else {
       // A field reference.
+      if (_isPrivateName(annotationNode.name.name)) {
+        logger.error("Cannot access private name ${annotationNode.name}");
+      }
       metadataParts.add("$prefix${annotationNode.name}");
     }
   }
@@ -4745,4 +4808,8 @@ String _qualifiedTypeParameterName(TypeParameterElement typeParameterElement) {
   if (typeParameterElement == null) return "null";
   return "${_qualifiedName(typeParameterElement.enclosingElement)}."
       "${typeParameterElement.name}";
+}
+
+bool _isPrivateName(String name) {
+  return name.startsWith("_") || name.contains("._");
 }

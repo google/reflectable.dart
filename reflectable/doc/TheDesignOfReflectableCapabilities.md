@@ -30,7 +30,7 @@ Here, a capability is only concerned with the ability to do something,
 not with security.
 
 [package_reflectable]: https://github.com/dart-lang/reflectable
-[dartdoc_for_capability]: http://www.dartdocs.org/documentation/reflectable/0.1.0/index.html#reflectable/reflectable-capability
+[dartdoc_for_capability]: http://www.dartdocs.org/documentation/reflectable/latest/index.html#reflectable/reflectable-capability
 [capabilities_in_OS]: https://en.wikipedia.org/wiki/Capability-based_security
 
 # Context and Design Ideas
