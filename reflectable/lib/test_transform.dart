@@ -27,6 +27,7 @@ class MessageRecord {
 class TestTransform implements Transform {
   final String fileName;
   final String fileContents;
+  final String package;
   final List<Asset> outputs = <Asset>[];
   final Map<AssetId, Asset> assets = <AssetId, Asset>{};
   Asset _primaryAsset;
@@ -40,7 +41,8 @@ class TestTransform implements Transform {
     messages.add(new MessageRecord(id, level, message, span));
   }
 
-  TestTransform(this.fileName, this.fileContents, [String packageRoot]) {
+  TestTransform(this.fileName, this.fileContents, this.package,
+      [String packageRoot]) {
     this.packageRoot =
         packageRoot == null ? io.Platform.packageRoot : packageRoot;
     // The semantics of `io.Platform.packageRoot` suddenly changed from version
@@ -50,12 +52,20 @@ class TestTransform implements Transform {
     // path, and an absolute path is in turn changed into a 'file://' uri.
     // If [packageRoot] is a 'file://' uri then we reduce it to a path.
     Uri uri;
+    if (this.packageRoot == null) {
+      logger.error("Cannot determine the package root, using './packages'.");
+      this.packageRoot = "./packages";
+    }
     try {
       uri = Uri.parse(this.packageRoot);
       this.packageRoot = uri.path;
     } on FormatException catch (_) {
       // No problem, now we just know that `packageRoot` is not a well-formed
       // uri; it should then be a path.
+    }
+    if (this.packageRoot.endsWith(io.Platform.pathSeparator)) {
+      this.packageRoot =
+          this.packageRoot.substring(0, this.packageRoot.length - 1);
     }
     _primaryAssetId = new AssetId.parse(fileName);
     _primaryAsset = new Asset.fromString(_primaryAssetId, fileContents);
@@ -77,10 +87,15 @@ class TestTransform implements Transform {
   Future<Asset> getInput(AssetId id) async {
     Asset content = assets[id];
     if (content != null) return content;
-    String pathWithoutLib =
-        id.path.split('/').skip(1).join(io.Platform.pathSeparator);
-    String path = [packageRoot, id.package, pathWithoutLib]
-        .join(io.Platform.pathSeparator);
+    String path;
+    if (package == id.package) {
+      path = id.path;
+    } else {
+      String pathWithoutLib =
+          id.path.split('/').skip(1).join(io.Platform.pathSeparator);
+      path = [packageRoot, id.package, pathWithoutLib]
+          .join(io.Platform.pathSeparator);
+    }
     io.File file = new io.File(path);
     if (!(await file.exists())) {
       throw new AssetNotFoundException(id);

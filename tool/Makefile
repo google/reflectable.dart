@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+# Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 # source code is governed by a BSD-style license that can be found in
 # the LICENSE file.
 
@@ -13,6 +13,8 @@ all_except_bottest: get check build test
 all: get check build full_test
 
 g: get
+
+u: upgrade
 
 c: check
 
@@ -29,6 +31,10 @@ ft: full_test
 get:
 	@./makein Getting $(RTOOLS) get
 	@./makein Getting $(TTOOLS) get
+
+upgrade:
+	@./makein Getting $(RTOOLS) upgrade
+	@./makein Getting $(TTOOLS) upgrade
 
 check:
 	@./makein Checking $(RTOOLS) check
@@ -54,5 +60,5 @@ bot_test:
 
 full_test: test bot_test
 
-.PHONY: all_except_bottest all c b t ft check build test bot_test full_test
-.PHONY: measure_output
+.PHONY: all_except_bottest all g u c b t ft get upgrade check build test
+.PHONY: bot_test full_test measure_output

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+// Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
@@ -23,8 +23,11 @@ class ImportTransformer extends Transformer implements DeclaringTransformer {
   }
 
   Future apply(Transform transform) async {
-    // TODO(eernst) future: Add an option to disable the transformer.
+    // TODO(eernst) future: Add an option to disable the transformer
     // from the command-line.
+    if (const bool.fromEnvironment("reflectable.print.entry.point")) {
+      print("Starting transform_import on '${transform.primaryInput.id}'.");
+    }
     String content = await transform.primaryInput.readAsString();
     AssetId id = transform.primaryInput.id;
     String newContent = content.replaceAll(

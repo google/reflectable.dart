@@ -279,7 +279,7 @@ bool reflectableSupportsInstanceInvoke(
       }
     }
 
-    return reflectable.hasCapability(predicate);
+    return reflectable._hasCapability(predicate);
   }
 
   return _checkWithGetter(reflectable, name, helper);
@@ -326,7 +326,7 @@ bool reflectableSupportsDeclaration(
       }
     }
 
-    return reflectable.hasCapability(predicate);
+    return reflectable._hasCapability(predicate);
   }
 
   return _checkWithGetter(reflectable, name, helper);
@@ -336,14 +336,14 @@ bool reflectableSupportsDeclaration(
 bool reflectableSupportsType(ReflectableImpl reflectable) {
   bool predicate(ApiReflectCapability capability) =>
       capability is TypeCapability;
-  return reflectable.hasCapability(predicate);
+  return reflectable._hasCapability(predicate);
 }
 
 /// Returns true iff [reflectable] supports delegation.
 bool reflectableSupportsDelegate(ReflectableImpl reflectable) {
   bool predicate(ApiReflectCapability capability) =>
       capability == delegateCapability;
-  return reflectable.hasCapability(predicate);
+  return reflectable._hasCapability(predicate);
 }
 
 /// Used to delay the extraction of metadata that may be needed.
@@ -403,7 +403,7 @@ bool reflectableSupportsStaticInvoke(
       }
       return false;
     }
-    return reflectable.hasCapability(predicate);
+    return reflectable._hasCapability(predicate);
   }
 
   return _checkWithGetterUsingMetadata(
@@ -464,7 +464,7 @@ bool reflectableSupportsTopLevelInvoke(
           (capability is TopLevelInvokeMetaCapability &&
               metadataSupported(metadata, capability));
     }
-    return reflectable.hasCapability(predicate);
+    return reflectable._hasCapability(predicate);
   }
 
   if (_reflectableLibraryCoverage[reflectable] == null) {
@@ -525,19 +525,19 @@ bool reflectableSupportsConstructorInvoke(
     return false;
   }
 
-  return reflectable.hasCapability(predicate);
+  return reflectable._hasCapability(predicate);
 }
 
 bool reflectableSupportsDeclarations(Reflectable reflectable) {
   bool predicate(ApiReflectCapability capability) =>
       capability is DeclarationsCapability;
-  return reflectable.hasCapability(predicate);
+  return reflectable._hasCapability(predicate);
 }
 
 bool reflectableSupportsTypeRelations(Reflectable reflectable) {
   bool predicate(ApiReflectCapability capability) =>
       capability is TypeRelationsCapability;
-  return reflectable.hasCapability(predicate);
+  return reflectable._hasCapability(predicate);
 }
 
 /// Returns [name] with final "=" removed.
@@ -2363,7 +2363,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   /// if the corresponding capability to do something has been granted
   /// for a class that carries this [ReflectableImpl] as metadata, and to
   /// the instances of such a class.
-  bool hasCapability(bool predicate(ApiReflectCapability capability)) {
+  bool _hasCapability(bool predicate(ApiReflectCapability capability)) {
     return capabilities.any((ReflectCapability capability) =>
         capability is ApiReflectCapability && predicate(capability));
   }

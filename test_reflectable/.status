@@ -5,6 +5,8 @@
 # Prevent execution of non-test files with name *_test.dart in packages.
 test/packages: SkipByDesign
 build/test/packages: SkipByDesign
+test/three_files_dir/packages: SkipByDesign
+build/test/three_files_dir/packages: SkipByDesign
 
 [ $compiler != dart2analyzer ]
 test/mixin_application_test: RuntimeError # sdk/issues/25344

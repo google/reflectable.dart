@@ -161,16 +161,59 @@ given in the situation where an entry point has been specified in
 'pubspec.yaml', but no corresponding library (aka 'asset') has been provided
 by `pub` to the transformer.
 
-For a more advanced example, you could look at [serialize_test.dart][3] and its
-[library][4], where the base of a serialization framework is implemented; or you
-could look at [meta_reflectors_test.dart][5] and the libraries it imports,
-which illustrates how reflectable can be used to dynamically make a choice
-among several kinds of reflection, and how to eliminate several kinds of static
-dependencies among libraries.
+If you want to use the transformer directly rather than having `pub` invoke it,
+you can invoke it as a stand-alone tool. This is particularly relevant if you
+have several entry points, but at some point you only want to work with one of
+them, e.g., because it is being extended or debugged.
 
-[3]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/serialize_test.dart
-[4]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/lib/serialize.dart
-[5]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/meta_reflectors_test.dart
+The stand-alone version of the transformer will transform exactly the entry
+points you specify on the command line, no matter whether each of them is
+declared to be an entry point in 'pubspec.yaml'. It works in a similar way as
+`pub serve` because it is able to transform subsets of the entry points, but
+it differs in that it allows for inspection of the generated code, and it is
+completely under the programmer's control.
+
+The stand-alone version of the reflectable transformer is
+`bin/reflectable_transformer.dart`. It can be invoked using
+`pub global run` (after activating it with
+`pub global activate reflectable`):
+
+```
+pub global run reflectable:reflectable_transformer \
+  <my_package> <my_entry_point>..
+```
+
+In that command, `my_package` stands for the name of the package you are
+working in, and `my_entry_point` is the entry point to transform. For instance,
+the command could look like this in the testing package `test_reflectable`:
+
+```
+pub global run reflectable:reflectable_transformer \
+  test_reflectable test/export_test.dart
+```
+
+The script [`reflectable_transformer`][3] in the `test_reflectable` package
+illustrates how you can call it directly if you wish to run it independently
+of `pub`.
+
+It should be noted that the stand-alone transformer only works if `pub build..`
+has been executed, because the stand-alone only produces transformed files; the
+symptoms that arise if `pub build..` has not been executed successfully first
+is that some files are missing, including the `packages` directories inside
+`build`. When that is in place, stand-alone transformation can be used any
+number of times.
+
+For a more advanced example, you could look at [serialize_test.dart][4] and
+its [library][5], where the base of a serialization framework is
+implemented; or you could look at [meta_reflectors_test.dart][6] and the
+libraries it imports, which illustrates how reflectable can be used to
+dynamically make a choice among several kinds of reflection, and how to
+eliminate several kinds of static dependencies among libraries.
+
+[3]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/tool/reflectable_transformer
+[4]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/serialize_test.dart
+[5]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/lib/serialize.dart
+[6]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/meta_reflectors_test.dart
 
 ### Comparison with `dart:mirrors` with `MirrorsUsed` annotations
 

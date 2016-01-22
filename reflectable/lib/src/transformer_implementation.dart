@@ -3174,20 +3174,20 @@ class TransformerImplementation {
           "constructor which is `const`, has \n"
           "the empty name, takes zero arguments, and "
           "uses at most one superinitializer.\n"
-          "Please correct $potentialReflectorClass to match this.");
-      // If this method is changed such that it returns, call sites should
-      // have `return false;` added after the call.
+          "Please correct `$potentialReflectorClass` to match this.");
     }
 
     if (potentialReflectorClass.constructors.length != 1) {
       // We "own" the direct subclasses of `Reflectable` so when they are
       // malformed as reflector classes we raise an error.
       constructorFail();
+      return false;
     }
     ConstructorElement constructor = potentialReflectorClass.constructors[0];
     if (constructor.parameters.isNotEmpty || !constructor.isConst) {
       // We still "own" `potentialReflectorClass`.
       constructorFail();
+      return false;
     }
     ConstructorDeclaration constructorDeclarationNode =
         constructor.computeNode();
@@ -3195,6 +3195,7 @@ class TransformerImplementation {
         constructorDeclarationNode.initializers;
     if (initializers.length > 1) {
       constructorFail();
+      return false;
     }
 
     // Do we care about type parameters? We don't expect any, but if someone
@@ -3587,14 +3588,21 @@ class TransformerImplementation {
   _Capabilities _capabilitiesOf(
       LibraryElement capabilityLibrary, ClassElement reflector) {
     List<ConstructorElement> constructors = reflector.constructors;
-    // Well-formedness for each reflector class should be checked by
-    // `_isReflectorClass`, so we do not report errors here, we just
-    // assert. We use one assert per check such that a failing assert will
-    // be as informative as possible.
-    assert(constructors.length == 1);
+
+    // Well-formedness for each reflector class is checked by
+    // `_isReflectorClass`, so we do not report errors here. But errors will
+    // not terminate the program, so we need to decide on how to handle
+    // erroneous reflectors here. We choose to pretend that they have no
+    // capabilities. An error message has already been issued, so that should
+    // not be too surprising for the programmer.
+    if (constructors.length != 1) {
+      return new _Capabilities(<ec.ReflectCapability>[]);
+    }
     ConstructorElement constructorElement = constructors[0];
-    assert(constructorElement.isConst);
-    assert(constructorElement.isDefaultConstructor);
+    if (!constructorElement.isConst ||
+        !constructorElement.isDefaultConstructor) {
+      return new _Capabilities(<ec.ReflectCapability>[]);
+    }
 
     ConstructorDeclaration constructorDeclarationNode =
         constructorElement.computeNode();

@@ -28,6 +28,8 @@ main() {
 """
 };
 
+const String package = "a";
+
 main() async {
   BarbackSettings settings = new BarbackSettings({
     "entry_points": ["main.dart"]
@@ -36,7 +38,8 @@ main() async {
   test("Verify error when reflector constructor is non-const", () async {
     for (String inputName in sources.keys) {
       String inputContents = sources[inputName];
-      TestTransform transform = new TestTransform(inputName, inputContents);
+      TestTransform transform =
+          new TestTransform(inputName, inputContents, package);
       Transformer transformer = new ReflectableTransformer.asPlugin(settings);
       await transformer.apply(transform);
       await transform.outputMap();

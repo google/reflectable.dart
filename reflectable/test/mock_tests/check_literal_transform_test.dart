@@ -114,13 +114,16 @@ _initializeReflectable() {
   }
 ];
 
+const String package = "a";
+
 checkTransform(List maps) async {
   Map<String, String> inputs = maps[0];
   Map<String, String> expectedOutputs = maps[1];
 
   for (String inputName in inputs.keys) {
     String inputContents = inputs[inputName];
-    TestTransform transform = new TestTransform(inputName, inputContents);
+    TestTransform transform =
+        new TestTransform(inputName, inputContents, package);
     ReflectableTransformer transformer =
         new ReflectableTransformer.asPlugin(new BarbackSettings({
       "entry_points": ["main.dart"],

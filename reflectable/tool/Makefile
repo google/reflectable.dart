@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+# Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 # source code is governed by a BSD-style license that can be found in
 # the LICENSE file.
 
@@ -14,6 +14,8 @@ all: get check build test
 
 g: get
 
+u: upgrade
+
 c: check
 
 b: build
@@ -22,6 +24,9 @@ t: test
 
 get:
 	( cd ..; pub get )
+
+upgrade:
+	( cd ..; pub upgrade )
 
 check:
 	( cd ..; dartanalyzer `find test lib -name \*.dart` )
@@ -33,5 +38,5 @@ test:
 	@echo "-------------------- mock_tests"
 	@./run_mock_tests
 
-.PHONY: all c b t ft check build test
+.PHONY: all g u c b t ft get upgrade check build test
 
