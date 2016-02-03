@@ -2864,6 +2864,20 @@ class _ImportCollector {
 // debugging which is concerned with the generated code (but that would
 // ideally be an infrequent occurrence).
 
+/// Keeps track of all entry points we have seen. Used to determine when the
+/// transformation job is complete during `pub build..` or stand-alone
+/// transformation, such that it is time to give control to the debugger.
+/// Only in use when `const bool.fromEnvironment("reflectable.pause.at.exit")`.
+Set<String> _allEntryPoints = new Set<String>();
+
+/// Keeps track of all entry points we have completed processing (either by
+/// transforming it successfully, or by concluding that it should not be
+/// transformed). Used to determine when the transformation job is complete
+/// during `pub build..` or stand-alone transformation, such that it is time
+/// to give control to the debugger.
+/// Only in use when `const bool.fromEnvironment("reflectable.pause.at.exit")`.
+Set<String> _processedEntryPoints = new Set<String>();
+
 class TransformerImplementation {
   TransformLogger _logger;
   Resolver _resolver;
@@ -3718,67 +3732,94 @@ _initializeReflectable() {
   /// statically generated mirror classes.
   Future apply(Transform transform, List<String> entryPoints, bool formatted,
       List<WarningKind> suppressedWarnings) async {
-    _logger = transform.logger;
-    _formatted = formatted;
-    _suppressedWarnings = suppressedWarnings;
     // The type argument in the return type is omitted because the
     // documentation on barback and on transformers do not specify it.
 
+    _logger = transform.logger;
+    _formatted = formatted;
+    _suppressedWarnings = suppressedWarnings;
+
     Asset asset = await transform.primaryInput;
     assert(asset != null); // Every transform has a primary asset.
+    String currentEntryPoint; // Null means not found.
+
+    if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+      _allEntryPoints.addAll(entryPoints);
+    }
 
     for (String entryPoint in entryPoints) {
-      if (!asset.id.path.endsWith(entryPoint)) {
-        // `asset` does not correspond to this `entryPoint`.
-        continue;
+      if (asset.id.path.endsWith(entryPoint)) {
+        currentEntryPoint = entryPoint;
+        break;
       }
-
-      _resolver = await _resolvers.get(transform);
-      LibraryElement reflectableLibrary =
-          _resolver.getLibraryByName("reflectable.reflectable");
-      if (reflectableLibrary == null) {
-        // Stop and do not consumePrimary, i.e., let the original source
-        // pass through without changes.
-        _logger.info("Ignoring entry point $entryPoint that does not "
-            "include the library 'package:reflectable/reflectable.dart'");
-        continue;
-      }
-
-      LibraryElement entryPointLibrary = _resolver.getLibrary(asset.id);
-      if (const bool.fromEnvironment("reflectable.print.entry.point")) {
-        print("Starting transformation of '$entryPoint'.");
-      }
-
-      ReflectionWorld world =
-          _computeWorld(reflectableLibrary, entryPointLibrary, asset.id);
-      if (world == null) continue;
-
-      String source = await asset.readAsString();
-      AssetId originalEntryPointId =
-          asset.id.changeExtension("_reflectable_original_main.dart");
-      // Rename the original entry-point.
-      transform.addOutput(new Asset.fromString(originalEntryPointId, source));
-
-      String originalEntryPointFilename =
-          path.basename(originalEntryPointId.path);
-
-      if (entryPointLibrary.entryPoint == null) {
-        _logger.info(
-            "Entry point: $entryPoint has no member called `main`. Skipping.");
-        continue;
-      }
-
-      // Generate a new file with the name of the entry-point, whose main
-      // initializes the reflection data, and calls the main from
-      // [originalEntryPointId].
-      String newEntryPoint =
-          _generateNewEntryPoint(world, asset.id, originalEntryPointFilename);
-      transform.addOutput(new Asset.fromString(asset.id, newEntryPoint));
-      _resolver.release();
     }
+    // If the given [asset] is not an entry point: skip.
+    if (currentEntryPoint == null) return;
+    assert(asset.id.path.endsWith(currentEntryPoint));
+
+    // The [_resolver] provides all the static information.
+    _resolver = await _resolvers.get(transform);
+
+    LibraryElement reflectableLibrary =
+        _resolver.getLibraryByName("reflectable.reflectable");
+    if (reflectableLibrary == null) {
+      // Stop and do not consumePrimary, i.e., let the original source
+      // pass through without changes.
+      _logger.info("Ignoring entry point $currentEntryPoint that does not "
+          "include the library 'package:reflectable/reflectable.dart'");
+      if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+        _processedEntryPoints.add(currentEntryPoint);
+      }
+      return;
+    }
+
+    LibraryElement entryPointLibrary = _resolver.getLibrary(asset.id);
+    if (const bool.fromEnvironment("reflectable.print.entry.point")) {
+      print("Starting transformation of '$currentEntryPoint'.");
+    }
+
+    ReflectionWorld world =
+        _computeWorld(reflectableLibrary, entryPointLibrary, asset.id);
+    if (world == null) {
+      // Errors have already been reported during `_computeWorld`.
+      if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+        _processedEntryPoints.add(currentEntryPoint);
+      }
+      return;
+    }
+
+    String source = await asset.readAsString();
+    AssetId originalEntryPointId =
+        asset.id.changeExtension("_reflectable_original_main.dart");
+    String originalEntryPointFilename =
+        path.basename(originalEntryPointId.path);
+    transform.addOutput(new Asset.fromString(originalEntryPointId, source));
+
+    if (entryPointLibrary.entryPoint == null) {
+      _logger.info("Entry point: $currentEntryPoint has no member "
+          "called `main`. Skipping.");
+      if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+        _processedEntryPoints.add(currentEntryPoint);
+      }
+      return;
+    }
+
+    // Generate a new file with the name of the entry-point, whose main
+    // initializes the reflection data, and calls the main from
+    // [originalEntryPointId].
+    String newEntryPoint =
+        _generateNewEntryPoint(world, asset.id, originalEntryPointFilename);
+    transform.addOutput(new Asset.fromString(asset.id, newEntryPoint));
     if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-      print("Transformation complete, pausing at exit.");
-      developer.debugger();
+      _processedEntryPoints.add(currentEntryPoint);
+    }
+    _resolver.release();
+
+    if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+      if (_processedEntryPoints.containsAll(_allEntryPoints)) {
+        print("Transformation complete, pausing at exit.");
+        developer.debugger();
+      }
     }
   }
 }
