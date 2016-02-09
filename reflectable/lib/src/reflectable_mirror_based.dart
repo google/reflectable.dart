@@ -1961,7 +1961,8 @@ class _TypedefMirrorImpl extends _TypeMirrorImpl implements rm.TypedefMirror {
     return new _FunctionTypeMirrorImpl(_typedefMirror.referent, _reflectable);
   }
 
-  @override operator ==(other) {
+  @override
+  operator ==(other) {
     return other is _TypedefMirrorImpl &&
         other._typedefMirror == _typedefMirror;
   }
@@ -1979,7 +1980,8 @@ class _SpecialTypeMirrorImpl extends _TypeMirrorImpl {
   _SpecialTypeMirrorImpl(dm.TypeMirror typeMirror, ReflectableImpl reflectable)
       : super(typeMirror, reflectable);
 
-  @override operator ==(other) {
+  @override
+  operator ==(other) {
     return other is _SpecialTypeMirrorImpl && other._typeMirror == _typeMirror;
   }
 
@@ -2099,7 +2101,8 @@ class _SourceLocationImpl implements rm.SourceLocation {
   @override
   Uri get sourceUri => _sourceLocation.sourceUri;
 
-  @override operator ==(other) {
+  @override
+  operator ==(other) {
     return other is _SourceLocationImpl &&
         other._sourceLocation == _sourceLocation;
   }
@@ -2500,20 +2503,30 @@ class _TypeAnnotationsFixedPoint extends FixedPoint<dm.ClassMirror> {
     for (dm.DeclarationMirror declaration in classMirror.declarations.values) {
       if (declaration is dm.VariableMirror) {
         dm.TypeMirror typeMirror = declaration.type.originalDeclaration;
-        if (typeMirror is dm.ClassMirror) yield typeMirror;
+        if (typeMirror is dm.ClassMirror &&
+            typeMirror is! dm.FunctionTypeMirror) {
+          yield typeMirror;
+        }
       } else if (declaration is dm.MethodMirror) {
         for (dm.ParameterMirror parameter in declaration.parameters) {
           dm.TypeMirror typeMirror = parameter.type.originalDeclaration;
-          if (typeMirror is dm.ClassMirror) yield typeMirror;
+          if (typeMirror is dm.ClassMirror &&
+              typeMirror is! dm.FunctionTypeMirror) {
+            yield typeMirror;
+          }
         }
         dm.TypeMirror typeMirror = declaration.returnType;
-        if (typeMirror is dm.ClassMirror) yield typeMirror;
+        if (typeMirror is dm.ClassMirror &&
+            typeMirror is! dm.FunctionTypeMirror) {
+          yield typeMirror;
+        }
       }
     }
     for (dm.TypeVariableMirror typeVariableMirror
         in classMirror.typeVariables) {
       dm.TypeMirror typeMirror = typeVariableMirror.upperBound;
-      if (typeMirror is dm.ClassMirror) {
+      if (typeMirror is dm.ClassMirror &&
+          typeMirror is! dm.FunctionTypeMirror) {
         yield typeMirror;
       }
     }
