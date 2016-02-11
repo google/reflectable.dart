@@ -8,7 +8,7 @@
 // which capability is missing.)
 
 /// Implementation of the reflectable interface using dart mirrors.
-library reflectable.src.reflectable_implementation;
+library reflectable.src.reflectable_mirror_based;
 
 import 'dart:mirrors' as dm;
 import 'incompleteness.dart';

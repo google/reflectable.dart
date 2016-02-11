@@ -6,7 +6,7 @@
 // Defines a reflector that is never used as a reflector; causes a transformer
 // warning, but not an error.
 
-library test_reflectable.test.invoke_test;
+library test_reflectable.test.unused_reflector_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';

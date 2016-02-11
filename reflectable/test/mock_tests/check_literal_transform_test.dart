@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library reflectable.check_literal_transform_test;
+library reflectable.test.mock_tests.check_literal_transform_test;
 
 /// Test the literal output of the transformation for a few simple cases.
 

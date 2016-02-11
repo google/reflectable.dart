@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.src.mirrors_unimpl;
+library reflectable.src.reflectable_transformer_based;
 
 import 'dart:collection' show UnmodifiableMapView, UnmodifiableListView;
 

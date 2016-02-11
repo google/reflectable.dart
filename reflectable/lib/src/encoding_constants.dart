@@ -1,8 +1,8 @@
-// Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
+// Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.encoding_constants;
+library reflectable.src.encoding_constants;
 
 // The first `flagsBit-1` bits are used to enumerate the "kind" of the
 // declaration. The more significant bits are flags.

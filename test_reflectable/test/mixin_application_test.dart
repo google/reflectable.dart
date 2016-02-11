@@ -11,7 +11,7 @@
 // applications is as recommended there then this test can work, otherwise
 // the test should be adjusted.
 
-library test_reflectable.test.generic_mixin_test;
+library test_reflectable.test.mixin_application_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';

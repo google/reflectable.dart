@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 /// Convenience functionality for testing the transformer.
-library test_transform;
+library reflectable.test_transform;
 
 import 'dart:async';
 import 'dart:convert';

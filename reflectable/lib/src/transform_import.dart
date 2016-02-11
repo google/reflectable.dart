@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.transform_import;
+library reflectable.src.transform_import;
 
 import 'dart:async';
 

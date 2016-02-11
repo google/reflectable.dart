@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library reflectable.arguments_test;
+library reflectable.test.mock_tests.arguments_test;
 
 /// Check that attempts to have a non-empty argument list in a reflector
 /// constructor is detected and diagnosed as an error.
