@@ -4248,24 +4248,32 @@ String _extractMetadataCode(Element element, Resolver resolver,
       if (annotationName is SimpleIdentifier) {
         name = "$annotationName";
       } else if (annotationName is PrefixedIdentifier) {
-        name = "${annotationName.identifier}";
+        // The annotation is on the form `@p.C(..)` where `p` is a library
+        // prefix, or it is on the form `@C.n(..)` where `C` is a class and
+        // `n` a named constructor.
+        if (annotationName.prefix.staticElement is PrefixElement) {
+          // We must replace the library prefix by the appropriate prefix for
+          // code in the generated library, so we omit `prefix`.
+          name = "${annotationName.identifier}";
+        } else {
+          // We must preserve the prefix which is a class name.
+          name = "$annotationName";
+        }
+        // In both cases we must include the library prefix.
         prefix = importCollector._getPrefix(annotationNode.element.library);
       } else {
         throw unimplementedError(
             "This kind of metadata not yet supported: $annotationNode");
       }
-      String constructor = (annotationNode.constructorName == null)
-          ? "$name"
-          : "$name.${annotationNode.constructorName}";
       String arguments =
           annotationNode.arguments.arguments.map((Expression argument) {
         return _extractConstantCode(argument, element.library, importCollector,
             logger, dataId, resolver);
       }).join(", ");
-      if (_isPrivateName(constructor)) {
-        logger.error("Cannot access private name $constructor");
+      if (_isPrivateName(name)) {
+        logger.error("Cannot access private name $name");
       }
-      metadataParts.add("const $prefix$constructor($arguments)");
+      metadataParts.add("const $prefix$name($arguments)");
     } else {
       // A field reference.
       if (_isPrivateName(annotationNode.name.name)) {

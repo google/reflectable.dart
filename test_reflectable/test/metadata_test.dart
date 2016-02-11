@@ -48,6 +48,7 @@ class K {
 @c
 class Foo {
   @Bar(const {})
+  @Bar.namedConstructor(const {})
   @b
   @c
   foo() {}
@@ -58,10 +59,12 @@ class Foo {
 
 @myReflectable2
 @Bar(const {})
+@Bar.namedConstructor(const {})
 @b
 @c
 class Foo2 {
   @Bar(const {})
+  @Bar.namedConstructor(const {})
   @b
   @c
   foo() {}
@@ -70,6 +73,7 @@ class Foo2 {
 class Bar {
   final Map<String, int> m;
   const Bar(this.m);
+  const Bar.namedConstructor(this.m);
   toString() => "Bar($m)";
 }
 
@@ -91,6 +95,7 @@ main() {
     ]);
 
     expect(myReflectable.reflectType(Foo).declarations["foo"].metadata, [
+      const Bar(const {}),
       const Bar(const {}),
       13,
       const [
