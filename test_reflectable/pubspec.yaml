@@ -79,6 +79,7 @@ transformers:
       - test/mixin_application_test.dart
       - test/unused_reflector_test.dart
       - test/function_type_annotation_test.dart
+      - test/prefixed_reflector_test.dart
     formatted: true
 - $dart2js:
     $include: []

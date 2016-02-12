@@ -31,6 +31,7 @@ enum WarningKind {
   badNamePattern,
   badMetadata,
   badReflectorClass,
+  unrecognizedReflector,
   unusedReflector
 }
 
@@ -3003,8 +3004,6 @@ class TransformerImplementation {
     }
 
     Element element = elementAnnotation.element;
-    // TODO(eernst) future: Currently we only handle constructor expressions
-    // and simple identifiers.  May be generalized later.
     if (element is ConstructorElement) {
       bool isOk =
           checkInheritance(element.enclosingElement.type, focusClass.type);
@@ -3029,23 +3028,29 @@ class TransformerImplementation {
         if (result?.value == null) return null;
         bool isOk = checkInheritance(result.value.type, focusClass.type);
         return isOk ? result.value.type.element : null;
+      } else if (variable is ConstFieldElementImpl) {
+        // A [ConstFieldElementImpl] is also used for non-const (final)
+        // fields, so we could also check `variable.isConst`; however, if
+        // we have non-const metadata then the program (pre- and post-
+        // transformed) will be rejected by the analyzer and the compilers,
+        // which means that it is unimportant for us to reject that case.
+        EvaluationResultImpl result = variable.evaluationResult;
+        if (result?.value == null) return null;
+        bool isOk = checkInheritance(result.value.type, focusClass.type);
+        return isOk ? result.value.type.element : null;
       } else {
-        // Not a const top-level variable, not relevant.
+        _logger.fine("Ignoring unsupported metadata form ${element}",
+            asset: _resolver.getSourceAssetId(element),
+            span: _resolver.getSourceSpan(element));
         return null;
       }
     }
     // Otherwise [element] is some other construct which is not supported.
-    //
-    // TODO(eernst) clarify: We need to consider whether there could be some
-    // other syntactic constructs that are incorrectly assumed by programmers
-    // to be usable with Reflectable.  Currently, such constructs will silently
-    // have no effect; it might be better to emit a diagnostic message (a
-    // hint?) in order to notify the programmer that "it does not work".
-    // The trade-off is that such constructs may have been written by
-    // programmers who are doing something else, intentionally.  To emit a
-    // diagnostic message, we must check whether there is a Reflectable
-    // somewhere inside this syntactic construct, and then emit the message
-    // in cases that we "consider likely to be misunderstood".
+    _logger.fine(
+        "Ignoring metadata in a form ($elementAnnotation) "
+        "which is not yet supported.",
+        asset: _resolver.getSourceAssetId(elementAnnotation.element),
+        span: _resolver.getSourceSpan(elementAnnotation.element));
     return null;
   }
 
