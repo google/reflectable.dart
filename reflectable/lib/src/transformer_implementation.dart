@@ -1314,7 +1314,8 @@ class _ReflectorDomain {
         ? libraries.indexOf(libraryMap[classElement.library])
         : constants.NO_CAPABILITY_INDEX;
 
-    String superinterfaceIndices = "<int>[${constants.NO_CAPABILITY_INDEX}]";
+    String superinterfaceIndices =
+        "const <int>[${constants.NO_CAPABILITY_INDEX}]";
     if (_capabilities._impliesTypeRelations) {
       superinterfaceIndices = _formatAsConstList(
           'int',
