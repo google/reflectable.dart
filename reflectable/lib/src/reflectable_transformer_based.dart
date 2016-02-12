@@ -377,6 +377,11 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   final int _mixinIndex;
 
   List<ClassMirror> get superinterfaces {
+    if (_superinterfaceIndices.length == 1 &&
+        _superinterfaceIndices[0] == NO_CAPABILITY_INDEX) {
+      throw new NoSuchCapabilityError(
+          "Requesting `superinterfaces` of '$qualifiedName' without capability");
+    }
     return _superinterfaceIndices.map((int i) => _data.typeMirrors[i]).toList();
   }
 
@@ -688,10 +693,15 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   @override
   bool isSubtypeOf(TypeMirror other) {
     if (_superclassIndex == NO_CAPABILITY_INDEX) {
-      // There is no way to get access to `superinterfaces` if we do not have
-      // access to `superclass`, and vice versa.
+      // There are two possible reasons for this: (1) If we have no type
+      // relations capability then the index will always be NO_CAPABILITY_INDEX.
+      // (2) Even if we have the type relations capability then the superclass
+      // may be un-covered. So we cannot tell the two apart based on index.
+      // Note that the check for superclass access also applies to the access
+      // to superinterfaces, that is, it is not necessary (nor useful) to check
+      // for access to superinterfaces here.
       throw new NoSuchCapabilityError(
-          "Attempt to get `isSubtypeOf` without `typeRelationsCapability`.");
+          "Attempt to evaluate `isSubtypeOf` without capability.");
     }
     return _isSubtypeOf(other);
   }
@@ -715,10 +725,15 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   bool isSubclassOf(ClassMirror other) {
     if (_superclassIndex == NO_CAPABILITY_INDEX) {
-      // There is no way to get access to `superinterfaces` if we do not have
-      // access to `superclass`, and vice versa.
+      // There are two possible reasons for this: (1) If we have no type
+      // relations capability then the index will always be NO_CAPABILITY_INDEX.
+      // (2) Even if we have the type relations capability then the superclass
+      // may be un-covered. So we cannot tell the two apart based on index.
+      // Note that the check for superclass access also applies to the access
+      // to superinterfaces, that is, it is not necessary (nor useful) to check
+      // for access to superinterfaces here.
       throw new NoSuchCapabilityError(
-          "Attempt to get `isSubclassOf` without `typeRelationsCapability`.");
+          "Attempt to evaluate `isSubclassOf` without capability.");
     }
     return _isSubclassOf(other);
   }
@@ -2215,9 +2230,12 @@ abstract class ReflectableImpl extends ReflectableBase
       }
     }
     switch (matchCount) {
-      case 0: throw new ArgumentError("No such library: $libraryName");
-      case 1: return matchingLibrary;
-      default: throw new ArgumentError("Ambiguous library name: $libraryName");
+      case 0:
+        throw new ArgumentError("No such library: $libraryName");
+      case 1:
+        return matchingLibrary;
+      default:
+        throw new ArgumentError("Ambiguous library name: $libraryName");
     }
   }
 
@@ -2237,7 +2255,8 @@ abstract class ReflectableImpl extends ReflectableBase
 
   @override
   Iterable<ClassMirror> get annotatedClasses {
-    return new List<ClassMirror>.unmodifiable(data[this].typeMirrors
+    return new List<ClassMirror>.unmodifiable(data[this]
+        .typeMirrors
         .where((TypeMirror typeMirror) => typeMirror is ClassMirror));
   }
 }

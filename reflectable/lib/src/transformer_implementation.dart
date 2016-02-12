@@ -1314,12 +1314,15 @@ class _ReflectorDomain {
         ? libraries.indexOf(libraryMap[classElement.library])
         : constants.NO_CAPABILITY_INDEX;
 
-    String superinterfaceIndices = _formatAsConstList(
-        'int',
-        classElement.interfaces
-            .map((InterfaceType type) => type.element)
-            .where(classes.contains)
-            .map(classes.indexOf));
+    String superinterfaceIndices = "<int>[${constants.NO_CAPABILITY_INDEX}]";
+    if (_capabilities._impliesTypeRelations) {
+      superinterfaceIndices = _formatAsConstList(
+          'int',
+          classElement.interfaces
+              .map((InterfaceType type) => type.element)
+              .where(classes.contains)
+              .map(classes.indexOf));
+    }
 
     String classMetadataCode;
     if (_capabilities._supportsMetadata) {
