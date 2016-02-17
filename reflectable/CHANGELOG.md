@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.5.2
+
+* **Potentially breaking bug fix**: In transformed code, `superinterfaces`
+  used to be callable even without a `typeRelationsCapability`. That
+  capability is now required (as it should be according to the documentation)
+  and this will break programs that rely on the old, incorrect behavior.
+* Adds support for recognizing a `const` field as a reflector (e.g., class `C`
+  can be covered by having `@SomeClass.aConstField` as metadata on `C`).
+* Fixes bug: misleading error messages from `isSubtypeOf` and `isAssignableTo`
+  corrected.
+* Fixes bug: now named constructors can be used in metadata (e.g.,
+  `@F.foo(42) var x;` can be used to get reflective support for `x`). 
+* Fixes bug: certain external function type mirrors seem to be unequal to
+  themselves, which caused an infinite loop; now that case is handled.
+* Adds a stand-alone version of the transformer; for more information please
+  consult the main comment on commit 8f90cb92341431097ad97b0d7aa442362e90e5b3.
+* Fixes bug: some private names could occur in generated code; this situation
+  is now detected more consistently and transformation fails.
+* The documentation now clearly states that it is not supported to use
+  reflectable in untransformed mode with `dart2js` generated code.
+* Adds a small corner of support for function types: A `typedef` can be used
+  to give a function type a name, and such a type can be used as a type
+  annotation (say, for a method parameter) for which it is possible to obtain
+  a mirror, and that type `hasReflectedType`.
+* Fixes bug: in the case where a reflector does not match anything at all there
+  used to be a null error; now that is handled, and a warning is emitted.
+* Switches from using an `AggregateTransform` to using a plain `Transform` for
+  all transformations; this reduces the number of redundant transformations
+  performed in the context of `pub serve`.
+* Adds extra tests such that line coverage in the transformer is again complete.
+* Fixes bug: `hasReflectedType` used to incorrectly return `true` in some cases
+  where a type variable was used in a nested generic type instantiation.
+* Fixes bugs associated with anonymous mixin applications involving type
+  arguments.
+* Fixes bug: several error messages claimed 'no such method' where they should
+  claim 'no such constructor' etc.
+* Fixes bug: it is now possible to invoke a constructor in an abstract class
+  reflectively, as long as it is a `factory`.
+* `List` receives some constructor arguments with default values which are
+  different on different platforms, and the analyzer reports that there are
+  no default values; this release introduces a special case for that.
+* Fixes bug: some constructors of native classes were omitted, are now
+  available like other members.
+
 ## 0.5.1
 
 * Changes the version constraint on analyzer to 0.27.1, to avoid an issue with
