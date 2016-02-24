@@ -13,6 +13,7 @@ import 'package:analyzer/src/generated/utilities_dart.dart';
 import 'package:barback/barback.dart';
 import 'package:code_transformers/resolver.dart';
 import 'package:dart_style/dart_style.dart';
+import 'package:glob/glob.dart';
 import 'package:path/path.dart' as path;
 import 'element_capability.dart' as ec;
 import 'encoding_constants.dart' as constants;
@@ -2869,19 +2870,11 @@ class _ImportCollector {
 // debugging which is concerned with the generated code (but that would
 // ideally be an infrequent occurrence).
 
-/// Keeps track of all entry points we have seen. Used to determine when the
+/// Keeps track of the number of entry points seen. Used to determine when the
 /// transformation job is complete during `pub build..` or stand-alone
 /// transformation, such that it is time to give control to the debugger.
 /// Only in use when `const bool.fromEnvironment("reflectable.pause.at.exit")`.
-Set<String> _allEntryPoints = new Set<String>();
-
-/// Keeps track of all entry points we have completed processing (either by
-/// transforming it successfully, or by concluding that it should not be
-/// transformed). Used to determine when the transformation job is complete
-/// during `pub build..` or stand-alone transformation, such that it is time
-/// to give control to the debugger.
-/// Only in use when `const bool.fromEnvironment("reflectable.pause.at.exit")`.
-Set<String> _processedEntryPoints = new Set<String>();
+int _processedEntryPointCount = 0;
 
 class TransformerImplementation {
   TransformLogger _logger;
@@ -3750,21 +3743,17 @@ _initializeReflectable() {
 
     Asset asset = await transform.primaryInput;
     assert(asset != null); // Every transform has a primary asset.
-    String currentEntryPoint; // Null means not found.
-
-    if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-      _allEntryPoints.addAll(entryPoints);
-    }
+    AssetId currentEntryPoint; // Null means not found.
 
     for (String entryPoint in entryPoints) {
-      if (asset.id.path.endsWith(entryPoint)) {
-        currentEntryPoint = entryPoint;
+      Glob glob = new Glob(entryPoint);
+      if (glob.matches(asset.id.path)) {
+        currentEntryPoint = asset.id;
         break;
       }
     }
     // If the given [asset] is not an entry point: skip.
     if (currentEntryPoint == null) return;
-    assert(asset.id.path.endsWith(currentEntryPoint));
 
     // The [_resolver] provides all the static information.
     _resolver = await _resolvers.get(transform);
@@ -3777,7 +3766,7 @@ _initializeReflectable() {
       _logger.info("Ignoring entry point $currentEntryPoint that does not "
           "include the library 'package:reflectable/reflectable.dart'");
       if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-        _processedEntryPoints.add(currentEntryPoint);
+        _processedEntryPointCount++;
       }
       return;
     }
@@ -3792,7 +3781,7 @@ _initializeReflectable() {
     if (world == null) {
       // Errors have already been reported during `_computeWorld`.
       if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-        _processedEntryPoints.add(currentEntryPoint);
+        _processedEntryPointCount++;
       }
       return;
     }
@@ -3808,7 +3797,7 @@ _initializeReflectable() {
       _logger.info("Entry point: $currentEntryPoint has no member "
           "called `main`. Skipping.");
       if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-        _processedEntryPoints.add(currentEntryPoint);
+        _processedEntryPointCount++;
       }
       return;
     }
@@ -3820,12 +3809,13 @@ _initializeReflectable() {
         _generateNewEntryPoint(world, asset.id, originalEntryPointFilename);
     transform.addOutput(new Asset.fromString(asset.id, newEntryPoint));
     if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-      _processedEntryPoints.add(currentEntryPoint);
+      _processedEntryPointCount++;
     }
     _resolver.release();
 
     if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-      if (_processedEntryPoints.containsAll(_allEntryPoints)) {
+      if (_processedEntryPointCount ==
+          const int.fromEnvironment("reflectable.pause.at.exit.count")) {
         print("Transformation complete, pausing at exit.");
         developer.debugger();
       }

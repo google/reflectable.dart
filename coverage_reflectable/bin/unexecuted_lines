@@ -8,7 +8,10 @@ BUILD_DIR=../../test_reflectable
 TIMESTAMP=$(date +"%Y%m%d-%H%M")
 OUTPUT_FILE="/tmp/unexecuted-lines-$TIMESTAMP.txt"
 VM_PORT=43979
-DART_VM_OPTIONS="--enable-vm-service:$VM_PORT -Dreflectable.pause.at.exit=true"
+TEST_COUNT=$(ls ../../test_reflectable/test/*_test.dart | wc -l)
+D_OPTION1="-Dreflectable.pause.at.exit=true"
+D_OPTION2="-Dreflectable.pause.at.exit.count=$TEST_COUNT"
+DART_VM_OPTIONS="--enable-vm-service:$VM_PORT $D_OPTION1 $D_OPTION2"
 export DART_VM_OPTIONS
 ( cd $BUILD_DIR; pub build --mode=debug test ) & sleep 1
 

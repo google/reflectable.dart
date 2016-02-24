@@ -7,6 +7,7 @@ library reflectable.transformer;
 import 'dart:async';
 import 'dart:io';
 import 'package:barback/barback.dart';
+import 'package:glob/glob.dart';
 import 'package:logging/logging.dart';
 import 'src/transformer_implementation.dart' as implementation;
 
@@ -143,7 +144,8 @@ class ReflectableTransformer extends Transformer
   declareOutputs(DeclaringTransform transform) async {
     AssetId id = await transform.primaryId;
     _entryPoints.forEach((String entryPoint) {
-      if (id.path.endsWith(entryPoint)) {
+      Glob glob = new Glob(entryPoint);
+      if (glob.matches(id.path)) {
         transform.declareOutput(id);
         AssetId dataId = id.changeExtension("_reflectable_original_main.dart");
         transform.declareOutput(dataId);
