@@ -658,7 +658,6 @@ class _ReflectorDomain {
           parameterNode.defaultValue != null) {
         defaultValueCode = " = ${_extractConstantCode(
             parameterNode.defaultValue,
-            parameterElement.library,
             importCollector, logger, _generatedLibraryId, _resolver)}";
       }
       return "${parameterNames[requiredPositionalCount + i]}"
@@ -679,7 +678,6 @@ class _ReflectorDomain {
           parameterNode.defaultValue != null) {
         defaultValueCode = ": ${_extractConstantCode(
             parameterNode.defaultValue,
-            parameterElement.library,
             importCollector, logger, _generatedLibraryId, _resolver)}";
       }
       return "${namedParameterNames[i]}$defaultValueCode";
@@ -787,9 +785,10 @@ class _ReflectorDomain {
     // [parameters], [instanceGetterNames], and [instanceSetterNames].
     _libraries.items.forEach(uncheckedAddLibrary);
     classes.forEach((ClassElement classElement) {
+      LibraryElement classLibrary = classElement.library;
       if (!libraries.items.any((_LibraryDomain libraryDomain) =>
-          libraryDomain._libraryElement == classElement.library)) {
-        addLibrary(classElement.library);
+          libraryDomain._libraryElement == classLibrary)) {
+        addLibrary(classLibrary);
       }
       classElement.typeParameters.forEach(typeParameters.add);
     });
@@ -863,8 +862,9 @@ class _ReflectorDomain {
     if (_capabilities._impliesTypes && _capabilities._impliesTypeAnnotations) {
       void addClass(ClassElement classElement) {
         classes.add(classElement);
-        if (!libraries.items.contains(classElement.library)) {
-          uncheckedAddLibrary(classElement.library);
+        LibraryElement classLibrary = classElement.library;
+        if (!libraries.items.contains(classLibrary)) {
+          uncheckedAddLibrary(classLibrary);
         }
       }
 
@@ -1934,13 +1934,8 @@ class _ReflectorDomain {
     String defaultValueCode = "null";
     if (parameterNode is DefaultFormalParameter &&
         parameterNode.defaultValue != null) {
-      defaultValueCode = _extractConstantCode(
-          parameterNode.defaultValue,
-          element.library,
-          importCollector,
-          logger,
-          _generatedLibraryId,
-          _resolver);
+      defaultValueCode = _extractConstantCode(parameterNode.defaultValue,
+          importCollector, logger, _generatedLibraryId, _resolver);
     }
     String parameterSymbolCode = descriptor & constants.namedAttribute != 0
         ? "#${element.name}"
@@ -2556,7 +2551,8 @@ class _Capabilities {
   Iterable<DartObjectImpl> _getEvaluatedMetadata(
       Iterable<ElementAnnotation> metadata) {
     return metadata.map((ElementAnnotationImpl elementAnnotation) {
-      EvaluationResultImpl evaluation = elementAnnotation.evaluationResult;
+      EvaluationResultImpl evaluation =
+          _annotationEvaluationResult(elementAnnotation);
       if (evaluation != null) return evaluation.value;
       // The `evaluationResult` from a getter is `null`, so we have to deal
       // with that case separately.
@@ -2913,7 +2909,7 @@ class TransformerImplementation {
     FieldElement idField = type.getField("thisClassId");
     if (idField == null || !idField.isStatic) return false;
     if (idField is ConstFieldElementImpl) {
-      EvaluationResultImpl idResult = idField.evaluationResult;
+      EvaluationResultImpl idResult = _constFieldEvaluationResult(idField);
       if (idResult != null) {
         return idField.constantValue.toStringValue() ==
             reflectable_class_constants.id;
@@ -2922,10 +2918,11 @@ class TransformerImplementation {
       // occur "if this variable is not a 'const' variable, if it does not
       // have an initializer, or if the compilation unit containing the
       // variable has not been resolved". The third case should not occur with
-      // the approach we use to obtain a `LibraryElement`, so it is not the
+      // the approach we use to obtain the `LibraryElement` for the library
+      // 'package:reflectable/reflectable.dart', so it is not the
       // right declaration we are looking at.
     }
-    // Not a const field, or failed the test, cannot be the right class.
+    // Not a const field, or failed the `id` test: cannot be the right class.
     return false;
   }
 
@@ -3010,7 +3007,8 @@ class TransformerImplementation {
       // [VariableElementImpl], but with that one we would have to test
       // `isConst` as well.
       if (variable is ConstTopLevelVariableElementImpl) {
-        EvaluationResultImpl result = variable.evaluationResult;
+        EvaluationResultImpl result =
+            _constTopLevelVariableEvaluationResult(variable);
         // Handle errors during evaluation. In general `evaluationResult` is
         // null for (1) non-const variables, (2) variables without an
         // initializer, and (3) unresolved libraries; (3) should not occur
@@ -3027,7 +3025,7 @@ class TransformerImplementation {
         // we have non-const metadata then the program (pre- and post-
         // transformed) will be rejected by the analyzer and the compilers,
         // which means that it is unimportant for us to reject that case.
-        EvaluationResultImpl result = variable.evaluationResult;
+        EvaluationResultImpl result = _constFieldEvaluationResult(variable);
         if (result?.value == null) return null;
         bool isOk = checkInheritance(result.value.type, focusClass.type);
         return isOk ? result.value.type.element : null;
@@ -3083,9 +3081,11 @@ class TransformerImplementation {
 
     for (LibraryElement library in _resolver.libraries) {
       for (ImportElement import in library.imports) {
+        if (import.importedLibrary != reflectableLibrary) continue;
         for (ElementAnnotationImpl metadatum in import.metadata) {
           if (metadatum.element == globalQuantifyCapabilityConstructor) {
-            EvaluationResultImpl evaluation = metadatum.evaluationResult;
+            EvaluationResultImpl evaluation =
+                _annotationEvaluationResult(metadatum);
             if (evaluation != null && evaluation.value != null) {
               DartObjectImpl value = evaluation.value;
               String pattern = value.fields["classNamePattern"].toStringValue();
@@ -3116,7 +3116,8 @@ class TransformerImplementation {
             }
           } else if (metadatum.element ==
               globalQuantifyMetaCapabilityConstructor) {
-            EvaluationResultImpl evaluation = metadatum.evaluationResult;
+            EvaluationResultImpl evaluation =
+                _annotationEvaluationResult(metadatum);
             if (evaluation?.value != null) {
               DartObjectImpl value = evaluation.value;
               Object metadataFieldValue =
@@ -3265,10 +3266,11 @@ class TransformerImplementation {
     /// it if none exists.
     _ReflectorDomain getReflectorDomain(ClassElement reflector) {
       return domains.putIfAbsent(reflector, () {
+        LibraryElement reflectorLibrary = reflector.library;
         _Capabilities capabilities =
             _capabilitiesOf(capabilityLibrary, reflector);
-        assert(_isImportableLibrary(reflector.library, dataId, _resolver));
-        importCollector._addLibrary(reflector.library);
+        assert(_isImportableLibrary(reflectorLibrary, dataId, _resolver));
+        importCollector._addLibrary(reflectorLibrary);
         return new _ReflectorDomain(_resolver, dataId, reflector, capabilities);
       });
     }
@@ -3326,11 +3328,11 @@ class TransformerImplementation {
       }
     }
 
-    /// Runs through a list of metadata, and finds any Reflectors, and
+    /// Runs through [metadata] and finds all reflectors as well as
     /// objects that are associated with reflectors via
-    /// GlobalQuantifyMetaCapability and GlobalQuantifyCapability.
+    /// [GlobalQuantifyMetaCapability] or [GlobalQuantifyCapability].
     /// [qualifiedName] is the name of the library or class annotated by
-    /// metadata.
+    /// [metadata].
     Iterable<ClassElement> getReflectors(
         String qualifiedName, List<ElementAnnotation> metadata) {
       List<ClassElement> result = <ClassElement>[];
@@ -3770,6 +3772,7 @@ _initializeReflectable() {
       }
       return;
     }
+    reflectableLibrary = _resolvedLibraryOf(reflectableLibrary);
 
     LibraryElement entryPointLibrary = _resolver.getLibrary(asset.id);
     if (const bool.fromEnvironment("reflectable.print.entry.point")) {
@@ -3810,6 +3813,10 @@ _initializeReflectable() {
     transform.addOutput(new Asset.fromString(asset.id, newEntryPoint));
     if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
       _processedEntryPointCount++;
+    }
+    if (const bool.fromEnvironment("reflectable.print.resolved.libraries")) {
+      print("Resolved libraries for $currentEntryPoint: "
+          "${_resolvedLibraries.length}/${_resolver.libraries.length}");
     }
     _resolver.release();
 
@@ -4006,7 +4013,6 @@ String _formatAsMap(Iterable parts) => "{${parts.join(", ")}}";
 /// would evaluate to in [originatingLibrary].
 String _extractConstantCode(
     Expression expression,
-    LibraryElement originatingLibrary,
     _ImportCollector importCollector,
     TransformLogger logger,
     AssetId generatedLibraryId,
@@ -4038,8 +4044,7 @@ String _extractConstantCode(
       if (_isImportableLibrary(
           libraryOfConstructor, generatedLibraryId, resolver)) {
         importCollector._addLibrary(libraryOfConstructor);
-        String prefix =
-            importCollector._getPrefix(expression.staticElement.library);
+        String prefix = importCollector._getPrefix(libraryOfConstructor);
         // TODO(sigurdm) implement: Named arguments.
         String arguments =
             expression.argumentList.arguments.map((Expression argument) {
@@ -4115,13 +4120,8 @@ String _extractConstantCode(
       String b = helper(arguments[1]);
       return "identical($a, $b)";
     } else if (expression is NamedExpression) {
-      String value = _extractConstantCode(
-          expression.expression,
-          originatingLibrary,
-          importCollector,
-          logger,
-          generatedLibraryId,
-          resolver);
+      String value = _extractConstantCode(expression.expression,
+          importCollector, logger, generatedLibraryId, resolver);
       return "${expression.name} $value";
     } else {
       assert(expression is IntegerLiteral ||
@@ -4134,6 +4134,7 @@ String _extractConstantCode(
       return expression.toSource();
     }
   }
+
   return helper(expression);
 }
 
@@ -4226,7 +4227,6 @@ String _extractMetadataCode(Element element, Resolver resolver,
       continue;
     }
 
-    LibraryElement library = annotationNode.element.library;
     if (!_isImportable(annotationNode.element, dataId, resolver)) {
       // Private constants, and constants made of classes in internal libraries
       // cannot be represented.
@@ -4238,8 +4238,9 @@ String _extractMetadataCode(Element element, Resolver resolver,
           span: resolver.getSourceSpan(element));
       continue;
     }
-    importCollector._addLibrary(library);
-    String prefix = importCollector._getPrefix(library);
+    LibraryElement annotationLibrary = annotationNode.element.library;
+    importCollector._addLibrary(annotationLibrary);
+    String prefix = importCollector._getPrefix(annotationLibrary);
     if (annotationNode.arguments != null) {
       // A const constructor.
       Identifier annotationName = annotationNode.name;
@@ -4266,8 +4267,8 @@ String _extractMetadataCode(Element element, Resolver resolver,
       }
       String arguments =
           annotationNode.arguments.arguments.map((Expression argument) {
-        return _extractConstantCode(argument, element.library, importCollector,
-            logger, dataId, resolver);
+        return _extractConstantCode(
+            argument, importCollector, logger, dataId, resolver);
       }).join(", ");
       if (_isPrivateName(name)) {
         logger.error("Cannot access private name $name");
@@ -4659,6 +4660,12 @@ class MixinApplication implements ClassElement {
       declaredName != null ? subclass.computeNode() : null;
 
   @override
+  ElementKind get kind => ElementKind.CLASS;
+
+  @override
+  ElementLocation get location => null;
+
+  @override
   bool operator ==(Object object) {
     return object is MixinApplication &&
         superclass == object.superclass &&
@@ -4801,18 +4808,17 @@ class MixinApplication implements ClassElement {
   bool get isPublic => throw unreachableError("isPublic");
 
   @override
-  ElementKind get kind => throw unreachableError("kind");
-
-  @override
-  ElementLocation get location => throw unreachableError("location");
-
-  @override
   int get nameOffset => throw unreachableError("nameOffset");
 
   @override
   get source => throw unreachableError("source");
 
   @override
+  String get documentationComment =>
+      throw unreachableError("documentationComment");
+
+  @override
+  @deprecated
   get docRange => throw unreachableError("docRange");
 
   @override
@@ -4822,6 +4828,7 @@ class MixinApplication implements ClassElement {
   accept(ElementVisitor visitor) => throw unreachableError("accept");
 
   @override
+  @deprecated
   String computeDocumentationComment() =>
       throw unreachableError("computeDocumentationComment");
 
@@ -4869,3 +4876,57 @@ String _qualifiedTypeParameterName(TypeParameterElement typeParameterElement) {
 bool _isPrivateName(String name) {
   return name.startsWith("_") || name.contains("._");
 }
+
+/// Returns the `evaluationResult` for [annotation], after having forced
+/// constant resolution to take place in `annotation.compilationUnit.library`.
+/// Note that future invocations of `annotation.compilationUnit.library` will
+/// return a resolved library, but previously obtained results from that method
+/// will remain unresolved if they were unresolved when they were obtained.
+EvaluationResultImpl _annotationEvaluationResult(
+    ElementAnnotationImpl annotation) {
+  _resolvedLibraryOf(annotation.compilationUnit.library);
+  return annotation.evaluationResult;
+}
+
+/// Returns the `evaluationResult` for [constFieldElement], after having forced
+/// constant resolution to take place in `constFieldElement.library`.
+/// Note that future invocations of `constFieldElement.library` will
+/// return a resolved library, but previously obtained results from that method
+/// will remain unresolved if they were unresolved when they were obtained.
+EvaluationResultImpl _constFieldEvaluationResult(
+    ConstFieldElementImpl constFieldElement) {
+  // This is safe: The result returned from `library` will not be used again.
+  _resolvedLibraryOf(constFieldElement.library);
+  return constFieldElement.evaluationResult;
+}
+
+/// Returns the `evaluationResult` for [constTopLevelVariable], after having
+/// forced constant resolution to take place in `constTopLevelvariable.library`.
+/// Note that future invocations of `constTopLevelVariable.library` will
+/// return a resolved library, but previously obtained results from that method
+/// will remain unresolved if they were unresolved when they were obtained.
+EvaluationResultImpl _constTopLevelVariableEvaluationResult(
+    ConstTopLevelVariableElementImpl constTopLevelVariable) {
+  // This is safe: The result returned from `library` will not be used again.
+  _resolvedLibraryOf(constTopLevelVariable.library);
+  return constTopLevelVariable.evaluationResult;
+}
+
+/// Requests resolution of constants in [libraryElement] and returns a
+/// [LibraryElement] wherein they have been resolved. If the library has
+/// been obtained by evaluating `library` on an `Element` and all further
+/// usage of that library will happen by invoking `library` again then it is
+/// safe to ignore the returned value (because the future invocations of
+/// `library` will return the resolved library).
+LibraryElement _resolvedLibraryOf(LibraryElement libraryElement) {
+  LibraryElement resolvedLibrary = _resolvedLibraries[libraryElement];
+  if (resolvedLibrary == null) {
+    resolvedLibrary = libraryElement.context
+        .computeLibraryElement(libraryElement.definingCompilationUnit.source);
+    _resolvedLibraries[libraryElement] = resolvedLibrary;
+  }
+  return resolvedLibrary;
+}
+
+Map<LibraryElement, LibraryElement> _resolvedLibraries =
+    <LibraryElement, LibraryElement>{};

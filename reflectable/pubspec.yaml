@@ -10,7 +10,7 @@ homepage: https://www.github.com/dart-lang/reflectable
 environment:
   sdk: '>=1.12.0 <2.0.0'
 dependencies:
-  analyzer: 0.27.1 # Temporary constraint: avoid issue with 0.27.1+1.
+  analyzer: ^0.27.2
   barback: ^0.15.0
   code_transformers: ^0.4.0
   dart_style: ^0.2.0
