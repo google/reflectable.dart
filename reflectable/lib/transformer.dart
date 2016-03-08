@@ -136,8 +136,8 @@ class ReflectableTransformer extends Transformer
   /// Performs the transformation.
   @override
   Future apply(Transform transform) {
-    return new implementation.TransformerImplementation()
-        .apply(transform, _entryPoints, _formatted, _suppressWarnings);
+    return new implementation.TransformerImplementation().apply(
+        transform, _entryPoints, _formatted, _suppressWarnings);
   }
 
   @override

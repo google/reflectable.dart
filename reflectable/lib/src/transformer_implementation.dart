@@ -3757,8 +3757,10 @@ _initializeReflectable() {
     // If the given [asset] is not an entry point: skip.
     if (currentEntryPoint == null) return;
 
-    // The [_resolver] provides all the static information.
-    _resolver = await _resolvers.get(transform);
+    // The [_resolver] provides all the static information. Use the default
+    // for `entryPoints` and `false` for `resolveAllLibraries` (we resolve
+    // here in reflectable, in a more fine-grained and lazy manner).
+    _resolver = await _resolvers.get(transform, null, false);
 
     LibraryElement reflectableLibrary =
         _resolver.getLibraryByName("reflectable.reflectable");
