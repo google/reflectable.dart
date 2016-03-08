@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.3
+
+* Eliminates the binding to `analyzer` 0.27.1, using ^0.27.2 instead; also uses
+  `code_transformers` ^0.4.1.
+* Introduces support for entry point globbing; for more information please
+  consult commit
+  [8936f98](https://github.com/dart-lang/reflectable/commit/8936f98be71cd4325928b8b249b906f83aa54034).
+
 ## 0.5.2
 
 * **Potentially breaking bug fix**: In transformed code, `superinterfaces`
@@ -15,7 +23,8 @@
 * Fixes bug: certain external function type mirrors seem to be unequal to
   themselves, which caused an infinite loop; now that case is handled.
 * Adds a stand-alone version of the transformer; for more information please
-  consult the main comment on commit 8f90cb92341431097ad97b0d7aa442362e90e5b3.
+  consult the main comment on commit
+  [8f90cb9](https://github.com/dart-lang/reflectable/commit/8f90cb92341431097ad97b0d7aa442362e90e5b3).
 * Fixes bug: some private names could occur in generated code; this situation
   is now detected more consistently and transformation fails.
 * The documentation now clearly states that it is not supported to use
