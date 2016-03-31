@@ -2548,30 +2548,6 @@ class _Capabilities {
     return false;
   }
 
-  Iterable<DartObjectImpl> _getEvaluatedMetadata(
-      Iterable<ElementAnnotation> metadata) {
-    return metadata.map((ElementAnnotationImpl elementAnnotation) {
-      EvaluationResultImpl evaluation =
-          _annotationEvaluationResult(elementAnnotation);
-      if (evaluation != null) return evaluation.value;
-      // The `evaluationResult` from a getter is `null`, so we have to deal
-      // with that case separately.
-      Element element = elementAnnotation.element;
-      if (element is PropertyAccessorElement &&
-          element.isGetter &&
-          element.isSynthetic) {
-        return element.variable.constantValue;
-      } else if (element is ConstructorElementImpl) {
-        DartType dartType = element.returnType;
-        if (dartType is InterfaceType) {
-          return new DartObjectImpl.validWithUnknownValue(dartType);
-        }
-      }
-      return unimplementedError(
-          "Metadata has a not yet supported form: $elementAnnotation");
-    });
-  }
-
   // TODO(sigurdm) future: Find a way to cache these. Perhaps take an
   // element instead of name+metadata.
   bool supportsInstanceInvoke(
@@ -3084,10 +3060,8 @@ class TransformerImplementation {
         if (import.importedLibrary != reflectableLibrary) continue;
         for (ElementAnnotationImpl metadatum in import.metadata) {
           if (metadatum.element == globalQuantifyCapabilityConstructor) {
-            EvaluationResultImpl evaluation =
-                _annotationEvaluationResult(metadatum);
-            if (evaluation != null && evaluation.value != null) {
-              DartObjectImpl value = evaluation.value;
+            DartObjectImpl value = _getEvaluatedMetadatum(metadatum);
+            if (value != null) {
               String pattern = value.fields["classNamePattern"].toStringValue();
               if (pattern == null) {
                 // TODO(sigurdm) implement: Create a span for the annotation
@@ -3338,8 +3312,7 @@ class TransformerImplementation {
       List<ClassElement> result = <ClassElement>[];
 
       for (ElementAnnotationImpl metadatum in metadata) {
-        EvaluationResultImpl evaluation = metadatum.evaluationResult;
-        DartObject value = evaluation?.value;
+        DartObject value = _getEvaluatedMetadatum(metadatum);
 
         // Test if the type of this metadata is associated with any reflectors
         // via GlobalQuantifyMetaCapability.
@@ -3355,9 +3328,7 @@ class TransformerImplementation {
         // Test if the annotation is a reflector.
         ClassElement reflector =
             _getReflectableAnnotation(metadatum, classReflectable);
-        if (reflector != null) {
-          result.add(reflector);
-        }
+        if (reflector != null) result.add(reflector);
       }
 
       // Add All reflectors associated with a
@@ -3815,10 +3786,6 @@ _initializeReflectable() {
     transform.addOutput(new Asset.fromString(asset.id, newEntryPoint));
     if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
       _processedEntryPointCount++;
-    }
-    if (const bool.fromEnvironment("reflectable.print.resolved.libraries")) {
-      print("Resolved libraries for $currentEntryPoint: "
-          "${_resolvedLibraries.length}/${_resolver.libraries.length}");
     }
     _resolver.release();
 
@@ -4883,41 +4850,8 @@ bool _isPrivateName(String name) {
   return name.startsWith("_") || name.contains("._");
 }
 
-/// Returns the `evaluationResult` for [annotation], after having forced
-/// constant resolution to take place in `annotation.compilationUnit.library`.
-/// Note that future invocations of `annotation.compilationUnit.library` will
-/// return a resolved library, but previously obtained results from that method
-/// will remain unresolved if they were unresolved when they were obtained.
-EvaluationResultImpl _annotationEvaluationResult(
-    ElementAnnotationImpl annotation) {
-  _resolvedLibraryOf(annotation.compilationUnit.library);
-  return annotation.evaluationResult;
-}
-
-/// Returns the `evaluationResult` for [constFieldElement], after having forced
-/// constant resolution to take place in `constFieldElement.library`.
-/// Note that future invocations of `constFieldElement.library` will
-/// return a resolved library, but previously obtained results from that method
-/// will remain unresolved if they were unresolved when they were obtained.
-EvaluationResultImpl _constFieldEvaluationResult(
-    ConstFieldElementImpl constFieldElement) {
-  // This is safe: The result returned from `library` will not be used again.
-  _resolvedLibraryOf(constFieldElement.library);
-  return constFieldElement.evaluationResult;
-}
-
-/// Returns the `evaluationResult` for [constTopLevelVariable], after having
-/// forced constant resolution to take place in `constTopLevelvariable.library`.
-/// Note that future invocations of `constTopLevelVariable.library` will
-/// return a resolved library, but previously obtained results from that method
-/// will remain unresolved if they were unresolved when they were obtained.
-EvaluationResultImpl _constTopLevelVariableEvaluationResult(
-    ConstTopLevelVariableElementImpl constTopLevelVariable) {
-  // This is safe: The result returned from `library` will not be used again.
-  _resolvedLibraryOf(constTopLevelVariable.library);
-  return constTopLevelVariable.evaluationResult;
-}
-
+/// Returns a constant resolved version of the given [libraryElement].
+///
 /// Requests resolution of constants in [libraryElement] and returns a
 /// [LibraryElement] wherein they have been resolved. If the library has
 /// been obtained by evaluating `library` on an `Element` and all further
@@ -4925,14 +4859,111 @@ EvaluationResultImpl _constTopLevelVariableEvaluationResult(
 /// safe to ignore the returned value (because the future invocations of
 /// `library` will return the resolved library).
 LibraryElement _resolvedLibraryOf(LibraryElement libraryElement) {
-  LibraryElement resolvedLibrary = _resolvedLibraries[libraryElement];
-  if (resolvedLibrary == null) {
-    resolvedLibrary = libraryElement.context
-        .computeLibraryElement(libraryElement.definingCompilationUnit.source);
-    _resolvedLibraries[libraryElement] = resolvedLibrary;
-  }
-  return resolvedLibrary;
+  return libraryElement.context
+      .computeLibraryElement(libraryElement.definingCompilationUnit.source);
 }
 
-Map<LibraryElement, LibraryElement> _resolvedLibraries =
-    <LibraryElement, LibraryElement>{};
+/// Returns `evaluationResult` for the given [annotation].
+///
+/// Returns the `evaluationResult` for [annotation], after having forced
+/// constant resolution to take place in `annotation.compilationUnit.library`.
+/// Note that future invocations of `annotation.compilationUnit.library` will
+/// return a resolved library, but previously obtained results from that method
+/// will remain unresolved if they were unresolved when they were obtained.
+EvaluationResultImpl _annotationEvaluationResult(
+    ElementAnnotationImpl annotation) {
+  EvaluationResultImpl result = annotation.evaluationResult;
+  if (result == null) {
+    // This is safe: The `library` will not be used again.
+    _resolvedLibraryOf(annotation.compilationUnit.library);
+    result = annotation.evaluationResult;
+  }
+  return result;
+}
+
+/// Returns `evaluationResult` for the given [constFieldElement].
+///
+/// Returns the `evaluationResult` for [constFieldElement], after having
+/// forced constant resolution to take place in `constFieldElement.library`.
+/// Note that future invocations of `constFieldElement.library` will return
+/// a resolved library, but previously obtained results from that method
+/// will remain unresolved if they were unresolved when they were obtained.
+EvaluationResultImpl _constFieldEvaluationResult(
+    ConstFieldElementImpl constFieldElement) {
+  EvaluationResultImpl result = constFieldElement.evaluationResult;
+  if (result == null) {
+    // This is safe: The `library` will not be used again.
+    _resolvedLibraryOf(constFieldElement.library);
+    result = constFieldElement.evaluationResult;
+  }
+  return result;
+}
+
+/// Returns `evaluationResult` for the given [constTopLevelVariable].
+///
+/// Returns the `evaluationResult` for [constTopLevelVariable], after having
+/// forced constant resolution to take place in `constTopLevelvariable.library`.
+/// Note that future invocations of `constTopLevelVariable.library` will
+/// return a resolved library, but previously obtained results from that method
+/// will remain unresolved if they were unresolved when they were obtained.
+EvaluationResultImpl _constTopLevelVariableEvaluationResult(
+    ConstTopLevelVariableElementImpl constTopLevelVariable) {
+  EvaluationResultImpl result = constTopLevelVariable.evaluationResult;
+  if (result == null) {
+    // This is safe: The `library` will not be used again.
+    _resolvedLibraryOf(constTopLevelVariable.library);
+    result = constTopLevelVariable.evaluationResult;
+  }
+  return result;
+}
+
+/// Returns the result of evaluating [elementAnnotation].
+///
+/// Returns the result of invoking `evaluationResult` on the given
+/// [elementAnnotation], possibly resolving constants in its enclosing
+/// [LibraryElement]. As an exception, when [elementAnnotation] denotes
+/// a getter or a constructor, `evaluationResult` is null; the value is
+/// then obtained indirectly.
+DartObjectImpl _getEvaluatedMetadatum(ElementAnnotation elementAnnotation) {
+  fail() {
+    throw unimplementedError(
+        "Metadata has a not yet supported form: $elementAnnotation");
+  }
+
+  EvaluationResultImpl evaluation =
+      _annotationEvaluationResult(elementAnnotation);
+  if (evaluation != null) return evaluation.value;
+  // The `evaluationResult` from a getter is `null`, so we have to deal
+  // with that case separately.
+  Element element = elementAnnotation.element;
+  if (element is PropertyAccessorElement &&
+      element.isGetter &&
+      element.isSynthetic) {
+    PropertyInducingElement variable = element.variable;
+    EvaluationResultImpl result;
+    if (variable is ConstFieldElementImpl) {
+      result = _constFieldEvaluationResult(variable);
+    } else if (variable is ConstTopLevelVariableElementImpl) {
+      result = _constTopLevelVariableEvaluationResult(variable);
+    } else {
+      throw fail();
+    }
+    if (result?.value == null) throw fail();
+    return result.value;
+  } else if (element is ConstructorElementImpl) {
+    DartType dartType = element.returnType;
+    if (dartType is InterfaceType) {
+      return new DartObjectImpl.validWithUnknownValue(dartType);
+    }
+  }
+  throw fail();
+}
+
+/// Returns the result of evaluating [metadata].
+///
+/// Returns the result of evaluating each of the element annotations
+/// in [metadata] using [_getEvaluatedMetadatum].
+Iterable<DartObjectImpl> _getEvaluatedMetadata(
+    Iterable<ElementAnnotation> metadata) {
+  return metadata.map(_getEvaluatedMetadatum);
+}
