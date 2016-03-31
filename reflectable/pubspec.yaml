@@ -16,6 +16,8 @@ dependencies:
   dart_style: ^0.2.0
   glob: ^1.1.0
   logging: ^0.11.0
+  path: ^1.2.0
+  source_span: ^1.0.0
 dev_dependencies:
   unittest: ^0.11.0
 transformers:
