@@ -4186,6 +4186,10 @@ String _extractMetadataCode(Element element, Resolver resolver,
     // This can occur with members of subclasses of `Element` from 'dart:html'.
     return "const []";
   }
+  if (node is EnumConstantDeclaration) {
+    // The grammar does not allow for individual enum values to have metadata.
+    return "const []";
+  }
 
   // The `element.node` of a field is the [VariableDeclaration] that is nested
   // in a [VariableDeclarationList] that is nested in a [FieldDeclaration]. The
