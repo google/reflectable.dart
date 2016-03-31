@@ -11,17 +11,20 @@ import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 
 class NoTypeVariablesReflector extends Reflectable {
-  const NoTypeVariablesReflector() : super(libraryCapability, typeCapability);
+  const NoTypeVariablesReflector()
+      : super(libraryCapability, typeRelationsCapability);
 }
 
 class NoBoundsReflector extends Reflectable {
-  const NoBoundsReflector() : super(declarationsCapability, libraryCapability);
+  const NoBoundsReflector()
+      : super(
+            declarationsCapability, typeRelationsCapability, libraryCapability);
 }
 
 class Reflector extends Reflectable {
   const Reflector()
       : super(typeAnnotationQuantifyCapability, declarationsCapability,
-            libraryCapability, metadataCapability);
+            libraryCapability, typeRelationsCapability, metadataCapability);
 }
 
 const Reflectable noTypeVariablesReflector = const NoTypeVariablesReflector();

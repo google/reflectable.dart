@@ -1301,16 +1301,20 @@ class _ReflectorDomain {
               importCollector, classElement, element.name, logger)));
     }
 
-    int mixinIndex;
-    if (classElement.isMixinApplication) {
-      // Named mixin application (using the syntax `class B = A with M;`).
-      mixinIndex = classes.indexOf(classElement.mixins.last.element);
-    } else {
-      mixinIndex = (classElement is MixinApplication)
-          ? classes.indexOf(classElement.mixin)
-          : classes.indexOf(classElement);
+    int mixinIndex = constants.NO_CAPABILITY_INDEX;
+    if (_capabilities._impliesTypeRelations) {
+      mixinIndex = classElement.isMixinApplication
+          // Named mixin application (using the syntax `class B = A with M;`).
+          ? classes.indexOf(classElement.mixins.last.element)
+          : (classElement is MixinApplication
+              // Anonymous mixin application.
+              ? classes.indexOf(classElement.mixin)
+              // No mixins, by convention we use the class itself.
+              : classes.indexOf(classElement));
+      // We may not have support for the given class, in which case we must
+      // correct the `null` from `indexOf` to indicate missing capability.
+      if (mixinIndex == null) mixinIndex = constants.NO_CAPABILITY_INDEX;
     }
-    if (mixinIndex == null) mixinIndex = constants.NO_CAPABILITY_INDEX;
 
     int ownerIndex = _capabilities._supportsLibraries
         ? libraries.indexOf(libraryMap[classElement.library])

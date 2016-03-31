@@ -594,7 +594,7 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
   Map<String, rm.DeclarationMirror> get declarations {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get declarations without `declarationsCapability`");
+          "Attempt to get `declarations` without `declarationsCapability`");
     }
     return _rawDeclarations;
   }
@@ -823,7 +823,7 @@ class _LibraryDependencyMirrorImpl implements rm.LibraryDependencyMirror {
   List<Object> get metadata {
     if (!_supportsMetadata(_reflectable.capabilities)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get metadata without `MetadataCapability`.");
+          "Attempt to get `metadata` without `MetadataCapability`.");
     }
     return _libraryDependencyMirror.metadata.map((m) => m.reflectee).toList();
   }
@@ -860,7 +860,7 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
   rm.TypeMirror get type {
     if (!reflectableSupportsType(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get `type` without capability");
+          "Attempt to get `type` without `typeCapability`");
     }
     return _rawType;
   }
@@ -966,7 +966,7 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
   delegate(Invocation invocation) {
     if (!reflectableSupportsDelegate(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to `delegate` without `delegateCapability`.");
+          "Attempt to `delegate` without `delegateCapability`");
     }
     if (!reflectableSupportsInstanceInvoke(_reflectable,
         dm.MirrorSystem.getName(invocation.memberName), _instanceMirror.type)) {
@@ -1046,7 +1046,11 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   List<rm.TypeVariableMirror> get typeVariables {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get typeVariables without `declarationsCapability`");
+          "Attempt to get `typeVariables` without `declarationsCapability`");
+    }
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `typeVariables` without `typeRelationsCapability`");
     }
     return _classMirror.typeVariables.map((v) {
       return new _TypeVariableMirrorImpl(v, _reflectable);
@@ -1057,7 +1061,11 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   List<rm.TypeMirror> get typeArguments {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get typeArguments without `declarationsCapability`");
+          "Attempt to get `typeArguments` without `declarationsCapability`");
+    }
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `typeArguments` without `typeRelationsCapability`");
     }
     return _classMirror.typeArguments.map((a) {
       return wrapTypeMirror(a, _reflectable);
@@ -1068,7 +1076,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   rm.ClassMirror get superclass {
     if (!reflectableSupportsTypeRelations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get superclass without `typeRelationsCapability`");
+          "Attempt to get `superclass` without `typeRelationsCapability`");
     }
     dm.ClassMirror sup = _classMirror.superclass;
     if (sup == null) return null; // For `Object`, do as `dm`.
@@ -1079,7 +1087,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   List<rm.ClassMirror> get superinterfaces {
     if (!reflectableSupportsTypeRelations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get superinterfaces without `typeRelationsCapability`");
+          "Attempt to get `superinterfaces` without `typeRelationsCapability`");
     }
     List<dm.ClassMirror> superinterfaces = _classMirror.superinterfaces;
     return superinterfaces
@@ -1101,7 +1109,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   Map<String, rm.DeclarationMirror> get declarations {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get declarations without `declarationsCapability`.");
+          "Attempt to get `declarations` without `declarationsCapability`");
     }
     return _rawDeclarations;
   }
@@ -1184,7 +1192,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   Map<String, rm.MethodMirror> get instanceMembers {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get instanceMembers without `declarationsCapability`.");
+          "Attempt to get `instanceMembers` without `declarationsCapability`");
     }
     return _rawInstanceMembers;
   }
@@ -1202,7 +1210,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   Map<String, rm.MethodMirror> get staticMembers {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get staticMembers without `declarationsCapability`.");
+          "Attempt to get `staticMembers` without `declarationsCapability`");
     }
     return _rawStaticMembers;
   }
@@ -1218,6 +1226,10 @@ class ClassMirrorImpl extends _TypeMirrorImpl
 
   @override
   rm.ClassMirror get mixin {
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `mixin` without `typeRelationsCapability`");
+    }
     return wrapClassMirrorIfSupported(_classMirror.mixin, _reflectable);
   }
 
@@ -1385,6 +1397,10 @@ class ClassMirrorImpl extends _TypeMirrorImpl
 
   @override
   bool isSubclassOf(rm.ClassMirror other) {
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `isSubclassOf` without `typeRelationsCapability`");
+    }
     return _classMirror.isSubclassOf(unwrapClassMirror(other));
   }
 
@@ -1425,7 +1441,7 @@ class ClassMirrorImpl extends _TypeMirrorImpl
   rm.LibraryMirror get owner {
     if (_reflectable._supportsLibraries) return super.owner;
     throw new NoSuchCapabilityError(
-        "Trying to get owner of class '$qualifiedName' "
+        "Attempt to get `owner` of class '$qualifiedName' "
         "without 'libraryCapability'");
   }
 
@@ -1500,7 +1516,7 @@ abstract class _DeclarationMirrorImpl implements rm.DeclarationMirror {
   List<Object> get metadata {
     if (!_supportsMetadata(_reflectable.capabilities)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get metadata without `MetadataCapability`.");
+          "Attempt to get `metadata` without `MetadataCapability`");
     }
     return _rawMetadata;
   }
@@ -1544,7 +1560,8 @@ class MethodMirrorImpl extends _DeclarationMirrorImpl
       return _methodMirror.returnType.hasReflectedType;
     }
     throw new NoSuchCapabilityError(
-        "Attempt to evaluate hasReflectedReturnType without capability");
+        "Attempt to evaluate `hasReflectedReturnType` without "
+        "reflectedTypeCapability`");
   }
 
   @override
@@ -1553,7 +1570,8 @@ class MethodMirrorImpl extends _DeclarationMirrorImpl
       return _methodMirror.returnType.reflectedType;
     }
     throw new NoSuchCapabilityError(
-        "Attempt to get reflectedReturnType without capability");
+        "Attempt to get `reflectedReturnType` without "
+        "`reflectedTypeCapability`");
   }
 
   @override
@@ -1564,7 +1582,7 @@ class MethodMirrorImpl extends _DeclarationMirrorImpl
           _methodMirror.returnType.hasReflectedType;
     }
     throw new NoSuchCapabilityError("Attempt to get "
-        "hasDynamicReflectedReturnType without `reflectedTypeCapability`");
+        "`hasDynamicReflectedReturnType` without `reflectedTypeCapability`");
   }
 
   @override
@@ -1577,12 +1595,12 @@ class MethodMirrorImpl extends _DeclarationMirrorImpl
         // even though this is unimplemented and may be implemented if we get
         // the required runtime support, it is currently an `UnsupportedError`.
         throw new UnsupportedError("Attempt to obtain the "
-            "dynamicReflectedReturnType of a generic type "
+            "`dynamicReflectedReturnType` of a generic type "
             "${_methodMirror.returnType}");
       }
     }
-    throw new NoSuchCapabilityError("Attempt to get dynamicReflectedReturnType "
-        "without `reflectedTypeCapability`");
+    throw new NoSuchCapabilityError("Attempt to get "
+        "`dynamicReflectedReturnType` without `reflectedTypeCapability`");
   }
 
   @override
@@ -1757,7 +1775,7 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
       return wrapTypeMirror(_variableMirror.type, _reflectable);
     }
     throw new NoSuchCapabilityError(
-        "Attempt to get type without `TypeCapability`");
+        "Attempt to get `type` without `typeCapability`");
   }
 
   @override
@@ -1797,7 +1815,7 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
             "of a generic type ${_variableMirror.type}");
       }
     }
-    throw new NoSuchCapabilityError("Attempt to get dynamicReflectedType "
+    throw new NoSuchCapabilityError("Attempt to get `dynamicReflectedType` "
         "without `reflectedTypeCapability`");
   }
 
@@ -1873,7 +1891,7 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
   bool isAssignableTo(rm.TypeMirror other) {
     if (!reflectableSupportsTypeRelations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get `isAssignableTo` without `typeRelationsCapability`.");
+          "Attempt to get `isAssignableTo` without `typeRelationsCapability`");
     }
     return _typeMirror.isAssignableTo(unwrapTypeMirror(other));
   }
@@ -1885,13 +1903,17 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
   bool isSubtypeOf(rm.TypeMirror other) {
     if (!reflectableSupportsTypeRelations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get `isSubtypeOf` without `typeRelationsCapability`.");
+          "Attempt to get `isSubtypeOf` without `typeRelationsCapability`");
     }
     return _typeMirror.isSubtypeOf(unwrapTypeMirror(other));
   }
 
   @override
   rm.TypeMirror get originalDeclaration {
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError("Attempt to get `originalDeclaration` "
+          "without `typeRelationsCapability`");
+    }
     return wrapTypeMirror(_typeMirror.originalDeclaration, _reflectable);
   }
 
@@ -1909,7 +1931,7 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
   List<rm.TypeVariableMirror> get typeVariables {
     if (!reflectableSupportsDeclarations(_reflectable)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get typeVariables without `declarationsCapability`");
+          "Attempt to get `typeVariables` without `declarationsCapability`");
     }
     return _typeMirror.typeVariables
         .map((dm.TypeVariableMirror typeVariableMirror) {
@@ -2029,8 +2051,8 @@ class _VoidMirrorImpl implements rm.TypeMirror {
   bool get hasReflectedType => false;
 
   @override
-  Type get reflectedType => throw new NoSuchCapabilityError(
-      "Attempt to get the reflected type of 'void'");
+  Type get reflectedType =>
+      throw new UnsupportedError("Attempt to get `reflectedType` of `void`");
 
   @override
   List<TypeVariableMirror> get typeVariables => [];
@@ -2151,7 +2173,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
     dm.InstanceMirror mirror = dm.reflect(o);
     if (_canReflect(mirror)) return wrapInstanceMirror(mirror, this);
     throw new NoSuchCapabilityError(
-        "Attempt to reflect on class '${o.runtimeType}' without capability");
+        "Attempt to `reflect` on class '${o.runtimeType}' without capability");
   }
 
   bool get _supportsType {
@@ -2206,8 +2228,8 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   rm.LibraryMirror findLibrary(String libraryName) {
     if (!_supportsLibraries) {
       throw new NoSuchCapabilityError(
-          "Searching for library '$libraryName'. LibraryMirrors are not "
-          "supported by this reflector. Try adding 'libraryCapability'");
+          "Attempt to `findLibrary` for '$libraryName' "
+          "without `libraryCapability`");
     }
     Symbol librarySymbol = new Symbol(libraryName);
     return new _LibraryMirrorImpl(
@@ -2218,8 +2240,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
   Map<Uri, rm.LibraryMirror> get libraries {
     if (!_supportsLibraries) {
       throw new NoSuchCapabilityError(
-          "Trying to obtain a library mirror without capability. Try adding "
-          "`libraryCapability`");
+          "Attempt to get `libraries` without `libraryCapability`");
     }
     Map<Uri, dm.LibraryMirror> libs = dm.currentMirrorSystem().libraries;
     return new Map<Uri, rm.LibraryMirror>.fromIterable(libs.keys,

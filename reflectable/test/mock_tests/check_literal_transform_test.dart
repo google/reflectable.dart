@@ -81,7 +81,7 @@ final _data = {
             {},
             {r"": (b) => () => b ? new prefix0.A() : null},
             -1,
-            0,
+            -1,
             const <int>[-1],
             null,
             {})

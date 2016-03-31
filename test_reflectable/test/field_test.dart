@@ -12,8 +12,12 @@ import 'package:unittest/unittest.dart';
 
 class FieldReflector extends Reflectable {
   const FieldReflector()
-      : super(typeAnnotationQuantifyCapability, invokingCapability,
-            declarationsCapability, metadataCapability);
+      : super(
+            typeAnnotationQuantifyCapability,
+            invokingCapability,
+            declarationsCapability,
+            typeRelationsCapability,
+            metadataCapability);
 }
 
 const fieldReflector = const FieldReflector();

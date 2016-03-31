@@ -17,16 +17,24 @@ import 'package:unittest/unittest.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(typeAnnotationQuantifyCapability, invokingCapability,
-            declarationsCapability, reflectedTypeCapability);
+      : super(
+            typeAnnotationQuantifyCapability,
+            invokingCapability,
+            declarationsCapability,
+            reflectedTypeCapability,
+            typeRelationsCapability);
 }
 
 const reflector = const Reflector();
 
 class DeepReflector extends Reflectable {
   const DeepReflector()
-      : super(typeAnnotationDeepQuantifyCapability, invokingCapability,
-            declarationsCapability, reflectedTypeCapability);
+      : super(
+            typeAnnotationDeepQuantifyCapability,
+            invokingCapability,
+            declarationsCapability,
+            reflectedTypeCapability,
+            typeRelationsCapability);
 }
 
 const deepReflector = const DeepReflector();
