@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.4
+
+* **Potentially breaking bug fix**: Several additional mirror methods
+  documented to require a `typeRelationsCapability` will now actually require
+  it. Concretely, this affects the methods `typeVariables`, `typeArguments`,
+  `superclass`, `superinterfaces`, `mixin`, `isSubclassOf`, `isAssignableTo`,
+  `isSubtypeOf`, `originalDeclaration`. Programs relying on the previous
+  (incorrect) behavior may need to have the relevant reflectors extended with
+  a `typeRelationsCapability`. This change also enables throwing an error
+  which blames the missing capability rather than incorrectly blaming lack of
+  coverage for a specific class. This fixes issue 77.
+* Adds constant resolution requests for metadata such that some spurious 'This
+  reflector does not match anything' events are avoided; fixes issue 82.
+* Corrects treatment of metadata with enum values, fixing issue 80.
+* Adds two missing package dependencies, fixing issue 81.
+
 ## 0.5.3
 
 * Eliminates the binding to `analyzer` 0.27.1, using ^0.27.2 instead; also uses
