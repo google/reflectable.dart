@@ -116,7 +116,7 @@ _initializeReflectable() {
 
 const String package = "a";
 
-checkTransform(List maps) async {
+checkTransform(List<Map<String, String>> maps) async {
   Map<String, String> inputs = maps[0];
   Map<String, String> expectedOutputs = maps[1];
 

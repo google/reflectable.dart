@@ -78,7 +78,8 @@ main() {
   });
 
   test("Subtype quantification supports mixin applications", () {
-    expect(reflector.reflectType(E).superclass, isClassMirror);
+    ClassMirror eMirror = reflector.reflectType(E);
+    expect(eMirror.superclass, isClassMirror);
     // TODO(eernst) implement: Cover the different kinds of mixin applications.
   });
 

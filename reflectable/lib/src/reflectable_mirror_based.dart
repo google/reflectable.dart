@@ -580,7 +580,6 @@ MetadataEvaluator _getMetadataLibraryFactory(dm.LibraryMirror libraryMirror) {
 }
 
 class _LibraryMirrorImpl extends _DeclarationMirrorImpl
-    with _ObjectMirrorImplMixin
     implements rm.LibraryMirror {
   dm.LibraryMirror get _libraryMirror => _declarationMirror;
 
@@ -778,8 +777,11 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
 
   @override
   List<rm.LibraryDependencyMirror> get libraryDependencies {
+    // TODO(eernst): Analyzer claims `map` has zero type arguments => cannot
+    // eliminate 'unsound implicit cast'.
     return _libraryMirror.libraryDependencies
-        .map((dep) => new _LibraryDependencyMirrorImpl(dep, _reflectable))
+        .map/*<rm.LibraryDependencyMirror>*/((dm.LibraryDependencyMirror dep) =>
+            new _LibraryDependencyMirrorImpl(dep, _reflectable))
         .toList();
   }
 
@@ -836,7 +838,7 @@ class _LibraryDependencyMirrorImpl implements rm.LibraryDependencyMirror {
   @override
   List<rm.CombinatorMirror> get combinators {
     return _libraryDependencyMirror.combinators
-        .map(wrapCombinatorMirror)
+        .map/*<rm.CombinatorMirror>*/(wrapCombinatorMirror)
         .toList();
   }
 
@@ -857,7 +859,7 @@ class _InstanceMirrorImpl extends _ObjectMirrorImplMixin
   _InstanceMirrorImpl(this._instanceMirror, this._reflectable);
 
   @override
-  rm.TypeMirror get type {
+  rm.ClassMirror get type {
     if (!reflectableSupportsType(_reflectable)) {
       throw new NoSuchCapabilityError(
           "Attempt to get `type` without `typeCapability`");
@@ -1471,9 +1473,9 @@ class _FunctionTypeMirrorImpl extends ClassMirrorImpl
   @override
   List<rm.ParameterMirror> get parameters {
     return _functionTypeMirror.parameters
-        .map((dm.ParameterMirror parameterMirror) {
+        .map/*<rm.ParameterMirror>*/((dm.ParameterMirror parameterMirror) {
       return new _ParameterMirrorImpl(parameterMirror, _reflectable);
-    });
+    }).toList();
   }
 
   @override
@@ -2441,7 +2443,11 @@ class _SubtypesFixedPoint extends FixedPoint<dm.ClassMirror> {
 
   /// Returns all the immediate subtypes of the given [classMirror].
   Iterable<dm.ClassMirror> successors(final dm.ClassMirror classMirror) {
-    return subtypes[classMirror] ?? <dm.ClassMirror>[];
+    // Workaround: Declare auxiliary local variable to avoid 'Unsound implicit
+    // cast from Object' in strong mode due to
+    // https://github.com/dart-lang/sdk/issues/25821.
+    Iterable<dm.ClassMirror> classMirrors = subtypes[classMirror];
+    return classMirrors ?? <dm.ClassMirror>[];
   }
 }
 

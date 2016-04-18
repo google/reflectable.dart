@@ -231,7 +231,8 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
   }
 
   @override
-  Iterable map(f(ClassElement element)) => classElements.items.map(f);
+  Iterable/*<T>*/ map/*<T>*/(/*=T*/ f(ClassElement element)) =>
+      classElements.items.map/*<T>*/(f);
 
   @override
   Iterable<ClassElement> where(bool f(ClassElement element)) {
@@ -239,8 +240,8 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
   }
 
   @override
-  Iterable expand(Iterable f(ClassElement element)) {
-    return classElements.items.expand(f);
+  Iterable/*<T>*/ expand/*<T>*/(Iterable/*<T>*/ f(ClassElement element)) {
+    return classElements.items.expand/*<T>*/(f);
   }
 
   @override
@@ -253,9 +254,10 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
   }
 
   @override
-  dynamic fold(
-      initialValue, dynamic combine(previousValue, ClassElement element)) {
-    return classElements.items.fold(initialValue, combine);
+  dynamic /*=T*/ fold/*<T>*/(
+      /*=T*/ initialValue, /*=T*/ combine(
+          /*=T*/ previousValue, ClassElement element)) {
+    return classElements.items.fold/*<T>*/(initialValue, combine);
   }
 
   @override
@@ -1286,13 +1288,13 @@ class _ReflectorDomain {
     String staticGettersCode = "const {}";
     String staticSettersCode = "const {}";
     if (classElement is! MixinApplication) {
-      staticGettersCode = _formatAsMap([
+      staticGettersCode = _formatAsMap(<Iterable<ExecutableElement>>[
         classDomain._declaredMethods
             .where((ExecutableElement element) => element.isStatic),
         classDomain._accessors.where((PropertyAccessorElement element) =>
             element.isStatic && element.isGetter)
-      ].expand((x) => x).map((ExecutableElement element) =>
-          _staticGettingClosure(
+      ].expand((Iterable<ExecutableElement> x) => x).map(
+          (ExecutableElement element) => _staticGettingClosure(
               importCollector, classElement, element.name, logger)));
       staticSettersCode = _formatAsMap(classDomain._accessors
           .where((PropertyAccessorElement element) =>
@@ -1395,8 +1397,12 @@ class _ReflectorDomain {
           yield "(o) { return o is $prefix${classElement.name}";
 
           Iterable<String> helper(ClassElement classElement) sync* {
-            Iterable<ClassElement> subtypes =
-                _world.subtypes[classElement] ?? <ClassElement>[];
+            // Workaround: Declare auxiliary local variable to avoid 'Unsound
+            // implicit cast from Object' in strong mode due to
+            // https://github.com/dart-lang/sdk/issues/25821.
+            Iterable<ClassElement> worldSubtypes =
+                _world.subtypes[classElement];
+            Iterable<ClassElement> subtypes = worldSubtypes ?? <ClassElement>[];
             for (ClassElement subtype in subtypes) {
               if (subtype.isPrivate ||
                   subtype.isAbstract ||
@@ -1961,7 +1967,11 @@ class _SubtypesFixedPoint extends FixedPoint<ClassElement> {
 
   /// Returns all the immediate subtypes of the given [classMirror].
   Iterable<ClassElement> successors(final ClassElement classElement) {
-    return subtypes[classElement] ?? <ClassElement>[];
+    // Workaround: Declare auxiliary local variable to avoid 'Unsound implicit
+    // cast from Object' in strong mode due to
+    // https://github.com/dart-lang/sdk/issues/25821.
+    Iterable<ClassElement> classElements = subtypes[classElement];
+    return classElements ?? <ClassElement>[];
   }
 }
 
@@ -2359,7 +2369,11 @@ class _ClassDomain {
   /// the same semantics as that of `declarations` in [ClassMirror].
   Iterable<ExecutableElement> get _declarations {
     // TODO(sigurdm) feature: Include type variables (if we keep them).
-    return [_declaredMethods, _accessors, _constructors].expand((x) => x);
+    return () sync* {
+      yield* _declaredMethods;
+      yield* _accessors;
+      yield* _constructors;
+    }();
   }
 
   /// Finds all instance members by going through the class hierarchy.
@@ -2494,9 +2508,9 @@ class _Capabilities {
   bool _supportsMeta(ec.MetadataQuantifiedCapability capability,
       Iterable<DartObject> metadata) {
     if (metadata == null) return false;
-    return metadata.map((DartObject o) => o.type).any(
-        (InterfaceType interfaceType) =>
-            interfaceType.isSubtypeOf(capability.metadataType.type));
+    return metadata.map/*<ParameterizedType>*/((DartObject o) => o.type).any(
+        (ParameterizedType parameterizedType) =>
+            parameterizedType.isSubtypeOf(capability.metadataType.type));
   }
 
   bool _supportsInstanceInvoke(
@@ -3461,7 +3475,7 @@ class TransformerImplementation {
     if (classElement.library != capabilityLibrary) {
       _logger.error(
           errors.applyTemplate(errors.SUPER_ARGUMENT_WRONG_LIBRARY,
-              {"library": capabilityLibrary, "element": classElement}),
+              {"library": "$capabilityLibrary", "element": "$classElement"}),
           span: _resolver.getSourceSpan(classElement));
       return ec.invokingCapability; // Error default.
     }

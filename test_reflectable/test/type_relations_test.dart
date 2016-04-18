@@ -21,8 +21,8 @@ const myReflectable = const MyReflectable();
 class MyClass {}
 
 main() {
-  var typeMirror = myReflectable.reflectType(MyClass);
-  ClassMirror classObjectMirror = typeMirror.superclass;
+  ClassMirror myClassMirror = myReflectable.reflectType(MyClass);
+  ClassMirror classObjectMirror = myClassMirror.superclass;
   test('superclass targetting un-annotated class', () {
     expect(classObjectMirror.simpleName, "Object");
   });

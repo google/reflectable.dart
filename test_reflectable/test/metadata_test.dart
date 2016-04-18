@@ -71,7 +71,7 @@ class Foo2 {
 }
 
 class Bar {
-  final Map<String, int> m;
+  final Map<Object, Object> m;
   const Bar(this.m);
   const Bar.namedConstructor(this.m);
   toString() => "Bar($m)";
@@ -79,7 +79,7 @@ class Bar {
 
 main() {
   test("metadata on class", () {
-    expect(myReflectable.reflectType(Foo).metadata, [
+    expect(myReflectable.reflectType(Foo).metadata, const [
       const MyReflectable(),
       const Bar(const {
         b: deprecated,
@@ -94,7 +94,8 @@ main() {
       ]
     ]);
 
-    expect(myReflectable.reflectType(Foo).declarations["foo"].metadata, [
+    ClassMirror fooMirror = myReflectable.reflectType(Foo);
+    expect(fooMirror.declarations["foo"].metadata, const [
       const Bar(const {}),
       const Bar(const {}),
       13,
@@ -103,20 +104,21 @@ main() {
       ]
     ]);
 
-    expect(myReflectable.reflectType(Foo).declarations["x"].metadata, [b]);
+    expect(fooMirror.declarations["x"].metadata, [b]);
 
     // The synthetic accessors do not have metadata.
-    expect(myReflectable.reflectType(Foo).instanceMembers["x"].metadata, []);
-    expect(myReflectable.reflectType(Foo).instanceMembers["x="].metadata, []);
+    expect(fooMirror.instanceMembers["x"].metadata, []);
+    expect(fooMirror.instanceMembers["x="].metadata, []);
 
     // Test metadata on libraries
     expect(myReflectable.reflectType(Foo).owner.metadata, [c]);
   });
   test("metadata without capability", () {
-    expect(() => myReflectable2.reflectType(Foo2).metadata,
+    ClassMirror foo2Mirror = myReflectable2.reflectType(Foo2);
+    expect(() => foo2Mirror.metadata,
         throwsA(const isInstanceOf<NoSuchCapabilityError>()));
 
-    expect(() => myReflectable2.reflectType(Foo2).declarations["foo"].metadata,
+    expect(() => foo2Mirror.declarations["foo"].metadata,
         throwsA(const isInstanceOf<NoSuchCapabilityError>()));
   });
 }

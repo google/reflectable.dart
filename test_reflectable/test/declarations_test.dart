@@ -45,10 +45,10 @@ class B extends A {
 
 main() {
   const reflector = const Reflector();
-  Map<String, DeclarationMirror> declarationsA =
-      reflector.reflectType(A).declarations;
-  Map<String, DeclarationMirror> declarationsB =
-      reflector.reflectType(B).declarations;
+  ClassMirror aMirror = reflector.reflectType(A);
+  ClassMirror bMirror = reflector.reflectType(B);
+  Map<String, DeclarationMirror> declarationsA = aMirror.declarations;
+  Map<String, DeclarationMirror> declarationsB = bMirror.declarations;
 
   test("declarations", () {
     expect(
@@ -164,8 +164,8 @@ main() {
   });
 
   test("instanceMethods", () {
-    Map<String, DeclarationMirror> instanceMembersA =
-        reflector.reflectType(A).instanceMembers;
+    ClassMirror aMirror = reflector.reflectType(A);
+    Map<String, DeclarationMirror> instanceMembersA = aMirror.instanceMembers;
     expect(
         instanceMembersA.values.map((x) => x.simpleName),
         new Set.from([
@@ -179,8 +179,8 @@ main() {
           "setter1=",
           "+"
         ]));
-    Map<String, DeclarationMirror> instanceMembersB =
-        reflector.reflectType(B).instanceMembers;
+    ClassMirror bMirror = reflector.reflectType(B);
+    Map<String, DeclarationMirror> instanceMembersB = bMirror.instanceMembers;
     expect(
         instanceMembersB.values.map((x) => x.simpleName),
         new Set.from([

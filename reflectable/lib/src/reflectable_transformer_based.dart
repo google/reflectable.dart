@@ -4,7 +4,7 @@
 
 library reflectable.src.reflectable_transformer_based;
 
-import 'dart:collection' show UnmodifiableMapView, UnmodifiableListView;
+import 'dart:collection' show UnmodifiableMapView;
 
 import '../capability.dart';
 import '../mirrors.dart';
@@ -136,9 +136,14 @@ class ReflectorData {
         // Note that [types] corresponds to the prefix of [typeMirrors] which
         // are class mirrors; [typeMirrors] continues with type variable
         // mirrors, and they are irrelevant here.
-        _typeToClassMirrorCache = new Map.fromIterables(
-            types.sublist(0, supportedClassCount),
-            typeMirrors.sublist(0, supportedClassCount));
+        Iterable<ClassMirror> classMirrors() sync* {
+          for (TypeMirror typeMirror
+              in typeMirrors.sublist(0, supportedClassCount)) {
+            yield typeMirror;
+          }
+        }
+        _typeToClassMirrorCache = new Map<Type, ClassMirror>.fromIterables(
+            types.sublist(0, supportedClassCount), classMirrors());
       }
     }
     return _typeToClassMirrorCache[type];
@@ -543,7 +548,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       assert(parameterListShape.length == 3);
       int numberOfPositionalParameters = parameterListShape[0];
       int numberOfOptionalPositionalParameters = parameterListShape[1];
-      List<Symbol> namesOfNamedParameters = parameterListShape[2];
+      List namesOfNamedParameters = parameterListShape[2];
       // The length of the positional part of the argument list must be
       // within bounds.
       if (numberOfPositionalArguments <
@@ -742,8 +747,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     // Recursively test hierarchy over `superclass`.
     if (superclass._isSubtypeOf(other)) return true;
     // Recursively test hierarchy over remaining direct supertypes.
-    return superinterfaces
-        .any((ClassMirrorBase classMirror) => classMirror._isSubtypeOf(other));
+    return superinterfaces.any((ClassMirror classMirror) =>
+        classMirror is ClassMirrorBase && classMirror._isSubtypeOf(other));
   }
 
   bool isSubclassOf(ClassMirror other) {
@@ -1392,7 +1397,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
       assert(parameterListShape.length == 3);
       int numberOfPositionalParameters = parameterListShape[0];
       int numberOfOptionalPositionalParameters = parameterListShape[1];
-      List<Symbol> namesOfNamedParameters = parameterListShape[2];
+      List namesOfNamedParameters = parameterListShape[2];
       if (numberOfPositionalArguments <
               numberOfPositionalParameters -
                   numberOfOptionalPositionalParameters ||

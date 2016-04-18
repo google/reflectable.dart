@@ -40,7 +40,8 @@ class C<E> extends A with M<E> {}
 
 main() {
   test('Anonymous mixin application', () {
-    ClassMirror bmMirror = reflector.reflectType(B).superclass;
+    ClassMirror bMirror = reflector.reflectType(B);
+    ClassMirror bmMirror = bMirror.superclass;
     DeclarationMirror beMirror = bmMirror.instanceMembers['e'];
     expect(beMirror, new isInstanceOf<MethodMirror>());
     MethodMirror beMethodMirror = beMirror;

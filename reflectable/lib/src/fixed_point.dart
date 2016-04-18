@@ -29,7 +29,7 @@ abstract class FixedPoint<T> {
   /// [successors] to it. Then it returns the expanded `initialSet`.
   Set<T> singleExpand(final Set<T> initialSet) {
     Set<T> newSet = new Set<T>();
-    void addSuccessors(element) => successors(element).forEach(newSet.add);
+    void addSuccessors(T t) => successors(t).forEach(newSet.add);
     initialSet.forEach(addSuccessors);
     initialSet.addAll(newSet);
     return initialSet;

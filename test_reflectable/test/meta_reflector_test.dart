@@ -179,17 +179,20 @@ main() {
           const ReflectorUpwardsClosedUntilA()
         ].toSet());
     expect(
-        allReflectors.where((AllReflectorsCapable reflector) =>
+        allReflectors.where((Reflectable reflector) =>
+            reflector is AllReflectorsCapable &&
             reflector.scopes.contains("polymer")),
         [const Reflector(), const ReflectorUpwardsClosed()].toSet());
     expect(
-        allReflectors.where((AllReflectorsCapable reflector) =>
+        allReflectors.where((Reflectable reflector) =>
+            reflector is AllReflectorsCapable &&
             reflector.scopes.contains("observe")),
         [const Reflector2(), const ReflectorUpwardsClosed()].toSet());
   });
 
   allReflectors
-      .where((AllReflectorsCapable reflector) =>
+      .where((Reflectable reflector) =>
+          reflector is AllReflectorsCapable &&
           reflector.scopes.contains("polymer"))
       .forEach(
           (Reflectable reflector) => testReflector(reflector, "$reflector"));
@@ -224,9 +227,9 @@ main() {
   });
 
   test("MetaReflector, select by capability", () {
-    var reflector = allReflectors.firstWhere((AllReflectorsCapable reflector) {
+    var reflector = allReflectors.firstWhere((Reflectable reflector) {
       return (reflector.capabilities.any((ReflectCapability capability) =>
-          capability is SuperclassQuantifyCapability &&
+              capability is SuperclassQuantifyCapability &&
               capability.upperBound == A &&
               !capability.excludeUpperBound));
     });
