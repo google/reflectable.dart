@@ -254,9 +254,10 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
   }
 
   @override
-  dynamic /*=T*/ fold/*<T>*/(
+  dynamic/*=T*/ fold/*<T>*/(
       /*=T*/ initialValue, /*=T*/ combine(
-          /*=T*/ previousValue, ClassElement element)) {
+          /*=T*/ previousValue,
+          ClassElement element)) {
     return classElements.items.fold/*<T>*/(initialValue, combine);
   }
 
@@ -4004,14 +4005,27 @@ String _extractConstantCode(
     TransformLogger logger,
     AssetId generatedLibraryId,
     Resolver resolver) {
+  String typeNameHelper(TypeName typeName) {
+    LibraryElement library = typeName.type.element.library;
+    String prefix = importCollector._getPrefix(library);
+    return "$prefix$typeName";
+  }
+
   String helper(Expression expression) {
     if (expression is ListLiteral) {
       Iterable<String> elements =
           expression.elements.map((Expression subExpression) {
         return helper(subExpression);
       });
-      // TODO(sigurdm) feature: Type arguments.
-      return "const ${_formatAsDynamicList(elements)}";
+      if (expression.typeArguments == null ||
+          expression.typeArguments.arguments.isEmpty) {
+        return "const ${_formatAsDynamicList(elements)}";
+      } else {
+        assert(expression.typeArguments.arguments.length == 1);
+        String typeArgument =
+            typeNameHelper(expression.typeArguments.arguments[0]);
+        return "const <$typeArgument>${_formatAsDynamicList(elements)}";
+      }
     } else if (expression is MapLiteral) {
       Iterable<String> elements =
           expression.entries.map((MapLiteralEntry entry) {
@@ -4019,8 +4033,16 @@ String _extractConstantCode(
         String value = helper(entry.value);
         return "$key: $value";
       });
-      // TODO(sigurdm) feature: Type arguments.
-      return "const ${_formatAsMap(elements)}";
+      if (expression.typeArguments == null ||
+          expression.typeArguments.arguments.isEmpty) {
+        return "const ${_formatAsMap(elements)}";
+      } else {
+        assert(expression.typeArguments.arguments.length == 2);
+        String keyType = typeNameHelper(expression.typeArguments.arguments[0]);
+        String valueType =
+            typeNameHelper(expression.typeArguments.arguments[1]);
+        return "const <$keyType, $valueType>${_formatAsMap(elements)}";
+      }
     } else if (expression is InstanceCreationExpression) {
       String constructor = expression.constructorName.toSource();
       if (_isPrivateName(constructor)) {
