@@ -2,61 +2,6 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-// This file defines the same types as sdk/lib/mirrors/mirrors.dart, in
-// order to enable code using [dart:mirrors] to switch to using
-// [Reflectable] based mirrors with a small porting effort. The changes are
-// discussed below, under headings on the form 'API Change: ..'.
-
-// API Change: Incompleteness.
-//
-// Compared to the corresponding classes in [dart:mirrors], a number of
-// classes have been omitted and some methods have been omitted from some
-// classes, based on the needs arising in concrete examples.  Additional
-// methods may be added later if the need arises and if they can be
-// implemented.  These missing elements are indicated by comments on the
-// form '// Currently skip ..' in the code below.
-
-// API Change: Returning non-mirrors.
-//
-// We took the opportunity to change the returned values of reflective
-// operations from mirrors to base values. E.g., [invoke] in [ObjectMirror]
-// has return type [Object] rather than [InstanceMirror].  If myObjectMirror
-// is an [ObjectMirror] then evaluation of, e.g., myObjectMirror.invoke(..)
-// yields the same result as that of myObjectMirror.invoke(..).reflectee in
-// [dart:mirrors].  The point is that returning base values may be cheaper in
-// typical scenarios (no mirror objects created, and they were never used
-// anyway) and there is no loss of information (we can get a mirror on the
-// returned value). So we move from the "pure" design where the reflective
-// level is always preserved to a "practical" model where we return to the
-// base level in selected cases.
-//
-// These selected cases are [invoke], [getField], and [setField] in
-// [ObjectMirror], [newInstance] in [ClassMirror], and [defaultValue] in
-// [ParameterMirror], where the return type has been changed from
-// [InstanceMirror] to [Object]. Similarly, the return type for [metadata]
-// in [DeclarationMirror] and in [LibraryDependencyMirror] was changed from
-// `List<InstanceMirror>` to `List<Object>`.  The relevant locations in the
-// code below have been marked with comments on the form
-// '// RET: <old-return-type>' resp. '// TYARG: <old-type-argument>' and the
-// discrepancies are mentioned in the relevant class dartdoc.
-//
-// TODO(eernst) doc: The information given in the previous paragraph
-// should be made part of the dartdoc comments on each of the relevant
-// methods; since those comments will now differ from the ones in
-// dart:mirrors, we should copy them all and add the discrepancies.
-//
-// A similar change could have been applied to many other methods, but
-// in those cases it seems more likely that the mirror will be used
-// in its own right rather than just to get 'theMirror.reflectee'.
-// Some of these locations are marked with '// Possible'.  They are in
-// general concerned with types in a broad sense: [ClassMirror],
-// [TypeMirror], and [LibraryMirror].
-
-// TODO(eernst) doc: The preceeding comment blocks should be made a dartdoc
-// on the library when/if such dartdoc comments are supported.
-// TODO(eernst) doc: Change the preceeding comment to use a more
-// user-centric style.
-
 // TODO(eernst) doc: This is a Meta-TODO, adding detail to several TODOs below
 // saying 'make this .. more user friendly' as well as the comment above
 // saying 'more user-centric'. All those "not-so-friendly" comments originate
@@ -113,11 +58,78 @@
 /// are assumed to be fresh variables (meaning that they are
 /// distinct from any other variables in the program).
 ///
-/// Sometimes the documentation refers to *serializable* objects.
-/// An object is serializable across isolates if and only if it is an instance
-/// of num, bool, String, a list of objects that are serializable
-/// across isolates, or a map with keys and values that are all serializable
-/// across isolates.
+/// ## The relation to [dart:mirrors].
+///
+/// This library defines essentially the same types as the library
+/// [dart:mirrors], in order to enable code using [dart:mirrors] to switch to
+/// using Reflectable based mirrors with a small porting effort. The changes
+/// are discussed below and mentioned in the documentation on the relevant
+/// declarations.
+///
+/// ## Required capabilities.
+///
+///
+///
+/// ## Differences in the set of declared entities.
+///
+/// Compared to the library [dart:mirrors], a number of classes have been
+/// omitted, and some methods have been omitted from some classes, based on
+/// the need for those classes and the ability of the context to support those
+/// operations. For instance, Reflectable does not support the [MirrorSystem]
+/// class nor the [currentMirrorSystem] method, because the obligations ascribed
+/// to these entities are handled in a very different manner in Reflectable
+/// (a so-called reflector plays the role as a mirror system, multiple mirror
+/// systems can coexist, and none of them plays a special role that could
+/// justify calling it the "current" mirror system).
+/// A few additional methods have been added in cases where this was considered
+/// sufficiently useful and implementable.
+///
+/// Concretely, the elements which are present in [dart:mirrors] and absent
+/// from Reflectable are the following:
+///  - Class [MirrorSystem]: unnecessary.
+///  - Class [IsolateMirror]: not currently supported by Reflectable.
+///  - Top-level method [currentMirrorSystem]: unnecessary.
+///  - Top-level function [reflectClass]: unnecessary
+///    (use [reflectType] and [originalDeclaration]).
+///  - Top-level function [reflectType]: has become a method on [Reflectable].
+///  - Top-level function [reflect]: has become a method on [Reflectable].
+///
+// In the code below, missing elements are represented by place-holders which
+// are comments on the form '// Currently skip'.
+//
+/// ## Differences in mirror method signatures.
+///
+/// In contrast to [dart.mirrors], reflective mirror operations return base
+/// values rather than mirrors. E.g., [invoke] in [ObjectMirror] has return
+/// type [Object] rather than [InstanceMirror].  If `myObjectMirror` is an
+/// [ObjectMirror] then evaluation of, e.g., `myObjectMirror.invoke(..)` will
+/// yield the same result as that of `myObjectMirror.invoke(..).reflectee` in
+/// [dart:mirrors].
+///
+/// The rationale for this change is that it may be cheaper to return base
+/// values in typical scenarios (no mirror object is created, but it was often
+/// never used anyway) and there is no loss of information (we can get a mirror
+/// on the returned value if needed). Conceptually, it could be said that we
+/// move from the "pure" design where the reflective level is always preserved
+/// to a "practical" model where we return to the base level in selected cases.
+///
+/// Concretely, these cases are [invoke], [getField], and [setField] in
+/// [ObjectMirror], [newInstance] in [ClassMirror], and [defaultValue] in
+/// [ParameterMirror], where the return type has been changed from
+/// [InstanceMirror] to [Object]. Similarly, the return type for [metadata]
+/// in [DeclarationMirror] and in [LibraryDependencyMirror] was changed from
+/// `List<InstanceMirror>` to `List<Object>`.
+//
+// The relevant locations in the code below have been marked with comments on
+// the form '// RET: <old-return-type>' resp. '// TYARG: <old-type-argument>',
+// and the discrepancies have been mentioned in the relevant dartdoc.
+//
+// A similar change could have been applied to several other methods, but
+// in those cases it seems more likely that the mirror will be used
+// in its own right rather than just to get 'theMirror.reflectee'.
+// Some of these locations are marked with '// Possible'.  They are in
+// general concerned with types in a broad sense: [ClassMirror],
+// [TypeMirror], and [LibraryMirror].
 library reflectable.mirrors;
 
 // Currently skip 'abstract class MirrorSystem': represented by reflectors.
@@ -143,6 +155,8 @@ abstract class DeclarationMirror implements Mirror {
   /// The simple name is in most cases the the identifier name of the entity,
   /// such as 'myMethod' for a method, [:void myMethod() {...}:] or 'mylibrary'
   /// for a [:library 'mylibrary';:] declaration.
+  ///
+  /// Required capabilities: [simpleName] does not require any capabilities.
   String get simpleName;
 
   /// The fully-qualified name for this Dart language entity.
@@ -163,6 +177,8 @@ abstract class DeclarationMirror implements Mirror {
   /// Because an isolate can contain more than one library with the same name
   /// (at different URIs), a fully-qualified name does not uniquely identify
   /// any language entity.
+  ///
+  /// Required capabilities: [qualifiedName] does not require any capabilities.
   String get qualifiedName;
 
   /// A mirror on the owner of this Dart language entity.
@@ -180,6 +196,10 @@ abstract class DeclarationMirror implements Mirror {
   ///   invocation of a generic.
   /// * For a parameter, local variable or local function the owner is the
   ///   immediately enclosing function.
+  ///
+  /// Required capabilities: [owner] on a [ClassMirror] requires a
+  /// [LibraryCapability]; on other declarations it does not require any
+  /// capabilities.
   DeclarationMirror get owner;
 
   /// Whether this declaration is library private.
@@ -187,11 +207,15 @@ abstract class DeclarationMirror implements Mirror {
   /// Always returns `false` for a library declaration,
   /// otherwise returns `true` if the declaration's name starts with an
   /// underscore character (`_`), and `false` if it doesn't.
+  ///
+  /// Required capabilities: [isPrivate] does not require any capabilities.
   bool get isPrivate;
 
   /// Whether this declaration is top-level.
   ///
   /// A declaration is considered top-level if its [owner] is a [LibraryMirror].
+  ///
+  /// Required capabilities: [isTopLevel] does not require any capabilities.
   bool get isTopLevel;
 
   /// The source location of this Dart language entity, or [:null:] if the
@@ -226,6 +250,8 @@ abstract class DeclarationMirror implements Mirror {
   /// declaration.
   ///
   /// This operation is optional and may throw an [UnsupportedError].
+  ///
+  /// Required capabilities: [location] does not require any capabilities.
   SourceLocation get location;
 
   /// A list of the metadata associated with this declaration.
@@ -262,6 +288,8 @@ abstract class DeclarationMirror implements Mirror {
   // `docComments` or similar.  To me it is highly confusing that
   // metadata returns comments.  But if dart:mirrors does this we
   // might just want to follow along.
+  ///
+  /// Required capabilities: [metadata] requires a [MetadataCapability].
   List<Object> get metadata; // TYARG: InstanceMirror
 }
 
@@ -303,6 +331,13 @@ abstract class ObjectMirror implements Mirror {
   //
   // TODO(eernst) doc: make this comment more user friendly.
   // TODO(eernst) doc: revise language on private members when semantics known.
+  ///
+  /// Required capabilities: [invoke] on an instance mirror requires a matching
+  /// [InstanceInvokeCapability] or [InstanceInvokeMetaCapability]; [invoke] on
+  /// a class mirror requires a matching [StaticInvokeCapability] or
+  /// [StaticInvokeMetaCapability]; and [invoke] on a top-level function
+  /// requires a matching [TopLevelInvokeCapability] or
+  /// [TopLevelInvokeMetaCapability].
   Object invoke(String memberName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
 
@@ -342,6 +377,14 @@ abstract class ObjectMirror implements Mirror {
   //
   // TODO(eernst) doc: make this comment more user friendly.
   // TODO(eernst) doc: revise language on private members when semantics known.
+  ///
+  /// Required capabilities: [invokeGetter] on an instance mirror requires a
+  /// matching [InstanceInvokeCapability] or [InstanceInvokeMetaCapability],
+  /// and it may target a getter or a method (in which case it is a tear-off
+  /// operation); similarly, [invokeGetter] on a class mirror requires a
+  /// matching [StaticInvokeCapability] or [StaticInvokeMetaCapability], and
+  /// [invokeGetter] on a top-level function requires a matching
+  /// [TopLevelInvokeCapability] or [TopLevelInvokeMetaCapability].
   Object invokeGetter(String getterName);
 
   /// Invokes a setter and returns the result. The setter may be either
@@ -370,6 +413,13 @@ abstract class ObjectMirror implements Mirror {
   //
   // TODO(eernst) doc: make this comment more user friendly.
   // TODO(eernst) doc: revise language on private members when semantics known.
+  ///
+  /// Required capabilities: [invokeSetter] on an instance mirror requires a
+  /// matching [InstanceInvokeCapability] or [InstanceInvokeMetaCapability];
+  /// [invokeSetter] on a class mirror requires a matching
+  /// [StaticInvokeCapability] or [StaticInvokeMetaCapability]; and
+  /// [invokeSetter] on a top-level function requires a matching
+  /// [TopLevelInvokeCapability] or [TopLevelInvokeMetaCapability].
   Object invokeSetter(String setterName, Object value);
 }
 
@@ -383,6 +433,8 @@ abstract class InstanceMirror implements ObjectMirror {
   /// may differ from the object returned by invoking [runtimeType] on
   /// the reflectee, because that method can be overridden. In that case,
   /// please take special care.
+  ///
+  /// Required capabilities: [type] requires a [TypeCapability].
   ClassMirror get type;
 
   /// Whether [reflectee] will return the instance reflected by this mirror.
@@ -393,6 +445,8 @@ abstract class InstanceMirror implements ObjectMirror {
   /// * the value is of type [num]
   /// * the value is of type [bool]
   /// * the value is of type [String]
+  ///
+  /// Required capabilities: [hasReflectee] does not require any capabilities.
   bool get hasReflectee;
 
   /// If the [InstanceMirror] reflects an instance it is meaningful to
@@ -401,6 +455,8 @@ abstract class InstanceMirror implements ObjectMirror {
   ///
   /// If you access [reflectee] when [hasReflectee] is false, an
   /// exception is thrown.
+  ///
+  /// Required capabilities: [reflectee] does not require any capabilities.
   get reflectee;
 
   /// Whether this mirror is equal to [other].
@@ -408,6 +464,8 @@ abstract class InstanceMirror implements ObjectMirror {
   /// The equality holds if and only if [other] is a mirror
   /// of the same kind, [hasReflectee] is true, and so is
   /// [:identical(reflectee, other.reflectee):].
+  ///
+  /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
 
   /// Performs [invocation] on [reflectee].
@@ -426,6 +484,8 @@ abstract class InstanceMirror implements ObjectMirror {
   ///           invocation.positionalArguments,
   ///           invocation.namedArguments);
   ///     }
+  ///
+  /// Required capabilities: [delegate] requires the [delegateCapability].
   delegate(Invocation invocation);
 }
 
@@ -452,6 +512,8 @@ abstract class ClosureMirror implements InstanceMirror {
   /// the closure body. So one cannot rely on closures from distinct closure
   /// expressions having distinct classes ([:type:]), but one can rely on
   /// them having distinct functions ([:function:]).
+  ///
+  /// Required capabilities: [function] does not require any capabilities.
   MethodMirror get function;
 
   /// Executes the closure and returns a mirror on the result.
@@ -472,6 +534,10 @@ abstract class ClosureMirror implements InstanceMirror {
   ///
   /// If the invocation throws an exception *e* (that it does not catch), this
   /// method throws *e*.
+  ///
+  /// Required capabilities: [apply] requires a matching
+  /// [InstanceInvokeCapability] or [InstanceInvokeMetaCapability], targeting
+  /// the relevant `call` method.
   Object apply(List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
 }
@@ -482,6 +548,8 @@ abstract class ClosureMirror implements InstanceMirror {
 abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
 
   /// The absolute uri of the library.
+  ///
+  /// Required capabilities: [uri] requires a [UriCapability].
   Uri get uri;
 
   /// Returns an immutable map of the declarations actually given in the 
@@ -490,8 +558,15 @@ abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
   /// This map includes all regular methods, getters, setters, fields, classes
   /// and typedefs actually declared in the library. The map is keyed by the
   /// simple names of the declarations.
+  ///
+  /// Required capabilities: [declarations] requires a [DeclarationsCapability].
+  /// Note that the available invocation capabilities determine which
+  /// declarations are included. E.g., in order to obtain a declaration mirror
+  /// for a given instance method as part of the value returned from
+  /// [declarations] there must be a matching [InstanceInvokeCapability] or
+  /// [InstanceInvokeMetaCapability], and similarly for static methods and
+  /// top-level functions.
   Map<String, DeclarationMirror> get declarations;
-
 
   /// Whether this mirror is equal to [other].
   ///
@@ -500,56 +575,86 @@ abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
   /// 1. [other] is a mirror of the same kind, and
   /// 2. The library being reflected by this mirror and the library being
   ///    reflected by [other] are the same library in the same isolate.
+  ///
+  /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
 
   /// Returns a list of the imports and exports in this library;
+  ///
+  /// Required capabilities: [libraryDependencies] requires a
+  /// [LibraryCapability].
   List<LibraryDependencyMirror> get libraryDependencies;
 }
 
 /// A mirror on an import or export declaration.
 abstract class LibraryDependencyMirror implements Mirror {
   /// Is `true` if this dependency is an import.
+  ///
+  /// Required capabilities: [isImport] does not require any capabilities.
   bool get isImport;
 
   /// Is `true` if this dependency is an export.
+  ///
+  /// Required capabilities: [isExport] does not require any capabilities.
   bool get isExport;
 
   /// Returns true iff this dependency is a deferred import. Otherwise returns
   /// false.
+  ///
+  /// Required capabilities: [isDeferred] does not require any capabilities.
   bool get isDeferred;
 
   /// Returns the library mirror of the library that imports or exports the
   /// [targetLibrary].
+  ///
+  /// Required capabilities: [sourceLibraries] does not require any
+  /// capabilities.
   LibraryMirror get sourceLibrary;
 
   /// Returns the library mirror of the library that is imported or exported,
   /// or null if the library is not loaded.
+  ///
+  /// Required capabilities: [targetLibrary] does not require any capabilities.
   LibraryMirror get targetLibrary;
 
   /// Returns the prefix if this is a prefixed import and `null` otherwise.
+  ///
+  /// Required capabilities: [prefix] does not require any capabilities.
   String get prefix;
 
   /// Returns the list of show/hide combinators on the import/export
   /// declaration.
+  ///
+  /// Required capabilities: [combinators] does not require any capabilities.
   List<CombinatorMirror> get combinators;
 
   /// Returns the source location for this import/export declaration.
+  ///
+  /// Required capabilities: [location] does not require any capabilities.
   SourceLocation get location;
 
   /// Note that the return type of the corresponding method in
   /// dart:mirrors is List<InstanceMirror>.
+  ///
+  /// Required capabilities: [metadata] requires a [MetadataCapability].
   List<Object> get metadata; // TYARG: InstanceMirror
 }
 
 /// A mirror on a show/hide combinator declared on a library dependency.
 abstract class CombinatorMirror implements Mirror {
   /// The list of identifiers on the combinator.
+  ///
+  /// Required capabilities: [identifiers] does not require any capabilities.
   List<String> get identifiers;
 
   /// Is `true` if this is a 'show' combinator.
+  ///
+  /// Required capabilities: [isShow] does not require any capabilities.
   bool get isShow;
 
   /// Is `true` if this is a 'hide' combinator.
+  ///
+  /// Required capabilities: [isHide] does not require any capabilities.
   bool get isHide;
 }
 
@@ -571,10 +676,18 @@ abstract class TypeMirror implements DeclarationMirror {
   /// a type mirror for the annotation where `hasReflectedType` is false,
   /// because of the lack of primitives to access the actual type argument of
   /// that list.
+  ///
+  /// Required capabilities: [hasReflectedType] does not require any
+  /// capabilities.
   bool get hasReflectedType;
 
   /// If [hasReflectedType] returns true, returns the corresponding [Type].
   /// Otherwise, an [UnsupportedError] is thrown.
+  ///
+  /// Required capabilities: [reflectedType] can be invoked iff
+  /// [hasReflectedType] returns true. However, capabilities can be used to
+  /// extend the set of situations where [hasReflectedType] returns true, by
+  /// having a [reflectedTypeCapability] in the reflector for this [TypeMirror].
   Type get reflectedType;
 
   /// An immutable list with mirrors for all type variables for this type.
@@ -585,6 +698,9 @@ abstract class TypeMirror implements DeclarationMirror {
   /// Otherwise, the returned list is empty.
   ///
   /// This list preserves the order of declaration of the type variables.
+  ///
+  /// Required capabilities: [typeVariables] requires a
+  /// [DeclarationsCapability].
   List<TypeVariableMirror> get typeVariables;
 
   /// An immutable list with mirrors for all type arguments for
@@ -598,6 +714,9 @@ abstract class TypeMirror implements DeclarationMirror {
   /// it has no type arguments and this method returns an empty list.
   ///
   /// This list preserves the order of declaration of the type variables.
+  ///
+  /// Required capabilities: [typeArguments] requires a
+  /// [TypeRelationsCapability].
   List<TypeMirror> get typeArguments;
 
   /// Is this the original declaration of this type?
@@ -607,6 +726,9 @@ abstract class TypeMirror implements DeclarationMirror {
   /// original class declaration, which has unbound type variables, and
   /// the instantiations of generic classes, which have bound type
   /// variables.
+  ///
+  /// Required capabilities: [isOriginalDeclaration] requires a
+  /// [TypeRelationsCapability].
   bool get isOriginalDeclaration;
 
   /// A mirror on the original declaration of this type.
@@ -616,6 +738,9 @@ abstract class TypeMirror implements DeclarationMirror {
   /// original class declaration, which has unbound type variables, and
   /// the instantiations of generic classes, which have bound type
   /// variables.
+  ///
+  /// Required capabilities: [originalDeclaration] requires a
+  /// [TypeRelationsCapability].
   TypeMirror get originalDeclaration;
 
   // Remark on `isSubtypeOf` signature: Possible ARG: Type.
@@ -634,6 +759,10 @@ abstract class TypeMirror implements DeclarationMirror {
   /// Note that this method can only be invoked successfully if all the
   /// supertypes of the receiver are covered by the reflector, and a
   /// `TypeRelationsCapability` has been requested.
+  ///
+  /// Required capabilities: [isSubtypeOf] requires a [TypeRelationsCapability],
+  /// and it requires that all the types visited in order to determine the
+  /// result must be covered.
   bool isSubtypeOf(TypeMirror other);
 
   // Remark on `isAssignableTo` signature: Possible ARG: Type.
@@ -646,6 +775,10 @@ abstract class TypeMirror implements DeclarationMirror {
   /// Note that this method can only be invoked successfully if all the
   /// supertypes of the receiver and [other] are covered by the reflector,
   /// and a `TypeRelationsCapability` has been requested.
+  ///
+  /// Required capabilities: [assignAbleTo] requires a
+  /// [TypeRelationsCapability], and it requires that all the types visited in
+  /// order to determine the result must be covered.
   bool isAssignableTo(TypeMirror other);
 }
 
@@ -655,15 +788,24 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// A mirror on the superclass on the reflectee.
   ///
   /// If this type is [:Object:], the superclass will be null.
+  ///
+  /// Required capabilities: [superclass] requires a [TypeRelationsCapability].
   ClassMirror get superclass;
 
   /// A list of mirrors on the superinterfaces of the reflectee.
+  ///
+  /// Required capabilities: [superinterfaces] requires a
+  /// [TypeRelationsCapability].
   List<ClassMirror> get superinterfaces;
 
   /// Is the reflectee abstract?
+  ///
+  /// Required capabilities: [isAbstract] does not require any capabilities.
   bool get isAbstract;
 
   /// Is the reflectee an enum?
+  ///
+  /// Required capabilities: [isEnum] does not require any capabilities.
   bool get isEnum;
 
   /// Returns an immutable map of the declarations actually given in the class
@@ -675,6 +817,14 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// included. The map is keyed by the simple names of the declarations.
   ///
   /// This does not include inherited members.
+  ///
+  /// Required capabilities: [declarations] requires a [DeclarationsCapability].
+  /// Note that the available invocation capabilities determine which
+  /// declarations are included. E.g., in order to obtain a declaration mirror
+  /// for a given instance method as part of the value returned from
+  /// [declarations] there must be a matching [InstanceInvokeCapability] or
+  /// [InstanceInvokeMetaCapability], and similarly for static methods and
+  /// top-level functions.
   Map<String, DeclarationMirror> get declarations;
 
   /// Returns a map of the methods, getters and setters of an instance of the
@@ -687,6 +837,9 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// class itself.
   ///
   /// The map is keyed by the simple names of the members.
+  ///
+  /// Required capabilities: [instanceMembers] requires a
+  /// [DeclarationsCapability].
   Map<String, MethodMirror> get instanceMembers;
 
   /// Returns a map of the static methods, getters and setters of the class.
@@ -696,6 +849,9 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// introduced by fields are included.
   ///
   /// The map is keyed by the simple names of the members.
+  ///
+  /// Required capabilities: [staticMembers] requires a
+  /// [DeclarationsCapability].
   Map<String, MethodMirror> get staticMembers;
 
   /// The mixin of this class.
@@ -703,6 +859,8 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// If this class is the result of a mixin application of the form S with M,
   /// returns a class mirror on M. Otherwise returns a class mirror on
   /// [reflectee].
+  ///
+  /// Required capabilities: [mixin] requires a [TypeRelationsCapability].
   ClassMirror get mixin;
 
   /// Returns true if this mirror reflects dynamic, a non-generic class or
@@ -719,6 +877,9 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// `List<dynamic>` because there are no primitives in 'dart:mirrors'
   /// nor in the core libraries for applying a given generic class to any
   /// given type arguments.
+  ///
+  /// Required capabilities: [hasDynamicReflectedType] does not require any
+  /// capabilities.
   bool get hasDynamicReflectedType;
 
   /// If [hasDynamicReflectedType] returns true, returns the [Type] object
@@ -730,6 +891,12 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// length where every argument is `dynamic`. For instance, the fully dynamic
   /// instantiation of `List` and `Map` is `List<dynamic>` respectively
   /// `Map<dynamic, dynamic>`.
+  ///
+  /// Required capabilities: [dynamicReflectedType] can be invoked iff
+  /// [hasDynamicReflectedType] returns true. However, capabilities can be used
+  /// to extend the set of situations where [hasDynamicReflectedType] returns
+  /// true, by having a [reflectedTypeCapability] in the reflector for this
+  /// [ClassMirror].
   Type get dynamicReflectedType;
 
   /// Returns `hasReflectedType || hasDynamicReflectedType`.
@@ -775,6 +942,9 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   //
   // TODO(eernst) doc: make this comment more user friendly.
   // TODO(eernst) doc: revise language on private members when semantics known.
+  ///
+  /// Required capabilities: [newInstance] requires a matching
+  /// [NewInstanceCapability] or [NewInstanceMetaCapability].
   Object newInstance(String constructorName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
 
@@ -787,6 +957,8 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   ///
   /// Note that if the reflected class is an invocation of a generic class, 2.
   /// implies that the reflected class and [other] have equal type arguments.
+  ///
+  /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
 
   /// Returns whether the class denoted by the receiver is a subclass of the
@@ -797,6 +969,10 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   // Possible ARG: Type.
   // Input from Gilad on [TypeMirror#isSubtypeOf] is also relevant for this
   // case.
+  ///
+  /// Required capabilities: [isSubclassOf] requires a
+  /// [TypeRelationsCapability], and it requires that the chain of subclasses
+  /// from [this] to [other] is covered.
   bool isSubclassOf(ClassMirror other);
 
   /// Returns an invoker builder for the given [memberName]. An invoker builder
@@ -835,6 +1011,13 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// likely to mean a reflective operation for each invocation).
   //
   // TODO(eernst) doc: revise language on private members when semantics known.
+  ///
+  /// Required capabilities: [invoker] for an instance method requires a
+  /// matching [InstanceInvokeCapability] or [InstanceInvokeMetaCapability];
+  /// [invoker] for a static method requires a matching
+  /// [StaticInvokeCapability] or [StaticInvokeMetaCapability]; and [invoker]
+  /// for a top-level function requires a matching [TopLevelInvokeCapability]
+  /// or [TopLevelInvokeMetaCapability].
   Function invoker(String memberName);
 }
 
@@ -843,12 +1026,18 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
 abstract class FunctionTypeMirror implements ClassMirror {
 
   /// Returns the return type of the reflectee.
+  ///
+  /// Required capabilities: [returnType] requires a [TypeCapability].
   TypeMirror get returnType;
 
   /// Returns a list of the parameter types of the reflectee.
+  ///
+  /// Required capabilities: [parameters] requires a [DeclarationsCapability].
   List<ParameterMirror> get parameters;
 
   /// A mirror on the [:call:] method for the reflectee.
+  ///
+  /// Required capabilities: [callMethod] does not require any capabilities.
   MethodMirror get callMethod;
 }
 
@@ -856,11 +1045,15 @@ abstract class FunctionTypeMirror implements ClassMirror {
 abstract class TypeVariableMirror extends TypeMirror {
 
   /// A mirror on the type that is the upper bound of this type variable.
+  ///
+  /// Required capabilities: [upperBound] requires a [TypeCapability].
   TypeMirror get upperBound; // Possible RET: Type
 
   /// Is the reflectee static?
   /// For the purposes of the mirrors library, type variables are considered
   /// non-static.
+  ///
+  /// Required capabilities: [isStatic] does not require any capabilities.
   bool get isStatic;
 
   /// Whether [other] is a [TypeVariableMirror] on the same type variable as 
@@ -870,6 +1063,8 @@ abstract class TypeVariableMirror extends TypeMirror {
   ///
   /// 1. [other] is a mirror of the same kind, and
   /// 2. [:simpleName == other.simpleName:] and [:owner == other.owner:].
+  ///
+  /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
 }
 
@@ -882,6 +1077,8 @@ abstract class TypedefMirror implements TypeMirror {
   /// result will be [:FunctionTypeMirror:] reflecting *F* which is abstract
   /// and has an abstract method [:call:] whose signature corresponds to *F*.
   /// For instance [:void f(int):] is the referent for [:typedef void f(int):].
+  ///
+  /// Required capabilities: [referent] requires a [TypeCapability].
   FunctionTypeMirror get referent;
 }
 
@@ -890,40 +1087,69 @@ abstract class TypedefMirror implements TypeMirror {
 abstract class MethodMirror implements DeclarationMirror {
 
   /// A mirror on the return type for the reflectee.
+  ///
+  /// Required capabilities: [returnType] requires a [TypeCapability].
   TypeMirror get returnType; // Possible RET: Type
 
   /// Returns the value specified with `hasReflectedType` in [TypeMirror],
   /// but for the return type given by the annotation of the method modeled
   /// by this mirror.
+  ///
+  /// Required capabilities: [hasReflectedReturnType] does not require any
+  /// capabilities.
   bool get hasReflectedReturnType;
 
   /// If [hasReflectedReturnType] is true, returns the corresponding [Type].
   /// Otherwise, an [UnsupportedError] is thrown.
+  ///
+  /// Required capabilities: [reflectedReturnType] can be invoked iff
+  /// [hasReflectedReturnType] returns true. However, capabilities can be used
+  /// to extend the set of situations where [hasReflectedReturnType] returns
+  /// true, by having a [reflectedTypeCapability] in the reflector for this
+  /// [MethodMirror].
   Type get reflectedReturnType;
 
   /// Returns the value specified with `hasDynamicReflectedType` in
   /// [ClassMirror], but for the return type given by the annotation of the
   /// method modeled by this mirror.
+  ///
+  /// Required capabilities: [hasDynamicReflectedReturnType] does not require
+  /// any capabilities.
   bool get hasDynamicReflectedReturnType;
 
   /// If [hasDynamicReflectedReturnType] is true, returns the corresponding
   /// [Type] as specified for `dynamicReflectedType` in [ClassMirror].
   /// Otherwise, an [UnsupportedError] is thrown.
+  ///
+  /// Required capabilities: [dynamicReflectedReturnType] can be invoked iff
+  /// [hasDynamicReflectedReturnType] returns true. However, capabilities can
+  /// be used to extend the set of situations where
+  /// [hasDynamicReflectedReturnType] returns true, by
+  /// having a [reflectedTypeCapability] in the reflector for this
+  /// [MethodMirror].
   Type get dynamicReflectedReturnType;
 
   /// The source code for the reflectee, if available. Otherwise null.
+  ///
+  /// Required capabilities: [source] does not require any capabilities.
   String get source;
 
   /// A list of mirrors on the parameters for the reflectee.
+  ///
+  /// Required capabilities: [parameters] requires a [DeclarationsCapability].
   List<ParameterMirror> get parameters;
 
   /// A function is considered non-static iff it is permited to refer to 'this'.
   ///
   /// Note that generative constructors are considered non-static, whereas
   /// factory constructors are considered static.
+  ///
+  /// Required capabilities: [isStatic] does not require any capabilities.
   bool get isStatic;
 
   /// Is the reflectee abstract?
+  ///
+  /// Required capabilities: [isAbstract] does not require any capabilities.
   bool get isAbstract;
 
   /// Returns true if the reflectee is synthetic, and returns false otherwise.
@@ -931,6 +1157,8 @@ abstract class MethodMirror implements DeclarationMirror {
   /// A reflectee is synthetic if it is a getter or setter implicitly introduced
   /// for a field or Type, or if it is a constructor that was implicitly
   /// introduced as a default constructor or as part of a mixin application.
+  ///
+  /// Required capabilities: [isSynthetic] does not require any capabilities.
   bool get isSynthetic;
 
   /// Is the reflectee a regular function or method?
@@ -938,18 +1166,29 @@ abstract class MethodMirror implements DeclarationMirror {
   /// A function or method is regular if it is not a getter, setter, or
   /// constructor.  Note that operators, by this definition, are
   /// regular methods.
+  ///
+  /// Required capabilities: [isRegularMethod] does not require any
+  /// capabilities.
   bool get isRegularMethod;
 
   /// Is the reflectee an operator?
+  ///
+  /// Required capabilities: [isOperator] does not require any capabilities.
   bool get isOperator;
 
   /// Is the reflectee a getter?
+  ///
+  /// Required capabilities: [isGetter] does not require any capabilities.
   bool get isGetter;
 
   /// Is the reflectee a setter?
+  ///
+  /// Required capabilities: [isSetter] does not require any capabilities.
   bool get isSetter;
 
   /// Is the reflectee a constructor?
+  ///
+  /// Required capabilities: [isConstructor] does not require any capabilities.
   bool get isConstructor;
 
   /// The constructor name for named constructors and factory methods.
@@ -959,18 +1198,33 @@ abstract class MethodMirror implements DeclarationMirror {
   ///
   /// For example, [:'bar':] is the constructor name for constructor
   /// [:Foo.bar:] of type [:Foo:].
+  ///
+  /// Required capabilities: [constructorName] does not require any
+  /// capabilities.
   String get constructorName;
 
   /// Is the reflectee a const constructor?
+  ///
+  /// Required capabilities: [isConstConstructor] does not require any
+  /// capabilities.
   bool get isConstConstructor;
 
   /// Is the reflectee a generative constructor?
+  ///
+  /// Required capabilities: [isGenerativeConstructor] does not require any
+  /// capabilities.
   bool get isGenerativeConstructor;
 
   /// Is the reflectee a redirecting constructor?
+  ///
+  /// Required capabilities: [isRedirectingConstructor] does not require any
+  /// capabilities.
   bool get isRedirectingConstructor;
 
   /// Is the reflectee a factory constructor?
+  ///
+  /// Required capabilities: [isFactoryConstructor] does not require any
+  /// capabilities.
   bool get isFactoryConstructor;
 
   /// Whether this mirror is equal to [other].
@@ -979,6 +1233,8 @@ abstract class MethodMirror implements DeclarationMirror {
   ///
   /// 1. [other] is a mirror of the same kind, and
   /// 2. [:simpleName == other.simpleName:] and [:owner == other.owner:].
+  ///
+  /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
 }
 
@@ -986,25 +1242,45 @@ abstract class MethodMirror implements DeclarationMirror {
 abstract class VariableMirror implements DeclarationMirror {
 
   /// Returns a mirror on the type of the reflectee.
+  ///
+  /// Required capabilities: [type] requires a [TypeCapability].
   TypeMirror get type; // Possible RET: Type
 
   /// Returns the value specified with `hasReflectedType` in [TypeMirror],
   /// but for the type given by the annotation of the variable modeled
   /// by this mirror.
+  ///
+  /// Required capabilities: [hasReflectedType] does not require any
+  /// capabilities.
   bool get hasReflectedType;
 
   /// If [hasReflectedType] is true, returns the corresponding [Type].
   /// Otherwise, an [UnsupportedError] is thrown.
+  ///
+  /// Required capabilities: [reflectedType] can be invoked iff
+  /// [hasReflectedType] returns true. However, capabilities can be used to
+  /// extend the set of situations where [hasReflectedType] returns true, by
+  /// having a [reflectedTypeCapability] in the reflector for this
+  /// [VariableMirror].
   Type get reflectedType;
 
   /// Returns the value specified with `hasDynamicReflectedType` in
   /// [ClassMirror], but for the type given by the annotation of the
   /// variable modeled by this mirror.
+  ///
+  /// Required capabilities: [hasDynamicReflectedType] does not require any
+  /// capabilities.
   bool get hasDynamicReflectedType;
 
   /// If [hasDynamicReflectedType] is true, returns the corresponding
   /// [Type] as specified for `dynamicReflectedType` in [ClassMirror].
   /// Otherwise, an [UnsupportedError] is thrown.
+  ///
+  /// Required capabilities: [dynamicReflectedType] can be invoked iff
+  /// [hasDynamicReflectedType] returns true. However, capabilities can be used
+  /// to extend the set of situations where [hasDynamicReflectedType] returns
+  /// true, by having a [reflectedTypeCapability] in the reflector for this
+  /// [VariableMirror].
   Type get dynamicReflectedType;
 
   /// Returns [:true:] if the reflectee is a static variable.
@@ -1012,14 +1288,20 @@ abstract class VariableMirror implements DeclarationMirror {
   ///
   /// For the purposes of the mirror library, top-level variables are
   /// implicitly declared static.
+  ///
+  /// Required capabilities: [isStatic] does not require any capabilities.
   bool get isStatic;
 
   /// Returns [:true:] if the reflectee is a final variable.
   /// Otherwise returns [:false:].
+  ///
+  /// Required capabilities: [isFinal] does not require any capabilities.
   bool get isFinal;
 
   /// Returns [:true:] if the reflectee is declared [:const:].
   /// Otherwise returns [:false:].
+  ///
+  /// Required capabilities: [isConst] does not require any capabilities.
   bool get isConst;
 
   /// Whether this mirror is equal to [other].
@@ -1028,6 +1310,8 @@ abstract class VariableMirror implements DeclarationMirror {
   ///
   /// 1. [other] is a mirror of the same kind, and
   /// 2. [:simpleName == other.simpleName:] and [:owner == other.owner:].
+  ///
+  /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
 }
 
@@ -1035,18 +1319,27 @@ abstract class VariableMirror implements DeclarationMirror {
 abstract class ParameterMirror implements VariableMirror {
 
   /// A mirror on the type of this parameter.
+  ///
+  /// Required capabilities: [type] requires a [TypeCapability].
   TypeMirror get type;
 
   /// Returns [:true:] if the reflectee is an optional parameter.
   /// Otherwise returns [:false:].
+  ///
+  /// Required capabilities: [isOptional] does not require any capabilities.
   bool get isOptional;
 
   /// Returns [:true:] if the reflectee is a named parameter.
   /// Otherwise returns [:false:].
+  ///
+  /// Required capabilities: [isNamed] does not require any capabilities.
   bool get isNamed;
 
   /// Returns [:true:] if the reflectee has explicitly declared a default value.
   /// Otherwise returns [:false:].
+  ///
+  /// Required capabilities: [hasDefaultValue] requires a
+  /// [DeclarationsCapability].
   bool get hasDefaultValue;
 
   /// Returns the default value of an optional parameter.
@@ -1057,6 +1350,8 @@ abstract class ParameterMirror implements VariableMirror {
   /// and a mirror of `null` is returned.
   ///
   /// Returns `null` for a required parameter.
+  ///
+  /// Required capabilities: [defaultValue] requires a [DeclarationsCapability].
   Object get defaultValue; // RET: InstanceMirror
 }
 

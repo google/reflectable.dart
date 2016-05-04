@@ -684,9 +684,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   @override
   bool get isTopLevel => true;
 
-  // It is allowed to return null.
   @override
-  SourceLocation get location => null;
+  SourceLocation get location => throw new UnsupportedError("location");
 
   @override
   List<Object> get metadata {
@@ -709,8 +708,27 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   }
 
   @override
-  bool isAssignableTo(TypeMirror other) =>
-      isSubtypeOf(other) || other.isSubtypeOf(this);
+  bool isAssignableTo(TypeMirror other) {
+    if (_superclassIndex == NO_CAPABILITY_INDEX) {
+      // There are two possible reasons for this: (1) If we have no type
+      // relations capability then the index will always be NO_CAPABILITY_INDEX.
+      // (2) Even if we have the type relations capability then the superclass
+      // may be un-covered. So we cannot tell the two apart based on index.
+      // Note that the check for superclass access also applies to the access
+      // to superinterfaces, that is, it is not necessary (nor useful) to check
+      // for access to superinterfaces here.
+      if (!_supportsTypeRelations(_reflector)) {
+        throw new NoSuchCapabilityError(
+            "Attempt to evaluate `isAssignableTo` for `$qualifiedName` "
+            "without `typeRelationsCapability`");
+      }
+      throw new NoSuchCapabilityError(
+          "Attempt to evaluate `isAssignableTo` for `$qualifiedName` "
+          "without capability.");
+    }
+    return _isSubtypeOf(other) ||
+        (other is ClassMirrorBase && other._isSubtypeOf(this));
+  }
 
   @override
   bool isSubtypeOf(TypeMirror other) {
@@ -1035,7 +1053,19 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
   bool get hasDynamicReflectedType => true;
 
   @override
-  Type get dynamicReflectedType => _data.types[_dynamicReflectedTypeIndex];
+  Type get dynamicReflectedType {
+    if (_dynamicReflectedTypeIndex == constants.NO_CAPABILITY_INDEX) {
+      if (!_supportsReflectedType(_reflector)) {
+        throw new NoSuchCapabilityError(
+            "Attempt to evaluate `dynamicReflectedType` for `$qualifiedName` "
+            "without `reflectedTypeCapability`");
+      }
+      throw new NoSuchCapabilityError(
+          "Attempt to get `dynamicReflectedType` for `$qualifiedName` "
+          "without capability");
+    }
+    return _data.types[_dynamicReflectedTypeIndex];
+  }
 
   // Because we take care to only ever create one instance for each
   // type/reflector-combination we can rely on the default `hashCode` and `==`
@@ -1246,11 +1276,24 @@ class TypeVariableMirrorImpl extends _DataCaching
   }
 
   @override
-  bool isAssignableTo(TypeMirror other) =>
-      throw unimplementedError("isAssignableTo");
+  bool isAssignableTo(TypeMirror other) {
+    if (!_supportsTypeRelations(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `isAssignableTo` for `$qualifiedName` "
+          "without `typeRelationsCapability`");
+    }
+    return upperBound.isSubtypeOf(other) || other.isSubtypeOf(this);
+  }
 
   @override
-  bool isSubtypeOf(TypeMirror other) => upperBound.isSubtypeOf(other);
+  bool isSubtypeOf(TypeMirror other) {
+    if (!_supportsTypeRelations(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `isSubtypeOf` for `$qualifiedName` "
+          "without `typeRelationsCapability`");
+    }
+    return upperBound.isSubtypeOf(other);
+  }
 
   @override
   TypeMirror get originalDeclaration {
@@ -1269,7 +1312,7 @@ class TypeVariableMirrorImpl extends _DataCaching
   List<TypeMirror> get typeArguments {
     if (!_supportsTypeRelations(_reflector)) {
       throw new NoSuchCapabilityError(
-          "Attempt to get `typeArgumnts` for `$qualifiedName` "
+          "Attempt to get `typeArguments` for `$qualifiedName` "
           "without `typeRelationsCapability`");
     }
     return <TypeMirror>[];
@@ -1303,9 +1346,8 @@ class TypeVariableMirrorImpl extends _DataCaching
     return <Object>[];
   }
 
-  /// It is allowed to return null;
   @override
-  SourceLocation get location => null;
+  SourceLocation get location => throw new UnsupportedError("location");
 
   @override
   bool get isTopLevel => false;
@@ -1497,7 +1539,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   bool get isTopLevel => false;
 
   @override
-  SourceLocation get location => null;
+  SourceLocation get location => throw new UnsupportedError("location");
 
   final List<Object> _metadata;
 
@@ -1526,8 +1568,8 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   int get hashCode =>
       uri.hashCode ^ _reflector.hashCode ^ _declarationIndices.hashCode;
 
-  // TODO(sigurdm) implement: Need to implement this. Probably only when a given
-  // capability is enabled.
+  // TODO(sigurdm) implement: Need to implement this, with the requirement that
+  // a [LibraryCapability] must be available.
   List<LibraryDependencyMirror> get libraryDependencies =>
       throw unimplementedError("libraryDependencies");
 }
@@ -1652,9 +1694,8 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   bool get _hasGenericReturnType =>
       (_descriptor & constants.genericReturnTypeAttribute != 0);
 
-  // It is allowed to return null.
   @override
-  SourceLocation get location => null;
+  SourceLocation get location => throw new UnsupportedError("location");
 
   @override
   List<Object> get metadata {
@@ -1667,6 +1708,10 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
 
   @override
   List<ParameterMirror> get parameters {
+    if (!_supportsDeclarations(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `parameters` without `DeclarationsCapability`");
+    }
     return _parameterIndices
         .map((int parameterIndex) => _data.parameterMirrors[parameterIndex])
         .toList();
@@ -1857,9 +1902,8 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
   @override
   bool get isTopLevel => false;
 
-  // It is allowed to return null.
   @override
-  SourceLocation get location => null;
+  SourceLocation get location => throw new UnsupportedError("location");
 
   @override
   List<Object> get metadata => <Object>[];
@@ -1897,7 +1941,13 @@ class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
   bool get isSetter => false;
 
   @override
-  List<ParameterMirror> get parameters => <ParameterMirror>[];
+  List<ParameterMirror> get parameters {
+    if (!_supportsDeclarations(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `parameters` without `DeclarationsCapability`");
+    }
+    return <ParameterMirror>[];
+  }
 
   @override
   String get qualifiedName => _variableMirror.qualifiedName;
@@ -1934,6 +1984,10 @@ class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
 
   @override
   List<ParameterMirror> get parameters {
+    if (!_supportsDeclarations(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `parameters` without `DeclarationsCapability`");
+    }
     return <ParameterMirror>[
       new ParameterMirrorImpl(
           _variableMirror.simpleName,
@@ -1998,9 +2052,8 @@ abstract class VariableMirrorBase extends _DataCaching
   bool get _isGenericType =>
       (_descriptor & constants.genericTypeAttribute != 0);
 
-  // It is allowed to return null.
   @override
-  SourceLocation get location => null;
+  SourceLocation get location => throw new UnsupportedError("location");
 
   @override
   List<Object> get metadata {
@@ -2020,6 +2073,10 @@ abstract class VariableMirrorBase extends _DataCaching
   @override
   TypeMirror get type {
     if (_classMirrorIndex == NO_CAPABILITY_INDEX) {
+      if (!_supportsType(_reflector)) {
+        throw new NoSuchCapabilityError(
+            "Attempt to get `type` without `TypeCapability`");
+      }
       throw new NoSuchCapabilityError(
           "Attempt to get class mirror for un-marked class (type of '$_name')");
     }
@@ -2035,15 +2092,20 @@ abstract class VariableMirrorBase extends _DataCaching
   }
 
   @override
-  bool get hasReflectedType => _reflectedTypeIndex != NO_CAPABILITY_INDEX;
+  bool get hasReflectedType =>
+      _isDynamic || _reflectedTypeIndex != NO_CAPABILITY_INDEX;
 
   @override
   Type get reflectedType {
-    if (_isDynamic) return dynamic;
     if (_reflectedTypeIndex == NO_CAPABILITY_INDEX) {
+      if (!_supportsReflectedType(_reflector)) {
+        throw new NoSuchCapabilityError(
+            "Attempt to get `reflectedType` without `reflectedTypeCapability`");
+      }
       throw new UnsupportedError(
           "Attempt to get reflectedType without capability (of '$_name')");
     }
+    if (_isDynamic) return dynamic;
     return _data.types[_reflectedTypeIndex];
   }
 
@@ -2105,8 +2167,7 @@ class VariableMirrorImpl extends VariableMirrorBase {
 
 class ParameterMirrorImpl extends VariableMirrorBase
     implements ParameterMirror {
-  @override
-  final defaultValue;
+  final Object _defaultValue;
 
   /// Symbol for the name of this parameter, if named; otherwise null.
   final Symbol _nameSymbol;
@@ -2118,8 +2179,22 @@ class ParameterMirrorImpl extends VariableMirrorBase
   bool get isConst => (_descriptor & constants.constAttribute != 0);
 
   @override
-  bool get hasDefaultValue =>
-      (_descriptor & constants.hasDefaultValueAttribute != 0);
+  bool get hasDefaultValue {
+    if (!_supportsDeclarations(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `hasDefaultValue` without `DeclarationsCapability`");
+    }
+    return (_descriptor & constants.hasDefaultValueAttribute != 0);
+  }
+
+  @override
+  Object get defaultValue {
+    if (!_supportsDeclarations(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `defaultValue` without `DeclarationsCapability`");
+    }
+    return _defaultValue;
+  }
 
   @override
   bool get isOptional => (_descriptor & constants.optionalAttribute != 0);
@@ -2139,7 +2214,7 @@ class ParameterMirrorImpl extends VariableMirrorBase
       int reflectedTypeIndex,
       int dynamicReflectedTypeIndex,
       List<Object> metadata,
-      this.defaultValue,
+      this._defaultValue,
       this._nameSymbol)
       : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
             reflectedTypeIndex, dynamicReflectedTypeIndex, metadata);
@@ -2182,11 +2257,10 @@ class DynamicMirrorImpl implements TypeMirror {
 
   // TODO(eernst) implement: do as in 'dart:mirrors'.
   @override
-  TypeMirror get originalDeclaration => null;
+  TypeMirror get originalDeclaration => this;
 
-  // It is allowed to return null.
   @override
-  SourceLocation get location => null;
+  SourceLocation get location => throw new UnsupportedError("location");
 
   // TODO(eernst) implement: We ought to check for the capability, which
   // means that we should have a `_reflector`, and then we should throw a
@@ -2245,11 +2319,10 @@ class VoidMirrorImpl implements TypeMirror {
 
   // TODO(eernst) implement: do as in 'dart:mirrors'.
   @override
-  TypeMirror get originalDeclaration => null;
+  TypeMirror get originalDeclaration => this;
 
-  // It is allowed to return null.
   @override
-  SourceLocation get location => null;
+  SourceLocation get location => throw new UnsupportedError("location");
 
   // TODO(eernst) implement: We ought to check for the capability, which
   // means that we should have a `supportsTypeRelations` bool, and then we
@@ -2393,7 +2466,22 @@ bool _isSetterName(String name) => name.endsWith("=");
 
 String _getterNameToSetterName(String name) => name + "=";
 
+bool _supportsType(ReflectableImpl reflector) {
+  return reflector.capabilities.any(
+      (ReflectCapability capability) => capability is TypeCapability);
+}
+
 bool _supportsTypeRelations(ReflectableImpl reflector) {
   return reflector.capabilities.any(
       (ReflectCapability capability) => capability is TypeRelationsCapability);
+}
+
+bool _supportsReflectedType(ReflectableImpl reflector) {
+  return reflector.capabilities.any(
+      (ReflectCapability capability) => capability == reflectedTypeCapability);
+}
+
+bool _supportsDeclarations(ReflectableImpl reflector) {
+  return reflector.capabilities.any(
+      (ReflectCapability capability) => capability is DeclarationsCapability);
 }

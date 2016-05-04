@@ -85,16 +85,32 @@ class NewInstanceMetaCapability extends MetadataQuantifiedCapability
       : super(metadataType);
 }
 
+/// To be eliminated when `NameCapability` in 'capability.dart' is eliminated.
+/// We do not mark it as deprecated at this time because it will be needed in
+/// order to handle usages of the deprecated `NameCapability` class or
+/// `nameCapability` value in client code.
 class NameCapability implements TypeCapability {
   const NameCapability();
 }
 
+/// To be eliminated when `nameCapability` in 'capability.dart' is eliminated.
+/// We do not mark it as deprecated at this time because it will be needed in
+/// order to handle usages of the deprecated `NameCapability` class or
+/// `nameCapability` value in client code.
 const nameCapability = const NameCapability();
 
+/// To be eliminated when `ClassifyCapability` in 'capability.dart' is
+/// eliminated. We do not mark it as deprecated at this time because it will be
+/// needed in order to handle usages of the deprecated `ClassifyCapability`
+/// class or `classifyCapability` value in client code.
 class ClassifyCapability implements TypeCapability {
   const ClassifyCapability();
 }
 
+/// To be eliminated when `classifyCapability` in 'capability.dart' is
+/// eliminated. We do not mark it as deprecated at this time because it will be
+/// needed in order to handle usages of the deprecated `ClassifyCapability`
+/// class or `classifyCapability` value in client code.
 const classifyCapability = const ClassifyCapability();
 
 class MetadataCapability implements TypeCapability {

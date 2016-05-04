@@ -170,28 +170,47 @@ class NewInstanceMetaCapability extends MetadataQuantifiedCapability
 /// to the methods `simpleName`, `qualifiedName` and `constructorName` on
 /// `DeclarationMirror` and `MethodMirror`.
 ///
-/// TODO(eernst) clarify: This should be enforced or deleted,
-/// where 'enforced' means that `..name..` related methods must fail with a
-/// [NoSuchCapabilityError] if this capability is not present. This sounds
-/// like a really strict approach for a very cheap feature, but there might
-/// be reasons (maybe related to code obfuscation) for keeping the names out
-/// of reach.
+/// This class has been deprecated: The associated getters are always available,
+/// and it has no effect to include this capability. Exception:  if it is the
+/// only [TypeCapability] on a given reflector and types are used reflectively
+/// then it should be replaced by a [TypeCapability] rather than removed.
+@deprecated
 class NameCapability implements TypeCapability {
   const NameCapability();
 }
 
 /// Shorthand for `const NameCapability()`.
+///
+/// This value has been deprecated: The associated getters are always available,
+/// and it has no effect to include this capability. Exception: if it is the
+/// only [TypeCapability] on a given reflector and types are used reflectively
+/// then it should be replaced by [typeCapability] rather than removed.
+@deprecated
 const nameCapability = const NameCapability();
 
 /// Gives support for classification predicates such as `isPrivate`, `isStatic`
 /// .., offered by `DeclarationMirror`, `LibraryDependencyMirror`,
 /// `CombinatorMirror' `TypeMirror`, `ClassMirror`, `TypeVariableMirror`,
 /// `MethodMirror`, `VariableMirror`, and `ParameterMirror`.
+///
+/// This class has been deprecated: The classification predicates are always
+/// available, and it has no effect to include this capability. Exception: if
+/// it is the only [TypeCapability] on a given reflector and types are used
+/// reflectively then it should be replaced by a [TypeCapability] rather than
+/// removed.
+@deprecated
 class ClassifyCapability implements TypeCapability {
   const ClassifyCapability();
 }
 
 /// Shorthand for `const ClassifyCapability()`.
+///
+/// This value has been deprecated: The classification predicates are always
+/// available, and it has no effect to include this capability. Exception: if
+/// it is the only [TypeCapability] on a given reflector and types are used
+/// reflectively then it should be replaced by [typeCapability] rather than
+/// removed.
+@deprecated
 const classifyCapability = const ClassifyCapability();
 
 /// Gives support for reflective access to metadata associated with a
@@ -268,9 +287,6 @@ class DeclarationsCapability implements TypeCapability {
 const declarationsCapability = const DeclarationsCapability();
 
 /// Gives support for the mirror method `uri` on LibraryMirrors.
-///
-/// The corresponding class is private for the same reason as mentioned
-/// with [classifyCapability].
 class UriCapability implements LibraryCapability {
   const UriCapability();
 }
@@ -314,15 +330,12 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
   const InvokingMetaCapability(Type metadataType) : super(metadataType);
 }
 
-/// Gives the capabilities of [TypeCapability], [nameCapability],
-/// [classifyCapability], [metadataCapability], [typeRelationsCapability],
-/// [declarationsCapability], [uriCapability], and
+/// Gives the capabilities of [TypeCapability], [metadataCapability],
+/// [typeRelationsCapability], [declarationsCapability], [uriCapability], and
 /// [libraryDependenciesCapability].
 class TypingCapability
     implements
         TypeCapability, // Redundant, just included for readability.
-        NameCapability,
-        ClassifyCapability,
         MetadataCapability,
         TypeRelationsCapability,
         DeclarationsCapability,

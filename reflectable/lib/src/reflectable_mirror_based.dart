@@ -777,6 +777,10 @@ class _LibraryMirrorImpl extends _DeclarationMirrorImpl
 
   @override
   List<rm.LibraryDependencyMirror> get libraryDependencies {
+    if (!_supportsLibrary(_reflectable, _libraryMirror)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `libraryDependencies` without `libraryCapability`");
+    }
     // TODO(eernst): Analyzer claims `map` has zero type arguments => cannot
     // eliminate 'unsound implicit cast'.
     return _libraryMirror.libraryDependencies
@@ -1061,10 +1065,6 @@ class ClassMirrorImpl extends _TypeMirrorImpl
 
   @override
   List<rm.TypeMirror> get typeArguments {
-    if (!reflectableSupportsDeclarations(_reflectable)) {
-      throw new NoSuchCapabilityError(
-          "Attempt to get `typeArguments` without `declarationsCapability`");
-    }
     if (!reflectableSupportsTypeRelations(_reflectable)) {
       throw new NoSuchCapabilityError(
           "Attempt to get `typeArguments` without `typeRelationsCapability`");
@@ -1403,6 +1403,10 @@ class ClassMirrorImpl extends _TypeMirrorImpl
       throw new NoSuchCapabilityError(
           "Attempt to get `isSubclassOf` without `typeRelationsCapability`");
     }
+    // TODO(eernst): To follow the specified semantics precisely this should
+    // fail with a [NoSuchCapabilityError] if any of the intermediate classes
+    // are not covered by [_reflectable]. So we should step up there using
+    // reflectable operations, not just rely on `isSubclassOf` from `dm`.
     return _classMirror.isSubclassOf(unwrapClassMirror(other));
   }
 
@@ -1752,6 +1756,12 @@ class _ClosureMirrorImpl extends _InstanceMirrorImpl
   @override
   Object apply(List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
+    if (!reflectableSupportsInstanceInvoke(
+        _reflectable, "call", _closureMirror.type)) {
+      throw reflectableNoSuchMethodError(
+          _receiver, "call", positionalArguments, namedArguments);
+
+    }
     return _closureMirror.apply(positionalArguments, namedArguments).reflectee;
   }
 
@@ -1777,12 +1787,11 @@ class VariableMirrorImpl extends _DeclarationMirrorImpl
       return wrapTypeMirror(_variableMirror.type, _reflectable);
     }
     throw new NoSuchCapabilityError(
-        "Attempt to get `type` without `typeCapability`");
+        "Attempt to get `type` without a `TypeCapability`");
   }
 
   @override
   bool get hasReflectedType =>
-      impliesReflectedType(_reflectable.capabilities) &&
       _variableMirror.type is! dm.FunctionTypeMirror &&
       _variableMirror.type.hasReflectedType;
 
@@ -1856,10 +1865,20 @@ class _ParameterMirrorImpl extends VariableMirrorImpl
   bool get isNamed => _parameterMirror.isNamed;
 
   @override
-  bool get hasDefaultValue => _parameterMirror.hasDefaultValue;
+  bool get hasDefaultValue {
+    if (!reflectableSupportsDeclarations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `hasDefaultValue` without `DeclarationsCapability`");
+    }
+    return _parameterMirror.hasDefaultValue;
+  }
 
   @override
   Object get defaultValue {
+    if (!reflectableSupportsDeclarations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `defaultValue` without `DeclarationsCapability`");
+    }
     if (_parameterMirror.hasDefaultValue) {
       return _parameterMirror.defaultValue.reflectee;
     }
@@ -1899,7 +1918,13 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
   }
 
   @override
-  bool get isOriginalDeclaration => _typeMirror.isOriginalDeclaration;
+  bool get isOriginalDeclaration {
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError("Attempt to get `isOriginalDeclaration` "
+          "without `typeRelationsCapability`");
+    }
+    return _typeMirror.isOriginalDeclaration;
+  }
 
   @override
   bool isSubtypeOf(rm.TypeMirror other) {
@@ -1907,6 +1932,8 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
       throw new NoSuchCapabilityError(
           "Attempt to get `isSubtypeOf` without `typeRelationsCapability`");
     }
+    // TODO(eernst): In order to behave precisely as specified, the following
+    // should check for each type visited during the search that it is covered.
     return _typeMirror.isSubtypeOf(unwrapTypeMirror(other));
   }
 
@@ -1924,6 +1951,10 @@ abstract class _TypeMirrorImpl extends _DeclarationMirrorImpl
 
   @override
   List<rm.TypeMirror> get typeArguments {
+    if (!reflectableSupportsTypeRelations(_reflectable)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `typeArguments` without `typeRelationsCapability`");
+    }
     return _typeMirror.typeArguments.map((dm.TypeMirror typeArgument) {
       return wrapTypeMirror(typeArgument, _reflectable);
     }).toList();
@@ -2103,9 +2134,8 @@ class _VoidMirrorImpl implements rm.TypeMirror {
   @override
   bool get isPrivate => false;
 
-  // It is allowed to return null.
   @override
-  get location => null;
+  get location => throw new UnsupportedError("location");
 
   @override
   bool get isTopLevel => true;

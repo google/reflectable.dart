@@ -433,10 +433,9 @@ the need for reflection.
 
 | **Non-terminal**               | **Expansion**                  |
 | ------------------------------ | ------------------------------ |
-| *apiSelection*                 | *invocation* \| *naming* \| *classification* \| *annotation* \| *typing* \| *introspection* |
+| *apiSelection*                 | *invocation* \| *annotation* \| *typing* \| *introspection* |
 | *invocation*                   | `instanceInvoke([`*`RegExp`*`])` \| `instanceInvokeMeta(`*`MetadataClass`*`)` \| `staticInvoke([`*`RegExp`*`])` \| `staticInvokeMeta(`*`MetadataClass`*`)` \| `topLevelInvoke([`*`RegExp`*`])` \| `topLevelInvokeMeta(`*`MetadataClass`*`)` \| `newInstance([`*`RegExp`*`])` \| `newInstanceMeta(`*`MetadataClass`*`)` |
-| *naming*                       | `name`                         |
-| *classification*               | `classify`                     |
+| *delegation*                   | `delegate` |
 | *annotation*                   | `metadata`                     |
 | *typing*                       | `type` \| `typeRelations` |
 | *introspection*                | `owner` \| `declarations` \| `uri` \| `libraryDependencies` |
@@ -445,19 +444,19 @@ the need for reflection.
 
 In the category *invocation* we have used the prefix `topLevel` rather
 than `library`, because this terminology is common in the existing
-documentation of mirror classes. The category *naming*
-has been expressed atomically as `name` because we do not want to
-distinguish among the different kinds of names, and similarly for all the
-*classification* predicates. The category *concretization* was removed
-because it is trivial to support these features, so they are always
-enabled. The category *text* was removed because we do not plan to
-support reflective access to the source code as a whole at this point.
+documentation of mirror classes. The category *naming* was eliminated
+and support for the corresponding features is always provided,
+because the need for disabling these features never arose in practice
+and they are cheap to support; the category *classification* was handled
+in the same manner, and so was *concretization*. The category *text* was
+removed because we do not plan to support reflective access to the
+source code as a whole at this point.
 
 We have omitted `apply` and `function` because we do not have support for
 `ClosureMirror` and we do not expect to get it anytime soon.
 
-Moreover, `delegate` was made implicit such that the ability to invoke a
-method implies the ability to delegate to it.
+The category *delegation* was separated out from *invocation*, because
+support for delegation is rather costly.
 
 The category *typing* was simplified in several ways: `instance_type` was
 renamed into `type` because of its prominence. The method `reflectType` on
