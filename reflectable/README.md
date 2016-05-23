@@ -139,10 +139,18 @@ transformers:
     formatted: true # Optional.
 ```
 
-Note that it is possible to use globbing with entry points, based on the
-package [glob](https://pub.dartlang.org/packages/glob). For instance,
-`entry_points: ["test/*_test.dart"]` can be used to specify that all Dart
-source files in `test` whose name ends in `_test.dart` are entry points.
+Note that it is necessary to include the reflectable transformer in the
+`pubspec.yaml` of your package if you use reflectable directly *or indirectly*
+(by depending on a package that uses reflectable), because the transformer may
+need to generate code based on files in your package. In particular, if you
+are writing a package which uses reflectable and is expected to be used by
+clients, please make it explicit that such clients must include the reflectable
+transformer in their `pubspec.yaml`.
+
+It is possible to use globbing with entry points, based on the package
+[glob](https://pub.dartlang.org/packages/glob). For instance, `entry_points:
+["test/*_test.dart"]` can be used to specify that all Dart source files in
+`test` whose name ends in `_test.dart` are entry points.
 
 Now run `pub build --mode=debug web` to perform the transformation. This will
 rename the file `web/main.dart` and generate a new file `build/web/main.dart`.
