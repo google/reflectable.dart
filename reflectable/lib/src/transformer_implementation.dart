@@ -6,9 +6,13 @@ library reflectable.src.transformer_implementation;
 
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'package:analyzer/src/generated/ast.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/src/dart/element/element.dart';
+import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/generated/constant.dart';
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer/src/generated/source.dart' show Source;
 import 'package:analyzer/src/generated/utilities_dart.dart';
 import 'package:barback/barback.dart';
 import 'package:code_transformers/resolver.dart';
@@ -4649,6 +4653,9 @@ class MixinApplication implements ClassElement {
     return result;
   }
 
+  @override
+  Source get librarySource => library.source;
+
   /// Returns true iff this class was declared using the syntax
   /// `class B = A with M;`, i.e., if it is an explicitly named mixin
   /// application.
@@ -4815,10 +4822,22 @@ class MixinApplication implements ClassElement {
   bool get isDeprecated => throw unreachableError("isDeprecated");
 
   @override
+  bool get isFactory => throw unreachableError("isFactory");
+
+  @override
+  bool get isJS => throw unreachableError("isJS");
+
+  @override
   bool get isOverride => throw unreachableError("isOverride");
 
   @override
+  bool get isProtected => throw unreachableError("isProtected");
+
+  @override
   bool get isPublic => throw unreachableError("isPublic");
+
+  @override
+  bool get isRequired => throw unreachableError("isRequired");
 
   @override
   int get nameOffset => throw unreachableError("nameOffset");
@@ -4846,7 +4865,8 @@ class MixinApplication implements ClassElement {
       throw unreachableError("computeDocumentationComment");
 
   @override
-  Element getAncestor(predicate) => throw unreachableError("getAncestor");
+  Element/*=E*/ getAncestor/*<E extends Element>*/(bool predicate(Element e)) =>
+      throw unreachableError("getAncestor");
 
   @override
   String getExtendedDisplayName(String shortName) =>

@@ -2,11 +2,11 @@
 # source code is governed by a BSD-style license that can be found in
 # the LICENSE file.
 
-build/*: SkipByDesign # Nothing relies on getting built.
+test/*: SkipByDesign # Testing in build to get a package root.
 
 # Prevent execution of non-test files with name *_test.dart in packages.
-test/packages: SkipByDesign
-test/mock_tests/packages: SkipByDesign
+build/test/packages: SkipByDesign
+build/test/mock_tests/packages: SkipByDesign
 
 [ $runtime != vm ]
-test/mock_tests/*: SkipByDesign # Use dart:io.
+build/test/mock_tests/*: SkipByDesign # Use dart:io.

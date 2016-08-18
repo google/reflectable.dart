@@ -19,7 +19,7 @@ library reflectable.src.element_capability;
 // NB! It is crucial that all changes in '../capabilities.dart' are
 // performed in the corresponding manner here, and vice versa.
 
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer/dart/element/element.dart';
 
 abstract class ReflectCapability {
   const ReflectCapability();

@@ -23,10 +23,10 @@ b: build
 t: test
 
 get:
-	( cd ..; pub get )
+	( cd ..; pub get --no-packages-dir )
 
 upgrade:
-	( cd ..; pub upgrade )
+	( cd ..; pub upgrade --no-packages-dir )
 
 check:
 	( cd ..; dartanalyzer `find test lib -name \*.dart` )

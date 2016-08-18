@@ -5,8 +5,8 @@
 # TODO(eernst) implement: Rewrite this to a Dart script, make is not available
 # on all platforms.
 
-PACKAGE_ROOT=../packages
-OPTIONS=--package-root=$(PACKAGE_ROOT)
+PACKAGES=../.packages
+OPTIONS=--packages=$(PACKAGES)
 TEST_DIR=../test
 
 all: get check build test
@@ -24,10 +24,10 @@ b: build
 t: test
 
 get:
-	( cd ..; pub get )
+	( cd ..; pub get --no-packages-dir )
 
 upgrade:
-	( cd ..; pub upgrade )
+	( cd ..; pub upgrade --no-packages-dir )
 
 check:
 	dartanalyzer $(OPTIONS) ../{lib,test}/*.dart

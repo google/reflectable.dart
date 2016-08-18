@@ -6,7 +6,7 @@
 
 function run_dart {
   echo "---------- $(basename $n)"
-  if dart --checked --package-root="$1/test/packages" $n; then true; else
+  if dart --checked $n; then true; else
     SUMMARY="$SUMMARY
   $n"
   fi
