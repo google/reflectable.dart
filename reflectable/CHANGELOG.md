@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.0.0
+
+* Updates documentation about capabilities required for each method.
+* **Potentially breaking bug fix**: Several mirror methods perform more strict
+  checks on capabilities, to make them match the documented requirements. In
+  particular, `LibraryMirror.libraryDependencies` requires a
+  `libraryCapability`; `ClosureMirror.apply` requires an
+  `InstanceInvokeCapability`; `ParameterMirror.hasDefaultValue`,
+  `ParameterMirror.defaultValue`, `MethodMirror.parameters`,
+  `GetterMirror.parameters`, and `SetterMirror.parameters` require a
+  `DeclarationsCapability`; `TypeMirror.isOriginalDeclaration`,
+  `TypeMirror.typeArguments`, `ClassMirror.isAssignableTo`,
+  `TypeVariableMirror.isAssignableTo` and `TypeVariableMirror.isSubtypeOf`
+  require a `TypeRelationsCapability`; and `ClassMirror.dynamicReflectedType`
+  and `VariableMirror.reflectedType` require a `ReflectedTypeCapability`.
+* Updates tests to work with `--no-packages-dir`.
+* Deprecates `NameCapability`, `nameCapability`, `ClassifyCapability`, and
+  `classifyCapability`; these capabilities are now always enabled.
+* Uses more strict typing in generated code: `List` and `Map` literals will now
+  consistently include type arguments. This is rarely detectable in client code,
+  but could for instance be detected in some situations with complex metadata.
+* Uses more strict typing in the implementation, in order to pass strong mode
+  checks.
+
 ## 0.5.4
 
 * **Potentially breaking bug fix**: Several additional mirror methods
