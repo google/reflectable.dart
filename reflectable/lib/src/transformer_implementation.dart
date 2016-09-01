@@ -4087,7 +4087,9 @@ String _extractConstantCode(
         }
       } else {
         Element element = expression.staticElement;
-        if (_isImportableLibrary(
+        if (element.library == null) {
+          return "${element.name}";
+        } else if (_isImportableLibrary(
             element.library, generatedLibraryId, resolver)) {
           importCollector._addLibrary(element.library);
           String prefix = importCollector._getPrefix(element.library);
