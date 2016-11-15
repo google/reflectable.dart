@@ -5,6 +5,7 @@
 * Updates `analyzer` and `code_transformers` dependencies.
 * As a consequence of these version updates, changes a method signature and
   deletes a method (overriding a previously deprecated, now deleted method).
+  These changes should not affect clients of this package.
 
 ## 1.0.0
 
