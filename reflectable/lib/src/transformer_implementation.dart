@@ -427,7 +427,7 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
   }
 
   @override
-  Set<ClassElement> difference(Set<ClassElement> other) {
+  Set<ClassElement> difference(Set<Object> other) {
     return classElements.items.toSet().difference(other);
   }
 
@@ -4850,10 +4850,6 @@ class MixinApplication implements ClassElement {
   @override
   String get documentationComment =>
       throw unreachableError("documentationComment");
-
-  @override
-  @deprecated
-  get docRange => throw unreachableError("docRange");
 
   @override
   CompilationUnit get unit => throw unreachableError("unit");

@@ -2,7 +2,9 @@
 
 ## 1.0.1
 
-* Update `analyzer` and `code_transformers` deps.
+* Updates `analyzer` and `code_transformers` dependencies.
+* As a consequence of these version updates, changes a method signature and
+  deletes a method (overriding a previously deprecated, now deleted method).
 
 ## 1.0.0
 
