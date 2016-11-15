@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+
+* Update `analyzer` and `code_transformers` deps.
+
 ## 1.0.0
 
 * Updates documentation about capabilities required for each method.
