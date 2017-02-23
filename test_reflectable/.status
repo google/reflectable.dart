@@ -11,6 +11,7 @@ build/test/three_files_dir/packages: SkipByDesign
 [ $compiler != dart2analyzer ]
 test/mixin_application_test: RuntimeError # sdk/issues/25344
 build/test/mixin_application_test: RuntimeError # `typeArguments` unimplemented
+build/test/not_loaded_test: RuntimeError # `libraryDependencies` unimplemented.
 
 [ $runtime == vm ]
 test/new_instance_html_test: SkipByDesign # imports 'dart:html'.

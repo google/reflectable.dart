@@ -26,7 +26,7 @@ Set<Reflectable> get reflectors {
   for (dm.LibraryMirror library in dm.currentMirrorSystem().libraries.values) {
     for (dm.LibraryDependencyMirror dependency in library.libraryDependencies) {
       if (dependency.isImport &&
-          dependency.targetLibrary.qualifiedName == reflectableLibrarySymbol) {
+          dependency.targetLibrary?.qualifiedName == reflectableLibrarySymbol) {
         for (dm.InstanceMirror metadatumMirror in dependency.metadata) {
           Object metadatum = metadatumMirror.reflectee;
           if (metadatum is GlobalQuantifyCapability) {
@@ -818,12 +818,19 @@ class _LibraryDependencyMirrorImpl implements rm.LibraryDependencyMirror {
 
   @override
   rm.LibraryMirror get targetLibrary {
-    return new _LibraryMirrorImpl(
-        _libraryDependencyMirror.targetLibrary, _reflectable);
+    dm.LibraryMirror libraryMirror = _libraryDependencyMirror.targetLibrary;
+    return libraryMirror != null
+        ? new _LibraryMirrorImpl(libraryMirror, _reflectable)
+        : null;
   }
 
   @override
-  String get prefix => dm.MirrorSystem.getName(_libraryDependencyMirror.prefix);
+  String get prefix {
+    Symbol prefix = _libraryDependencyMirror.prefix;
+    return prefix != null
+        ? dm.MirrorSystem.getName(prefix)
+        : null;
+  }
 
   @override
   List<Object> get metadata {
@@ -2300,7 +2307,7 @@ class ReflectableImpl extends ReflectableBase implements ReflectableInterface {
       for (dm.LibraryDependencyMirror dependency
           in library.libraryDependencies) {
         if (dependency.isImport &&
-            dependency.targetLibrary.qualifiedName ==
+            dependency.targetLibrary?.qualifiedName ==
                 reflectableLibrarySymbol) {
           for (dm.InstanceMirror metadatumMirror in dependency.metadata) {
             Object metadatum = metadatumMirror.reflectee;
