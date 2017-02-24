@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+
+* Bug fix, handling the case where `prefix` is null on a library mirror,
+  and the case where `targetLibrary` is null on a library dependency mirror.
+
 ## 1.0.1
 
 * Updates `analyzer` and `code_transformers` dependencies.
