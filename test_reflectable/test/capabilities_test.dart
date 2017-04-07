@@ -102,6 +102,23 @@ Matcher throwsNoCapability =
 Matcher throwsReflectableNoMethod =
     throwsA(new isInstanceOf<c.ReflectableNoSuchMethodError>());
 
+class MyReflectableWithMetaCap extends r.Reflectable {
+  const MyReflectableWithMetaCap() : super(c.metadataCapability, c.invokingCapability, c.declarationsCapability);
+}
+
+const myReflectableWithMetaCap = const MyReflectableWithMetaCap();
+
+class AnnotationClass {
+  const AnnotationClass();
+}
+
+@myReflectableWithMetaCap
+class AnnotatedWithoutConstructor {
+  @AnnotationClass()
+  String someField;
+}
+
+
 void testDynamic(B o, String description) {
   test("Dynamic invocation $description", () {
     expect(instanceReflector.canReflect(o), true);
@@ -163,5 +180,10 @@ void main() {
     expect(instanceReflector.canReflect(new C()), false);
     expect(instanceReflector.canReflectType(C), false);
     expect(() => instanceReflector.reflect(new C()), throwsNoCapability);
+  });
+
+  test("Annotated Capability", () {
+    var awcMirror = myReflectableWithMetaCap.reflectType(AnnotatedWithoutConstructor);
+    expect(awcMirror.declarations['someField'].metadata, equals([const AnnotationClass()]));
   });
 }
