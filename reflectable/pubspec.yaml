@@ -13,7 +13,7 @@ dependencies:
   analyzer: '>=0.27.2 <0.30.0'
   barback: ^0.15.0
   code_transformers: '>=0.4.1 <0.6.0'
-  dart_style: ^0.2.0
+  dart_style: ">=0.2.0 <2.0.0"
   glob: ^1.1.0
   logging: ^0.11.0
   path: ^1.2.0
