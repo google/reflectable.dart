@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3
+
+* Updated version constraint on `dart_style`.
+
 ## 1.0.2
 
 * Bug fix, handling the case where `prefix` is null on a library mirror,
