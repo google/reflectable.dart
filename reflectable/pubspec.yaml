@@ -8,16 +8,16 @@ version: 1.0.3
 author: The Dart Team <dart@google.com>
 homepage: https://www.github.com/dart-lang/reflectable
 environment:
-  sdk: '>=1.12.0 <2.0.0'
+  sdk: '>=1.12.0 <2.0.0-dev.infinity'
 dependencies:
-  analyzer: '>=0.27.2 <0.30.0'
+  analyzer: ^0.30.0
   barback: ^0.15.0
   code_transformers: '>=0.4.1 <0.6.0'
   dart_style: '>=0.2.0 <2.0.0'
   glob: ^1.1.0
   logging: ^0.11.0
-  path: ^1.2.0
-  source_span: ^1.0.0
+  path: '>=1.2.0 <1.5.0'
+  source_span: '>=1.0.0 <1.5.0'
 dev_dependencies:
   unittest: ^0.11.0
 transformers:

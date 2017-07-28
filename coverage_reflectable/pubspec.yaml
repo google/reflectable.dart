@@ -7,6 +7,8 @@ description: >
   to depend on observatory, because observatory has not been made available as
   a separate package; any concrete usage of this package entails downloading the
   sdk separately and adjusting the paths for the concrete setup.
+environment:
+  sdk: '>=1.12.0 <2.0.0-dev.infinity'
 dependencies:
   observatory:
     path: ../../sdk/runtime/observatory

@@ -4855,7 +4855,7 @@ class MixinApplication implements ClassElement {
   CompilationUnit get unit => throw unreachableError("unit");
 
   @override
-  accept(ElementVisitor visitor) => throw unreachableError("accept");
+  T accept<T>(ElementVisitor<T> visitor) => throw unreachableError("accept");
 
   @override
   @deprecated

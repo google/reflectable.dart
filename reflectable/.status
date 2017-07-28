@@ -10,3 +10,6 @@ build/test/mock_tests/packages: SkipByDesign
 
 [ $runtime != vm ]
 build/test/mock_tests/*: SkipByDesign # Use dart:io.
+
+[ $system == windows ]
+build/test/mock_tests/*: RuntimeError # Issue 97.
