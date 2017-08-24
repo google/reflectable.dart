@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+* Updated version constraint on `analyzer` to include versions `^0.30.0`. Note
+  that this forces a lower bound of `0.30.0` because of a breaking change in the
+  analyzer.
+
 ## 1.0.3
 
 * Updated version constraint on `dart_style`.
