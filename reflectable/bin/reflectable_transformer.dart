@@ -50,7 +50,7 @@ transform(String package, String entryPoint, Map<String, String> inputs) async {
 
     TestDeclaringTransform declaringTransform =
         new TestDeclaringTransform(inputName);
-    transformer.declareOutputs(declaringTransform);
+    await transformer.declareOutputs(declaringTransform);
 
     await transformer.apply(transform);
     Map<String, String> outputs = await transform.outputMap();

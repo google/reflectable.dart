@@ -131,25 +131,25 @@ dependencies:
 You may also wish to specify constraints on the version, depending on the
 approach to version management that your software otherwise employs.
 
-Please make sure that the reflectable package has been made active:
-```shell
-...> pub global activate reflectable
-```
-
 Now run the code generation step:
 ```shell
 ...> cd ... # go to the root directory of your package
-...> pub global run reflectable:reflectable_builder myPackage web/myProgram.dart
+...> pub run reflectable:reflectable_builder web/myProgram.dart
 ```
+where `web/myProgram.dart` should be replaced by the root library of the
+program for which you wish to generate code. For instance, to generate code
+for a set of test files in `test`, this would typically be
+`pub run reflectable:reflectable_builder test/*_test.dart`.
 
 Note that it is necessary to do this if you use reflectable directly *or
 indirectly* by depending on a package that uses reflectable. Even in the
 indirect case there may (typically will!) be a need to generate code based
-on files in your package. 
+on files in your package.
 
 Conversely, if you are writing a package which uses reflectable and is
 expected to be used by clients, please make it explicit that such clients
-must run this step in order to obtain the generated code.
+must run this step in order to obtain the generated code for each root
+library.
 
 The generated file contains the data needed for reflection, and a
 declaration of the top-level function `initializeReflectable`,

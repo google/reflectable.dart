@@ -3,11 +3,13 @@
 // the LICENSE file.
 
 // This file illustrates a peculiar situation: The `main` function which
-// defines the behavior of the program 'exported_main_test.dart' is _not_
+// defines the behavior of the program 'exported_main_test.dart' is not
 // declared in 'exported_main_test.dart', it is defined in this library.
-// When this situation arises, the modifications which are otherwise needed
-// in the root library must be applied to the library where the relevant
-// `main` function is declared, i.e., this library.
+// When this situation arises, i.e., when `main` is imported by the root
+// library rather than being declared in the root library, the modifications
+// which are otherwise needed in the root library must be applied to the
+// library where the relevant `main` function is declared, i.e., this
+// library.
 //
 // So we add an import of 'reflectable.dart' and of the generated code in
 // 'exported_main_test.reflectable.dart', and add `initializeReflectable()`
@@ -27,8 +29,12 @@
 // We recommend that such a design is simply avoided by adding a `main`
 // function in each of those root libraries, renaming the `main` below to
 // something else, say `myMain`, and then calling `myMain` from the newly
-// added `main` functions:
+// added `main` functions (it doesn't even have to be renamed, but the name
+// `main` may be confusing when it's never used as the entry point of a
+// program):
 //
+//   import 'sameNameAsThisFile.reflectable.dart';
+//   ...
 //   main(String[] args) {
 //     initializeReflectable();
 //     myMain(args);
@@ -37,7 +43,7 @@
 // In other words, this program shows that it is possible to import `main`,
 // but it is not recommended, doesn't scale, and is easy to avoid. This is
 // also the reason why README.md and other documentation does not discuss
-// this situation.
+// that situation.
 
 library test_reflectable.test.exported_main_lib;
 

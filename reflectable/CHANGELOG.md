@@ -8,7 +8,10 @@
   because it requires a different workflow, it requires the generated code to
   be imported explicitly by the root library (the one that contains the `main`
   function), and it requires invocation of `initializeReflectable()` at the
-  beginning of `main`.
+  beginning of `main`. To see the commands in this new workflow, please
+  consult [README.md][readme_md].
+
+[readme_md]: https://github.com/dart-lang/reflectable/blob/master/reflectable/README.md
 
 ## 1.0.4
 
