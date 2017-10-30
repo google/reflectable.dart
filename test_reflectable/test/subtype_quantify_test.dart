@@ -6,6 +6,7 @@ library test_reflectable.test.subtype_quantify_test;
 
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
+import 'subtype_quantify_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -45,6 +46,8 @@ Matcher throwsNoSuchCapabilityError =
 Matcher isClassMirror = const isInstanceOf<ClassMirror>();
 
 main() {
+  initializeReflectable();
+
   test("Subtype quantification supports annotated class", () {
     expect(reflector.canReflectType(A), true);
     expect(reflector.canReflect(new A()), true);

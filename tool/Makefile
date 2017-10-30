@@ -24,6 +24,8 @@ b: build
 
 t: test
 
+cb: clean build
+
 bt: bot_test
 
 ft: full_test
@@ -54,11 +56,9 @@ test:
 	@./makein Testing $(RTOOLS) test
 	@./makein Testing $(TTOOLS) test
 
-bot_test:
-	@echo '------------------- bottest'
-	./bottest
-
-full_test: test bot_test
+clean:
+	@./makein Cleaning $(RTOOLS) clean
+	@./makein Cleaning $(TTOOLS) clean
 
 .PHONY: all_except_bottest all g u c b t ft get upgrade check build test
 .PHONY: bot_test full_test measure_output

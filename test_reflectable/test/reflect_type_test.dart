@@ -6,6 +6,7 @@ library test_reflectable.test.reflect_type_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'reflect_type_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector() : super(typeCapability);
@@ -44,6 +45,8 @@ void performTests(String message, reflector) {
 }
 
 main() {
+  initializeReflectable();
+
   performTests('With typeCapability', reflector);
   performTests('With typingCapability', broadReflector);
   test('Seeing that typing is broader than type', () {

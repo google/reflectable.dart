@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.0
+
+* Switched to a new technology stack: Reflectable no longer provides a pub
+  transformer, it uses package `build` to generate code as a separate
+  step. This is a **breaking change** for *every* program using reflectable
+  because it requires a different workflow, it requires the generated code to
+  be imported explicitly by the root library (the one that contains the `main`
+  function), and it requires invocation of `initializeReflectable()` at the
+  beginning of `main`.
+
 ## 1.0.4
 
 * Updated version constraint on `analyzer` to include versions `^0.30.0`. Note

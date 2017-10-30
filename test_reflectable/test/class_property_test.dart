@@ -10,6 +10,7 @@ library test_reflectable.test.class_property_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'class_property_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -34,6 +35,8 @@ enum C { monday, tuesday, otherDays }
 class D<X> {}
 
 main() {
+  initializeReflectable();
+
   LibraryMirror libraryMirror =
       reflector.findLibrary("test_reflectable.test.class_property_test");
   ClassMirror aMirror = libraryMirror.declarations["A"];

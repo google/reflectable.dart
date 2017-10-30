@@ -9,6 +9,7 @@ library test_reflectable.test.invoker_operator_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'invoker_operator_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable() : super(invokingCapability, typeCapability);
@@ -26,6 +27,8 @@ class A {
 }
 
 main() {
+  initializeReflectable();
+
   A instance1 = new A(0);
   A instance2 = new A(1);
   ClassMirror classMirror = myReflectable.reflectType(A);

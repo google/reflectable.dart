@@ -23,6 +23,7 @@ import "package:reflectable/reflectable.dart";
 import "meta_reflectors_domain_definer.dart";
 import "meta_reflectors_definer.dart";
 import "meta_reflectors_meta.dart";
+import 'meta_reflectors_test.reflectable.dart';
 import "meta_reflectors_user.dart";
 
 Map<String, Iterable<Reflectable>> scopeMap = <String, Iterable<Reflectable>>{
@@ -34,5 +35,7 @@ Map<String, Iterable<Reflectable>> scopeMap = <String, Iterable<Reflectable>>{
 Iterable<Reflectable> reflectablesOfScope(String scope) => scopeMap[scope];
 
 main() {
+  initializeReflectable();
+
   runTests();
 }

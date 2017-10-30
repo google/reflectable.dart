@@ -10,6 +10,7 @@ library test_reflectable.test.reflected_type_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'reflected_type_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -46,6 +47,8 @@ class A {
 final throwsNoCapability = throwsA(const isInstanceOf<NoSuchCapabilityError>());
 
 main() {
+  initializeReflectable();
+
   ClassMirror aMirror = reflector.reflectType(A);
   Map<String, DeclarationMirror> declarations = aMirror.declarations;
 

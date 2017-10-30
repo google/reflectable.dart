@@ -11,11 +11,14 @@ import 'package:reflectable/mirrors.dart';
 import 'package:unittest/unittest.dart';
 import 'three_files_dir/three_files_aux.dart';
 import 'three_files_meta.dart';
+import 'three_files_test.reflectable.dart';
 
 @myReflectable
 class A {}
 
 main() {
+  initializeReflectable();
+
   test('reflect local', () {
     InstanceMirror instanceMirror = myReflectable.reflect(new A());
     expect(instanceMirror == null, isFalse);

@@ -1,0 +1,33 @@
+#!/bin/bash --norc
+
+# Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
+# source code is governed by a BSD-style license that can be found in
+# the LICENSE file.
+
+# Invocation: tool/reflectable_builder test/<name_of_test_file> ..
+
+# Note that the value of DART_VM_OPTIONS is included in the options
+# given to `dart`, similarly to the treatment of the same variable in
+# invocations of `pub`.
+
+function usage {
+  echo 'Usage: tool/reflectable_builder <test_files>..'
+}
+
+if [ ! -e pubspec.yaml ]; then
+  echo "Expected to find the file 'pubspec.yaml'. Please run from the"
+  echo "directory 'test_reflectable'."
+  echo
+  usage
+  exit -1
+fi
+
+if ! grep test_reflectable pubspec.yaml >/dev/null; then
+  echo "Expected to run from the directory 'test_reflectable' in the"
+  echo "package 'reflectable'. Please change directory and retry."
+  usage
+  exit -1
+fi
+
+BUILDER=../reflectable/bin/reflectable_builder.dart
+dart $DART_VM_OPTIONS $BUILDER test_reflectable "$@"

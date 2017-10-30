@@ -23,6 +23,8 @@ b: build
 
 t: test
 
+cb: clean build
+
 get:
 	( cd ..; pub get --no-packages-dir )
 
@@ -36,11 +38,15 @@ measure_output: build
 	@./measure_output --include-js --include-source-tree --include-unminified
 
 build:
-	( cd ..; pub build --mode=debug test )
+	( cd ..; tool/reflectable_builder test/*_test.dart)
+	( cd ..; pub build --mode=debug test)
 
 test:
 	@echo "-------------------- test"
 	@./run_tests
 
-.PHONY: all g u c b t ft get upgrade check measure_output build test
+clean:
+	( rm -rf ../.dart_tool ../build )
+	( rm -f ../test/*.reflectable.dart )
 
+.PHONY: all g u c b t ft get upgrade check measure_output build test clean
