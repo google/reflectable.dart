@@ -2,6 +2,7 @@
 
 *A listing of known limitations is given at the end of this page.*
 
+
 ## Introduction
 
 This package provides support for reflection which may be tailored to cover
@@ -73,6 +74,7 @@ As a result, the available universe of reflection related operations is so
 well-known at compile time that it is possible to specialize the support
 for reflection to a purely static form that satisfies the requirements of
 the given annotations and capabilities.
+
 
 ## Usage
 
@@ -172,6 +174,7 @@ eliminate several kinds of static dependencies among libraries.
 [5]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/lib/serialize.dart
 [6]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/meta_reflectors_test.dart
 
+
 ## Known limitations
 
 Several parts of the library have not yet been implemented. In particular, the
@@ -201,14 +204,16 @@ following parts are still incomplete:
   this kind of uri does not give any information about the location of a
   corresponding file on disk.
 
-- Type arguments of generic types are only supported in the simple
-  cases. E.g., when it is known that a given list of actual type arguments
-  is empty then the empty list is returned. However, when a parameterized
-  type has a non-trivial list of actual type arguments then returning the
-  actual type arguments would require runtime support that does not
-  currently exist.
+- Type arguments of generic types are only supported in some simple cases,
+  because we do not have the primitives required for a general
+  implementation. E.g., when it is known that a given list of actual type
+  arguments is empty then the empty list is returned. However, when a
+  parameterized type has a non-trivial list of actual type arguments then
+  returning the actual type arguments would require runtime support that does
+  not currently exist.
 
 - The mirror method `libraryDependencies` has not yet been implemented.
+
 
 ## Feature requests and bug reports
 
