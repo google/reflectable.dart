@@ -10,7 +10,7 @@ OPTIONS=--checked --package-root=$(PACKAGE_ROOT)
 TEST_DIR=../test
 XFORM_DIR=../test/to_be_transformed
 
-all: get check build test
+all: get clean build check test
 
 g: get
 
@@ -43,4 +43,4 @@ test:
 clean:
 	@echo "[No actions for clean in reflectable]"
 
-.PHONY: all g u c b t ft get upgrade check build test
+.PHONY: all g u c b t cb get upgrade clean build check test

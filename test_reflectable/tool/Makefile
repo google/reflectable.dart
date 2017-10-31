@@ -9,7 +9,7 @@ PACKAGES=../.packages
 OPTIONS=--packages=$(PACKAGES)
 TEST_DIR=../test
 
-all: get check build test
+all: get clean build check test
 
 g: get
 
