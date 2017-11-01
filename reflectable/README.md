@@ -139,14 +139,24 @@ Now run the code generation step:
 ...> pub run reflectable:reflectable_builder web/myProgram.dart
 ```
 where `web/myProgram.dart` should be replaced by the root library of the
-program for which you wish to generate code. For instance, to generate code
-for a set of test files in `test`, this would typically be
+program for which you wish to generate code. You can generate code for
+several programs in one step; for instance, to generate code for a set of
+test files in `test`, this would typically be
 `pub run reflectable:reflectable_builder test/*_test.dart`.
 
-Note that it is necessary to do this if you use reflectable directly *or
-indirectly* by depending on a package that uses reflectable. Even in the
-indirect case there may (typically will!) be a need to generate code based
-on files in your package.
+Note that it is necessary to generate code for the same set of programs
+every time you run `reflectable_builder` (because the build framework
+stores data about the code generation in a single database in the directory
+`.dart_tool`, so you will get complaints about inconsistencies if you switch
+from generating code for `web/myProgram.dart` to generating code for
+`web/myOtherProgram.dart`; in that case, delete all files named
+`*.reflectable.dart`, and the directory `.dart_tool`, and generate
+code for both programs together).
+
+Also note that it is necessary to perform this code generation step if you
+use reflectable directly *or indirectly* by depending on a package that
+uses reflectable. Even in the indirect case there may (typically will!) be
+a need to generate code based on files in your package.
 
 Conversely, if you are writing a package which uses reflectable and is
 expected to be used by clients, please make it explicit that such clients
