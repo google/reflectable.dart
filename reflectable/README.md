@@ -145,13 +145,14 @@ test files in `test`, this would typically be
 `pub run reflectable:reflectable_builder test/*_test.dart`.
 
 Note that it is necessary to generate code for the same set of programs
-every time you run `reflectable_builder` (because the build framework
-stores data about the code generation in a single database in the directory
-`.dart_tool`, so you will get complaints about inconsistencies if you switch
-from generating code for `web/myProgram.dart` to generating code for
-`web/myOtherProgram.dart`; in that case, delete all files named
-`*.reflectable.dart`, and the directory `.dart_tool`, and generate
-code for both programs together).
+every time you run `reflectable_builder`. This is because the build
+framework stores data about the code generation in a single database in the
+directory `.dart_tool`, so you will get complaints about inconsistencies if
+you switch from generating code for `web/myProgram.dart` to generating
+code for `web/myOtherProgram.dart`. In that case, delete all files named
+`*.reflectable.dart`, and the directory `.dart_tool`. Then generate code
+for all programs together, or at least all those programs that you are
+currently working on.
 
 Also note that it is necessary to perform this code generation step if you
 use reflectable directly *or indirectly* by depending on a package that
