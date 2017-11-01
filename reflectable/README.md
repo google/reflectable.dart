@@ -169,10 +169,6 @@ declaration of the top-level function `initializeReflectable`,
 which will initialize the reflection framework and which must be called
 before any reflective features are used.
 
-You can use one more option: 'suppress_warnings'; e.g., you could specify
-'suppress_warnings: true' in order to suppress various warnings given by
-the code generator.
-
 For a more advanced example, you could look at [serialize_test.dart][4] and
 its [library][5], where the base of a serialization framework is
 implemented; or you could look at [meta_reflectors_test.dart][6] and the
