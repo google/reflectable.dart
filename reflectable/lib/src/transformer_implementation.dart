@@ -1110,6 +1110,21 @@ class _ReflectorDomain {
         descriptor & constants.classTypeAttribute != 0);
   }
 
+  bool _hasSupportedReflectedTypeArguments(DartType dartType) {
+    if (dartType is ParameterizedType) {
+      for (DartType typeArgument in dartType.typeArguments) {
+        if (!_hasSupportedReflectedTypeArguments(typeArgument)) return false;
+      }
+      return true;
+    } else if (dartType is TypeParameterType) {
+      return false;
+    } else {
+      throw unimplementedError(
+          '`reflectedTypeArguments` where an actual type argument '
+          '(possibly nested) is $dartType');
+    }
+  }
+
   String _computeReflectedTypeArguments(
       DartType dartType, _ImportCollector importCollector) {
     if (dartType is ParameterizedType) {
@@ -1128,14 +1143,21 @@ class _ReflectorDomain {
         assert(typeArguments.length == typeParameters.length);
 
         bool isSupported = true;
-        Iterable<String> typesCodeList =
+        // Use `toList` in order to force execution of the following, such that
+        // the side effect on `isSupported` occurs before `if (isSupported)`.
+        List<String> typesCodeList =
             typeArguments.map((DartType actualTypeArgument) {
           if (actualTypeArgument is InterfaceType) {
-            return _dynamicTypeCodeOfClass(
-                actualTypeArgument.element, importCollector);
+            if (_hasSupportedReflectedTypeArguments(actualTypeArgument)) {
+              return _dynamicTypeCodeOfClass(
+                  actualTypeArgument.element, importCollector);
+            } else {
+              isSupported = false;
+              return null;
+            }
           } else if (actualTypeArgument is TypeParameterType) {
             isSupported = false;
-            return 'null';
+            return null;
           } else {
             // TODO(eernst) clarify: Are `dynamic` et al `InterfaceType`s?
             // Otherwise this means "a case that we have not it considered".
@@ -1143,7 +1165,7 @@ class _ReflectorDomain {
                 '`reflectedTypeArguments` where one actual type argument'
                 ' is $actualTypeArgument');
           }
-        });
+        }).toList();
         if (isSupported) {
           return _formatAsList("Type", typesCodeList);
         } else {
@@ -1595,6 +1617,10 @@ class _ReflectorDomain {
             element.type, classes, reflectedTypes, reflectedTypesOffset)
         : constants.NO_CAPABILITY_INDEX;
     String reflectedTypeArguments = 'null';
+    if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
+      reflectedTypeArguments =
+          _computeReflectedTypeArguments(element.type, importCollector);
+    }
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
