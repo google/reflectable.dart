@@ -1500,6 +1500,7 @@ class _ReflectorDomain {
       int descriptor = _declarationDescriptor(element);
       int returnTypeIndex = _computeReturnTypeIndex(element, descriptor);
       int ownerIndex = _computeOwnerIndex(element, descriptor);
+      String reflectedTypeArgumentsOfReturnType = 'null';
       String parameterIndicesCode = _formatAsConstList("int",
           element.parameters.map((ParameterElement parameterElement) {
         return parameters.indexOf(parameterElement);
@@ -1520,7 +1521,8 @@ class _ReflectorDomain {
           : null;
       return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, '
-          '$dynamicReflectedReturnTypeIndex, $parameterIndicesCode, '
+          '$dynamicReflectedReturnTypeIndex, '
+          '$reflectedTypeArgumentsOfReturnType, $parameterIndicesCode, '
           '${_constConstructionCode(importCollector, logger)}, $metadataCode)';
     }
   }
@@ -1544,6 +1546,7 @@ class _ReflectorDomain {
         ? _dynamicTypeCodeIndex(
             element.type, classes, reflectedTypes, reflectedTypesOffset)
         : constants.NO_CAPABILITY_INDEX;
+    String reflectedTypeArguments = 'null';
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
@@ -1556,7 +1559,8 @@ class _ReflectorDomain {
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector, logger)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
-        '$dynamicReflectedTypeIndex, $metadataCode)';
+        '$dynamicReflectedTypeIndex, $reflectedTypeArguments, '
+        '$metadataCode)';
   }
 
   String _fieldMirrorCode(
@@ -1577,6 +1581,7 @@ class _ReflectorDomain {
         ? _dynamicTypeCodeIndex(
             element.type, classes, reflectedTypes, reflectedTypesOffset)
         : constants.NO_CAPABILITY_INDEX;
+    String reflectedTypeArguments = 'null';
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
@@ -1589,7 +1594,7 @@ class _ReflectorDomain {
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector, logger)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
-        '$dynamicReflectedTypeIndex, $metadataCode)';
+        '$dynamicReflectedTypeIndex, $reflectedTypeArguments, $metadataCode)';
   }
 
   /// Returns the index into `ReflectorData.types` of the [Type] object
@@ -1932,6 +1937,7 @@ class _ReflectorDomain {
         ? _dynamicTypeCodeIndex(
             element.type, classes, reflectedTypes, reflectedTypesOffset)
         : constants.NO_CAPABILITY_INDEX;
+    String reflectedTypeArguments = 'null';
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
       FormalParameter node = element.computeNode();
@@ -1956,7 +1962,8 @@ class _ReflectorDomain {
     return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector, logger)}, '
         '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
-        '$metadataCode, $defaultValueCode, $parameterSymbolCode)';
+        '$reflectedTypeArguments, $metadataCode, $defaultValueCode, '
+        '$parameterSymbolCode)';
   }
 }
 

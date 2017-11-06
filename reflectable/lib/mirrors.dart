@@ -719,6 +719,17 @@ abstract class TypeMirror implements DeclarationMirror {
   /// [TypeRelationsCapability].
   List<TypeMirror> get typeArguments;
 
+  /// An immutable list with [Type] values for the actual type arguments
+  /// of this type.
+  ///
+  /// If the reflectee is an invocation of a generic class,
+  /// the type arguments are the bindings of its type parameters.
+  /// If the reflectee is the original declaration of a generic class,
+  /// it has no type arguments and this method returns an empty list.
+  /// If the reflectee is not generic, then
+  /// it has no type arguments and this method returns an empty list.
+  List<Type> get reflectedTypeArguments;
+
   /// Is this the original declaration of this type?
   ///
   /// For most classes, they are their own original declaration.  For
