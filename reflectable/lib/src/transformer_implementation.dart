@@ -1131,7 +1131,6 @@ class _ReflectorDomain {
         Iterable<String> typesCodeList =
             typeArguments.map((DartType actualTypeArgument) {
           if (actualTypeArgument is InterfaceType) {
-
             return _dynamicTypeCodeOfClass(
                 actualTypeArgument.element, importCollector);
           } else if (actualTypeArgument is TypeParameterType) {
@@ -1546,6 +1545,10 @@ class _ReflectorDomain {
       int returnTypeIndex = _computeReturnTypeIndex(element, descriptor);
       int ownerIndex = _computeOwnerIndex(element, descriptor);
       String reflectedTypeArgumentsOfReturnType = 'null';
+      if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
+        reflectedTypeArgumentsOfReturnType =
+            _computeReflectedTypeArguments(element.returnType, importCollector);
+      }
       String parameterIndicesCode = _formatAsConstList("int",
           element.parameters.map((ParameterElement parameterElement) {
         return parameters.indexOf(parameterElement);
@@ -1987,6 +1990,10 @@ class _ReflectorDomain {
             element.type, classes, reflectedTypes, reflectedTypesOffset)
         : constants.NO_CAPABILITY_INDEX;
     String reflectedTypeArguments = 'null';
+    if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
+      reflectedTypeArguments =
+          _computeReflectedTypeArguments(element.type, importCollector);
+    }
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
       FormalParameter node = element.computeNode();
