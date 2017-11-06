@@ -1110,6 +1110,53 @@ class _ReflectorDomain {
         descriptor & constants.classTypeAttribute != 0);
   }
 
+  String _computeReflectedTypeArguments(
+      DartType dartType, _ImportCollector importCollector) {
+    if (dartType is ParameterizedType) {
+      List<TypeParameterElement> typeParameters = dartType.typeParameters;
+      if (typeParameters.length == 0) {
+        // We have no formal type parameters, so there cannot be any actual
+        // type arguments.
+        return 'const <Type>[]';
+      } else {
+        // We have some formal type parameters: `dartType` is a generic class.
+        List<DartType> typeArguments = dartType.typeArguments;
+        // This method is called with variable/parameter type annotations and
+        // function return types, and they denote instantiated generic classes
+        // rather than "original" generic classes; so they do have actual type
+        // arguments when there are formal type parameters.
+        assert(typeArguments.length == typeParameters.length);
+
+        bool isSupported = true;
+        Iterable<String> typesCodeList =
+            typeArguments.map((DartType actualTypeArgument) {
+          if (actualTypeArgument is InterfaceType) {
+
+            return _dynamicTypeCodeOfClass(
+                actualTypeArgument.element, importCollector);
+          } else if (actualTypeArgument is TypeParameterType) {
+            isSupported = false;
+            return 'null';
+          } else {
+            // TODO(eernst) clarify: Are `dynamic` et al `InterfaceType`s?
+            // Otherwise this means "a case that we have not it considered".
+            throw unimplementedError(
+                '`reflectedTypeArguments` where one actual type argument'
+                ' is $actualTypeArgument');
+          }
+        });
+        if (isSupported) {
+          return _formatAsList("Type", typesCodeList);
+        } else {
+          return 'null';
+        }
+      }
+    } else {
+      // If the type is not a ParameterizedType then it has no type arguments.
+      return 'const <Type>[]';
+    }
+  }
+
   int _computeReturnTypeIndex(ExecutableElement element, int descriptor) {
     if (!_capabilities._impliesTypes) return constants.NO_CAPABILITY_INDEX;
     int result = _computeTypeIndexBase(
@@ -1217,12 +1264,10 @@ class _ReflectorDomain {
     });
 
     String declarationsCode = _capabilities._impliesDeclarations
-        ? _formatAsConstList(
-            "int",
-            () sync* {
-              yield* fieldsIndices;
-              yield* methodsIndices;
-            }())
+        ? _formatAsConstList("int", () sync* {
+            yield* fieldsIndices;
+            yield* methodsIndices;
+          }())
         : "const <int>[${constants.NO_CAPABILITY_INDEX}]";
 
     // All instance members belong to the behavioral interface, so they
@@ -1582,6 +1627,10 @@ class _ReflectorDomain {
             element.type, classes, reflectedTypes, reflectedTypesOffset)
         : constants.NO_CAPABILITY_INDEX;
     String reflectedTypeArguments = 'null';
+    if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
+      reflectedTypeArguments =
+          _computeReflectedTypeArguments(element.type, importCollector);
+    }
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
@@ -2059,8 +2108,10 @@ class _SuperclassFixedPoint extends FixedPoint<ClassElement> {
         if (classElement.supertype == null) return false;
         return helper(classElement.supertype.element, false);
       }
+
       return upwardsClosureBounds.keys.any(isSuperclassOfClassElement);
     }
+
     return upwardsClosureBounds.isEmpty || helper(classElement, true);
   }
 }
@@ -2397,8 +2448,10 @@ class _ClassDomain {
         if (member.isPrivate) return;
         // If [member] is a synthetic accessor created from a field, search for
         // the metadata on the original field.
-        List<ElementAnnotation> metadata = (member is PropertyAccessorElement &&
-            member.isSynthetic) ? member.variable.metadata : member.metadata;
+        List<ElementAnnotation> metadata =
+            (member is PropertyAccessorElement && member.isSynthetic)
+                ? member.variable.metadata
+                : member.metadata;
         List<ElementAnnotation> getterMetadata = null;
         if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
             member is PropertyAccessorElement &&
