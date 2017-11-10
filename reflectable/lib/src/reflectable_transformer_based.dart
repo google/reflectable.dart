@@ -142,6 +142,7 @@ class ReflectorData {
             yield typeMirror;
           }
         }
+
         _typeToClassMirrorCache = new Map<Type, ClassMirror>.fromIterables(
             types.sublist(0, supportedClassCount), classMirrors());
       }
@@ -157,7 +158,7 @@ class ReflectorData {
       if (classMirror is GenericClassMirrorImpl) {
         if (classMirror._isGenericRuntimeTypeOf(instance)) {
           return _createInstantiatedGenericClass(
-              classMirror, instance.runtimeType);
+              classMirror, instance.runtimeType, null);
         }
       }
     }
@@ -644,6 +645,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       throw reflectableNoSuchMethodError(
           reflectedType, memberName, positionalArguments, namedArguments);
     }
+
     _StaticGetter getter = _getters[memberName];
     if (getter == null) fail();
     if (!_checkStaticParameterListShape(
@@ -888,7 +890,18 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
           "Attempt to get `typeArguments` for `$qualifiedName` "
           "without `typeRelationsCapability`");
     }
-    return <TypeMirror>[];
+    return const <TypeMirror>[];
+  }
+
+  @override
+  List<Type> get reflectedTypeArguments {
+    if (!_supportsTypeRelations(_reflector) ||
+        !_supportsReflectedType(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `typeArguments` for `$qualifiedName` "
+          "without `typeRelationsCapability` or `reflectedTypeCapability`");
+    }
+    return const <Type>[];
   }
 
   @override
@@ -898,7 +911,7 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
           "Attempt to evaluate `typeVariables` for `$qualifiedName` "
           "without `typeRelationsCapability`");
     }
-    return <TypeVariableMirror>[];
+    return const <TypeVariableMirror>[];
   }
 
   @override
@@ -999,7 +1012,24 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
           "Attempt to get `typeArguments` for `$qualifiedName` "
           "without `typeRelationsCapability`");
     }
-    return <TypeMirror>[];
+    // This mirror represents the original declaration, so no actual type
+    // arguments have been passed. By convention we represent this situation
+    // by returning the empty list, as documented in mirrors.dart.
+    return const <TypeMirror>[];
+  }
+
+  @override
+  List<Type> get reflectedTypeArguments {
+    if (!_supportsTypeRelations(_reflector) ||
+        !_supportsReflectedType(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `reflectedTypeArguments` for `$qualifiedName` "
+          "without `typeRelationsCapability` or `reflectedTypeCapability`");
+    }
+    // This mirror represents the original declaration, so no actual type
+    // arguments have been passed. By convention we represent this situation
+    // by returning the empty list, as documented in mirrors.dart.
+    return const <Type>[];
   }
 
   // The type variables declared by this generic class, in declaration order.
@@ -1054,7 +1084,7 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
 
   @override
   Type get dynamicReflectedType {
-    if (_dynamicReflectedTypeIndex == constants.NO_CAPABILITY_INDEX) {
+    if (_dynamicReflectedTypeIndex == NO_CAPABILITY_INDEX) {
       if (!_supportsReflectedType(_reflector)) {
         throw new NoSuchCapabilityError(
             "Attempt to evaluate `dynamicReflectedType` for `$qualifiedName` "
@@ -1078,6 +1108,10 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
   final GenericClassMirrorImpl _originalDeclaration;
   final Type _reflectedType;
 
+  // `_reflectedTypeArgumentIndices == null` means that the given situation is
+  // not yet supported for method `reflectedTypeArguments`.
+  final List<int> _reflectedTypeArgumentIndices;
+
   InstantiatedGenericClassMirrorImpl(
       String simpleName,
       String qualifiedName,
@@ -1097,7 +1131,8 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
       List<Object> metadata,
       Map<String, int> parameterListShapes,
       this._originalDeclaration,
-      this._reflectedType)
+      this._reflectedType,
+      this._reflectedTypeArgumentIndices)
       : super(
             simpleName,
             qualifiedName,
@@ -1117,7 +1152,6 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
             metadata,
             parameterListShapes);
 
-  // TODO(sigurdm) implement: Implement typeArguments.
   @override
   List<TypeMirror> get typeArguments {
     if (!_supportsTypeRelations(_reflector)) {
@@ -1125,7 +1159,24 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
           "Attempt to get `typeArguments` for `$qualifiedName` "
           "without `typeRelationsCapability`");
     }
-    throw unimplementedError("typeArguments");
+    return reflectedTypeArguments
+        .map((Type type) => _reflector.reflectType(type)).toList();
+  }
+
+  @override
+  List<Type> get reflectedTypeArguments {
+    if (!_supportsTypeRelations(_reflector) ||
+        !_supportsReflectedType(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `reflectedTypeArguments` for `$qualifiedName` "
+          "without `typeRelationsCapability` or `reflectedTypeCapability`");
+    }
+    if (_reflectedTypeArgumentIndices == null) {
+      throw unimplementedError("reflectedTypeArguments");
+    }
+    return _reflectedTypeArgumentIndices
+        .map((int index) => _data.types[index])
+        .toList();
   }
 
   @override
@@ -1208,7 +1259,9 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
 }
 
 InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
-    GenericClassMirrorImpl genericClassMirror, Type reflectedType) {
+    GenericClassMirrorImpl genericClassMirror,
+    Type reflectedType,
+    List<int> reflectedTypeArguments) {
   // TODO(eernst) implement: Pass a representation of type arguments to this
   // method, and create an instantiated generic class which includes that
   // information.
@@ -1231,7 +1284,8 @@ InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
       genericClassMirror._metadata,
       genericClassMirror._parameterListShapes,
       genericClassMirror,
-      reflectedType);
+      reflectedType,
+      reflectedTypeArguments);
 }
 
 class TypeVariableMirrorImpl extends _DataCaching
@@ -1315,7 +1369,18 @@ class TypeVariableMirrorImpl extends _DataCaching
           "Attempt to get `typeArguments` for `$qualifiedName` "
           "without `typeRelationsCapability`");
     }
-    return <TypeMirror>[];
+    return const <TypeMirror>[];
+  }
+
+  @override
+  List<Type> get reflectedTypeArguments {
+    if (!_supportsTypeRelations(_reflector) ||
+        !_supportsReflectedType(_reflector)) {
+      throw new NoSuchCapabilityError(
+          "Attempt to get `reflectedTypeArguments` for `$qualifiedName` "
+          "without `typeRelationsCapability` or `reflectedTypeCapability`");
+    }
+    return const <Type>[];
   }
 
   @override
@@ -1598,6 +1663,13 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// `dynamicReflectedReturnType`.
   final int _dynamicReflectedReturnTypeIndex;
 
+  /// The [Type] values of the actual type arguments of the return type of this
+  /// method, if supported. If the actual type arguments are not supported,
+  /// [_reflectedTypeArgumentsOfReturnType] is null. The actual type arguments
+  /// are not supported if they are not compile-time constant, e.g., if such an
+  /// actual type argument is a type variable declared by the enclosing class.
+  final List<int> _reflectedTypeArgumentsOfReturnType;
+
   /// The indices of the [ParameterMirror]s describing the formal parameters
   /// of this method.
   final List<int> _parameterIndices;
@@ -1617,6 +1689,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
       this._returnTypeIndex,
       this._reflectedReturnTypeIndex,
       this._dynamicReflectedReturnTypeIndex,
+      this._reflectedTypeArgumentsOfReturnType,
       this._parameterIndices,
       this._reflector,
       this._metadata);
@@ -1730,8 +1803,8 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
     if (_hasVoidReturnType) return new VoidMirrorImpl();
     if (_hasClassReturnType) {
       return _hasGenericReturnType
-          ? _createInstantiatedGenericClass(
-              _data.typeMirrors[_returnTypeIndex], null)
+          ? _createInstantiatedGenericClass(_data.typeMirrors[_returnTypeIndex],
+              null, _reflectedTypeArgumentsOfReturnType)
           : _data.typeMirrors[_returnTypeIndex];
     }
     throw unreachableError("Unexpected kind of returnType");
@@ -1997,7 +2070,8 @@ class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
           _variableMirror._classMirrorIndex,
           _variableMirror._reflectedTypeIndex,
           _variableMirror._dynamicReflectedTypeIndex,
-          <Object>[],
+          _variableMirror._reflectedTypeArguments,
+          const <Object>[],
           null,
           null)
     ];
@@ -2022,6 +2096,7 @@ abstract class VariableMirrorBase extends _DataCaching
   final int _classMirrorIndex;
   final int _reflectedTypeIndex;
   final int _dynamicReflectedTypeIndex;
+  final List<int> _reflectedTypeArguments;
   final List<Object> _metadata;
 
   VariableMirrorBase(
@@ -2032,6 +2107,7 @@ abstract class VariableMirrorBase extends _DataCaching
       this._classMirrorIndex,
       this._reflectedTypeIndex,
       this._dynamicReflectedTypeIndex,
+      this._reflectedTypeArguments,
       this._metadata);
 
   int get kind => constants.kindFromEncoding(_descriptor);
@@ -2085,7 +2161,8 @@ abstract class VariableMirrorBase extends _DataCaching
       return _isGenericType
           ? _createInstantiatedGenericClass(
               _data.typeMirrors[_classMirrorIndex],
-              hasReflectedType ? reflectedType : null)
+              hasReflectedType ? reflectedType : null,
+              _reflectedTypeArguments)
           : _data.typeMirrors[_classMirrorIndex];
     }
     throw unreachableError("Unexpected kind of type");
@@ -2152,9 +2229,18 @@ class VariableMirrorImpl extends VariableMirrorBase {
       int classMirrorIndex,
       int reflectedTypeIndex,
       int dynamicReflectedTypeIndex,
+      List<int> reflectedTypeArguments,
       List<Object> metadata)
-      : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
-            reflectedTypeIndex, dynamicReflectedTypeIndex, metadata);
+      : super(
+            name,
+            descriptor,
+            ownerIndex,
+            reflectable,
+            classMirrorIndex,
+            reflectedTypeIndex,
+            dynamicReflectedTypeIndex,
+            reflectedTypeArguments,
+            metadata);
 
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
@@ -2213,11 +2299,20 @@ class ParameterMirrorImpl extends VariableMirrorBase
       int classMirrorIndex,
       int reflectedTypeIndex,
       int dynamicReflectedTypeIndex,
+      List<int> reflectedTypeArguments,
       List<Object> metadata,
       this._defaultValue,
       this._nameSymbol)
-      : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
-            reflectedTypeIndex, dynamicReflectedTypeIndex, metadata);
+      : super(
+            name,
+            descriptor,
+            ownerIndex,
+            reflectable,
+            classMirrorIndex,
+            reflectedTypeIndex,
+            dynamicReflectedTypeIndex,
+            reflectedTypeArguments,
+            metadata);
 
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
@@ -2250,10 +2345,13 @@ class DynamicMirrorImpl implements TypeMirror {
 
   // TODO(eernst) implement: do as in 'dart:mirrors'.
   @override
-  List<TypeVariableMirror> get typeVariables => <TypeVariableMirror>[];
+  List<TypeVariableMirror> get typeVariables => const <TypeVariableMirror>[];
 
   @override
-  List<TypeMirror> get typeArguments => <TypeMirror>[];
+  List<TypeMirror> get typeArguments => const <TypeMirror>[];
+
+  @override
+  List<Type> get reflectedTypeArguments => const <Type>[];
 
   // TODO(eernst) implement: do as in 'dart:mirrors'.
   @override
@@ -2312,10 +2410,13 @@ class VoidMirrorImpl implements TypeMirror {
 
   // TODO(eernst) implement: do as in 'dart:mirrors'.
   @override
-  List<TypeVariableMirror> get typeVariables => <TypeVariableMirror>[];
+  List<TypeVariableMirror> get typeVariables => const <TypeVariableMirror>[];
 
   @override
-  List<TypeMirror> get typeArguments => <TypeMirror>[];
+  List<TypeMirror> get typeArguments => const <TypeMirror>[];
+
+  @override
+  List<Type> get reflectedTypeArguments => const <Type>[];
 
   // TODO(eernst) implement: do as in 'dart:mirrors'.
   @override
@@ -2467,8 +2568,8 @@ bool _isSetterName(String name) => name.endsWith("=");
 String _getterNameToSetterName(String name) => name + "=";
 
 bool _supportsType(ReflectableImpl reflector) {
-  return reflector.capabilities.any(
-      (ReflectCapability capability) => capability is TypeCapability);
+  return reflector.capabilities
+      .any((ReflectCapability capability) => capability is TypeCapability);
 }
 
 bool _supportsTypeRelations(ReflectableImpl reflector) {
