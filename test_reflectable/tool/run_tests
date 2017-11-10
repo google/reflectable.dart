@@ -17,4 +17,3 @@ for n in ../test/*_test.dart; do run_dart ..; done
 for n in ../build/test/*_test.dart; do run_dart ../build; done
 
 echo "---------- Failed tests:$SUMMARY"
-
