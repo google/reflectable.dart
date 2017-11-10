@@ -133,28 +133,33 @@ dependencies:
 You may also wish to specify constraints on the version, depending on the
 approach to version management that your software otherwise employs.
 
-In order to generate code, you will need to run
-`dart $REFLECTABLE_PATH/bin/reflectable_builder.dart <targets>`
-where `$REFLECTABLE_PATH` is the path to the root of the package
-reflectable, and `<targets>` specifies the root libraries for which you
-wish to generate code. You should be able to find a line on the form
-`reflectable:$REFLECTABLE_PATH/lib`
-in the file `.packages` in the root directory of your package, after
-running `pub get`.
+In order to generate code, you will need to write a tiny Dart program which
+imports the actual builder. We'll assume that you store this program as
+`tool/builder.dart` as seen from the root of your package. Here's the code:
 
-Now run the code generation step:
-```shell
-> cd ... # go to the root directory of your package
-> dart $REFLECTABLE_PATH/bin/reflectable_builder.dart web/myProgram.dart
+```dart
+import 'package:reflectable/reflectable_builder.dart' as builder;
+
+main(List<String> arguments) async {
+  await builder.reflectableBuild(arguments);
+}
 ```
+
+Now run the code generation step with the root of your package as the current
+directory:
+
+```shell
+> dart tool/builder.dart web/myProgram.dart
+```
+
 where `web/myProgram.dart` should be replaced by the root library of the
 program for which you wish to generate code. You can generate code for
 several programs in one step; for instance, to generate code for a set of
 test files in `test`, this would typically be
-`pub run reflectable:reflectable_builder test/*_test.dart`.
+`tool/builder.dart test/*_test.dart`.
 
 Note that you should generate code for the _same_ set of root libraries
-every time you run `reflectable_builder`. This is because the build
+every time you run `builder.dart`. This is because the build
 framework stores data about the code generation in a single database in the
 directory `.dart_tool`, so you will get complaints about inconsistencies if
 you switch from generating code for `web/myProgram.dart` to generating code
