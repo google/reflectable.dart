@@ -38,7 +38,7 @@ measure_output: build
 	@./measure_output --include-js --include-source-tree --include-unminified
 
 build:
-	( cd ..; tool/reflectable_builder test/*_test.dart)
+	( cd ..; dart tool/build.dart test/*_test.dart)
 	( cd ..; pub build --mode=debug test)
 
 test:
