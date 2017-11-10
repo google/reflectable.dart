@@ -1,9 +1,0 @@
-# Strong mode checks have not been enabled here, because strong mode declares
-# it to be an error when fields are overridden. We have several cases where a
-# test involves overriding a field, because that is one of the cases that
-# we are testing, e.g., to see that `declarations` can handle it. It is not
-# obvious that we should change the code to avoid overriding, say, `var field`
-# by `var field` (how could that be unsound?) so currently we have disabled
-# the strong mode checks.
-analyzer:
-  strong-mode: false

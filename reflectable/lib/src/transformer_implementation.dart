@@ -904,6 +904,8 @@ class _ReflectorDomain {
       classesToAdd.forEach(addClass);
     }
 
+    // Add
+
     // From this point, [classes] must be kept immutable.
     classes.makeUnmodifiable();
 
@@ -1116,7 +1118,7 @@ class _ReflectorDomain {
         if (!_hasSupportedReflectedTypeArguments(typeArgument)) return false;
       }
       return true;
-    } else if (dartType is TypeParameterType) {
+    } else if (dartType is TypeParameterType || dartType.isDynamic) {
       return false;
     } else {
       throw unimplementedError(
@@ -1126,13 +1128,16 @@ class _ReflectorDomain {
   }
 
   String _computeReflectedTypeArguments(
-      DartType dartType, _ImportCollector importCollector) {
+      DartType dartType,
+      Enumerator<ErasableDartType> reflectedTypes,
+      int reflectedTypesOffset,
+      _ImportCollector importCollector) {
     if (dartType is ParameterizedType) {
       List<TypeParameterElement> typeParameters = dartType.typeParameters;
       if (typeParameters.length == 0) {
         // We have no formal type parameters, so there cannot be any actual
         // type arguments.
-        return 'const <Type>[]';
+        return 'const <int>[]';
       } else {
         // We have some formal type parameters: `dartType` is a generic class.
         List<DartType> typeArguments = dartType.typeArguments;
@@ -1141,40 +1146,28 @@ class _ReflectorDomain {
         // rather than "original" generic classes; so they do have actual type
         // arguments when there are formal type parameters.
         assert(typeArguments.length == typeParameters.length);
-
-        bool isSupported = true;
-        // Use `toList` in order to force execution of the following, such that
-        // the side effect on `isSupported` occurs before `if (isSupported)`.
-        List<String> typesCodeList =
-            typeArguments.map((DartType actualTypeArgument) {
-          if (actualTypeArgument is InterfaceType) {
-            if (_hasSupportedReflectedTypeArguments(actualTypeArgument)) {
-              return _dynamicTypeCodeOfClass(
-                  actualTypeArgument.element, importCollector);
+        if (typeArguments.every(_hasSupportedReflectedTypeArguments)) {
+          List<int> typesIndexList =
+              typeArguments.map((DartType actualTypeArgument) {
+            if (actualTypeArgument is InterfaceType) {
+              return _dynamicTypeCodeIndex(actualTypeArgument, classes,
+                  reflectedTypes, reflectedTypesOffset);
             } else {
-              isSupported = false;
-              return null;
+              // TODO(eernst) clarify: Are `dynamic` et al `InterfaceType`s?
+              // Otherwise this means "a case that we have not it considered".
+              throw unimplementedError(
+                  '`reflectedTypeArguments` where one actual type argument'
+                  ' is $actualTypeArgument');
             }
-          } else if (actualTypeArgument is TypeParameterType) {
-            isSupported = false;
-            return null;
-          } else {
-            // TODO(eernst) clarify: Are `dynamic` et al `InterfaceType`s?
-            // Otherwise this means "a case that we have not it considered".
-            throw unimplementedError(
-                '`reflectedTypeArguments` where one actual type argument'
-                ' is $actualTypeArgument');
-          }
-        }).toList();
-        if (isSupported) {
-          return _formatAsList("Type", typesCodeList);
+          });
+          return _formatAsConstList("int", typesIndexList);
         } else {
           return 'null';
         }
       }
     } else {
       // If the type is not a ParameterizedType then it has no type arguments.
-      return 'const <Type>[]';
+      return 'const <int>[]';
     }
   }
 
@@ -1568,8 +1561,11 @@ class _ReflectorDomain {
       int ownerIndex = _computeOwnerIndex(element, descriptor);
       String reflectedTypeArgumentsOfReturnType = 'null';
       if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
-        reflectedTypeArgumentsOfReturnType =
-            _computeReflectedTypeArguments(element.returnType, importCollector);
+        reflectedTypeArgumentsOfReturnType = _computeReflectedTypeArguments(
+            element.returnType,
+            reflectedTypes,
+            reflectedTypesOffset,
+            importCollector);
       }
       String parameterIndicesCode = _formatAsConstList("int",
           element.parameters.map((ParameterElement parameterElement) {
@@ -1618,8 +1614,8 @@ class _ReflectorDomain {
         : constants.NO_CAPABILITY_INDEX;
     String reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
-      reflectedTypeArguments =
-          _computeReflectedTypeArguments(element.type, importCollector);
+      reflectedTypeArguments = _computeReflectedTypeArguments(
+          element.type, reflectedTypes, reflectedTypesOffset, importCollector);
     }
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -1657,8 +1653,8 @@ class _ReflectorDomain {
         : constants.NO_CAPABILITY_INDEX;
     String reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
-      reflectedTypeArguments =
-          _computeReflectedTypeArguments(element.type, importCollector);
+      reflectedTypeArguments = _computeReflectedTypeArguments(
+          element.type, reflectedTypes, reflectedTypesOffset, importCollector);
     }
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -2017,8 +2013,8 @@ class _ReflectorDomain {
         : constants.NO_CAPABILITY_INDEX;
     String reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
-      reflectedTypeArguments =
-          _computeReflectedTypeArguments(element.type, importCollector);
+      reflectedTypeArguments = _computeReflectedTypeArguments(
+          element.type, reflectedTypes, reflectedTypesOffset, importCollector);
     }
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {

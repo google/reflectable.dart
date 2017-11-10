@@ -1084,7 +1084,7 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
 
   @override
   Type get dynamicReflectedType {
-    if (_dynamicReflectedTypeIndex == constants.NO_CAPABILITY_INDEX) {
+    if (_dynamicReflectedTypeIndex == NO_CAPABILITY_INDEX) {
       if (!_supportsReflectedType(_reflector)) {
         throw new NoSuchCapabilityError(
             "Attempt to evaluate `dynamicReflectedType` for `$qualifiedName` "
@@ -1108,9 +1108,9 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
   final GenericClassMirrorImpl _originalDeclaration;
   final Type _reflectedType;
 
-  // `_reflectedTypeArguments == null` means that the given situation is
+  // `_reflectedTypeArgumentIndices == null` means that the given situation is
   // not yet supported for method `reflectedTypeArguments`.
-  final List<Type> _reflectedTypeArguments;
+  final List<int> _reflectedTypeArgumentIndices;
 
   InstantiatedGenericClassMirrorImpl(
       String simpleName,
@@ -1132,7 +1132,7 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
       Map<String, int> parameterListShapes,
       this._originalDeclaration,
       this._reflectedType,
-      this._reflectedTypeArguments)
+      this._reflectedTypeArgumentIndices)
       : super(
             simpleName,
             qualifiedName,
@@ -1152,7 +1152,6 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
             metadata,
             parameterListShapes);
 
-  // TODO(sigurdm) implement: Implement typeArguments.
   @override
   List<TypeMirror> get typeArguments {
     if (!_supportsTypeRelations(_reflector)) {
@@ -1160,7 +1159,8 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
           "Attempt to get `typeArguments` for `$qualifiedName` "
           "without `typeRelationsCapability`");
     }
-    throw unimplementedError("typeArguments");
+    return reflectedTypeArguments
+        .map((Type type) => _reflector.reflectType(type)).toList();
   }
 
   @override
@@ -1171,10 +1171,12 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
           "Attempt to get `reflectedTypeArguments` for `$qualifiedName` "
           "without `typeRelationsCapability` or `reflectedTypeCapability`");
     }
-    if (_reflectedTypeArguments == null) {
+    if (_reflectedTypeArgumentIndices == null) {
       throw unimplementedError("reflectedTypeArguments");
     }
-    return _reflectedTypeArguments;
+    return _reflectedTypeArgumentIndices
+        .map((int index) => _data.types[index])
+        .toList();
   }
 
   @override
@@ -1259,7 +1261,7 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
 InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
     GenericClassMirrorImpl genericClassMirror,
     Type reflectedType,
-    List<Type> reflectedTypeArguments) {
+    List<int> reflectedTypeArguments) {
   // TODO(eernst) implement: Pass a representation of type arguments to this
   // method, and create an instantiated generic class which includes that
   // information.
@@ -1666,7 +1668,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// [_reflectedTypeArgumentsOfReturnType] is null. The actual type arguments
   /// are not supported if they are not compile-time constant, e.g., if such an
   /// actual type argument is a type variable declared by the enclosing class.
-  final List<Type> _reflectedTypeArgumentsOfReturnType;
+  final List<int> _reflectedTypeArgumentsOfReturnType;
 
   /// The indices of the [ParameterMirror]s describing the formal parameters
   /// of this method.
@@ -2094,7 +2096,7 @@ abstract class VariableMirrorBase extends _DataCaching
   final int _classMirrorIndex;
   final int _reflectedTypeIndex;
   final int _dynamicReflectedTypeIndex;
-  final List<Type> _reflectedTypeArguments;
+  final List<int> _reflectedTypeArguments;
   final List<Object> _metadata;
 
   VariableMirrorBase(
@@ -2227,7 +2229,7 @@ class VariableMirrorImpl extends VariableMirrorBase {
       int classMirrorIndex,
       int reflectedTypeIndex,
       int dynamicReflectedTypeIndex,
-      List<Type> reflectedTypeArguments,
+      List<int> reflectedTypeArguments,
       List<Object> metadata)
       : super(
             name,
@@ -2297,12 +2299,20 @@ class ParameterMirrorImpl extends VariableMirrorBase
       int classMirrorIndex,
       int reflectedTypeIndex,
       int dynamicReflectedTypeIndex,
-      List<Type> reflectedTypeArguments,
+      List<int> reflectedTypeArguments,
       List<Object> metadata,
       this._defaultValue,
       this._nameSymbol)
-      : super(name, descriptor, ownerIndex, reflectable, classMirrorIndex,
-            reflectedTypeIndex, dynamicReflectedTypeIndex, reflectedTypeArguments, metadata);
+      : super(
+            name,
+            descriptor,
+            ownerIndex,
+            reflectable,
+            classMirrorIndex,
+            reflectedTypeIndex,
+            dynamicReflectedTypeIndex,
+            reflectedTypeArguments,
+            metadata);
 
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
