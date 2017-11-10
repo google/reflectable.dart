@@ -133,10 +133,19 @@ dependencies:
 You may also wish to specify constraints on the version, depending on the
 approach to version management that your software otherwise employs.
 
+In order to generate code, you will need to run
+`dart $REFLECTABLE_PATH/bin/reflectable_builder.dart <targets>`
+where `$REFLECTABLE_PATH` is the path to the root of the package
+reflectable, and `<targets>` specifies the root libraries for which you
+wish to generate code. You should be able to find a line on the form
+`reflectable:$REFLECTABLE_PATH/lib`
+in the file `.packages` in the root directory of your package, after
+running `pub get`.
+
 Now run the code generation step:
 ```shell
-...> cd ... # go to the root directory of your package
-...> pub run reflectable:reflectable_builder web/myProgram.dart
+> cd ... # go to the root directory of your package
+> dart $REFLECTABLE_PATH/bin/reflectable_builder.dart web/myProgram.dart
 ```
 where `web/myProgram.dart` should be replaced by the root library of the
 program for which you wish to generate code. You can generate code for
@@ -144,15 +153,15 @@ several programs in one step; for instance, to generate code for a set of
 test files in `test`, this would typically be
 `pub run reflectable:reflectable_builder test/*_test.dart`.
 
-Note that it is necessary to generate code for the same set of programs
+Note that you should generate code for the _same_ set of root libraries
 every time you run `reflectable_builder`. This is because the build
 framework stores data about the code generation in a single database in the
 directory `.dart_tool`, so you will get complaints about inconsistencies if
-you switch from generating code for `web/myProgram.dart` to generating
-code for `web/myOtherProgram.dart`. In that case, delete all files named
-`*.reflectable.dart`, and the directory `.dart_tool`. Then generate code
-for all programs together, or at least all those programs that you are
-currently working on.
+you switch from generating code for `web/myProgram.dart` to generating code
+for `web/myOtherProgram.dart`.
+
+If and when you need to generate code for another set of programs, delete
+all files named `*.reflectable.dart`, and the directory `.dart_tool`.
 
 Also note that it is necessary to perform this code generation step if you
 use reflectable directly *or indirectly* by depending on a package that
