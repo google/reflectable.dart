@@ -1,6 +1,11 @@
 # Changelog
 
-## 2.0.0
+## 2.0.0-dev.1.0
+
+This version is a pre-release of the version 2.0.0 which makes all the
+changes described below. Henceforth, reflectable will be based on code
+generation using `build` rather than a pub transformer, because
+transformers will not be supported in the future.
 
 * Switched to a new technology stack: Reflectable no longer provides a pub
   transformer, it uses package `build` to generate code as a separate
