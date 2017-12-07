@@ -6,6 +6,7 @@ library test_reflectable.test.mixin_application_static_member_test;
 
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
+import 'mixin_application_static_member_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -30,6 +31,8 @@ Matcher throwsReflectableNoMethod =
     throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
+  initializeReflectable();
+
   test("Mixin-application invoke", () {
     TypeMirror typeMirror = const Reflector().reflectType(B);
     expect(typeMirror is ClassMirror, true);

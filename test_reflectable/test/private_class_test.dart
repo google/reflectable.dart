@@ -12,6 +12,7 @@ library test_reflectable.test.private_class_test;
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
 import 'private_class_library.dart';
+import 'private_class_test.reflectable.dart';
 
 class PrivacyReflectable extends Reflectable {
   const PrivacyReflectable()
@@ -69,6 +70,8 @@ void testPrivacyViolation(PublicClass object, String description,
 }
 
 main() {
+  initializeReflectable();
+
   test("Privacy, libraries", () {
     // Check that we can browse libraries.
     Map<Uri, LibraryMirror> libraries = privacyReflectable.libraries;

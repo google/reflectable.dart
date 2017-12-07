@@ -13,6 +13,7 @@ import 'dart:html';
 @GlobalQuantifyCapability(r"^dart.dom.html.HttpRequest$", reflector)
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'new_instance_html_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -22,6 +23,8 @@ class Reflector extends Reflectable {
 const Reflector reflector = const Reflector();
 
 void main() {
+  initializeReflectable();
+
   LibraryMirror lib = reflector.findLibrary('dart.dom.html');
   ClassMirror fooClass = lib.declarations['HttpRequest'];
   HttpRequest fooInstance = fooClass.newInstance('', []);

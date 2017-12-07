@@ -1,5 +1,5 @@
 name: coverage_reflectable
-version: 1.0.4
+version: 2.0.0-dev.1.0
 description: >
   A simple tool for measuring code coverage in the reflectable transformer when
   transforming all tests in 'test_reflectable/test'. Only useful for developers

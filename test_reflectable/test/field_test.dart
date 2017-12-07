@@ -9,6 +9,7 @@ library test_reflectable.test.field_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'field_test.reflectable.dart';
 
 class FieldReflector extends Reflectable {
   const FieldReflector()
@@ -39,6 +40,8 @@ class A {
 }
 
 main() {
+  initializeReflectable();
+
   ClassMirror classMirror = fieldReflector.reflectType(A);
   test("instance field properties", () {
     VariableMirror f1Mirror = classMirror.declarations["f1"];

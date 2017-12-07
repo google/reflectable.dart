@@ -10,8 +10,12 @@
 library test_reflectable.test.export_test;
 
 import 'package:reflectable/reflectable.dart';
+import 'export_test.reflectable.dart';
+
 export 'package:reflectable/reflectable.dart';
 
 const Reflectable ignored = null;  // To avoid 'unused import'.
 
-main() {}
+main() {
+  initializeReflectable();
+}

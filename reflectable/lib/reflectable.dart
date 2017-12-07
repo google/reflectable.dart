@@ -11,7 +11,7 @@ library reflectable.reflectable;
 import 'capability.dart';
 import 'mirrors.dart';
 import 'src/reflectable_class_constants.dart' as reflectable_class_constants;
-import 'src/reflectable_mirror_based.dart' as implementation;
+import 'src/reflectable_transformer_based.dart' as implementation;
 
 export 'capability.dart';
 export 'mirrors.dart';
