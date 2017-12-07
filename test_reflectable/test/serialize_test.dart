@@ -6,6 +6,7 @@ library test_reflectable.test.serialize_test;
 
 import "package:unittest/unittest.dart";
 import "package:test_reflectable/serialize.dart";
+import 'serialize_test.reflectable.dart';
 
 // By annotating with [Serializable] we indicate that [A] can be serialized
 // and reconstructed.
@@ -59,6 +60,8 @@ class B extends A {
 }
 
 main() {
+  initializeReflectable();
+
   Serializer serializer = new Serializer();
   test("Round trip test", () {
     var input = new A.fromValues(

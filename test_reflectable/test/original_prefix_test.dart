@@ -10,6 +10,7 @@ library test_reflectable.test.original_prefix_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'original_prefix_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable()
@@ -29,6 +30,8 @@ class C {
 }
 
 main() {
+  initializeReflectable();
+
   test("Original prefix", () {
     ClassMirror classMirror = myReflectable.reflectType(C);
     C c = classMirror.newInstance("", []);

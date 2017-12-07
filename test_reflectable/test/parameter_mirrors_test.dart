@@ -7,6 +7,7 @@ library test_reflectable.test.parameter_mirrors_test;
 import "package:unittest/unittest.dart";
 import "package:reflectable/reflectable.dart";
 import "parameter_mirrors_lib.dart" as lib;
+import 'parameter_mirrors_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -27,6 +28,8 @@ class A {
 }
 
 main() {
+  initializeReflectable();
+
   test("Parameter mirrors", () {
     ClassMirror cm = const Reflector().reflectType(A);
     MethodMirror f1 = cm.declarations["f1"];

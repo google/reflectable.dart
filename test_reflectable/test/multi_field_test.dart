@@ -9,6 +9,7 @@ library test_reflectable.test.multi_field_test;
 
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
+import 'multi_field_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -50,6 +51,8 @@ final Matcher throwsReflectableNoMethod =
     throwsA(new isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
+  initializeReflectable();
+
   A theA = new A();
   B theB = new B();
   InstanceMirror aInstanceMirror = reflector.reflect(theA),

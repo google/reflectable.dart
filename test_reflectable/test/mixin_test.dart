@@ -6,6 +6,7 @@ library test_reflectable.test.mixin_test;
 
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
+import 'mixin_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -141,6 +142,8 @@ Matcher throwsANoSuchCapabilityException =
     throwsA(const isInstanceOf<NoSuchCapabilityError>());
 
 main() {
+  initializeReflectable();
+
   testReflector(const Reflector(), "each is annotated");
   testReflector(const ReflectorUpwardsClosed(), "upwards closed");
   test("Mixin, superclasses not included", () {

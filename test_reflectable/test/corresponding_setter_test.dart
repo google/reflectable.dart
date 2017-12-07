@@ -11,6 +11,7 @@ library test_reflectable.test.corresponding_setter_test;
 import 'package:unittest/unittest.dart';
 import 'package:reflectable/reflectable.dart';
 import 'package:reflectable/capability.dart';
+import 'corresponding_setter_test.reflectable.dart';
 
 const String methodRegExp = r'f.*r$';
 
@@ -205,6 +206,8 @@ void testTopLevel(Reflectable mirrorSystem) {
 }
 
 void main() {
+  initializeReflectable();
+
   A a = new A();
   testInstance(invokingMetaReflector, a, broad: true);
   testInstance(instanceInvokeMetaReflector, a, broad: true);
