@@ -12,8 +12,9 @@ runAnnotatedStepsInSubdirectory(String subdirectory) async {
   buildernameParts[buildernameParts.length - 1] +=
       Platform.pathSeparator + subdirectory;
   environment["BUILDBOT_BUILDERNAME"] = buildernameParts.join("-");
-  String annotatedStepsPath = baseUri.resolve(
-      "third_party/package-bots/annotated_steps.py").toFilePath();
+  String annotatedStepsPath = baseUri
+      .resolve("third_party/package-bots/annotated_steps.py")
+      .toFilePath();
   print("^^^^^^^ Running $annotatedStepsPath for $subdirectory");
   Process process = await Process.start(
     pythonPath,
@@ -29,12 +30,14 @@ runBuildScriptInSubdirectory(String subdirectory) async {
   Map<String, String> environment =
       new Map<String, String>.from(Platform.environment);
   String dartPath = Platform.executable;
-  String buildScriptPath = packageUri.resolve(
-      subdirectory + Platform.pathSeparator + "tool/build.dart").toFilePath();
+  String buildScriptPath = packageUri
+      .resolve(subdirectory + Platform.pathSeparator + "tool/build.dart")
+      .toFilePath();
   String argument = "test" + Platform.pathSeparator + "*_test.dart";
   String workingDirectory = packageUri.resolve(subdirectory).toFilePath();
-  packageUri.resolve(
-      subdirectory + Platform.pathSeparator + "tool/build.dart").toFilePath();
+  packageUri
+      .resolve(subdirectory + Platform.pathSeparator + "tool/build.dart")
+      .toFilePath();
   print("^^^^^^^ Running $buildScriptPath for $subdirectory");
   Process process = await Process.start(
     dartPath,
