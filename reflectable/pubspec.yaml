@@ -6,6 +6,7 @@ description: >
   generated code does not use dynamic reflection and thus improves the
   resource economy (esp. by using a smaller amount of space than dart2js
   generated code).
+version: 2.0.0-dev.1.0
 author: The Dart Team <dart@google.com>
 homepage: https://www.github.com/dart-lang/reflectable
 environment:
