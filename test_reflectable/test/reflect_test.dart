@@ -9,6 +9,7 @@ library test_reflectable.test.reflect_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'reflect_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable();
@@ -20,6 +21,8 @@ const myReflectable = const MyReflectable();
 class A {}
 
 main() {
+  initializeReflectable();
+
   test('reflect', () {
     InstanceMirror instanceMirror = myReflectable.reflect(new A());
     expect(instanceMirror == null, isFalse);

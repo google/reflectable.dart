@@ -1,5 +1,5 @@
 name: coverage_reflectable
-version: 1.0.4
+version: 2.0.0-dev.1.0
 description: >
   A simple tool for measuring code coverage in the reflectable transformer when
   transforming all tests in 'test_reflectable/test'. Only useful for developers
@@ -8,7 +8,7 @@ description: >
   a separate package; any concrete usage of this package entails downloading the
   sdk separately and adjusting the paths for the concrete setup.
 environment:
-  sdk: '>=1.12.0 <2.0.0-dev.infinity'
+  sdk: '>=1.12.0 <2.0.0'
 dependencies:
   observatory:
     path: ../../sdk/runtime/observatory

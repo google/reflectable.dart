@@ -9,6 +9,7 @@ library test_reflectable.test.dynamic_reflected_type_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'dynamic_reflected_type_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector() : super(typeCapability);
@@ -36,6 +37,8 @@ void testDynamicReflectedType(
 }
 
 main() {
+  initializeReflectable();
+
   ClassMirror aMirror = reflector.reflectType(A);
   ClassMirror bMirror = reflector.reflectType(B);
   ClassMirror bInstantiationMirror = reflector.reflect(new B<int>()).type;

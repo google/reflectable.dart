@@ -10,6 +10,7 @@ library test_reflectable.test.member_capability_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'member_capability_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable() : super(invokingCapability);
@@ -68,6 +69,8 @@ final Matcher throwsReflectableNoMethod =
     throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
+  initializeReflectable();
+
   test("invokingCapability", () {
     Foo foo = new Foo();
     InstanceMirror fooMirror = myReflectable.reflect(foo);

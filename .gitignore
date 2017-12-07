@@ -6,3 +6,4 @@ build
 packages
 test/packages
 .packages
+*.reflectable.dart

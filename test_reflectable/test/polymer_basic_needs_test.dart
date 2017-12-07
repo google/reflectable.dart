@@ -8,6 +8,7 @@ library test_reflectable.test.polymer_basic_needs_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
+import 'polymer_basic_needs_test.reflectable.dart';
 
 /// This class was used to separate Jacob Macdonald's Polymer example from
 /// the package `smoke`, such that it was made possible to create a variant
@@ -90,6 +91,8 @@ class A {
 }
 
 main() {
+  initializeReflectable();
+
   test("Polymer basic needs", () {
     List<ThinDeclarationMirror> thinDeclarations = buildMirrors(A);
 

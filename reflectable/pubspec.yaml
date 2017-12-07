@@ -1,10 +1,11 @@
 name: reflectable
 description: >
   This package allows programmers to reduce certain usages of dynamic
-  reflection to a transformer generated specialization with the same
-  behavior. The generated code does not use dynamic reflection and thus
-  improves the performance of (esp. dart2js) generated code.
-version: 1.0.5-dev
+  reflection to a statically specified subset thereof, based on generated
+  code with the same behavior as mirrors provided by 'dart:mirrors'. The
+  generated code does not use dynamic reflection and thus improves the
+  resource economy (esp. by using a smaller amount of space than dart2js
+  generated code).
 author: The Dart Team <dart@google.com>
 homepage: https://www.github.com/dart-lang/reflectable
 environment:
@@ -12,6 +13,9 @@ environment:
 dependencies:
   analyzer: ^0.30.0
   barback: ^0.15.0
+  build: ^0.11.1
+  build_barback: ^0.4.0
+  build_runner: ^0.6.1
   code_transformers: '>=0.4.1 <0.6.0'
   dart_style: '>=0.2.0 <2.0.0'
   glob: ^1.1.0
@@ -21,8 +25,6 @@ dependencies:
 dev_dependencies:
   unittest: ^0.11.0
 transformers:
-- reflectable/src/transform_import:
-    $include: lib/reflectable.dart
 - $dart2js:
     commandLineOptions: [--show-package-warnings]
     # We do not want to compile anything in this package.
