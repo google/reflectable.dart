@@ -9,7 +9,6 @@ library test_reflectable.test.global_quantify_test;
 @GlobalQuantifyMetaCapability(Mark, reflector)
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
-import 'global_quantify_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -43,8 +42,6 @@ Matcher throwsNoSuchCapabilityError =
     throwsA(const isInstanceOf<NoSuchCapabilityError>());
 
 main() {
-  initializeReflectable();
-
   test("GlobalQuantifyCapability", () {
     expect(reflector.canReflectType(A), true);
     expect(reflector.canReflect(new A()), true);

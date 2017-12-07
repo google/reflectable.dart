@@ -9,7 +9,6 @@ library test_reflectable.test.type_variable_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'type_variable_test.reflectable.dart';
 
 class NoTypeVariablesReflector extends Reflectable {
   const NoTypeVariablesReflector()
@@ -107,8 +106,6 @@ Matcher throwsANoSuchCapabilityException =
     throwsA(const isInstanceOf<NoSuchCapabilityError>());
 
 main() {
-  initializeReflectable();
-
   B<int, A> b = new B<int, A>();
 
   test('Type variables, no type variable capability', () {

@@ -2,7 +2,8 @@
 
 This repository contains three packages:
 
-- [reflectable](reflectable/) Reflection in Dart, based on code generation.
+- [reflectable](reflectable/) Reflection in Dart implemented both dynamically
+  and with a transformer.
 
 - [test_reflectable](test_reflectable/) This package is subsidiary to
   reflectable; it contains tests.

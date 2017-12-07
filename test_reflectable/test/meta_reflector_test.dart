@@ -14,7 +14,6 @@ library test_reflectable.test.meta_reflector_test;
     r"^reflectable.reflectable.Reflectable$", const MetaReflector())
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
-import 'meta_reflector_test.reflectable.dart';
 
 abstract class AllReflectorsCapable implements Reflectable {
   Reflectable get self;
@@ -167,8 +166,6 @@ Matcher throwsANoSuchCapabilityException =
     throwsA(const isInstanceOf<NoSuchCapabilityError>());
 
 main() {
-  initializeReflectable();
-
   Set<Reflectable> allReflectors = const MetaReflector().allReflectors;
 
   test("MetaReflector, set of reflectors", () {

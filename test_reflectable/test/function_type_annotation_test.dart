@@ -10,7 +10,6 @@ library test_reflectable.test.function_type_annotation_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'function_type_annotation_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -32,8 +31,6 @@ class C {
 }
 
 main() {
-  initializeReflectable();
-
   LibraryMirror libraryMirror = reflector
       .findLibrary("test_reflectable.test.function_type_annotation_test");
   VariableMirror variableMirror = libraryMirror.declarations["int2int"];

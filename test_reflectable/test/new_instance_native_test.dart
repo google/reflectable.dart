@@ -12,7 +12,6 @@
 @GlobalQuantifyCapability(r"^dart.core.List", reflector)
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'new_instance_native_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector(): super(newInstanceCapability, declarationsCapability,
@@ -22,8 +21,6 @@ class Reflector extends Reflectable {
 const Reflector reflector = const Reflector();
 
 void main() {
-  initializeReflectable();
-
   LibraryMirror lib = reflector.findLibrary("dart.core");
   ClassMirror fooClass = lib.declarations["List"];
   List fooInstance = fooClass.newInstance("", []);

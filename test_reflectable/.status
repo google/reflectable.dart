@@ -2,12 +2,20 @@
 # source code is governed by a BSD-style license that can be found in
 # the LICENSE file.
 
+# Prevent execution of non-test files with name *_test.dart in packages.
+test/packages: SkipByDesign
+build/test/packages: SkipByDesign
+test/three_files_dir/packages: SkipByDesign
+build/test/three_files_dir/packages: SkipByDesign
+
 [ $compiler != dart2analyzer ]
-test/mixin_application_test: RuntimeError # `typeArguments` unimplemented.
-test/not_loaded_test: RuntimeError # `libraryDependencies` unimplemented.
+test/mixin_application_test: RuntimeError # sdk/issues/25344
 build/test/mixin_application_test: RuntimeError # `typeArguments` unimplemented
 build/test/not_loaded_test: RuntimeError # `libraryDependencies` unimplemented.
 
 [ $runtime == vm ]
 test/new_instance_html_test: SkipByDesign # imports 'dart:html'.
 build/test/new_instance_html_test: SkipByDesign # imports 'dart:html'.
+
+[ $compiler == dart2js ]
+test/*_test: skip # Some needed mirror features not implemented by dart2js.

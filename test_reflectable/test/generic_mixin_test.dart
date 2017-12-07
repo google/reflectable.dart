@@ -12,7 +12,6 @@ library test_reflectable.test.generic_mixin_test;
 @GlobalQuantifyCapability(r"^dart.core.num$", reflector)
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'generic_mixin_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -43,8 +42,6 @@ class MM<E> = A with M<E>;
 class D<E> extends MM<E> {}
 
 main() {
-  initializeReflectable();
-
   test('Generic mixin, instance', () {
     InstanceMirror bMirror = reflector.reflect(new B());
     expect(bMirror.invokeGetter("e"), null);

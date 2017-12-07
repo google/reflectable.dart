@@ -11,7 +11,6 @@ library test_reflectable.test.inherited_variable_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'inherited_variable_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector() : super(instanceInvokeCapability, declarationsCapability);
@@ -29,8 +28,6 @@ class B extends A {}
 class C extends B {}
 
 main() {
-  initializeReflectable();
-
   test('Variable inherited from non-covered class', () {
     expect(
         reflector.reflect(new C()).type.instanceMembers['x'].simpleName, 'x');

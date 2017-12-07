@@ -6,7 +6,6 @@ library test_reflectable.test.superinterfaces_test;
 
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
-import 'superinterfaces_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -39,8 +38,6 @@ class G {}
 const reflector = const Reflector();
 
 void main() {
-  initializeReflectable();
-
   ClassMirror bm = reflector.reflectType(B);
   ClassMirror dm = reflector.reflectType(D);
   ClassMirror fm = reflector.reflectType(F);

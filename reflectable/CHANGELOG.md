@@ -1,23 +1,5 @@
 # Changelog
 
-## 2.0.0-dev.1.0
-
-This version is a pre-release of the version 2.0.0 which makes all the
-changes described below. Henceforth, reflectable will be based on code
-generation using `build` rather than a pub transformer, because
-transformers will not be supported in the future.
-
-* Switched to a new technology stack: Reflectable no longer provides a pub
-  transformer, it uses package `build` to generate code as a separate
-  step. This is a **breaking change** for *every* program using reflectable
-  because it requires a different workflow, it requires the generated code to
-  be imported explicitly by the root library (the one that contains the `main`
-  function), and it requires invocation of `initializeReflectable()` at the
-  beginning of `main`. To see the commands in this new workflow, please
-  consult [README.md][readme_md].
-
-[readme_md]: https://github.com/dart-lang/reflectable/blob/master/reflectable/README.md
-
 ## 1.0.4
 
 * Updated version constraint on `analyzer` to include versions `^0.30.0`. Note

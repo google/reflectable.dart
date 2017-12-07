@@ -10,7 +10,6 @@ library test_reflectable.test.unused_reflector_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'unused_reflector_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector() : super(invokingCapability);
@@ -22,8 +21,6 @@ Matcher throwsNoCapability =
     throwsA(const isInstanceOf<NoSuchCapabilityError>());
 
 main() {
-  initializeReflectable();
-
   test('Unused reflector', () {
     expect(() => reflector.libraries, throwsNoCapability);
     expect(reflector.annotatedClasses, <ClassMirror>[]);

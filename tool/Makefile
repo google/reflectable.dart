@@ -8,7 +8,9 @@
 RTOOLS=../reflectable/tool
 TTOOLS=../test_reflectable/tool
 
-all: get clean build check test
+all_except_bottest: get check build test
+
+all: get check build full_test
 
 g: get
 
@@ -22,7 +24,9 @@ b: build
 
 t: test
 
-cb: clean build
+bt: bot_test
+
+ft: full_test
 
 get:
 	@./makein Getting $(RTOOLS) get
@@ -50,8 +54,11 @@ test:
 	@./makein Testing $(RTOOLS) test
 	@./makein Testing $(TTOOLS) test
 
-clean:
-	@./makein Cleaning $(RTOOLS) clean
-	@./makein Cleaning $(TTOOLS) clean
+bot_test:
+	@echo '------------------- bottest'
+	./bottest
 
-.PHONY: all g u c b t get upgrade clean build check test measure_output
+full_test: test bot_test
+
+.PHONY: all_except_bottest all g u c b t ft get upgrade check build test
+.PHONY: bot_test full_test measure_output

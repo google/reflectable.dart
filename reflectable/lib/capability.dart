@@ -166,6 +166,53 @@ class NewInstanceMetaCapability extends MetadataQuantifiedCapability
   const NewInstanceMetaCapability(Type metadataType) : super(metadataType);
 }
 
+/// Gives support for retrieving the names of named declarations, corresponding
+/// to the methods `simpleName`, `qualifiedName` and `constructorName` on
+/// `DeclarationMirror` and `MethodMirror`.
+///
+/// This class has been deprecated: The associated getters are always available,
+/// and it has no effect to include this capability. Exception:  if it is the
+/// only [TypeCapability] on a given reflector and types are used reflectively
+/// then it should be replaced by a [TypeCapability] rather than removed.
+@deprecated
+class NameCapability implements TypeCapability {
+  const NameCapability();
+}
+
+/// Shorthand for `const NameCapability()`.
+///
+/// This value has been deprecated: The associated getters are always available,
+/// and it has no effect to include this capability. Exception: if it is the
+/// only [TypeCapability] on a given reflector and types are used reflectively
+/// then it should be replaced by [typeCapability] rather than removed.
+@deprecated
+const nameCapability = const NameCapability();
+
+/// Gives support for classification predicates such as `isPrivate`, `isStatic`
+/// .., offered by `DeclarationMirror`, `LibraryDependencyMirror`,
+/// `CombinatorMirror' `TypeMirror`, `ClassMirror`, `TypeVariableMirror`,
+/// `MethodMirror`, `VariableMirror`, and `ParameterMirror`.
+///
+/// This class has been deprecated: The classification predicates are always
+/// available, and it has no effect to include this capability. Exception: if
+/// it is the only [TypeCapability] on a given reflector and types are used
+/// reflectively then it should be replaced by a [TypeCapability] rather than
+/// removed.
+@deprecated
+class ClassifyCapability implements TypeCapability {
+  const ClassifyCapability();
+}
+
+/// Shorthand for `const ClassifyCapability()`.
+///
+/// This value has been deprecated: The classification predicates are always
+/// available, and it has no effect to include this capability. Exception: if
+/// it is the only [TypeCapability] on a given reflector and types are used
+/// reflectively then it should be replaced by [typeCapability] rather than
+/// removed.
+@deprecated
+const classifyCapability = const ClassifyCapability();
+
 /// Gives support for reflective access to metadata associated with a
 /// declaration reflected by a given declaration mirror.
 class MetadataCapability implements TypeCapability {

@@ -9,7 +9,6 @@ library test_reflectable.test.static_members_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'static_members_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable() : super(staticInvokeCapability, declarationsCapability);
@@ -23,8 +22,6 @@ class A {
 }
 
 main() {
-  initializeReflectable();
-
   ClassMirror classMirror = myReflectable.reflectType(A);
   test('Static members', () {
     expect(classMirror.staticMembers.length, 1);

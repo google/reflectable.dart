@@ -7,7 +7,6 @@ library test_reflectable.test.invoke_capabilities_test;
 import 'package:unittest/unittest.dart';
 import 'package:reflectable/reflectable.dart' as r;
 import 'package:reflectable/capability.dart' as c;
-import 'invoke_capabilities_test.reflectable.dart';
 
 // Tests that reflection is constrained according to different kinds of
 // capabilities.
@@ -220,8 +219,6 @@ void testReflect(r.Reflectable mirrorSystem, B reflectee) {
 }
 
 void main() {
-  initializeReflectable();
-
   A a = new A();
   testInstance(invokingReflector, a, broad: true);
   testInstance(instanceInvokeReflector, a, broad: true);

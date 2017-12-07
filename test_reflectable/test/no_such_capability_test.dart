@@ -6,7 +6,6 @@ library test_reflectable.test.no_such_capability_test;
 
 import 'package:reflectable/reflectable.dart' as r;
 import 'package:unittest/unittest.dart';
-import 'no_such_capability_test.reflectable.dart';
 
 class MyReflectable extends r.Reflectable {
   const MyReflectable()
@@ -23,8 +22,6 @@ Matcher throwsReflectableNoMethod =
     throwsA(const isInstanceOf<r.ReflectableNoSuchMethodError>());
 
 main() {
-  initializeReflectable();
-
   test('reflect', () {
     r.InstanceMirror instanceMirror = myReflectable.reflect(new A());
     expect(() => instanceMirror.invoke("foo", []),

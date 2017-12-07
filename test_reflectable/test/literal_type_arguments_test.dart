@@ -9,7 +9,6 @@ library test_reflectable.test.literal_type_arguments_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'literal_type_arguments_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -38,8 +37,6 @@ class C {
 }
 
 main() {
-  initializeReflectable();
-
   test('Type arguments on literal maps and lists', () {
     ClassMirror cMirror = reflector.reflectType(C);
     Map<String, DeclarationMirror> cDeclarations = cMirror.declarations;

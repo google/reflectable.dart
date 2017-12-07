@@ -7,7 +7,6 @@
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'enum_test.reflectable.dart';
 
 /// This annotation specifies the object can be serialized
 class Serializable extends Reflectable {
@@ -50,8 +49,6 @@ class ObjectWithEnum {
 }
 
 main() {
-  initializeReflectable();
-
   test('deserialize enum', () {
     expect(fromJson('0', Color), Color.BLUE);
   });

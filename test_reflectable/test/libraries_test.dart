@@ -10,7 +10,6 @@ library test_reflectable.test.libraries_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'libraries_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -65,8 +64,6 @@ final Matcher throwsReflectableNoMethod =
     throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
-  initializeReflectable();
-
   test('invoke function, getter', () {
     LibraryMirror libraryMirror =
         reflector.findLibrary('test_reflectable.test.libraries_test');
