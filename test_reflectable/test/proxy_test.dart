@@ -9,7 +9,6 @@ library test_reflectable.test.proxy_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'proxy_test.reflectable.dart';
 
 class ProxyReflectable extends Reflectable {
   const ProxyReflectable()
@@ -27,7 +26,8 @@ class A {
   }
 }
 
-class Proxy implements A {
+@proxy
+class Proxy {
   final forwardee;
   final Map<Symbol, Function> methodMap;
   const Proxy(this.forwardee, this.methodMap);
@@ -58,8 +58,6 @@ Map<Symbol, Function> createMethodMap(Type T) {
 }
 
 main() {
-  initializeReflectable();
-
   // Set up support for proxying A instances.
   Map<Symbol, Function> methodMapForA = createMethodMap(A);
 

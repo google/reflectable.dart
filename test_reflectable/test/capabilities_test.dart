@@ -10,7 +10,6 @@ library test_reflectable.test.capabilities_test;
 import 'package:unittest/unittest.dart';
 import 'package:reflectable/reflectable.dart' as r;
 import 'package:reflectable/capability.dart' as c;
-import 'capabilities_test.reflectable.dart';
 
 class StaticReflector extends r.Reflectable {
   const StaticReflector()
@@ -124,8 +123,6 @@ void testDynamic(B o, String description) {
 }
 
 void main() {
-  initializeReflectable();
-
   test("Static invocation", () {
     r.ClassMirror classMirror = staticReflector.reflectType(A);
     expect(classMirror.invoke("foo", []), 42);

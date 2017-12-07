@@ -11,7 +11,6 @@ library test_reflectable.test.expanding_generics_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'expanding_generics_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector() : super(typeCapability);
@@ -36,8 +35,6 @@ void runTest(String message, ClassMirror classMirror) {
 }
 
 main() {
-  initializeReflectable();
-
   test('Reject reflection directly on instantiated generic class', () {
     expect(reflector.canReflectType(COfInt), false);
   });

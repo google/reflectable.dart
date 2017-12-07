@@ -9,7 +9,6 @@ library test_reflectable.test.metadata_subtype_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'metadata_subtype_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable()
@@ -60,8 +59,6 @@ final Matcher throwsReflectableNoMethod =
     throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
-  initializeReflectable();
-
   ClassMirror classMirror = myReflectable.reflectType(C);
   Map<String, DeclarationMirror> declarations = classMirror.declarations;
   test("Proper subtypes as metadata, declarations", () {

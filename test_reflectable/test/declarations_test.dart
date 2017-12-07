@@ -6,7 +6,6 @@ library test_reflectable.test.declarations_test;
 
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
-import 'declarations_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -45,8 +44,6 @@ class B extends A {
 }
 
 main() {
-  initializeReflectable();
-
   const reflector = const Reflector();
   ClassMirror aMirror = reflector.reflectType(A);
   ClassMirror bMirror = reflector.reflectType(B);

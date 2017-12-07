@@ -141,12 +141,13 @@ class ReflectableTransformer extends Transformer
   }
 
   @override
-  declareOutputs(DeclaringTransform transform) {
-    AssetId id = transform.primaryId;
+  declareOutputs(DeclaringTransform transform) async {
+    AssetId id = await transform.primaryId;
     _entryPoints.forEach((String entryPoint) {
       Glob glob = new Glob(entryPoint);
       if (glob.matches(id.path)) {
-        AssetId dataId = id.changeExtension(".reflectable.dart");
+        transform.declareOutput(id);
+        AssetId dataId = id.changeExtension("_reflectable_original_main.dart");
         transform.declareOutput(dataId);
       }
       // Otherwise there is no such entry point; however, we do not need to

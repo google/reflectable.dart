@@ -13,7 +13,6 @@ library test_reflectable.test.subtype_test;
     r"^test_reflectable\.test\.subtype_test\..*", const InsufficientReflector())
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'subtype_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -48,8 +47,6 @@ Matcher throwsNoCapability =
     throwsA(const isInstanceOf<NoSuchCapabilityError>());
 
 main() {
-  initializeReflectable();
-
   Reflectable reflector = const Reflector();
   Reflectable insufficientReflector = const InsufficientReflector();
 

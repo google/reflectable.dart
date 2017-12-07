@@ -9,7 +9,7 @@ PACKAGES=../.packages
 OPTIONS=--packages=$(PACKAGES)
 TEST_DIR=../test
 
-all: get clean build check test
+all: get check build test
 
 g: get
 
@@ -22,8 +22,6 @@ m: measure_output
 b: build
 
 t: test
-
-cb: clean build
 
 get:
 	( cd ..; pub get --no-packages-dir )
@@ -38,15 +36,11 @@ measure_output: build
 	@./measure_output --include-js --include-source-tree --include-unminified
 
 build:
-	( cd ..; dart tool/build.dart test/*_test.dart)
-	( cd ..; pub build --mode=debug test)
+	( cd ..; pub build --mode=debug test )
 
 test:
 	@echo "-------------------- test"
 	@./run_tests
 
-clean:
-	( rm -rf ../.dart_tool ../build )
-	( rm -f ../test/*.reflectable.dart )
+.PHONY: all g u c b t ft get upgrade check measure_output build test
 
-.PHONY: all g u c b t ft get upgrade check measure_output build test clean

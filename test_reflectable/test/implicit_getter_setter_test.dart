@@ -9,7 +9,6 @@ library test_reflectable.test.implicit_getter_setter_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'implicit_getter_setter_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -29,8 +28,6 @@ class A {
 }
 
 main() {
-  initializeReflectable();
-
   ClassMirror classMirror = reflector.reflectType(A);
 
   test("implicit getter properties", () {

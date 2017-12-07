@@ -15,7 +15,6 @@ library test_reflectable.test.mixin_application_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'mixin_application_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -40,8 +39,6 @@ class B extends A with M<int> {}
 class C<E> extends A with M<E> {}
 
 main() {
-  initializeReflectable();
-
   test('Anonymous mixin application', () {
     ClassMirror bMirror = reflector.reflectType(B);
     ClassMirror bmMirror = bMirror.superclass;

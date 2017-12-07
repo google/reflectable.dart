@@ -10,7 +10,6 @@ library test_reflectable.test.no_such_method_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'no_such_method_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -20,6 +19,7 @@ class Reflector extends Reflectable {
 const reflector = const Reflector();
 
 @reflector
+@proxy // To silence the analyzer.
 class A {
   int arg0() => 100;
   int arg1(int x) => 101;
@@ -37,8 +37,6 @@ Matcher throwsReflectableNoSuchMethod =
     throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
-  initializeReflectable();
-
   InstanceMirror aMirror = reflector.reflect(new A());
   LibraryMirror libraryMirror =
       reflector.findLibrary("test_reflectable.test.no_such_method_test");

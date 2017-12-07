@@ -6,7 +6,6 @@ library test_reflectable.test.annotated_classes_test;
 
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
-import 'annotated_classes_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable(): super(typeCapability);
@@ -37,8 +36,6 @@ class F implements A {}
 class G {}
 
 main() {
-  initializeReflectable();
-
   test("Annotated classes", () {
     expect(const MyReflectable().annotatedClasses
             .map((ClassMirror classMirror) => classMirror.simpleName),

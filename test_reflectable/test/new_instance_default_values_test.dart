@@ -9,7 +9,6 @@ library test_reflectable.test.new_instance_default_values_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'new_instance_default_values_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable() : super(newInstanceCapability);
@@ -28,8 +27,6 @@ class A {
 }
 
 main() {
-  initializeReflectable();
-
   ClassMirror classMirror = myReflectable.reflectType(A);
   test('newInstance named arguments default argument, local constant', () {
     expect((classMirror.newInstance("optional", [], {}) as A).f, 10);

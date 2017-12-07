@@ -9,7 +9,6 @@ library test_reflectable.test.prefixed_reflector_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'prefixed_reflector_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -28,8 +27,6 @@ class D {
 }
 
 main() {
-  initializeReflectable();
-
   ClassMirror classMirror = C.reflector.reflectType(D);
   test('Prefixed reflector type', () {
     expect(classMirror.reflectedType, D);

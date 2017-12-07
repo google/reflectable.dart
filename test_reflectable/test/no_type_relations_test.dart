@@ -7,7 +7,6 @@
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'no_type_relations_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
@@ -37,8 +36,6 @@ void expectCapabilityMessage(f()) {
 }
 
 main() {
-  initializeReflectable();
-
   ClassMirror classMirror = reflector.reflectType(Bar);
   test('Detect missing type relations capability', () {
     expectCapabilityMessage(() => classMirror.superclass);

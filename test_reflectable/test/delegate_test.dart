@@ -9,7 +9,6 @@ library test_reflectable.test.delegate_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'delegate_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector() : super(delegateCapability, instanceInvokeCapability);
@@ -68,7 +67,8 @@ class A {
   int getsetTarget = 107;
 }
 
-class B implements A {
+@proxy // Tell the analyzer that we can invoke any method on a `B`.
+class B {
   final InstanceMirror _instanceMirror;
   B(this._instanceMirror);
   noSuchMethod(Invocation invocation) {
@@ -80,8 +80,6 @@ Matcher throwsReflectableNoMethod =
     throwsA(const isInstanceOf<ReflectableNoSuchMethodError>());
 
 main() {
-  initializeReflectable();
-
   A a = new A();
   B b = new B(reflector.reflect(a));
   B bName = new B(nameReflector.reflect(a));

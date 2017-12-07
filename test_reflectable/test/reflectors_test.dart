@@ -13,7 +13,6 @@ library test_reflectable.test.reflectors_test;
     const AllReflectorsMetaReflector())
 import "package:reflectable/reflectable.dart";
 import "package:unittest/unittest.dart";
-import 'reflectors_test.reflectable.dart';
 
 /// Used to get access to all reflectors.
 class AllReflectorsMetaReflector extends Reflectable {
@@ -114,8 +113,6 @@ class C extends B with M2, M3 {}
 class D = A with M1;
 
 main() {
-  initializeReflectable();
-
   List<Reflectable> reflectors =
       const AllReflectorsMetaReflector().reflectors.toList();
 

@@ -9,7 +9,6 @@ library test_reflectable.test.type_relations_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'type_relations_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable()
@@ -22,8 +21,6 @@ const myReflectable = const MyReflectable();
 class MyClass {}
 
 main() {
-  initializeReflectable();
-
   ClassMirror myClassMirror = myReflectable.reflectType(MyClass);
   ClassMirror classObjectMirror = myClassMirror.superclass;
   test('superclass targetting un-annotated class', () {

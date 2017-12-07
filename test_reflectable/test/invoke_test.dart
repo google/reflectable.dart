@@ -9,7 +9,6 @@ library test_reflectable.test.invoke_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'invoke_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable() : super(invokingCapability);
@@ -38,8 +37,6 @@ class A {
 }
 
 main() {
-  initializeReflectable();
-
   A instance = new A();
   InstanceMirror instanceMirror = myReflectable.reflect(instance);
   test('invoke with no arguments', () {

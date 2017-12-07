@@ -10,7 +10,6 @@ library test_reflectable.test.metadata_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'metadata_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable()
@@ -79,8 +78,6 @@ class Bar {
 }
 
 main() {
-  initializeReflectable();
-
   test("metadata on class", () {
     expect(myReflectable.reflectType(Foo).metadata, const [
       const MyReflectable(),

@@ -9,7 +9,6 @@ library test_reflectable.test.new_instance_optional_arguments_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'new_instance_optional_arguments_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector(): super(newInstanceCapability);
@@ -39,8 +38,6 @@ class ClazzA
 }
 
 main() {
-  initializeReflectable();
-
   // Problem reproduction code as described in the issue, adjusted to make it a
   // test and ported to make it work with reflectable.
 

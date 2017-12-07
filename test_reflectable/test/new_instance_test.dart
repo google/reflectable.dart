@@ -9,7 +9,6 @@ library test_reflectable.test.new_instance_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:unittest/unittest.dart';
-import 'new_instance_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector() : super(newInstanceCapability);
@@ -52,14 +51,12 @@ class A {
 }
 
 void performTests(String message, Reflectable reflector) {
-  initializeReflectable();
-
   ClassMirror classMirror = reflector.reflectType(A);
   test('$message: newInstance unnamed constructor, no arguments', () {
     expect((classMirror.newInstance("", []) as A).f, 42);
   });
-  test('$message: newInstance named constructor, simple argument list, '
-      'one argument',
+  test(
+      '$message: newInstance named constructor, simple argument list, one argument',
       () {
     expect((classMirror.newInstance("positional", [84]) as A).f, 42);
   });
