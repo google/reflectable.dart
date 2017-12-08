@@ -1,8 +1,8 @@
 name: test_reflectable
+version: 2.0.0-dev.2.0
 description: >
   This package contains tests which depend on package reflectable
   and which are transformed by the transformer in that package.
-version: 2.0.0-dev.1.0
 author: The Dart Team <dart@google.com>
 homepage: https://www.github.com/dart-lang/reflectable
 environment:
