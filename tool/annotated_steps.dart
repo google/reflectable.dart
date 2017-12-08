@@ -33,11 +33,11 @@ runBuildScriptInSubdirectory(String subdirectory) async {
   String buildScriptPath = packageUri
       .resolve(subdirectory + Platform.pathSeparator + "tool/build.dart")
       .toFilePath();
-  String workingDirectory = packageUri.resolve(subdirectory).toFilePath();
   String argument = packageUri
       .resolve(
           [subdirectory, "test", "*_test.dart"].join(Platform.pathSeparator))
       .toFilePath();
+  String workingDirectory = packageUri.resolve(subdirectory).toFilePath();
   print("^^^^^^^ Running $buildScriptPath for $subdirectory");
   Process process = await Process.start(
     dartPath,
