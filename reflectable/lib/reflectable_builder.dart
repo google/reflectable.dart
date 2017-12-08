@@ -30,6 +30,7 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
       const <String, List<String>>{'.dart': const ['.reflectable.dart']},
     );
     return await build(
-        [new BuildAction(builder, packageName, inputs: arguments)]);
+        [new BuildAction(builder, packageName, inputs: arguments)],
+        deleteFilesByDefault: true);
   }
 }

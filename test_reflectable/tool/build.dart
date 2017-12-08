@@ -9,9 +9,11 @@ import 'package:reflectable/reflectable_builder.dart' as builder;
 main(List<String> arguments) async {
   List<String> globbedArguments = <String>[];
   for (String argument in arguments) {
-    Glob fileSpec = new Glob(argument);
-    await for (var entity in fileSpec.list()) {
-      globbedArguments.add(entity.path);
+    Glob fileGlob = new Glob(argument);
+    await for (var entity in fileGlob.list()) {
+      String fileSpec = entity.path;
+      if (fileSpec.startsWith("./")) fileSpec = fileSpec.substring(2);
+      globbedArguments.add(fileSpec);
     }
   }
   return await builder.reflectableBuild(globbedArguments) ==
