@@ -10,7 +10,7 @@ environment:
 dependencies:
   reflectable:
     path: ../reflectable
-  build_runner: ^0.6.1
+  build_runner: ^0.7.0
   glob: ^1.1.5
 dev_dependencies:
   unittest: ^0.11.0
