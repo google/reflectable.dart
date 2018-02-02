@@ -1,0 +1,6 @@
+targets:
+  test_reflectable:
+    builders:
+      reflectable:
+        generate_for:
+        - test/**_test.dart
