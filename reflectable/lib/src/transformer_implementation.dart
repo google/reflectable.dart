@@ -239,8 +239,22 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
       classElements.items.map<T>(f);
 
   @override
+  Set<R> cast<R>() {
+    Iterable<Object> self = this;
+    return self is Iterable<R> ? self : Set.castFrom<ClassElement, R>(this);
+  }
+
+  @override
+  Set<R> retype<R>() => unimplementedError("`retype` is not supported");
+
+  @override
   Iterable<ClassElement> where(bool f(ClassElement element)) {
     return classElements.items.where(f);
+  }
+
+  @override
+  Iterable<T> whereType<T>() sync* {
+    for (var element in this) if (element is T) yield (element as T);
   }
 
   @override
@@ -302,6 +316,12 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
   }
 
   @override
+  Iterable<ClassElement> followedBy(Iterable<ClassElement> other) sync* {
+    yield* this;
+    yield* other;
+  }
+
+  @override
   ClassElement get first => classElements.items.first;
 
   @override
@@ -323,7 +343,8 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
   }
 
   @override
-  ClassElement singleWhere(bool test(ClassElement element)) {
+  ClassElement singleWhere(bool test(ClassElement element),
+      {ClassElement orElse()}) {
     return classElements.items.singleWhere(test);
   }
 

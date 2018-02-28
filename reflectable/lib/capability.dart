@@ -475,7 +475,7 @@ class _AdmitSubtypeCapability implements ReflecteeQuantifyCapability {
 
 /// Thrown when reflection is invoked without sufficient capabilities.
 abstract class NoSuchCapabilityError extends Error {
-  factory NoSuchCapabilityError(message) = _NoSuchCapabilityErrorImpl;
+  factory NoSuchCapabilityError(String message) = _NoSuchCapabilityErrorImpl;
 }
 
 class _NoSuchCapabilityErrorImpl extends Error
