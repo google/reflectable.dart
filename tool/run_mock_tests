@@ -4,11 +4,10 @@
 # source code is governed by a BSD-style license that can be found in
 # the LICENSE file.
 
-TEST_DIR=../build/test/mock_tests
+TEST_DIR=../build/test
 PACKAGE_ROOT=../build/test/packages
 
 for n in $TEST_DIR/*.dart; do
   echo "---------- $(basename $n)"
   dart --package-root=$PACKAGE_ROOT $n
 done
-
