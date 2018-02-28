@@ -6,10 +6,10 @@ test/*: SkipByDesign # Testing in build to get a package root.
 
 # Prevent execution of non-test files with name *_test.dart in packages.
 build/test/packages: SkipByDesign
-build/test/mock_tests/packages: SkipByDesign
+build/test/packages: SkipByDesign
 
 [ $runtime != vm ]
-build/test/mock_tests/*: SkipByDesign # Use dart:io.
+build/test/*: SkipByDesign # Use dart:io.
 
 [ $system == windows ]
-build/test/mock_tests/*: RuntimeError # Issue 97.
+build/test/*: RuntimeError # Issue 97.
