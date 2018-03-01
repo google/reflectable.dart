@@ -12,9 +12,9 @@ homepage: https://www.github.com/dart-lang/reflectable
 environment:
   sdk: '>=1.12.0 <2.0.0'
 dependencies:
-  analyzer: ^0.30.0
+  analyzer: ^0.31.0
   barback: ^0.15.0
-  build: ^0.11.1
+  build: ^0.12.0
   build_barback: ^0.5.0
   build_config: ^0.2.0
   build_runner: ^0.7.0
@@ -22,10 +22,10 @@ dependencies:
   dart_style: '>=0.2.0 <2.0.0'
   glob: ^1.1.0
   logging: ^0.11.0
-  path: '>=1.2.0 <1.5.0'
+  path: '>=1.2.0 <1.6.0'
   source_span: '>=1.0.0 <1.5.0'
 dev_dependencies:
-  unittest: ^0.11.0
+  unittest: ^0.11.7
 transformers:
 - $dart2js:
     commandLineOptions: [--show-package-warnings]
