@@ -6,7 +6,6 @@ test/*: SkipByDesign # Testing in build to get a package root.
 
 # Prevent execution of non-test files with name *_test.dart in packages.
 build/test/packages: SkipByDesign
-build/test/packages: SkipByDesign
 
 [ $runtime != vm ]
 build/test/*: SkipByDesign # Use dart:io.
