@@ -9,7 +9,7 @@ library reflectable.test.mock_tests.check_literal_transform_test;
 import 'package:barback/barback.dart';
 import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";
-import "package:unittest/unittest.dart";
+import "package:test/test.dart";
 
 var useReflect = [
   {
