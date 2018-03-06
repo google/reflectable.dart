@@ -6,7 +6,7 @@
 * Changed `TestTransform` to require its 3rd constructor argument,
   because there is no default way to obtain the path to '.packages'.
 * Generated files are now placed in 'test' rather than 'build/test';
-  adjusted 'test_transform.dart' to work with that setup and enable
+  adjusted 'test_transform.dart' to work with that setup, and enable
   `pub run test`.
 
 ## 2.0.0-dev.1.0
