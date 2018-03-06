@@ -10,6 +10,8 @@ import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:barback/barback.dart';
+import 'package:package_resolver/package_resolver.dart';
+import "package:package_config/packages_file.dart" as packages_file;
 import 'package:source_span/source_span.dart';
 
 /// Collects logger-messages for inspection in tests.
@@ -22,8 +24,7 @@ class MessageRecord {
 }
 
 /// A transform that gets its main inputs from a [Map] from path to [String].
-/// If an input is not found there it will be looked up in [packageRoot].
-/// [packageRoot] should use the system path-separator.
+/// If an input is not found there it will be looked up in [packagesUri].
 class TestTransform implements Transform {
   final String fileName;
   final String fileContents;
@@ -33,7 +34,8 @@ class TestTransform implements Transform {
   Asset _primaryAsset;
   AssetId _primaryAssetId;
   bool consumed = false;
-  String packageRoot;
+  Uri packagesUri;
+  PackageResolver packageResolver;
 
   final List<MessageRecord> messages = <MessageRecord>[];
 
@@ -41,35 +43,20 @@ class TestTransform implements Transform {
     messages.add(new MessageRecord(id, level, message, span));
   }
 
-  TestTransform(this.fileName, this.fileContents, this.package,
-      [String packageRoot]) {
-    this.packageRoot =
-        packageRoot == null ? io.Platform.packageRoot : packageRoot;
-    // The semantics of `io.Platform.packageRoot` suddenly changed from version
-    // dart-sdk-1.14.0-dev.4.0 to .5.0: It used to be passed on from the
-    // command line arguments directly, but starting from .5.0 it is being
-    // interpreted: If it is a relative path then it is turned into an absolute
-    // path, and an absolute path is in turn changed into a 'file://' uri.
-    // If [packageRoot] is a 'file://' uri then we reduce it to a path.
-    Uri uri;
-    if (this.packageRoot == null) {
-      logger.error("Cannot determine the package root, using './packages'.");
-      this.packageRoot = "./packages";
-    }
-    try {
-      uri = Uri.parse(this.packageRoot);
-      this.packageRoot = uri.path;
-    } on FormatException catch (_) {
-      // No problem, now we just know that `packageRoot` is not a well-formed
-      // uri; it should then be a path.
-    }
-    if (this.packageRoot.endsWith(io.Platform.pathSeparator)) {
-      this.packageRoot =
-          this.packageRoot.substring(0, this.packageRoot.length - 1);
-    }
+  TestTransform(
+      this.fileName, this.fileContents, this.package, this.packagesUri) {
     _primaryAssetId = new AssetId.parse(fileName);
     _primaryAsset = new Asset.fromString(_primaryAssetId, fileContents);
     assets[_primaryAssetId] = _primaryAsset;
+    UriData uriData = packagesUri.data;
+    if (uriData != null) {
+      String uriDataScriptString = uriData.contentAsString();
+      int index = uriDataScriptString.lastIndexOf("file:///");
+      if (index == 0) {
+        logger.error("Unexpected script url format: $uriDataScriptString");
+      }
+      packagesUri = Uri.parse(uriDataScriptString.substring(index));
+    }
   }
 
   @override
@@ -78,6 +65,17 @@ class TestTransform implements Transform {
   /// The stream of primary inputs that will be processed by this transform.
   @override
   Asset get primaryInput => _primaryAsset;
+
+  Future _setupPackageResolver() async {
+    String path = packagesUri.toFilePath();
+    io.File file = new io.File(path);
+    if (!(await file.exists())) {
+      logger.error("Package specification not found: $path");
+    }
+    String contents = await file.readAsString();
+    Map<String, Uri> map = packages_file.parse(contents.codeUnits, packagesUri);
+    packageResolver = new PackageResolver.config(map, uri: packagesUri);
+  }
 
   /// Gets the asset for an input [id].
   ///
@@ -91,15 +89,14 @@ class TestTransform implements Transform {
     if (package == id.package) {
       path = id.path;
     } else {
+      if (packageResolver == null) await _setupPackageResolver();
       String pathWithoutLib =
           id.path.split('/').skip(1).join(io.Platform.pathSeparator);
-      path = [packageRoot, id.package, pathWithoutLib]
-          .join(io.Platform.pathSeparator);
+      path = (await packageResolver.urlFor(id.package, pathWithoutLib))
+          .toFilePath();
     }
     io.File file = new io.File(path);
-    if (!(await file.exists())) {
-      throw new AssetNotFoundException(id);
-    }
+    if (!(await file.exists())) throw new AssetNotFoundException(id);
     return new Asset.fromFile(id, file);
   }
 

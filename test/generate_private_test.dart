@@ -7,10 +7,13 @@ library reflectable.test.mock_tests.generate_private_test;
 /// Check that attempts to generate expressions that contain private names
 /// from different libraries are detected and diagnosed as an error.
 
+import 'dart:io';
 import 'package:barback/barback.dart';
 import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";
 import "package:test/test.dart";
+
+Uri dotPackages = Platform.script.resolve("../.packages");
 
 var sources = {
   "a|main.dart": """
@@ -40,7 +43,7 @@ main() async {
     for (String inputName in sources.keys) {
       String inputContents = sources[inputName];
       TestTransform transform =
-          new TestTransform(inputName, inputContents, package);
+          new TestTransform(inputName, inputContents, package, dotPackages);
       Transformer transformer = new ReflectableTransformer.asPlugin(settings);
       await transformer.apply(transform);
       await transform.outputMap();

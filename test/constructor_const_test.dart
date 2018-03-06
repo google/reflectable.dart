@@ -6,10 +6,13 @@ library reflectable.test.mock_tests.constructor_const_test;
 
 /// Checks that a non-const reflector constructor is an error.
 
+import 'dart:io';
 import 'package:barback/barback.dart';
 import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";
 import "package:test/test.dart";
+
+Uri dotPackages = Platform.script.resolve("../.packages");
 
 var sources = {
   "a|main.dart": """
@@ -39,7 +42,7 @@ main() async {
     for (String inputName in sources.keys) {
       String inputContents = sources[inputName];
       TestTransform transform =
-          new TestTransform(inputName, inputContents, package);
+          new TestTransform(inputName, inputContents, package, dotPackages);
       Transformer transformer = new ReflectableTransformer.asPlugin(settings);
       await transformer.apply(transform);
       await transform.outputMap();

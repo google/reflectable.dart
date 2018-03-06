@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0-dev.2.0
+
+* Removed bin/reflectable_transformer.dart.
+* Changed `TestTransform` to require its 3rd constructor argument,
+  because there is no default way to obtain the path to '.packages'.
+* 
+
 ## 2.0.0-dev.1.0
 
 This version is a pre-release of the version 2.0.0 which makes all the

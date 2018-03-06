@@ -6,10 +6,13 @@ library reflectable.test.mock_tests.check_literal_transform_test;
 
 /// Test the literal output of the transformation for a few simple cases.
 
+import 'dart:io';
 import 'package:barback/barback.dart';
 import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";
 import "package:test/test.dart";
+
+Uri dotPackages = Platform.script.resolve("../.packages");
 
 var useReflect = [
   {
@@ -104,7 +107,7 @@ checkTransform(List<Map<String, String>> maps) async {
   for (String inputName in inputs.keys) {
     String inputContents = inputs[inputName];
     TestTransform transform =
-        new TestTransform(inputName, inputContents, package);
+        new TestTransform(inputName, inputContents, package, dotPackages);
     ReflectableTransformer transformer =
         new ReflectableTransformer.asPlugin(new BarbackSettings({
       "entry_points": ["main.dart"],
