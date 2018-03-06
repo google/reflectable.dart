@@ -13,8 +13,6 @@ import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";
 import "package:test/test.dart";
 
-Uri dotPackages = Platform.script.resolve("../.packages");
-
 var sources = {
   "a|main.dart": """
 import 'package:reflectable/reflectable.dart';
@@ -43,7 +41,7 @@ main() async {
     for (String inputName in sources.keys) {
       String inputContents = sources[inputName];
       TestTransform transform =
-          new TestTransform(inputName, inputContents, package, dotPackages);
+          new TestTransform(inputName, inputContents, package);
       Transformer transformer = new ReflectableTransformer.asPlugin(settings);
       await transformer.apply(transform);
       await transform.outputMap();

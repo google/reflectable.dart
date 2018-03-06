@@ -12,8 +12,6 @@ import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";
 import "package:test/test.dart";
 
-Uri dotPackages = Platform.script.resolve("../.packages");
-
 var useReflect = [
   {
     "a|main.dart": """
@@ -107,7 +105,7 @@ checkTransform(List<Map<String, String>> maps) async {
   for (String inputName in inputs.keys) {
     String inputContents = inputs[inputName];
     TestTransform transform =
-        new TestTransform(inputName, inputContents, package, dotPackages);
+        new TestTransform(inputName, inputContents, package);
     ReflectableTransformer transformer =
         new ReflectableTransformer.asPlugin(new BarbackSettings({
       "entry_points": ["main.dart"],

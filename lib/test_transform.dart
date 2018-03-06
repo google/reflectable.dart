@@ -14,6 +14,8 @@ import 'package:package_resolver/package_resolver.dart';
 import "package:package_config/packages_file.dart" as packages_file;
 import 'package:source_span/source_span.dart';
 
+Uri dotPackages = io.Platform.script;
+
 /// Collects logger-messages for inspection in tests.
 class MessageRecord {
   AssetId id;
@@ -24,7 +26,7 @@ class MessageRecord {
 }
 
 /// A transform that gets its main inputs from a [Map] from path to [String].
-/// If an input is not found there it will be looked up in [packagesUri].
+/// If an input is not found there it will be looked up in '.packages'.
 class TestTransform implements Transform {
   final String fileName;
   final String fileContents;
@@ -34,7 +36,7 @@ class TestTransform implements Transform {
   Asset _primaryAsset;
   AssetId _primaryAssetId;
   bool consumed = false;
-  Uri packagesUri;
+  Uri dotPackages;
   PackageResolver packageResolver;
 
   final List<MessageRecord> messages = <MessageRecord>[];
@@ -44,19 +46,27 @@ class TestTransform implements Transform {
   }
 
   TestTransform(
-      this.fileName, this.fileContents, this.package, this.packagesUri) {
+      this.fileName, this.fileContents, this.package) {
     _primaryAssetId = new AssetId.parse(fileName);
     _primaryAsset = new Asset.fromString(_primaryAssetId, fileContents);
     assets[_primaryAssetId] = _primaryAsset;
-    UriData uriData = packagesUri.data;
-    if (uriData != null) {
-      String uriDataScriptString = uriData.contentAsString();
-      int index = uriDataScriptString.lastIndexOf("file:///");
-      if (index == 0) {
-        logger.error("Unexpected script url format: $uriDataScriptString");
+    Uri scriptUri = io.Platform.script;
+    String uriDataScriptString = scriptUri.data?.contentAsString();
+    if (uriDataScriptString != null) {
+      // `uriDataScriptString` actually contains the entire program, which
+      // imports the test file using a `file:///` uri.
+      int startIndex = uriDataScriptString.indexOf("file:///");
+      if (startIndex == 0) {
+        logger.error("Unexpected Platform.script: $uriDataScriptString");
       }
-      packagesUri = Uri.parse(uriDataScriptString.substring(index));
+      int endIndex = uriDataScriptString.indexOf("\" as test;");
+      scriptUri =
+          Uri.parse(uriDataScriptString.substring(startIndex, endIndex));
     }
+    if (scriptUri.hasScheme && scriptUri.scheme == 'http') {
+      logger.error("Platform.script has scheme 'http': Not supported");
+    }
+    dotPackages = scriptUri.resolve("../.packages");
   }
 
   @override
@@ -67,14 +77,14 @@ class TestTransform implements Transform {
   Asset get primaryInput => _primaryAsset;
 
   Future _setupPackageResolver() async {
-    String path = packagesUri.toFilePath();
+    String path = dotPackages.toFilePath();
     io.File file = new io.File(path);
     if (!(await file.exists())) {
       logger.error("Package specification not found: $path");
     }
     String contents = await file.readAsString();
-    Map<String, Uri> map = packages_file.parse(contents.codeUnits, packagesUri);
-    packageResolver = new PackageResolver.config(map, uri: packagesUri);
+    Map<String, Uri> map = packages_file.parse(contents.codeUnits, dotPackages);
+    packageResolver = new PackageResolver.config(map, uri: dotPackages);
   }
 
   /// Gets the asset for an input [id].
