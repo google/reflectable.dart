@@ -7,11 +7,13 @@ library reflectable.src.transformer_implementation;
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
-import 'package:analyzer/src/generated/constant.dart';
+import 'package:analyzer/src/dart/constant/evaluation.dart';
+import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/generated/source.dart' show Source;
 import 'package:analyzer/src/generated/utilities_dart.dart';
 import 'package:barback/barback.dart';
@@ -3101,9 +3103,9 @@ class TransformerImplementation {
         if (import.importedLibrary != reflectableLibrary) continue;
         for (ElementAnnotationImpl metadatum in import.metadata) {
           if (metadatum.element == globalQuantifyCapabilityConstructor) {
-            DartObjectImpl value = _getEvaluatedMetadatum(metadatum);
+            DartObject value = _getEvaluatedMetadatum(metadatum);
             if (value != null) {
-              String pattern = value.fields["classNamePattern"].toStringValue();
+              String pattern = value.getField("classNamePattern").toStringValue();
               if (pattern == null) {
                 // TODO(sigurdm) implement: Create a span for the annotation
                 // rather than the import.
@@ -3112,7 +3114,7 @@ class TransformerImplementation {
                 continue;
               }
               ClassElement reflector =
-                  value.fields["(super)"].fields["reflector"].type.element;
+                  value.getField("(super)").getField("reflector").type.element;
               if (reflector == null ||
                   reflector.type.element.supertype.element !=
                       reflectableClass) {
@@ -3134,21 +3136,21 @@ class TransformerImplementation {
             EvaluationResultImpl evaluation =
                 _annotationEvaluationResult(metadatum);
             if (evaluation?.value != null) {
-              DartObjectImpl value = evaluation.value;
+              DartObject value = evaluation.value;
               Object metadataFieldValue =
-                  value.fields["metadataType"].toTypeValue().element;
+                  value.getField("metadataType").toTypeValue().element;
               if (metadataFieldValue == null ||
-                  value.fields["metadataType"].type.element != typeClass) {
+                  value.getField("metadataType").type.element != typeClass) {
                 // TODO(sigurdm) implement: Create a span for the annotation.
                 _warn(
                     WarningKind.badMetadata,
                     "The metadata must be a Type. "
-                    "Found ${value.fields["metadataType"].type.element.name}",
+                    "Found ${value.getField("metadataType").type.element.name}",
                     import);
                 continue;
               }
               ClassElement reflector =
-                  value.fields["(super)"].fields["reflector"].type.element;
+                  value.getField("(super)").getField("reflector").type.element;
               if (reflector == null ||
                   reflector.type.element.supertype.element !=
                       reflectableClass) {
@@ -3468,7 +3470,7 @@ class TransformerImplementation {
       return ec.invokingCapability; // Error default.
     }
 
-    DartObjectImpl constant = evaluated.value;
+    DartObject constant = evaluated.value;
 
     if (constant == null) {
       // This could be because it is an argument to a `const` constructor,
@@ -3505,33 +3507,31 @@ class TransformerImplementation {
 
     /// Extracts the namePattern String from an instance of a subclass of
     /// NamePatternCapability.
-    String extractNamePattern(DartObjectImpl constant) {
-      if (constant.fields == null ||
-          constant.fields["(super)"] == null ||
-          constant.fields["(super)"].fields["namePattern"] == null ||
-          constant.fields["(super)"].fields["namePattern"].toStringValue() ==
+    String extractNamePattern(DartObject constant) {
+      if (constant.getField("(super)") == null ||
+          constant.getField("(super)").getField("namePattern") == null ||
+          constant.getField("(super)").getField("namePattern").toStringValue() ==
               null) {
         // TODO(eernst) implement: Add location info to message.
         _warn(WarningKind.badNamePattern,
             "Could not extract namePattern from capability.");
         return "";
       }
-      return constant.fields["(super)"].fields["namePattern"].toStringValue();
+      return constant.getField("(super)").getField("namePattern").toStringValue();
     }
 
     /// Extracts the metadata property from an instance of a subclass of
     /// MetadataCapability.
-    ClassElement extractMetaData(DartObjectImpl constant) {
-      if (constant.fields == null ||
-          constant.fields["(super)"] == null ||
-          constant.fields["(super)"].fields["metadataType"] == null) {
+    ClassElement extractMetaData(DartObject constant) {
+      if (constant.getField("(super)") == null ||
+          constant.getField("(super)").getField("metadataType") == null) {
         // TODO(eernst) implement: Add location info to message.
         _warn(WarningKind.badMetadata,
             "Could not extract metadata type from capability.");
         return null;
       }
       Object metadataFieldValue = constant
-          .fields["(super)"].fields["metadataType"]
+          .getField("(super)").getField("metadataType")
           .toTypeValue()
           .element;
       if (metadataFieldValue is! ClassElement) {
@@ -3592,12 +3592,12 @@ class TransformerImplementation {
         return ec.subtypeQuantifyCapability;
       case "SuperclassQuantifyCapability":
         return new ec.SuperclassQuantifyCapability(
-            constant.fields["upperBound"].toTypeValue().element,
+            constant.getField("upperBound").toTypeValue().element,
             excludeUpperBound:
-                constant.fields["excludeUpperBound"].toBoolValue());
+                constant.getField("excludeUpperBound").toBoolValue());
       case "TypeAnnotationQuantifyCapability":
         return new ec.TypeAnnotationQuantifyCapability(
-            transitive: constant.fields["transitive"].toBoolValue());
+            transitive: constant.getField("transitive").toBoolValue());
       case "_CorrespondingSetterQuantifyCapability":
         return ec.correspondingSetterQuantifyCapability;
       case "_AdmitSubtypeCapability":
@@ -4881,6 +4881,12 @@ class MixinApplication implements ClassElement {
   @override
   void visitChildren(ElementVisitor visitor) =>
       throw unreachableError("visitChildren");
+
+  @override
+  bool get isAlwaysThrows => throw unreachableError("isAlwaysThrows");
+
+  @override
+  bool get isVisibleForTesting => throw unreachableError("isVisibleForTesting");
 }
 
 bool _isSetterName(String name) => name.endsWith("=");
@@ -4986,7 +4992,7 @@ EvaluationResultImpl _constTopLevelVariableEvaluationResult(
 /// [LibraryElement]. As an exception, when [elementAnnotation] denotes
 /// a getter or a constructor, `evaluationResult` is null; the value is
 /// then obtained indirectly.
-DartObjectImpl _getEvaluatedMetadatum(ElementAnnotation elementAnnotation) {
+DartObject _getEvaluatedMetadatum(ElementAnnotation elementAnnotation) {
   fail() {
     throw unimplementedError(
         "Metadata has a not yet supported form: $elementAnnotation");
@@ -5025,7 +5031,7 @@ DartObjectImpl _getEvaluatedMetadatum(ElementAnnotation elementAnnotation) {
 ///
 /// Returns the result of evaluating each of the element annotations
 /// in [metadata] using [_getEvaluatedMetadatum].
-Iterable<DartObjectImpl> _getEvaluatedMetadata(
+Iterable<DartObject> _getEvaluatedMetadata(
     Iterable<ElementAnnotation> metadata) {
   return metadata.map(_getEvaluatedMetadatum);
 }
