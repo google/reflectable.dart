@@ -10,7 +10,12 @@ import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:barback/barback.dart';
+import 'package:package_resolver/package_resolver.dart';
+import "package:package_config/packages_file.dart" as packages_file;
 import 'package:source_span/source_span.dart';
+
+final RegExp testfileUriPattern =
+    new RegExp(r'file:///.*/reflectable/test/.*_test.dart');
 
 /// Collects logger-messages for inspection in tests.
 class MessageRecord {
@@ -22,8 +27,7 @@ class MessageRecord {
 }
 
 /// A transform that gets its main inputs from a [Map] from path to [String].
-/// If an input is not found there it will be looked up in [packageRoot].
-/// [packageRoot] should use the system path-separator.
+/// If an input is not found there it will be looked up in '.packages'.
 class TestTransform implements Transform {
   final String fileName;
   final String fileContents;
@@ -33,7 +37,23 @@ class TestTransform implements Transform {
   Asset _primaryAsset;
   AssetId _primaryAssetId;
   bool consumed = false;
-  String packageRoot;
+  Uri dotPackages;
+
+  Future<PackageResolver> packageResolver() async {
+    if (_packageResolver == null) {
+      String path = dotPackages.toFilePath();
+      io.File file = new io.File(path);
+      if (!(await file.exists())) {
+        logger.error("Package specification not found: $path");
+      }
+      String contents = await file.readAsString();
+      Map<String, Uri> map =
+          packages_file.parse(contents.codeUnits, dotPackages);
+      _packageResolver = new PackageResolver.config(map, uri: dotPackages);
+    }
+    return _packageResolver;
+  }
+  PackageResolver _packageResolver;
 
   final List<MessageRecord> messages = <MessageRecord>[];
 
@@ -41,35 +61,26 @@ class TestTransform implements Transform {
     messages.add(new MessageRecord(id, level, message, span));
   }
 
-  TestTransform(this.fileName, this.fileContents, this.package,
-      [String packageRoot]) {
-    this.packageRoot =
-        packageRoot == null ? io.Platform.packageRoot : packageRoot;
-    // The semantics of `io.Platform.packageRoot` suddenly changed from version
-    // dart-sdk-1.14.0-dev.4.0 to .5.0: It used to be passed on from the
-    // command line arguments directly, but starting from .5.0 it is being
-    // interpreted: If it is a relative path then it is turned into an absolute
-    // path, and an absolute path is in turn changed into a 'file://' uri.
-    // If [packageRoot] is a 'file://' uri then we reduce it to a path.
-    Uri uri;
-    if (this.packageRoot == null) {
-      logger.error("Cannot determine the package root, using './packages'.");
-      this.packageRoot = "./packages";
-    }
-    try {
-      uri = Uri.parse(this.packageRoot);
-      this.packageRoot = uri.path;
-    } on FormatException catch (_) {
-      // No problem, now we just know that `packageRoot` is not a well-formed
-      // uri; it should then be a path.
-    }
-    if (this.packageRoot.endsWith(io.Platform.pathSeparator)) {
-      this.packageRoot =
-          this.packageRoot.substring(0, this.packageRoot.length - 1);
-    }
+  TestTransform(
+      this.fileName, this.fileContents, this.package) {
     _primaryAssetId = new AssetId.parse(fileName);
     _primaryAsset = new Asset.fromString(_primaryAssetId, fileContents);
     assets[_primaryAssetId] = _primaryAsset;
+    Uri scriptUri = io.Platform.script;
+    String source = scriptUri.data?.contentAsString();
+    if (source != null) {
+      // `source` actually contains the entire program, which
+      // imports the test file using a uri with scheme 'file'.
+      Match match = testfileUriPattern.firstMatch(source);
+      if (match == null) {
+        logger.error("Unexpected Platform.script: $source");
+      }
+      scriptUri = Uri.parse(source.substring(match.start, match.end));
+    }
+    else if (scriptUri.hasScheme && scriptUri.scheme == 'http') {
+      logger.error("Platform.script has scheme 'http': Not supported");
+    }
+    dotPackages = scriptUri.resolve("../.packages");
   }
 
   @override
@@ -91,15 +102,13 @@ class TestTransform implements Transform {
     if (package == id.package) {
       path = id.path;
     } else {
-      String pathWithoutLib =
-          id.path.split('/').skip(1).join(io.Platform.pathSeparator);
-      path = [packageRoot, id.package, pathWithoutLib]
-          .join(io.Platform.pathSeparator);
+      String localPath = id.path.substring(4); // Delete 'lib/'.
+      PackageResolver resolver = await packageResolver();
+      Uri libraryUri = await resolver.urlFor(id.package, localPath);
+      path = libraryUri.toFilePath();
     }
     io.File file = new io.File(path);
-    if (!(await file.exists())) {
-      throw new AssetNotFoundException(id);
-    }
+    if (!(await file.exists())) throw new AssetNotFoundException(id);
     return new Asset.fromFile(id, file);
   }
 

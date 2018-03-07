@@ -6,10 +6,11 @@ library reflectable.test.mock_tests.check_literal_transform_test;
 
 /// Test the literal output of the transformation for a few simple cases.
 
+import 'dart:io';
 import 'package:barback/barback.dart';
 import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";
-import "package:unittest/unittest.dart";
+import "package:test/test.dart";
 
 var useReflect = [
   {

@@ -7,10 +7,11 @@ library reflectable.test.mock_tests.arguments_test;
 /// Check that attempts to have a non-empty argument list in a reflector
 /// constructor is detected and diagnosed as an error.
 
+import 'dart:io';
 import 'package:barback/barback.dart';
 import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";
-import "package:unittest/unittest.dart";
+import "package:test/test.dart";
 
 var sources = {
   "a|main.dart": """
