@@ -14,7 +14,8 @@ import 'package:package_resolver/package_resolver.dart';
 import "package:package_config/packages_file.dart" as packages_file;
 import 'package:source_span/source_span.dart';
 
-Uri dotPackages = io.Platform.script;
+final RegExp testfileUriPattern =
+    new RegExp(r'file:///.*/reflectable/test/.*_test.dart');
 
 /// Collects logger-messages for inspection in tests.
 class MessageRecord {
@@ -37,7 +38,22 @@ class TestTransform implements Transform {
   AssetId _primaryAssetId;
   bool consumed = false;
   Uri dotPackages;
-  PackageResolver packageResolver;
+
+  Future<PackageResolver> packageResolver() async {
+    if (_packageResolver == null) {
+      String path = dotPackages.toFilePath();
+      io.File file = new io.File(path);
+      if (!(await file.exists())) {
+        logger.error("Package specification not found: $path");
+      }
+      String contents = await file.readAsString();
+      Map<String, Uri> map =
+          packages_file.parse(contents.codeUnits, dotPackages);
+      _packageResolver = new PackageResolver.config(map, uri: dotPackages);
+    }
+    return _packageResolver;
+  }
+  PackageResolver _packageResolver;
 
   final List<MessageRecord> messages = <MessageRecord>[];
 
@@ -51,19 +67,17 @@ class TestTransform implements Transform {
     _primaryAsset = new Asset.fromString(_primaryAssetId, fileContents);
     assets[_primaryAssetId] = _primaryAsset;
     Uri scriptUri = io.Platform.script;
-    String uriDataScriptString = scriptUri.data?.contentAsString();
-    if (uriDataScriptString != null) {
-      // `uriDataScriptString` actually contains the entire program, which
-      // imports the test file using a `file:///` uri.
-      int startIndex = uriDataScriptString.indexOf("file:///");
-      if (startIndex == -1) {
-        logger.error("Unexpected Platform.script: $uriDataScriptString");
+    String source = scriptUri.data?.contentAsString();
+    if (source != null) {
+      // `source` actually contains the entire program, which
+      // imports the test file using a uri with scheme 'file'.
+      Match match = testfileUriPattern.firstMatch(source);
+      if (match == null) {
+        logger.error("Unexpected Platform.script: $source");
       }
-      int endIndex = uriDataScriptString.indexOf("\" as test;");
-      scriptUri =
-          Uri.parse(uriDataScriptString.substring(startIndex, endIndex));
+      scriptUri = Uri.parse(source.substring(match.start, match.end));
     }
-    if (scriptUri.hasScheme && scriptUri.scheme == 'http') {
+    else if (scriptUri.hasScheme && scriptUri.scheme == 'http') {
       logger.error("Platform.script has scheme 'http': Not supported");
     }
     dotPackages = scriptUri.resolve("../.packages");
@@ -75,17 +89,6 @@ class TestTransform implements Transform {
   /// The stream of primary inputs that will be processed by this transform.
   @override
   Asset get primaryInput => _primaryAsset;
-
-  Future _setupPackageResolver() async {
-    String path = dotPackages.toFilePath();
-    io.File file = new io.File(path);
-    if (!(await file.exists())) {
-      logger.error("Package specification not found: $path");
-    }
-    String contents = await file.readAsString();
-    Map<String, Uri> map = packages_file.parse(contents.codeUnits, dotPackages);
-    packageResolver = new PackageResolver.config(map, uri: dotPackages);
-  }
 
   /// Gets the asset for an input [id].
   ///
@@ -99,11 +102,10 @@ class TestTransform implements Transform {
     if (package == id.package) {
       path = id.path;
     } else {
-      if (packageResolver == null) await _setupPackageResolver();
-      String pathWithoutLib =
-          id.path.split('/').skip(1).join(io.Platform.pathSeparator);
-      path = (await packageResolver.urlFor(id.package, pathWithoutLib))
-          .toFilePath();
+      String localPath = id.path.substring(4); // Delete 'lib/'.
+      PackageResolver resolver = await packageResolver();
+      Uri libraryUri = await resolver.urlFor(id.package, localPath);
+      path = libraryUri.toFilePath();
     }
     io.File file = new io.File(path);
     if (!(await file.exists())) throw new AssetNotFoundException(id);
