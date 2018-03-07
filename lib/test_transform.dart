@@ -56,7 +56,7 @@ class TestTransform implements Transform {
       // `uriDataScriptString` actually contains the entire program, which
       // imports the test file using a `file:///` uri.
       int startIndex = uriDataScriptString.indexOf("file:///");
-      if (startIndex == 0) {
+      if (startIndex == -1) {
         logger.error("Unexpected Platform.script: $uriDataScriptString");
       }
       int endIndex = uriDataScriptString.indexOf("\" as test;");
