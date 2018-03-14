@@ -25,8 +25,8 @@ dependencies:
   path: '>=1.2.0 <1.6.0'
   source_span: '>=1.0.0 <1.5.0'
 dev_dependencies:
-  test: ^0.12.0
   build_test: ^0.10.0
+  test: ^0.12.0
 transformers:
 - $dart2js:
     commandLineOptions: [--show-package-warnings]
