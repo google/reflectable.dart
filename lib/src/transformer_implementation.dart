@@ -129,11 +129,8 @@ class ReflectionWorld {
   Map<ClassElement, Set<ClassElement>> _subtypesCache;
 
   /// Returns code which will create all the data structures (esp. mirrors)
-  /// needed to enable the correct behavior for all [reflectors]. The
-  /// [resolver] is used to obtain static analysis information about the
-  /// entry point for this world, i.e., [entryPointLibrary], the [logger]
-  /// is used to report diagnostic messages, and [dataId] specifies the
-  /// asset where the generated code will be stored.
+  /// needed to enable the correct behavior for all [reflectors]. The [logger]
+  /// is used to report diagnostic messages.
   String generateCode(TransformLogger logger) {
     Iterable<String> reflectorsCode =
         reflectors.map((_ReflectorDomain reflector) {
@@ -3774,6 +3771,7 @@ initializeReflectable() {
       if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
         _processedEntryPointCount++;
       }
+      _resolver.release();
       return;
     }
     reflectableLibrary = _resolvedLibraryOf(reflectableLibrary);
@@ -3790,6 +3788,7 @@ initializeReflectable() {
       if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
         _processedEntryPointCount++;
       }
+      _resolver.release();
       return;
     }
 
@@ -3799,6 +3798,7 @@ initializeReflectable() {
       if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
         _processedEntryPointCount++;
       }
+      _resolver.release();
       return;
     }
 
