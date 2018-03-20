@@ -1237,12 +1237,10 @@ class _ReflectorDomain {
     });
 
     String declarationsCode = _capabilities._impliesDeclarations
-        ? _formatAsConstList(
-            "int",
-            () sync* {
-              yield* fieldsIndices;
-              yield* methodsIndices;
-            }())
+        ? _formatAsConstList("int", () sync* {
+            yield* fieldsIndices;
+            yield* methodsIndices;
+          }())
         : "const <int>[${constants.NO_CAPABILITY_INDEX}]";
 
     // All instance members belong to the behavioral interface, so they
@@ -1695,13 +1693,13 @@ class _ReflectorDomain {
       [Set<String> typeVariablesInScope]) {
     if (type is TypeParameterType &&
         (typeVariablesInScope == null ||
-         !typeVariablesInScope.contains(type.name))) {
+            !typeVariablesInScope.contains(type.name))) {
       return false;
     }
     if (type is InterfaceType) {
       if (type.typeArguments.isEmpty) return true;
-      return type.typeArguments.every(
-          (type) => _hasNoFreeTypeVariables(type, typeVariablesInScope));
+      return type.typeArguments
+          .every((type) => _hasNoFreeTypeVariables(type, typeVariablesInScope));
     }
     // Possible kinds of types at this point (apart from several types
     // indicating an error that we do not expect here): `BottomTypeImpl`,
@@ -1736,10 +1734,10 @@ class _ReflectorDomain {
         return "$prefix${classElement.name}";
       } else {
         if (dartType.typeArguments.every(
-                (type) => _hasNoFreeTypeVariables(type, typeVariablesInScope))) {
+            (type) => _hasNoFreeTypeVariables(type, typeVariablesInScope))) {
           String arguments = dartType.typeArguments
-              .map((DartType typeArgument) =>
-                   _typeCodeOfTypeArgument(typeArgument, importCollector, typeVariablesInScope))
+              .map((DartType typeArgument) => _typeCodeOfTypeArgument(
+                  typeArgument, importCollector, typeVariablesInScope))
               .join(', ');
           return "$prefix${classElement.name}<$arguments>";
         } else {
@@ -1755,44 +1753,44 @@ class _ReflectorDomain {
         if (!dartType.typeFormals.isEmpty) {
           if (typeVariablesInScope == null) {
             typeVariablesInScope = new Set<String>();
-            for (TypeParameterElement element in dartType.typeFormals) {
-              typeVariablesInScope.add(element.name);
-            }
+          }
+          for (TypeParameterElement element in dartType.typeFormals) {
+            typeVariablesInScope.add(element.name);
           }
         }
-        String returnType =
-            _typeCodeOfTypeArgument(dartType.returnType, importCollector, typeVariablesInScope);
+        String returnType = _typeCodeOfTypeArgument(
+            dartType.returnType, importCollector, typeVariablesInScope);
         String typeArguments = "";
         if (!dartType.typeFormals.isEmpty) {
-          List<String> typeArgumentList = dartType.typeArguments
-              .map((DartType typeArgument) =>
-                   _typeCodeOfTypeArgument(typeArgument, importCollector, typeVariablesInScope));
+          List<String> typeArgumentList = dartType.typeFormals.map(
+              (TypeParameterElement typeParameter) => typeParameter.toString());
           typeArguments = "<${typeArgumentList.join(', ')}>";
         }
         String argumentTypes = "";
         if (!dartType.normalParameterTypes.isEmpty) {
           List<String> normalParameterTypeList = dartType.normalParameterTypes
-              .map((DartType parameterType) =>
-                   _typeCodeOfTypeArgument(parameterType, importCollector, typeVariablesInScope));
+              .map((DartType parameterType) => _typeCodeOfTypeArgument(
+                  parameterType, importCollector, typeVariablesInScope));
           argumentTypes = normalParameterTypeList.join(', ');
         }
         if (!dartType.optionalParameterTypes.isEmpty) {
           List<String> optionalParameterTypeList = dartType
-              .optionalParameterTypes.map((DartType parameterType) =>
-                                          _typeCodeOfTypeArgument(parameterType, importCollector, typeVariablesInScope));
+              .optionalParameterTypes
+              .map((DartType parameterType) => _typeCodeOfTypeArgument(
+                  parameterType, importCollector, typeVariablesInScope));
           String connector = argumentTypes.length == 0 ? "" : ", ";
           argumentTypes = "$argumentTypes$connector"
               "[${optionalParameterTypeList.join(', ')}]";
         }
         if (!dartType.namedParameterTypes.isEmpty) {
           Map<String, DartType> parameterMap = dartType.namedParameterTypes;
-          List<String> namedParameterTypeList = parameterMap.keys
-              .map((String name) {
-                  DartType parameterType = parameterMap[name];
-                  String typeCode =
-                      _typeCodeOfTypeArgument(parameterType, importCollector, typeVariablesInScope);
-                  return "$name: $typeCode";
-                });
+          List<String> namedParameterTypeList =
+              parameterMap.keys.map((String name) {
+            DartType parameterType = parameterMap[name];
+            String typeCode = _typeCodeOfTypeArgument(
+                parameterType, importCollector, typeVariablesInScope);
+            return "$typeCode $name";
+          });
           String connector = argumentTypes.length == 0 ? "" : ", ";
           argumentTypes = "$argumentTypes$connector"
               "{${namedParameterTypeList.join(', ')}}";
@@ -1800,8 +1798,8 @@ class _ReflectorDomain {
         return "$returnType Function$typeArguments($argumentTypes)";
       }
     } else if (dartType is TypeParameterType &&
-               typeVariablesInScope != null &&
-               typeVariablesInScope.contains(dartType.name)) {
+        typeVariablesInScope != null &&
+        typeVariablesInScope.contains(dartType.name)) {
       return dartType.name;
     } else {
       throw fail();
@@ -2135,8 +2133,10 @@ class _SuperclassFixedPoint extends FixedPoint<ClassElement> {
         if (classElement.supertype == null) return false;
         return helper(classElement.supertype.element, false);
       }
+
       return upwardsClosureBounds.keys.any(isSuperclassOfClassElement);
     }
+
     return upwardsClosureBounds.isEmpty || helper(classElement, true);
   }
 }
@@ -2473,8 +2473,10 @@ class _ClassDomain {
         if (member.isPrivate) return;
         // If [member] is a synthetic accessor created from a field, search for
         // the metadata on the original field.
-        List<ElementAnnotation> metadata = (member is PropertyAccessorElement &&
-            member.isSynthetic) ? member.variable.metadata : member.metadata;
+        List<ElementAnnotation> metadata =
+            (member is PropertyAccessorElement && member.isSynthetic)
+                ? member.variable.metadata
+                : member.metadata;
         List<ElementAnnotation> getterMetadata = null;
         if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
             member is PropertyAccessorElement &&
@@ -3165,7 +3167,8 @@ class TransformerImplementation {
           if (metadatum.element == globalQuantifyCapabilityConstructor) {
             DartObject value = _getEvaluatedMetadatum(metadatum);
             if (value != null) {
-              String pattern = value.getField("classNamePattern").toStringValue();
+              String pattern =
+                  value.getField("classNamePattern").toStringValue();
               if (pattern == null) {
                 // TODO(sigurdm) implement: Create a span for the annotation
                 // rather than the import.
@@ -3570,14 +3573,20 @@ class TransformerImplementation {
     String extractNamePattern(DartObject constant) {
       if (constant.getField("(super)") == null ||
           constant.getField("(super)").getField("namePattern") == null ||
-          constant.getField("(super)").getField("namePattern").toStringValue() ==
+          constant
+                  .getField("(super)")
+                  .getField("namePattern")
+                  .toStringValue() ==
               null) {
         // TODO(eernst) implement: Add location info to message.
         _warn(WarningKind.badNamePattern,
             "Could not extract namePattern from capability.");
         return "";
       }
-      return constant.getField("(super)").getField("namePattern").toStringValue();
+      return constant
+          .getField("(super)")
+          .getField("namePattern")
+          .toStringValue();
     }
 
     /// Extracts the metadata property from an instance of a subclass of
@@ -3591,7 +3600,8 @@ class TransformerImplementation {
         return null;
       }
       Object metadataFieldValue = constant
-          .getField("(super)").getField("metadataType")
+          .getField("(super)")
+          .getField("metadataType")
           .toTypeValue()
           .element;
       if (metadataFieldValue is! ClassElement) {
