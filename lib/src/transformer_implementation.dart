@@ -1639,8 +1639,7 @@ class _ReflectorDomain {
           new ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
       return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
-    } else if (dartType is FunctionType &&
-        dartType.element is FunctionTypeAliasElement) {
+    } else if (dartType is FunctionType) {
       ErasableDartType erasableDartType =
           new ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
@@ -1679,8 +1678,7 @@ class _ReflectorDomain {
           erased: dartType.typeArguments.isNotEmpty);
       reflectedTypes.add(erasableDartType);
       return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
-    } else if (dartType is FunctionType &&
-        dartType.element is FunctionTypeAliasElement) {
+    } else if (dartType is FunctionType) {
       ErasableDartType erasableDartType =
           new ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
@@ -1690,13 +1688,20 @@ class _ReflectorDomain {
     return constants.NO_CAPABILITY_INDEX;
   }
 
-  /// Returns true iff the given [type] is not and does not contain a type
-  /// variable.
-  bool _isTypeVariableFree(DartType type) {
-    if (type is TypeParameterType) return false;
+  /// Returns true iff the given [type] is not and does not contain a free
+  /// type variable. [typeVariablesInScope] gives the names of type variables
+  /// which are in scope (and hence not free in the relevant context).
+  bool _hasNoFreeTypeVariables(DartType type,
+      [Set<String> typeVariablesInScope]) {
+    if (type is TypeParameterType &&
+        (typeVariablesInScope == null ||
+         !typeVariablesInScope.contains(type.name))) {
+      return false;
+    }
     if (type is InterfaceType) {
       if (type.typeArguments.isEmpty) return true;
-      return type.typeArguments.every(_isTypeVariableFree);
+      return type.typeArguments.every(
+          (type) => _hasNoFreeTypeVariables(type, typeVariablesInScope));
     }
     // Possible kinds of types at this point (apart from several types
     // indicating an error that we do not expect here): `BottomTypeImpl`,
@@ -1711,7 +1716,8 @@ class _ReflectorDomain {
   /// find the library prefixes needed in order to obtain values from other
   /// libraries.
   String _typeCodeOfTypeArgument(
-      DartType dartType, _ImportCollector importCollector) {
+      DartType dartType, _ImportCollector importCollector,
+      [Set<String> typeVariablesInScope]) {
     fail() {
       return unimplementedError(
           "Attempt to generate code for an unsupported kind of type $dartType");
@@ -1729,21 +1735,74 @@ class _ReflectorDomain {
       if (classElement.typeParameters.isEmpty) {
         return "$prefix${classElement.name}";
       } else {
-        if (dartType.typeArguments.every(_isTypeVariableFree)) {
+        if (dartType.typeArguments.every(
+                (type) => _hasNoFreeTypeVariables(type, typeVariablesInScope))) {
           String arguments = dartType.typeArguments
               .map((DartType typeArgument) =>
-                  _typeCodeOfTypeArgument(typeArgument, importCollector))
+                   _typeCodeOfTypeArgument(typeArgument, importCollector, typeVariablesInScope))
               .join(', ');
           return "$prefix${classElement.name}<$arguments>";
         } else {
           throw fail();
         }
       }
-    } else if (dartType is FunctionType &&
-        dartType.element is FunctionTypeAliasElement) {
-      FunctionTypeAliasElement element = dartType.element;
-      String prefix = importCollector._getPrefix(element.library);
-      return "$prefix${element.name}";
+    } else if (dartType is FunctionType) {
+      if (dartType is FunctionTypeAliasElement) {
+        FunctionTypeAliasElement element = dartType.element;
+        String prefix = importCollector._getPrefix(element.library);
+        return "$prefix${element.name}";
+      } else {
+        if (!dartType.typeFormals.isEmpty) {
+          if (typeVariablesInScope == null) {
+            typeVariablesInScope = new Set<String>();
+            for (TypeParameterElement element in dartType.typeFormals) {
+              typeVariablesInScope.add(element.name);
+            }
+          }
+        }
+        String returnType =
+            _typeCodeOfTypeArgument(dartType.returnType, importCollector, typeVariablesInScope);
+        String typeArguments = "";
+        if (!dartType.typeFormals.isEmpty) {
+          List<String> typeArgumentList = dartType.typeArguments
+              .map((DartType typeArgument) =>
+                   _typeCodeOfTypeArgument(typeArgument, importCollector, typeVariablesInScope));
+          typeArguments = "<${typeArgumentList.join(', ')}>";
+        }
+        String argumentTypes = "";
+        if (!dartType.normalParameterTypes.isEmpty) {
+          List<String> normalParameterTypeList = dartType.normalParameterTypes
+              .map((DartType parameterType) =>
+                   _typeCodeOfTypeArgument(parameterType, importCollector, typeVariablesInScope));
+          argumentTypes = normalParameterTypeList.join(', ');
+        }
+        if (!dartType.optionalParameterTypes.isEmpty) {
+          List<String> optionalParameterTypeList = dartType
+              .optionalParameterTypes.map((DartType parameterType) =>
+                                          _typeCodeOfTypeArgument(parameterType, importCollector, typeVariablesInScope));
+          String connector = argumentTypes.length == 0 ? "" : ", ";
+          argumentTypes = "$argumentTypes$connector"
+              "[${optionalParameterTypeList.join(', ')}]";
+        }
+        if (!dartType.namedParameterTypes.isEmpty) {
+          Map<String, DartType> parameterMap = dartType.namedParameterTypes;
+          List<String> namedParameterTypeList = parameterMap.keys
+              .map((String name) {
+                  DartType parameterType = parameterMap[name];
+                  String typeCode =
+                      _typeCodeOfTypeArgument(parameterType, importCollector, typeVariablesInScope);
+                  return "$name: $typeCode";
+                });
+          String connector = argumentTypes.length == 0 ? "" : ", ";
+          argumentTypes = "$argumentTypes$connector"
+              "{${namedParameterTypeList.join(', ')}}";
+        }
+        return "$returnType Function$typeArguments($argumentTypes)";
+      }
+    } else if (dartType is TypeParameterType &&
+               typeVariablesInScope != null &&
+               typeVariablesInScope.contains(dartType.name)) {
+      return dartType.name;
     } else {
       throw fail();
     }
@@ -1777,7 +1836,7 @@ class _ReflectorDomain {
       if (classElement.typeParameters.isEmpty) {
         return "$prefix${classElement.name}";
       } else {
-        if (dartType.typeArguments.every(_isTypeVariableFree)) {
+        if (dartType.typeArguments.every(_hasNoFreeTypeVariables)) {
           return "const m.TypeValue"
               "<${_typeCodeOfTypeArgument(dartType, importCollector)}>().type";
         } else {
@@ -1788,14 +1847,18 @@ class _ReflectorDomain {
               'r"${_qualifiedName(classElement)}<$arguments>")';
         }
       }
-    } else if (dartType is FunctionType &&
-        dartType.element is FunctionTypeAliasElement) {
+    } else if (dartType is FunctionType) {
       if (dartType.element.isPrivate) {
         return 'const r.FakeType(r"${_qualifiedName(dartType.element)}")';
       }
-      FunctionTypeAliasElement element = dartType.element;
-      String prefix = importCollector._getPrefix(element.library);
-      return "$prefix${element.name}";
+      if (dartType.element is FunctionTypeAliasElement) {
+        FunctionTypeAliasElement element = dartType.element;
+        String prefix = importCollector._getPrefix(element.library);
+        return "$prefix${element.name}";
+      } else {
+        return "const m.TypeValue"
+            "<${_typeCodeOfTypeArgument(dartType, importCollector)}>().type";
+      }
     } else {
       throw unimplementedError(
           "Attempt to generate code for an unsupported kind of type $dartType");
