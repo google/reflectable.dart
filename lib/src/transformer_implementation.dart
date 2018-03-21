@@ -141,10 +141,9 @@ class ReflectionWorld {
           reflector._generateCode(this, importCollector, logger, typedefs);
       if (!typedefs.isEmpty) {
         for (DartType dartType in typedefs.keys) {
-          String body =
-              reflector._typeCodeOfTypeArgument(
-                  dartType, importCollector, typeVariablesInScope, typedefs,
-                  useNameOfGenericFunctionType: false);
+          String body = reflector._typeCodeOfTypeArgument(
+              dartType, importCollector, typeVariablesInScope, typedefs,
+              useNameOfGenericFunctionType: false);
           typedefsCode +=
               "\ntypedef ${_typedefName(typedefs[dartType])} = $body;";
         }
@@ -1478,8 +1477,8 @@ class _ReflectorDomain {
                 .map(indexOf));
       }
 
-      int dynamicReflectedTypeIndex = _dynamicTypeCodeIndex(
-          classElement.type, classes, reflectedTypes, reflectedTypesOffset, typedefs);
+      int dynamicReflectedTypeIndex = _dynamicTypeCodeIndex(classElement.type,
+          classes, reflectedTypes, reflectedTypesOffset, typedefs);
 
       return 'new r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
@@ -1515,12 +1514,12 @@ class _ReflectorDomain {
       assert(variableMirrorIndex != null);
       int reflectedTypeIndex = reflectedTypeRequested
           ? _typeCodeIndex(accessorElement.variable.type, classes,
-                           reflectedTypes, reflectedTypesOffset, typedefs)
+              reflectedTypes, reflectedTypesOffset, typedefs)
           : constants.NO_CAPABILITY_INDEX;
       // Do not check `reflectedTypeIndex != null`, null means dynamic.
       int dynamicReflectedTypeIndex = reflectedTypeRequested
           ? _dynamicTypeCodeIndex(accessorElement.variable.type, classes,
-                                  reflectedTypes, reflectedTypesOffset, typedefs)
+              reflectedTypes, reflectedTypesOffset, typedefs)
           : constants.NO_CAPABILITY_INDEX;
       // Do not check `dynamicReflectedTypeIndex != null`, null means dynamic.
       int selfIndex = members.indexOf(accessorElement) + fields.length;
@@ -1549,13 +1548,17 @@ class _ReflectorDomain {
       }));
       int reflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
       if (!element.returnType.isVoid && reflectedTypeRequested) {
-        reflectedReturnTypeIndex = _typeCodeIndex(
-            element.returnType, classes, reflectedTypes, reflectedTypesOffset, typedefs);
+        reflectedReturnTypeIndex = _typeCodeIndex(element.returnType, classes,
+            reflectedTypes, reflectedTypesOffset, typedefs);
       }
       int dynamicReflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
       if (!element.returnType.isVoid && reflectedTypeRequested) {
         dynamicReflectedReturnTypeIndex = _dynamicTypeCodeIndex(
-            element.returnType, classes, reflectedTypes, reflectedTypesOffset, typedefs);
+            element.returnType,
+            classes,
+            reflectedTypes,
+            reflectedTypesOffset,
+            typedefs);
       }
       String metadataCode = _capabilities._supportsMetadata
           ? _extractMetadataCode(
@@ -1581,12 +1584,12 @@ class _ReflectorDomain {
         _libraries.indexOf(element.enclosingElement.enclosingElement);
     int classMirrorIndex = _computeVariableTypeIndex(element, descriptor);
     int reflectedTypeIndex = reflectedTypeRequested
-        ? _typeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
+        ? _typeCodeIndex(element.type, classes, reflectedTypes,
+            reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     int dynamicReflectedTypeIndex = reflectedTypeRequested
-        ? _dynamicTypeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
+        ? _dynamicTypeCodeIndex(element.type, classes, reflectedTypes,
+            reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -1615,12 +1618,12 @@ class _ReflectorDomain {
     int ownerIndex = classes.indexOf(element.enclosingElement);
     int classMirrorIndex = _computeVariableTypeIndex(element, descriptor);
     int reflectedTypeIndex = reflectedTypeRequested
-        ? _typeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
+        ? _typeCodeIndex(element.type, classes, reflectedTypes,
+            reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     int dynamicReflectedTypeIndex = reflectedTypeRequested
-        ? _dynamicTypeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
+        ? _dynamicTypeCodeIndex(element.type, classes, reflectedTypes,
+            reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -1646,8 +1649,11 @@ class _ReflectorDomain {
   /// as computed by [reflectedTypes], because the elements in there will be
   /// added to `ReflectorData.types` after the elements of [classes] have been
   /// added.
-  int _typeCodeIndex(DartType dartType, ClassElementEnhancedSet classes,
-      Enumerator<ErasableDartType> reflectedTypes, int reflectedTypesOffset,
+  int _typeCodeIndex(
+      DartType dartType,
+      ClassElementEnhancedSet classes,
+      Enumerator<ErasableDartType> reflectedTypes,
+      int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
     // The type `dynamic` is handled via the `dynamicAttribute` bit.
     if (dartType.isDynamic) return null;
@@ -1692,8 +1698,11 @@ class _ReflectorDomain {
   /// [reflectedTypesOffset] is used to adjust the index as computed by
   /// [reflectedTypes], because the elements in there will be added to
   /// `ReflectorData.types` after the elements of [classes] have been added.
-  int _dynamicTypeCodeIndex(DartType dartType, ClassElementEnhancedSet classes,
-      Enumerator<ErasableDartType> reflectedTypes, int reflectedTypesOffset,
+  int _dynamicTypeCodeIndex(
+      DartType dartType,
+      ClassElementEnhancedSet classes,
+      Enumerator<ErasableDartType> reflectedTypes,
+      int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
     // The type `dynamic` is handled via the `dynamicAttribute` bit.
     if (dartType.isDynamic) return null;
@@ -1722,7 +1731,6 @@ class _ReflectorDomain {
         typedefs[dartType] = index;
       }
       return index;
-
     }
     // We only handle the kinds of types already covered above.
     return constants.NO_CAPABILITY_INDEX;
@@ -1764,7 +1772,8 @@ class _ReflectorDomain {
   /// name or a fully spelled-out generic function type (and it has no
   /// effect when [dartType] is not a generic function type).
   String _typeCodeOfTypeArgument(
-      DartType dartType, _ImportCollector importCollector,
+      DartType dartType,
+      _ImportCollector importCollector,
       Set<String> typeVariablesInScope,
       Map<FunctionType, int> typedefs,
       {bool useNameOfGenericFunctionType = true}) {
@@ -1789,7 +1798,10 @@ class _ReflectorDomain {
             (type) => _hasNoFreeTypeVariables(type, typeVariablesInScope))) {
           String arguments = dartType.typeArguments
               .map((DartType typeArgument) => _typeCodeOfTypeArgument(
-                  typeArgument, importCollector, typeVariablesInScope, typedefs))
+                  typeArgument,
+                  importCollector,
+                  typeVariablesInScope,
+                  typedefs))
               .join(', ');
           return "$prefix${classElement.name}<$arguments>";
         } else {
@@ -1820,8 +1832,8 @@ class _ReflectorDomain {
             }
           }
         }
-        String returnType = _typeCodeOfTypeArgument(
-            dartType.returnType, importCollector, typeVariablesInScope, typedefs);
+        String returnType = _typeCodeOfTypeArgument(dartType.returnType,
+            importCollector, typeVariablesInScope, typedefs);
         String typeArguments = "";
         if (!dartType.typeFormals.isEmpty) {
           List<String> typeArgumentList = dartType.typeFormals.map(
@@ -1832,14 +1844,20 @@ class _ReflectorDomain {
         if (!dartType.normalParameterTypes.isEmpty) {
           List<String> normalParameterTypeList = dartType.normalParameterTypes
               .map((DartType parameterType) => _typeCodeOfTypeArgument(
-                  parameterType, importCollector, typeVariablesInScope, typedefs));
+                  parameterType,
+                  importCollector,
+                  typeVariablesInScope,
+                  typedefs));
           argumentTypes = normalParameterTypeList.join(', ');
         }
         if (!dartType.optionalParameterTypes.isEmpty) {
           List<String> optionalParameterTypeList = dartType
               .optionalParameterTypes
               .map((DartType parameterType) => _typeCodeOfTypeArgument(
-                  parameterType, importCollector, typeVariablesInScope, typedefs));
+                  parameterType,
+                  importCollector,
+                  typeVariablesInScope,
+                  typedefs));
           String connector = argumentTypes.length == 0 ? "" : ", ";
           argumentTypes = "$argumentTypes$connector"
               "[${optionalParameterTypeList.join(', ')}]";
@@ -1899,8 +1917,8 @@ class _ReflectorDomain {
         return "$prefix${classElement.name}";
       } else {
         if (dartType.typeArguments.every(_hasNoFreeTypeVariables)) {
-          String typeArgumentCode =
-              _typeCodeOfTypeArgument(dartType, importCollector, typeVariablesInScope, typedefs);
+          String typeArgumentCode = _typeCodeOfTypeArgument(
+              dartType, importCollector, typeVariablesInScope, typedefs);
           return "const m.TypeValue<$typeArgumentCode>().type";
         } else {
           String arguments = dartType.typeArguments
@@ -1922,10 +1940,12 @@ class _ReflectorDomain {
         if (!dartType.typeFormals.isEmpty) {
           // `dartType` is a generic function type, so we must use a
           // separately generated `typedef` to obtain a `Type` for it.
-          return _typeCodeOfTypeArgument(dartType, importCollector, typeVariablesInScope, typedefs, useNameOfGenericFunctionType: true);
+          return _typeCodeOfTypeArgument(
+              dartType, importCollector, typeVariablesInScope, typedefs,
+              useNameOfGenericFunctionType: true);
         } else {
-          String typeArgumentCode =
-              _typeCodeOfTypeArgument(dartType, importCollector, typeVariablesInScope, typedefs);
+          String typeArgumentCode = _typeCodeOfTypeArgument(
+              dartType, importCollector, typeVariablesInScope, typedefs);
           return "const m.TypeValue<$typeArgumentCode>().type";
         }
       }
@@ -2079,12 +2099,12 @@ class _ReflectorDomain {
       classMirrorIndex = constants.NO_CAPABILITY_INDEX;
     }
     int reflectedTypeIndex = reflectedTypeRequested
-        ? _typeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
+        ? _typeCodeIndex(element.type, classes, reflectedTypes,
+            reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     int dynamicReflectedTypeIndex = reflectedTypeRequested
-        ? _dynamicTypeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
+        ? _dynamicTypeCodeIndex(element.type, classes, reflectedTypes,
+            reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
