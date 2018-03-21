@@ -10,7 +10,7 @@ OPTIONS=--checked --package-root=$(PACKAGE_ROOT)
 TEST_DIR=../test
 XFORM_DIR=../test/to_be_transformed
 
-all: get clean build check test
+all: get check pub_test
 
 g: get
 
@@ -18,11 +18,9 @@ u: upgrade
 
 c: check
 
-b: build
-
 t: test
 
-cb: clean build
+pt: pub_test
 
 get:
 	( cd ..; pub get )
@@ -31,7 +29,7 @@ upgrade:
 	( cd ..; pub upgrade )
 
 check:
-	( cd ..; dartanalyzer `find lib test -name \*.dart` )
+	( cd ..; dartanalyzer --preview-dart-2 `find lib test -name \*.dart` )
 
 build:
 	@echo "[No actions for build in reflectable]"
@@ -39,6 +37,9 @@ build:
 test:
 	@echo "-------------------- mock_tests"
 	@./run_tests
+
+pub_test:
+	( cd ..; pub run test )
 
 clean:
 	@echo "[No actions for clean in reflectable]"
