@@ -132,14 +132,28 @@ class ReflectionWorld {
   /// needed to enable the correct behavior for all [reflectors]. The [logger]
   /// is used to report diagnostic messages.
   String generateCode(TransformLogger logger) {
+    var typedefs = <FunctionType, int>{};
+    var typeVariablesInScope = new Set<String>(); // None at top level.
+    String typedefsCode = "\n";
     Iterable<String> reflectorsCode =
         reflectors.map((_ReflectorDomain reflector) {
       String reflectorCode =
-          reflector._generateCode(this, importCollector, logger);
+          reflector._generateCode(this, importCollector, logger, typedefs);
+      if (!typedefs.isEmpty) {
+        for (DartType dartType in typedefs.keys) {
+          String body =
+              reflector._typeCodeOfTypeArgument(
+                  dartType, importCollector, typeVariablesInScope, typedefs,
+                  useGenericFunctionType: true);
+          typedefsCode +=
+              "\ntypedef ${_typedefName(typedefs[dartType])} = $body";
+        }
+        typedefs.clear();
+      }
       return "${reflector._constConstructionCode(importCollector, logger)}: "
           "$reflectorCode";
     });
-    return _formatAsMap(reflectorsCode);
+    return "final _data = ${_formatAsMap(reflectorsCode)};$typedefsCode";
   }
 
   /// Returns code which defines a mapping from symbols for covered members
@@ -753,7 +767,7 @@ class _ReflectorDomain {
   /// containing the mirrors and other reflection data which is needed for
   /// `_reflector` to behave correctly.
   String _generateCode(ReflectionWorld world, _ImportCollector importCollector,
-      TransformLogger logger) {
+      TransformLogger logger, Map<FunctionType, int> typedefs) {
     // Library related collections.
     Enumerator<_LibraryDomain> libraries = new Enumerator<_LibraryDomain>();
     Map<LibraryElement, _LibraryDomain> libraryMap =
@@ -979,6 +993,7 @@ class _ReflectorDomain {
                 libraries,
                 libraryMap,
                 importCollector,
+                typedefs,
                 logger));
         yield* typeParameters.items.map(
             (TypeParameterElement typeParameterElement) =>
@@ -1005,11 +1020,12 @@ class _ReflectorDomain {
           reflectedTypesOffset,
           importCollector,
           logger,
+          typedefs,
           reflectedTypeRequested);
     });
     Iterable<String> fieldsList = fields.items.map((FieldElement element) {
       return _fieldMirrorCode(element, reflectedTypes, reflectedTypesOffset,
-          importCollector, logger, reflectedTypeRequested);
+          importCollector, logger, typedefs, reflectedTypeRequested);
     });
     String membersCode = "null";
     if (_capabilities._impliesDeclarations) {
@@ -1025,6 +1041,7 @@ class _ReflectorDomain {
             parameters,
             importCollector,
             logger,
+            typedefs,
             reflectedTypeRequested);
       });
       Iterable<String> membersList = () sync* {
@@ -1048,6 +1065,7 @@ class _ReflectorDomain {
             reflectedTypesOffset,
             importCollector,
             logger,
+            typedefs,
             reflectedTypeRequested);
       });
       parameterMirrorsCode = _formatAsList("m.ParameterMirror", parametersList);
@@ -1063,7 +1081,8 @@ class _ReflectorDomain {
           return _dynamicTypeCodeOfClass(
               erasableDartType.dartType.element, importCollector);
         } else {
-          return _typeCodeOfClass(erasableDartType.dartType, importCollector);
+          return _typeCodeOfClass(
+              erasableDartType.dartType, importCollector, typedefs);
         }
       });
     }();
@@ -1207,6 +1226,7 @@ class _ReflectorDomain {
       Enumerator<_LibraryDomain> libraries,
       Map<LibraryElement, _LibraryDomain> libraryMap,
       _ImportCollector importCollector,
+      Map<FunctionType, int> typedefs,
       TransformLogger logger) {
     int descriptor = _classDescriptor(classDomain._classElement);
 
@@ -1455,7 +1475,7 @@ class _ReflectorDomain {
       }
 
       int dynamicReflectedTypeIndex = _dynamicTypeCodeIndex(
-          classElement.type, classes, reflectedTypes, reflectedTypesOffset);
+          classElement.type, classes, reflectedTypes, reflectedTypesOffset, typedefs);
 
       return 'new r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
@@ -1479,6 +1499,7 @@ class _ReflectorDomain {
       Enumerator<ParameterElement> parameters,
       _ImportCollector importCollector,
       TransformLogger logger,
+      Map<FunctionType, int> typedefs,
       bool reflectedTypeRequested) {
     if (element is PropertyAccessorElement && element.isSynthetic) {
       // There is no type propagation, so we declare an `accessorElement`.
@@ -1490,12 +1511,12 @@ class _ReflectorDomain {
       assert(variableMirrorIndex != null);
       int reflectedTypeIndex = reflectedTypeRequested
           ? _typeCodeIndex(accessorElement.variable.type, classes,
-              reflectedTypes, reflectedTypesOffset)
+                           reflectedTypes, reflectedTypesOffset, typedefs)
           : constants.NO_CAPABILITY_INDEX;
       // Do not check `reflectedTypeIndex != null`, null means dynamic.
       int dynamicReflectedTypeIndex = reflectedTypeRequested
           ? _dynamicTypeCodeIndex(accessorElement.variable.type, classes,
-              reflectedTypes, reflectedTypesOffset)
+                                  reflectedTypes, reflectedTypesOffset, typedefs)
           : constants.NO_CAPABILITY_INDEX;
       // Do not check `dynamicReflectedTypeIndex != null`, null means dynamic.
       int selfIndex = members.indexOf(accessorElement) + fields.length;
@@ -1525,12 +1546,12 @@ class _ReflectorDomain {
       int reflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
       if (!element.returnType.isVoid && reflectedTypeRequested) {
         reflectedReturnTypeIndex = _typeCodeIndex(
-            element.returnType, classes, reflectedTypes, reflectedTypesOffset);
+            element.returnType, classes, reflectedTypes, reflectedTypesOffset, typedefs);
       }
       int dynamicReflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
       if (!element.returnType.isVoid && reflectedTypeRequested) {
         dynamicReflectedReturnTypeIndex = _dynamicTypeCodeIndex(
-            element.returnType, classes, reflectedTypes, reflectedTypesOffset);
+            element.returnType, classes, reflectedTypes, reflectedTypesOffset, typedefs);
       }
       String metadataCode = _capabilities._supportsMetadata
           ? _extractMetadataCode(
@@ -1549,6 +1570,7 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       _ImportCollector importCollector,
       TransformLogger logger,
+      Map<FunctionType, int> typedefs,
       bool reflectedTypeRequested) {
     int descriptor = _topLevelVariableDescriptor(element);
     int ownerIndex =
@@ -1556,11 +1578,11 @@ class _ReflectorDomain {
     int classMirrorIndex = _computeVariableTypeIndex(element, descriptor);
     int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset)
+            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     int dynamicReflectedTypeIndex = reflectedTypeRequested
         ? _dynamicTypeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset)
+            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -1583,17 +1605,18 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       _ImportCollector importCollector,
       TransformLogger logger,
+      Map<FunctionType, int> typedefs,
       bool reflectedTypeRequested) {
     int descriptor = _fieldDescriptor(element);
     int ownerIndex = classes.indexOf(element.enclosingElement);
     int classMirrorIndex = _computeVariableTypeIndex(element, descriptor);
     int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset)
+            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     int dynamicReflectedTypeIndex = reflectedTypeRequested
         ? _dynamicTypeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset)
+            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -1620,7 +1643,8 @@ class _ReflectorDomain {
   /// added to `ReflectorData.types` after the elements of [classes] have been
   /// added.
   int _typeCodeIndex(DartType dartType, ClassElementEnhancedSet classes,
-      Enumerator<ErasableDartType> reflectedTypes, int reflectedTypesOffset) {
+      Enumerator<ErasableDartType> reflectedTypes, int reflectedTypesOffset,
+      Map<FunctionType, int> typedefs) {
     // The type `dynamic` is handled via the `dynamicAttribute` bit.
     if (dartType.isDynamic) return null;
     if (dartType is InterfaceType) {
@@ -1641,7 +1665,12 @@ class _ReflectorDomain {
       ErasableDartType erasableDartType =
           new ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
-      return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
+      int index =
+          reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
+      if (!dartType.typeFormals.isEmpty) {
+        typedefs[dartType] = index;
+      }
+      return index;
     }
     // We only handle the kinds of types already covered above. In particular,
     // we cannot produce code to return a value for `void`.
@@ -1660,7 +1689,8 @@ class _ReflectorDomain {
   /// [reflectedTypes], because the elements in there will be added to
   /// `ReflectorData.types` after the elements of [classes] have been added.
   int _dynamicTypeCodeIndex(DartType dartType, ClassElementEnhancedSet classes,
-      Enumerator<ErasableDartType> reflectedTypes, int reflectedTypesOffset) {
+      Enumerator<ErasableDartType> reflectedTypes, int reflectedTypesOffset,
+      Map<FunctionType, int> typedefs) {
     // The type `dynamic` is handled via the `dynamicAttribute` bit.
     if (dartType.isDynamic) return null;
     if (dartType is InterfaceType) {
@@ -1680,7 +1710,15 @@ class _ReflectorDomain {
       ErasableDartType erasableDartType =
           new ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
-      return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
+      int index =
+          reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
+      if (!dartType.typeFormals.isEmpty) {
+        // TODO(eernst) clarify: Maybe we should create an "erased" version
+        // of `dartType` in this case, and adjust `erased:` above?
+        typedefs[dartType] = index;
+      }
+      return index;
+
     }
     // We only handle the kinds of types already covered above.
     return constants.NO_CAPABILITY_INDEX;
@@ -1715,7 +1753,9 @@ class _ReflectorDomain {
   /// libraries.
   String _typeCodeOfTypeArgument(
       DartType dartType, _ImportCollector importCollector,
-      [Set<String> typeVariablesInScope]) {
+      Set<String> typeVariablesInScope,
+      Map<FunctionType, int> typedefs,
+      {bool useGenericFunctionType = false}) {
     fail() {
       return unimplementedError(
           "Attempt to generate code for an unsupported kind of type $dartType");
@@ -1737,7 +1777,7 @@ class _ReflectorDomain {
             (type) => _hasNoFreeTypeVariables(type, typeVariablesInScope))) {
           String arguments = dartType.typeArguments
               .map((DartType typeArgument) => _typeCodeOfTypeArgument(
-                  typeArgument, importCollector, typeVariablesInScope))
+                  typeArgument, importCollector, typeVariablesInScope, typedefs))
               .join(', ');
           return "$prefix${classElement.name}<$arguments>";
         } else {
@@ -1759,7 +1799,7 @@ class _ReflectorDomain {
           }
         }
         String returnType = _typeCodeOfTypeArgument(
-            dartType.returnType, importCollector, typeVariablesInScope);
+            dartType.returnType, importCollector, typeVariablesInScope, typedefs);
         String typeArguments = "";
         if (!dartType.typeFormals.isEmpty) {
           List<String> typeArgumentList = dartType.typeFormals.map(
@@ -1770,14 +1810,14 @@ class _ReflectorDomain {
         if (!dartType.normalParameterTypes.isEmpty) {
           List<String> normalParameterTypeList = dartType.normalParameterTypes
               .map((DartType parameterType) => _typeCodeOfTypeArgument(
-                  parameterType, importCollector, typeVariablesInScope));
+                  parameterType, importCollector, typeVariablesInScope, typedefs));
           argumentTypes = normalParameterTypeList.join(', ');
         }
         if (!dartType.optionalParameterTypes.isEmpty) {
           List<String> optionalParameterTypeList = dartType
               .optionalParameterTypes
               .map((DartType parameterType) => _typeCodeOfTypeArgument(
-                  parameterType, importCollector, typeVariablesInScope));
+                  parameterType, importCollector, typeVariablesInScope, typedefs));
           String connector = argumentTypes.length == 0 ? "" : ", ";
           argumentTypes = "$argumentTypes$connector"
               "[${optionalParameterTypeList.join(', ')}]";
@@ -1788,7 +1828,7 @@ class _ReflectorDomain {
               parameterMap.keys.map((String name) {
             DartType parameterType = parameterMap[name];
             String typeCode = _typeCodeOfTypeArgument(
-                parameterType, importCollector, typeVariablesInScope);
+                parameterType, importCollector, typeVariablesInScope, typedefs);
             return "$typeCode $name";
           });
           String connector = argumentTypes.length == 0 ? "" : ", ";
@@ -1811,7 +1851,9 @@ class _ReflectorDomain {
   /// evaluating the [typeDefiningElement] as an expression in the library
   /// where it occurs. [importCollector] is used to find the library prefixes
   /// needed in order to obtain values from other libraries.
-  String _typeCodeOfClass(DartType dartType, _ImportCollector importCollector) {
+  String _typeCodeOfClass(DartType dartType, _ImportCollector importCollector,
+      Map<FunctionType, int> typedefs) {
+    var typeVariablesInScope = new Set<String>(); // None at this level.
     if (dartType.isDynamic) return "dynamic";
     if (dartType is InterfaceType) {
       ClassElement classElement = dartType.element;
@@ -1835,8 +1877,9 @@ class _ReflectorDomain {
         return "$prefix${classElement.name}";
       } else {
         if (dartType.typeArguments.every(_hasNoFreeTypeVariables)) {
-          return "const m.TypeValue"
-              "<${_typeCodeOfTypeArgument(dartType, importCollector)}>().type";
+          String typeArgumentCode =
+              _typeCodeOfTypeArgument(dartType, importCollector, typeVariablesInScope, typedefs);
+          return "const m.TypeValue<$typeArgumentCode>().type";
         } else {
           String arguments = dartType.typeArguments
               .map((DartType typeArgument) => typeArgument.toString())
@@ -1854,8 +1897,9 @@ class _ReflectorDomain {
         String prefix = importCollector._getPrefix(element.library);
         return "$prefix${element.name}";
       } else {
-        return "const m.TypeValue"
-            "<${_typeCodeOfTypeArgument(dartType, importCollector)}>().type";
+        String typeArgumentCode =
+            _typeCodeOfTypeArgument(dartType, importCollector, typeVariablesInScope, typedefs);
+        return "const m.TypeValue<$typeArgumentCode>().type";
       }
     } else {
       throw unimplementedError(
@@ -1913,7 +1957,7 @@ class _ReflectorDomain {
 
     String settersCode = _formatAsMap(
         _settersOfLibrary(libraryDomain).map((PropertyAccessorElement setter) {
-      return topLevelSettingClosure(
+      return _topLevelSettingClosure(
           importCollector, library, setter.name, logger);
     }));
 
@@ -1984,6 +2028,7 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       _ImportCollector importCollector,
       TransformLogger logger,
+      Map<FunctionType, int> typedefs,
       bool reflectedTypeRequested) {
     int descriptor = _parameterDescriptor(element);
     int ownerIndex = members.indexOf(element.enclosingElement) + fields.length;
@@ -2007,11 +2052,11 @@ class _ReflectorDomain {
     }
     int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset)
+            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     int dynamicReflectedTypeIndex = reflectedTypeRequested
         ? _dynamicTypeCodeIndex(
-            element.type, classes, reflectedTypes, reflectedTypesOffset)
+            element.type, classes, reflectedTypes, reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
@@ -2300,7 +2345,7 @@ String _topLevelGettingClosure(_ImportCollector importCollector,
 }
 
 // Auxiliary function used by `_generateCode`.
-String topLevelSettingClosure(_ImportCollector importCollector,
+String _topLevelSettingClosure(_ImportCollector importCollector,
     LibraryElement library, String setterName, TransformLogger logger) {
   assert(setterName.substring(setterName.length - 1) == "=");
   // The [setterName] includes the "=", remove it.
@@ -2311,6 +2356,9 @@ String topLevelSettingClosure(_ImportCollector importCollector,
   }
   return 'r"$setterName": (value) => $prefix$name = value';
 }
+
+// Auxiliary function used by `_typeCodeIndex`.
+String _typedefName(int id) => "typedef$id";
 
 /// Information about reflectability for a given library.
 class _LibraryDomain {
@@ -3781,7 +3829,7 @@ import "package:reflectable/src/reflectable_transformer_based.dart" as r;
 // ignore:unused_import
 import "package:reflectable/reflectable.dart" show isTransformed;
 
-final _data = $code;
+$code
 
 final _memberSymbolMap = ${world.generateSymbolMap()};
 
