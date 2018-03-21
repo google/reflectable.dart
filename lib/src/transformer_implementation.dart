@@ -144,9 +144,9 @@ class ReflectionWorld {
           String body =
               reflector._typeCodeOfTypeArgument(
                   dartType, importCollector, typeVariablesInScope, typedefs,
-                  useGenericFunctionType: true);
+                  useNameOfGenericFunctionType: false);
           typedefsCode +=
-              "\ntypedef ${_typedefName(typedefs[dartType])} = $body";
+              "\ntypedef ${_typedefName(typedefs[dartType])} = $body;";
         }
         typedefs.clear();
       }
@@ -565,6 +565,10 @@ class ParameterListShape {
         "$numberOfOptionalPositionalParameters, $names]";
   }
 }
+
+// To avoid name clashes, we allocate numbers for generated `typedef`s
+// globally, by reading and updating this variable.
+int typedefNumber = 1;
 
 /// Information about the program parts that can be reflected by a given
 /// Reflector.
@@ -1748,14 +1752,22 @@ class _ReflectorDomain {
 
   /// Returns a string containing a type expression that in the generated
   /// library will serve as a type argument with the same meaning as the
-  /// [classElement] has where it occurs. The [importCollector] is used to
+  /// [dartType] has where it occurs. The [importCollector] is used to
   /// find the library prefixes needed in order to obtain values from other
-  /// libraries.
+  /// libraries. [typeVariablesInScope] is used to allow generation of
+  /// type expressions containing type variables which are in scope because
+  /// they were introduced by an enclosing generic function type. [typedefs]
+  /// is a mapping from generic function types which have had a `typedef`
+  /// declaration allocated for them to their indices; it may be extended
+  /// as well as used by this function. [useNameOfGenericFunctionType]
+  /// is used to decide whether the output should be a simple `typedef`
+  /// name or a fully spelled-out generic function type (and it has no
+  /// effect when [dartType] is not a generic function type).
   String _typeCodeOfTypeArgument(
       DartType dartType, _ImportCollector importCollector,
       Set<String> typeVariablesInScope,
       Map<FunctionType, int> typedefs,
-      {bool useGenericFunctionType = false}) {
+      {bool useNameOfGenericFunctionType = true}) {
     fail() {
       return unimplementedError(
           "Attempt to generate code for an unsupported kind of type $dartType");
@@ -1790,12 +1802,22 @@ class _ReflectorDomain {
         String prefix = importCollector._getPrefix(element.library);
         return "$prefix${element.name}";
       } else {
+        // Generic function types need separate `typedef`s.
         if (!dartType.typeFormals.isEmpty) {
-          if (typeVariablesInScope == null) {
-            typeVariablesInScope = new Set<String>();
-          }
-          for (TypeParameterElement element in dartType.typeFormals) {
-            typeVariablesInScope.add(element.name);
+          if (useNameOfGenericFunctionType) {
+            // Requested: just the name of the typedef; get it and return.
+            int dartTypeNumber = typedefs.containsKey(dartType)
+                ? typedefs[dartType]
+                : typedefNumber++;
+            return _typedefName(dartTypeNumber);
+          } else {
+            // Requested: the spelled-out generic function type; continue.
+            if (typeVariablesInScope == null) {
+              typeVariablesInScope = new Set<String>();
+            }
+            for (TypeParameterElement element in dartType.typeFormals) {
+              typeVariablesInScope.add(element.name);
+            }
           }
         }
         String returnType = _typeCodeOfTypeArgument(
@@ -1897,9 +1919,15 @@ class _ReflectorDomain {
         String prefix = importCollector._getPrefix(element.library);
         return "$prefix${element.name}";
       } else {
-        String typeArgumentCode =
-            _typeCodeOfTypeArgument(dartType, importCollector, typeVariablesInScope, typedefs);
-        return "const m.TypeValue<$typeArgumentCode>().type";
+        if (!dartType.typeFormals.isEmpty) {
+          // `dartType` is a generic function type, so we must use a
+          // separately generated `typedef` to obtain a `Type` for it.
+          return _typeCodeOfTypeArgument(dartType, importCollector, typeVariablesInScope, typedefs, useNameOfGenericFunctionType: true);
+        } else {
+          String typeArgumentCode =
+              _typeCodeOfTypeArgument(dartType, importCollector, typeVariablesInScope, typedefs);
+          return "const m.TypeValue<$typeArgumentCode>().type";
+        }
       }
     } else {
       throw unimplementedError(
