@@ -25,20 +25,20 @@ t: test
 cb: clean build
 
 get:
-	( cd ..; pub get --no-packages-dir )
+	( cd ..; pub get )
 
 upgrade:
-	( cd ..; pub upgrade --no-packages-dir )
+	( cd ..; pub upgrade )
 
 check:
-	( cd ..; dartanalyzer `find lib bin test -name \*.dart` )
+	( cd ..; dartanalyzer `find lib test -name \*.dart` )
 
 build:
-	( cd ..; pub build --mode=debug test )
+	@echo "[No actions for build in reflectable]"
 
 test:
 	@echo "-------------------- mock_tests"
-	@./run_mock_tests
+	@./run_tests
 
 clean:
 	@echo "[No actions for clean in reflectable]"
