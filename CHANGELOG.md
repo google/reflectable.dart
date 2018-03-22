@@ -13,6 +13,10 @@
 * Added note to README.md that generated code should not be published
   (it should be regenerated, such that it matches the current version of
   all dependencies).
+* Added 'dart:ui' to the set of platform libraries that reflectable will
+  recognize (and potentially import). This will only work on Flutter,
+  but there would not be any references to 'dart:ui' for any non-Flutter
+  program, unless it is already broken in other ways.
 
 ## 2.0.0-dev.2.0
 

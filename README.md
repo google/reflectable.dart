@@ -21,7 +21,7 @@ reflectable **capability**. For a more detailed discussion about
 capabilities, please consult the [reflectable capability design
 document][1]. On this page we just use a couple of simple special cases.
 
-[1]: https://github.com/dart-lang/reflectable/blob/master/reflectable/doc/TheDesignOfReflectableCapabilities.md
+[1]: https://github.com/dart-lang/reflectable/blob/master/doc/TheDesignOfReflectableCapabilities.md
 
 This package uses code generation to provide support for reflection at the
 level which is specified using capabilities. The [`build` package][2] is
@@ -197,10 +197,9 @@ libraries it imports, which illustrates how reflectable can be used to
 dynamically make a choice among several kinds of reflection, and how to
 eliminate several kinds of static dependencies among libraries.
 
-[3]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/tool/reflectable_transformer
-[4]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/serialize_test.dart
-[5]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/lib/serialize.dart
-[6]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/meta_reflectors_test.dart
+[4]: https://github.com/dart-lang/test_reflectable/tree/master/test/serialize_test.dart
+[5]: https://github.com/dart-lang/test_reflectable/tree/master/lib/serialize.dart
+[6]: https://github.com/dart-lang/test_reflectable/tree/master/test/meta_reflectors_test.dart
 
 
 ## Known limitations
