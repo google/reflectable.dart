@@ -10,6 +10,9 @@
 * Fixed bugs associated with error handling: In several situations
   where the build process would get stuck indefinitely, it will 
   now terminate with the intended error message.
+* Added note to README.md that generated code should not be published
+  (it should be regenerated, such that it matches the current version of
+  all dependencies).
 
 ## 2.0.0-dev.2.0
 

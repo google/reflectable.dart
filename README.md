@@ -120,6 +120,13 @@ library whose file name is obtained by taking the file name of the main
 library of the program and adding `.reflectable`. In the example, this
 amounts to `import 'main.reflectable.dart'`.
 
+Note that it is **not recommended to publish generated code**, i.e.,
+published packages on `pub.dartlang.org` should not include files whose
+name is of the form `*.reflectable.dart`. The reason for this is that the
+generated code may change because some direct or indirect dependency
+changes (say, your package indirectly imports package `path` and then
+`path` changes), and this could make some generated code invalid.
+
 It is also necessary to **initialize the reflection support** by calling
 `initializeReflectable()`, as shown at the beginning of `main` in the
 example.
