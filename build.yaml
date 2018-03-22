@@ -5,6 +5,7 @@ builders:
     builder_factories: ["reflectableBuilder"]
     build_extensions: {".dart": [".reflectable.dart"]}
     auto_apply: root_package
+    build_to: source
     defaults:
       generate_for:
         exclude:
