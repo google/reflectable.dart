@@ -142,7 +142,7 @@ class ReflectionWorld {
       if (!typedefs.isEmpty) {
         for (DartType dartType in typedefs.keys) {
           String body = reflector._typeCodeOfTypeArgument(
-              dartType, importCollector, typeVariablesInScope, typedefs,
+              dartType, importCollector, typeVariablesInScope, typedefs, logger,
               useNameOfGenericFunctionType: false);
           typedefsCode +=
               "\ntypedef ${_typedefName(typedefs[dartType])} = $body;";
@@ -375,7 +375,7 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
     bool result = classElements.add(value);
     if (result) {
       assert(!elementToDomain.containsKey(value));
-      elementToDomain[value] = _createClassDomain(value, reflectorDomain);
+      elementToDomain[value] = _createClassDomain(value, reflectorDomain, reflectorDomain._logger);
       if (value is MixinApplication && value.subclass != null) {
         // [value] is a mixin application which is the immediate superclass
         // of a class which is a regular class (not a mixin application). This
@@ -576,6 +576,7 @@ class _ReflectorDomain {
   final Resolver _resolver;
   final AssetId _generatedLibraryId;
   final ClassElement _reflector;
+  final TransformLogger _logger;
 
   /// Do not use this, use [classes] which ensures that closure operations
   /// have been performed as requested in [_capabilities]. Exception: In
@@ -613,7 +614,7 @@ class _ReflectorDomain {
       if (_capabilities._impliesTypes &&
           _capabilities._impliesTypeAnnotations) {
         _AnnotationClassFixedPoint fix = new _AnnotationClassFixedPoint(
-            _resolver, _generatedLibraryId, _classes.domainOf);
+            _resolver, _generatedLibraryId, _classes.domainOf, _logger);
         if (_capabilities._impliesTypeAnnotationClosure) {
           fix.expand(_classes);
         } else {
@@ -631,7 +632,7 @@ class _ReflectorDomain {
   final _Capabilities _capabilities;
 
   _ReflectorDomain(this._resolver, this._generatedLibraryId, this._reflector,
-      this._capabilities) {
+      this._capabilities, this._logger) {
     _classes = new ClassElementEnhancedSet(this);
   }
 
@@ -805,7 +806,7 @@ class _ReflectorDomain {
     /// for importability and insertion into [importCollector] to have taken
     /// place already.
     void uncheckedAddLibrary(LibraryElement library) {
-      _LibraryDomain libraryDomain = _createLibraryDomain(library, this);
+      _LibraryDomain libraryDomain = _createLibraryDomain(library, this, logger);
       libraries.add(libraryDomain);
       libraryMap[library] = libraryDomain;
       libraryDomain._declarations.forEach(members.add);
@@ -849,7 +850,7 @@ class _ReflectorDomain {
       classDomain._instanceMembers.forEach(members.add);
 
       // Add all the formal parameters (as a single, global set) which
-      // are declared by any of the methods in `classDomain._declarations`
+      // are declared by any of the methods in  `classDomain._declarations`
       // as well as in `classDomain._instanceMembers`.
       classDomain._declaredParameters.forEach(parameters.add);
       classDomain._instanceParameters.forEach(parameters.add);
@@ -870,8 +871,7 @@ class _ReflectorDomain {
           } else if (variable is TopLevelVariableElement) {
             topLevelVariables.add(variable);
           } else {
-            throw unimplementedError(
-                "This kind of variable is not yet supported");
+            logger.error("This kind of variable is not yet supported");
           }
         }
       });
@@ -1085,7 +1085,7 @@ class _ReflectorDomain {
               erasableDartType.dartType.element, importCollector);
         } else {
           return _typeCodeOfClass(
-              erasableDartType.dartType, importCollector, typedefs);
+              erasableDartType.dartType, importCollector, typedefs, logger);
         }
       });
     }();
@@ -1271,7 +1271,7 @@ class _ReflectorDomain {
     String instanceMembersCode = "null";
     if (_capabilities._impliesDeclarations) {
       instanceMembersCode = _formatAsConstList("int",
-          classDomain._instanceMembers.map((ExecutableElement element) {
+                                               classDomain._instanceMembers.map((ExecutableElement element) {
         // TODO(eernst) implement: The "magic" default constructor has
         // index: NO_CAPABILITY_INDEX; adjust this when support for it has
         // been implemented.
@@ -1308,7 +1308,7 @@ class _ReflectorDomain {
       superclassIndex =
           (classElement is! MixinApplication && classElement.type.isObject)
               ? "null"
-              : (classes.contains(superclass))
+          : (classes.contains(superclass))
                   ? "${classes.indexOf(superclass)}"
                   : "${constants.NO_CAPABILITY_INDEX}";
     }
@@ -1353,9 +1353,9 @@ class _ReflectorDomain {
           ? classes.indexOf(classElement.mixins.last.element)
           : (classElement is MixinApplication
               // Anonymous mixin application.
-              ? classes.indexOf(classElement.mixin)
+             ? classes.indexOf(classElement.mixin)
               // No mixins, by convention we use the class itself.
-              : classes.indexOf(classElement));
+             : classes.indexOf(classElement));
       // We may not have support for the given class, in which case we must
       // correct the `null` from `indexOf` to indicate missing capability.
       if (mixinIndex == null) mixinIndex = constants.NO_CAPABILITY_INDEX;
@@ -1372,8 +1372,8 @@ class _ReflectorDomain {
           'int',
           classElement.interfaces
               .map((InterfaceType type) => type.element)
-              .where(classes.contains)
-              .map(classes.indexOf));
+          .where(classes.contains)
+          .map(classes.indexOf));
     }
 
     String classMetadataCode;
@@ -1776,10 +1776,13 @@ class _ReflectorDomain {
       _ImportCollector importCollector,
       Set<String> typeVariablesInScope,
       Map<FunctionType, int> typedefs,
+      TransformLogger logger,
       {bool useNameOfGenericFunctionType = true}) {
     fail() {
-      return unimplementedError(
-          "Attempt to generate code for an unsupported kind of type $dartType");
+      logger.warning("Attempt to generate code for an "
+          "unsupported kind of type: $dartType (${dartType.runtimeType}). "
+          "Generating `dynamic`.");
+      return "dynamic";
     }
 
     if (dartType.isDynamic) return "dynamic";
@@ -1788,7 +1791,7 @@ class _ReflectorDomain {
       if ((classElement is MixinApplication &&
               classElement.declaredName == null) ||
           classElement.isPrivate) {
-        throw fail();
+        return fail();
       }
       String prefix = importCollector._getPrefix(classElement.library);
       if (classElement.typeParameters.isEmpty) {
@@ -1801,11 +1804,13 @@ class _ReflectorDomain {
                   typeArgument,
                   importCollector,
                   typeVariablesInScope,
-                  typedefs))
+                  typedefs,
+                  logger,
+                  useNameOfGenericFunctionType: useNameOfGenericFunctionType))
               .join(', ');
           return "$prefix${classElement.name}<$arguments>";
         } else {
-          throw fail();
+          return fail();
         }
       }
     } else if (dartType is FunctionType) {
@@ -1833,7 +1838,7 @@ class _ReflectorDomain {
           }
         }
         String returnType = _typeCodeOfTypeArgument(dartType.returnType,
-            importCollector, typeVariablesInScope, typedefs);
+                                                    importCollector, typeVariablesInScope, typedefs, logger, useNameOfGenericFunctionType: useNameOfGenericFunctionType);
         String typeArguments = "";
         if (!dartType.typeFormals.isEmpty) {
           List<String> typeArgumentList = dartType.typeFormals.map(
@@ -1847,7 +1852,7 @@ class _ReflectorDomain {
                   parameterType,
                   importCollector,
                   typeVariablesInScope,
-                  typedefs));
+                  typedefs, logger, useNameOfGenericFunctionType: useNameOfGenericFunctionType));
           argumentTypes = normalParameterTypeList.join(', ');
         }
         if (!dartType.optionalParameterTypes.isEmpty) {
@@ -1857,7 +1862,7 @@ class _ReflectorDomain {
                   parameterType,
                   importCollector,
                   typeVariablesInScope,
-                  typedefs));
+                  typedefs, logger, useNameOfGenericFunctionType: useNameOfGenericFunctionType));
           String connector = argumentTypes.length == 0 ? "" : ", ";
           argumentTypes = "$argumentTypes$connector"
               "[${optionalParameterTypeList.join(', ')}]";
@@ -1868,7 +1873,7 @@ class _ReflectorDomain {
               parameterMap.keys.map((String name) {
             DartType parameterType = parameterMap[name];
             String typeCode = _typeCodeOfTypeArgument(
-                parameterType, importCollector, typeVariablesInScope, typedefs);
+                parameterType, importCollector, typeVariablesInScope, typedefs, logger, useNameOfGenericFunctionType: useNameOfGenericFunctionType);
             return "$typeCode $name";
           });
           String connector = argumentTypes.length == 0 ? "" : ", ";
@@ -1882,7 +1887,7 @@ class _ReflectorDomain {
         typeVariablesInScope.contains(dartType.name)) {
       return dartType.name;
     } else {
-      throw fail();
+      return fail();
     }
   }
 
@@ -1892,7 +1897,7 @@ class _ReflectorDomain {
   /// where it occurs. [importCollector] is used to find the library prefixes
   /// needed in order to obtain values from other libraries.
   String _typeCodeOfClass(DartType dartType, _ImportCollector importCollector,
-      Map<FunctionType, int> typedefs) {
+      Map<FunctionType, int> typedefs, TransformLogger logger) {
     var typeVariablesInScope = new Set<String>(); // None at this level.
     if (dartType.isDynamic) return "dynamic";
     if (dartType is InterfaceType) {
@@ -1918,7 +1923,7 @@ class _ReflectorDomain {
       } else {
         if (dartType.typeArguments.every(_hasNoFreeTypeVariables)) {
           String typeArgumentCode = _typeCodeOfTypeArgument(
-              dartType, importCollector, typeVariablesInScope, typedefs);
+              dartType, importCollector, typeVariablesInScope, typedefs, logger, useNameOfGenericFunctionType: true);
           return "const m.TypeValue<$typeArgumentCode>().type";
         } else {
           String arguments = dartType.typeArguments
@@ -1941,17 +1946,19 @@ class _ReflectorDomain {
           // `dartType` is a generic function type, so we must use a
           // separately generated `typedef` to obtain a `Type` for it.
           return _typeCodeOfTypeArgument(
-              dartType, importCollector, typeVariablesInScope, typedefs,
+              dartType, importCollector, typeVariablesInScope, typedefs, logger,
               useNameOfGenericFunctionType: true);
         } else {
           String typeArgumentCode = _typeCodeOfTypeArgument(
-              dartType, importCollector, typeVariablesInScope, typedefs);
+              dartType, importCollector, typeVariablesInScope, typedefs, logger);
           return "const m.TypeValue<$typeArgumentCode>().type";
         }
       }
     } else {
-      throw unimplementedError(
-          "Attempt to generate code for an unsupported kind of type $dartType");
+      logger.warning("Attempt to generate code for an "
+          "unsupported kind of type: $dartType (${dartType.runtimeType}). "
+          "Generating `dynamic`.");
+      return "dynamic";
     }
   }
 
@@ -2279,9 +2286,10 @@ class _AnnotationClassFixedPoint extends FixedPoint<ClassElement> {
   final Resolver resolver;
   final AssetId generatedLibraryId;
   final ElementToDomain elementToDomain;
+  final TransformLogger logger;
 
   _AnnotationClassFixedPoint(
-      this.resolver, this.generatedLibraryId, this.elementToDomain);
+      this.resolver, this.generatedLibraryId, this.elementToDomain, this.logger);
 
   /// Returns the classes that occur as return types of covered methods or in
   /// type annotations of covered variables and parameters of covered methods,
@@ -2514,6 +2522,8 @@ class _ClassDomain {
       this._constructors,
       this._reflectorDomain);
 
+  TransformLogger get _logger => _reflectorDomain._logger;
+
   String get _simpleName {
     // TODO(eernst) clarify: Decide whether this should be simplified
     // by adding a method implementation to `MixinApplication`.
@@ -2583,7 +2593,7 @@ class _ClassDomain {
           getterMetadata = correspondingGetter?.metadata;
         }
         if (_reflectorDomain._capabilities
-            .supportsInstanceInvoke(member.name, metadata, getterMetadata)) {
+            .supportsInstanceInvoke(member.name, metadata, getterMetadata, _logger)) {
           result[name] = member;
         }
       }
@@ -2636,7 +2646,7 @@ class _ClassDomain {
       if (method.isStatic &&
           !method.isPrivate &&
           _reflectorDomain._capabilities
-              .supportsStaticInvoke(method.name, method.metadata, null)) {
+          .supportsStaticInvoke(method.name, method.metadata, null, _logger)) {
         result.add(method);
       }
     }
@@ -2656,7 +2666,7 @@ class _ClassDomain {
         getterMetadata = correspondingGetter?.metadata;
       }
       if (_reflectorDomain._capabilities
-          .supportsStaticInvoke(accessor.name, metadata, getterMetadata)) {
+          .supportsStaticInvoke(accessor.name, metadata, getterMetadata, _logger)) {
         result.add(accessor);
       }
     }
@@ -2671,10 +2681,10 @@ class _ClassDomain {
   }
 
   bool operator ==(Object other) =>
-      throw unimplementedError("== on _ClassDomain not in use");
+      throw unimplementedError("== on _ClassDomain not implemented");
 
   int get hashCode =>
-      throw unimplementedError("hashCode on _ClassDomain not in use");
+      throw unimplementedError("hashCode on _ClassDomain not implemented");
 }
 
 /// A wrapper around a list of Capabilities.
@@ -2754,12 +2764,13 @@ class _Capabilities {
   bool supportsInstanceInvoke(
       String methodName,
       Iterable<ElementAnnotation> metadata,
-      Iterable<ElementAnnotation> getterMetadata) {
+      Iterable<ElementAnnotation> getterMetadata,
+                              TransformLogger logger) {
     var v = _supportsInstanceInvoke(
         _capabilities,
         methodName,
-        _getEvaluatedMetadata(metadata),
-        getterMetadata == null ? null : _getEvaluatedMetadata(getterMetadata));
+        _getEvaluatedMetadata(metadata, logger),
+        getterMetadata == null ? null : _getEvaluatedMetadata(getterMetadata, logger));
     return v;
   }
 
@@ -2767,9 +2778,9 @@ class _Capabilities {
       String constructorName,
       Iterable<ElementAnnotation> metadata,
       LibraryElement libraryElement,
-      Resolver resolver) {
+      Resolver resolver, TransformLogger logger) {
     var result = _supportsNewInstance(
-        _capabilities, constructorName, _getEvaluatedMetadata(metadata));
+        _capabilities, constructorName, _getEvaluatedMetadata(metadata, logger));
     return result;
   }
 
@@ -2806,7 +2817,8 @@ class _Capabilities {
       List<ec.ReflectCapability> capabilities,
       String methodName,
       Iterable<DartObject> metadata,
-      Iterable<DartObject> getterMetadata) {
+      Iterable<DartObject> getterMetadata,
+      TransformLogger logger) {
     for (ec.ReflectCapability capability in capabilities) {
       // Handle API based capabilities.
       if (capability is ec.StaticInvokeCapability &&
@@ -2825,7 +2837,7 @@ class _Capabilities {
     // Check if we can retry, using the corresponding getter.
     if (_isSetterName(methodName) && getterMetadata != null) {
       return _supportsStaticInvoke(capabilities,
-          _setterNameToGetterName(methodName), getterMetadata, null);
+          _setterNameToGetterName(methodName), getterMetadata, null, logger);
     }
 
     // All options exhausted, give up.
@@ -2835,23 +2847,29 @@ class _Capabilities {
   bool supportsTopLevelInvoke(
       String methodName,
       Iterable<ElementAnnotation> metadata,
-      Iterable<ElementAnnotation> getterMetadata) {
+      Iterable<ElementAnnotation> getterMetadata,
+                              TransformLogger logger) {
     return _supportsTopLevelInvoke(
         _capabilities,
         methodName,
-        _getEvaluatedMetadata(metadata),
-        getterMetadata == null ? null : _getEvaluatedMetadata(getterMetadata));
+        _getEvaluatedMetadata(metadata, logger),
+        getterMetadata == null
+            ? null
+            : _getEvaluatedMetadata(getterMetadata, logger));
   }
 
   bool supportsStaticInvoke(
       String methodName,
       Iterable<ElementAnnotation> metadata,
-      Iterable<ElementAnnotation> getterMetadata) {
+      Iterable<ElementAnnotation> getterMetadata,
+      TransformLogger logger) {
     return _supportsStaticInvoke(
         _capabilities,
         methodName,
-        _getEvaluatedMetadata(metadata),
-        getterMetadata == null ? null : _getEvaluatedMetadata(getterMetadata));
+        _getEvaluatedMetadata(metadata, logger),
+        getterMetadata == null
+            ? null
+            : _getEvaluatedMetadata(getterMetadata, logger), logger);
   }
 
   bool get _supportsMetadata {
@@ -3153,7 +3171,7 @@ class TransformerImplementation {
     /// conforms to the constraints relative to [classReflectable],
     /// which is intended to refer to the class Reflectable defined
     /// in package:reflectable/reflectable.dart. In case of violations,
-    /// reports an error on [logger].
+    /// reports an error on [_logger].
     bool checkInheritance(InterfaceType type, InterfaceType classReflectable) {
       if (!_isSubclassOf(type, classReflectable)) {
         // Not a subclass of [classReflectable] at all.
@@ -3261,7 +3279,7 @@ class TransformerImplementation {
         if (import.importedLibrary != reflectableLibrary) continue;
         for (ElementAnnotationImpl metadatum in import.metadata) {
           if (metadatum.element == globalQuantifyCapabilityConstructor) {
-            DartObject value = _getEvaluatedMetadatum(metadatum);
+            DartObject value = _getEvaluatedMetadatum(metadatum, _logger);
             if (value != null) {
               String pattern =
                   value.getField("classNamePattern").toStringValue();
@@ -3447,7 +3465,7 @@ class TransformerImplementation {
             _capabilitiesOf(capabilityLibrary, reflector);
         assert(_isImportableLibrary(reflectorLibrary, dataId, _resolver));
         importCollector._addLibrary(reflectorLibrary);
-        return new _ReflectorDomain(_resolver, dataId, reflector, capabilities);
+        return new _ReflectorDomain(_resolver, dataId, reflector, capabilities, _logger);
       });
     }
 
@@ -3514,7 +3532,7 @@ class TransformerImplementation {
       List<ClassElement> result = <ClassElement>[];
 
       for (ElementAnnotationImpl metadatum in metadata) {
-        DartObject value = _getEvaluatedMetadatum(metadatum);
+        DartObject value = _getEvaluatedMetadatum(metadatum, _logger);
 
         // Test if the type of this metadata is associated with any reflectors
         // via GlobalQuantifyMetaCapability.
@@ -3768,7 +3786,8 @@ class TransformerImplementation {
         return ec.correspondingSetterQuantifyCapability;
       case "_AdmitSubtypeCapability":
         // TODO(eernst) implement: support for the admit subtype feature.
-        throw unimplementedError("_AdmitSubtypeCapability not yet supported!");
+        _logger.error("_AdmitSubtypeCapability not yet supported!");
+        return ec.admitSubtypeCapability;
       default:
         // We have checked that [element] is declared in 'capability.dart',
         // and it is a compile time error to use a non-const value in the
@@ -4454,8 +4473,8 @@ String _extractMetadataCode(Element element, Resolver resolver,
         // In both cases we must include the library prefix.
         prefix = importCollector._getPrefix(annotationNode.element.library);
       } else {
-        throw unimplementedError(
-            "This kind of metadata not yet supported: $annotationNode");
+        logger.error("This kind of metadata "
+            "not yet supported: $annotationNode");
       }
       String arguments =
           annotationNode.arguments.arguments.map((Expression argument) {
@@ -4482,13 +4501,13 @@ String _extractMetadataCode(Element element, Resolver resolver,
 /// filtering them such that the returned ones are those that are supported
 /// by [capabilities].
 Iterable<TopLevelVariableElement> _extractDeclaredVariables(Resolver resolver,
-    LibraryElement libraryElement, _Capabilities capabilities) sync* {
+                                                            LibraryElement libraryElement, _Capabilities capabilities, TransformLogger logger) sync* {
   for (CompilationUnitElement unit in libraryElement.units) {
     for (TopLevelVariableElement variable in unit.topLevelVariables) {
       if (variable.isPrivate || variable.isSynthetic) continue;
       // TODO(eernst) clarify: Do we want to subsume variables under invoke?
       if (capabilities.supportsTopLevelInvoke(
-          variable.name, variable.metadata, null)) {
+              variable.name, variable.metadata, null, logger)) {
         yield variable;
       }
     }
@@ -4499,12 +4518,12 @@ Iterable<TopLevelVariableElement> _extractDeclaredVariables(Resolver resolver,
 /// filtering them such that the returned ones are those that are supported
 /// by [capabilities].
 Iterable<FunctionElement> _extractDeclaredFunctions(Resolver resolver,
-    LibraryElement libraryElement, _Capabilities capabilities) sync* {
+                                                    LibraryElement libraryElement, _Capabilities capabilities, TransformLogger logger) sync* {
   for (CompilationUnitElement unit in libraryElement.units) {
     for (FunctionElement function in unit.functions) {
       if (function.isPrivate) continue;
       if (capabilities.supportsTopLevelInvoke(
-          function.name, function.metadata, null)) {
+              function.name, function.metadata, null, logger)) {
         yield function;
       }
     }
@@ -4532,32 +4551,33 @@ Iterable<ParameterElement> _extractDeclaredFunctionParameters(
 typedef bool CapabilityChecker(
     String methodName,
     Iterable<ElementAnnotation> metadata,
-    Iterable<ElementAnnotation> getterMetadata);
+    Iterable<ElementAnnotation> getterMetadata,
+    TransformLogger logger);
 
 /// Returns the declared fields in the given [classElement], filtered such
 /// that the returned ones are the ones that are supported by [capabilities].
 Iterable<FieldElement> _extractDeclaredFields(
-    Resolver resolver, ClassElement classElement, _Capabilities capabilities) {
+    Resolver resolver, ClassElement classElement, _Capabilities capabilities, TransformLogger logger) {
   return classElement.fields.where((FieldElement field) {
     if (field.isPrivate) return false;
     CapabilityChecker capabilityChecker = field.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
     return !field.isSynthetic &&
-        capabilityChecker(field.name, field.metadata, null);
+        capabilityChecker(field.name, field.metadata, null, logger);
   });
 }
 
 /// Returns the declared methods in the given [classElement], filtered such
 /// that the returned ones are the ones that are supported by [capabilities].
 Iterable<MethodElement> _extractDeclaredMethods(
-    Resolver resolver, ClassElement classElement, _Capabilities capabilities) {
+    Resolver resolver, ClassElement classElement, _Capabilities capabilities, TransformLogger logger) {
   return classElement.methods.where((MethodElement method) {
     if (method.isPrivate) return false;
     CapabilityChecker capabilityChecker = method.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
-    return capabilityChecker(method.name, method.metadata, null);
+    return capabilityChecker(method.name, method.metadata, null, logger);
   });
 }
 
@@ -4586,7 +4606,7 @@ Iterable<ParameterElement> _extractDeclaredParameters(
 /// Returns the accessors from the given [libraryElement], filtered such that
 /// the returned ones are the ones that are supported by [capabilities].
 Iterable<ExecutableElement> _extractLibraryAccessors(Resolver resolver,
-    LibraryElement libraryElement, _Capabilities capabilities) sync* {
+                                                     LibraryElement libraryElement, _Capabilities capabilities, TransformLogger logger) sync* {
   for (CompilationUnitElement unit in libraryElement.units) {
     for (PropertyAccessorElement accessor in unit.accessors) {
       if (accessor.isPrivate) continue;
@@ -4605,7 +4625,7 @@ Iterable<ExecutableElement> _extractLibraryAccessors(Resolver resolver,
         }
       }
       if (capabilities.supportsTopLevelInvoke(
-          accessor.name, metadata, getterMetadata)) {
+              accessor.name, metadata, getterMetadata, logger)) {
         yield accessor;
       }
     }
@@ -4621,7 +4641,7 @@ Iterable<ExecutableElement> _extractLibraryAccessors(Resolver resolver,
 /// here, by filtering out the accessors whose `isSynthetic` is true
 /// and adding the fields.
 Iterable<PropertyAccessorElement> _extractAccessors(
-    Resolver resolver, ClassElement classElement, _Capabilities capabilities) {
+    Resolver resolver, ClassElement classElement, _Capabilities capabilities, TransformLogger logger) {
   return classElement.accessors.where((PropertyAccessorElement accessor) {
     if (accessor.isPrivate) return false;
     // TODO(eernst) implement: refactor treatment of `getterMetadata`
@@ -4641,7 +4661,7 @@ Iterable<PropertyAccessorElement> _extractAccessors(
           accessor.correspondingGetter;
       getterMetadata = correspondingGetter?.metadata;
     }
-    return capabilityChecker(accessor.name, metadata, getterMetadata);
+    return capabilityChecker(accessor.name, metadata, getterMetadata, logger);
   });
 }
 
@@ -4651,24 +4671,24 @@ Iterable<ConstructorElement> _extractDeclaredConstructors(
     Resolver resolver,
     LibraryElement libraryElement,
     ClassElement classElement,
-    _Capabilities capabilities) {
+    _Capabilities capabilities, TransformLogger logger) {
   return classElement.constructors.where((ConstructorElement constructor) {
     if (constructor.isPrivate) return false;
     return capabilities.supportsNewInstance(
-        constructor.name, constructor.metadata, libraryElement, resolver);
+        constructor.name, constructor.metadata, libraryElement, resolver, logger);
   });
 }
 
 _LibraryDomain _createLibraryDomain(
-    LibraryElement library, _ReflectorDomain domain) {
+    LibraryElement library, _ReflectorDomain domain, TransformLogger logger) {
   Iterable<TopLevelVariableElement> declaredVariablesOfLibrary =
-      _extractDeclaredVariables(domain._resolver, library, domain._capabilities)
+      _extractDeclaredVariables(domain._resolver, library, domain._capabilities, logger)
           .toList();
   Iterable<FunctionElement> declaredFunctionsOfLibrary =
-      _extractDeclaredFunctions(domain._resolver, library, domain._capabilities)
+      _extractDeclaredFunctions(domain._resolver, library, domain._capabilities, logger)
           .toList();
   Iterable<PropertyAccessorElement> accessorsOfLibrary =
-      _extractLibraryAccessors(domain._resolver, library, domain._capabilities);
+      _extractLibraryAccessors(domain._resolver, library, domain._capabilities, logger);
   Iterable<ParameterElement> declaredParametersOfLibrary =
       _extractDeclaredFunctionParameters(
           domain._resolver, declaredFunctionsOfLibrary, accessorsOfLibrary);
@@ -4681,18 +4701,18 @@ _LibraryDomain _createLibraryDomain(
       domain);
 }
 
-_ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
+_ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain, TransformLogger logger) {
   if (type is MixinApplication) {
     Iterable<FieldElement> declaredFieldsOfClass = _extractDeclaredFields(
-            domain._resolver, type.mixin, domain._capabilities)
+        domain._resolver, type.mixin, domain._capabilities, logger)
         .where((FieldElement e) => !e.isStatic)
         .toList();
     Iterable<MethodElement> declaredMethodsOfClass = _extractDeclaredMethods(
-            domain._resolver, type.mixin, domain._capabilities)
+        domain._resolver, type.mixin, domain._capabilities, logger)
         .where((MethodElement e) => !e.isStatic)
         .toList();
     Iterable<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
-        _extractAccessors(domain._resolver, type.mixin, domain._capabilities)
+        _extractAccessors(domain._resolver, type.mixin, domain._capabilities, logger)
             .toList();
     Iterable<ConstructorElement> declaredConstructorsOfClass =
         <ConstructorElement>[];
@@ -4711,16 +4731,16 @@ _ClassDomain _createClassDomain(ClassElement type, _ReflectorDomain domain) {
   }
 
   List<FieldElement> declaredFieldsOfClass =
-      _extractDeclaredFields(domain._resolver, type, domain._capabilities)
+      _extractDeclaredFields(domain._resolver, type, domain._capabilities, logger)
           .toList();
   List<MethodElement> declaredMethodsOfClass =
-      _extractDeclaredMethods(domain._resolver, type, domain._capabilities)
+      _extractDeclaredMethods(domain._resolver, type, domain._capabilities, logger)
           .toList();
   List<PropertyAccessorElement> declaredAndImplicitAccessorsOfClass =
-      _extractAccessors(domain._resolver, type, domain._capabilities).toList();
+      _extractAccessors(domain._resolver, type, domain._capabilities, logger).toList();
   List<ConstructorElement> declaredConstructorsOfClass =
       _extractDeclaredConstructors(
-              domain._resolver, type.library, type, domain._capabilities)
+          domain._resolver, type.library, type, domain._capabilities, logger)
           .toList();
   List<ParameterElement> declaredParametersOfClass = _extractDeclaredParameters(
       declaredMethodsOfClass,
@@ -5161,10 +5181,15 @@ EvaluationResultImpl _constTopLevelVariableEvaluationResult(
 /// [LibraryElement]. As an exception, when [elementAnnotation] denotes
 /// a getter or a constructor, `evaluationResult` is null; the value is
 /// then obtained indirectly.
-DartObject _getEvaluatedMetadatum(ElementAnnotation elementAnnotation) {
-  fail() {
-    throw unimplementedError(
-        "Metadata has a not yet supported form: $elementAnnotation");
+DartObject _getEvaluatedMetadatum(ElementAnnotation elementAnnotation, TransformLogger logger) {
+  DartObject fail() {
+    logger.error("Metadata has a "
+        "not yet supported form: $elementAnnotation.");
+    // TODO(eernst): We do not have access to `nullObject` of `TypeProvider`,
+    // but it would make sense to return a `DartObject` that "means"
+    // null here. Right now we just return a plain `null` and hope that
+    // the error handling will stop processing before there is an NPE.
+    return null;
   }
 
   EvaluationResultImpl evaluation =
@@ -5183,9 +5208,9 @@ DartObject _getEvaluatedMetadatum(ElementAnnotation elementAnnotation) {
     } else if (variable is ConstTopLevelVariableElementImpl) {
       result = _constTopLevelVariableEvaluationResult(variable);
     } else {
-      throw fail();
+      return fail();
     }
-    if (result?.value == null) throw fail();
+    if (result?.value == null) return fail();
     return result.value;
   } else if (element is ConstructorElementImpl) {
     DartType dartType = element.returnType;
@@ -5193,7 +5218,7 @@ DartObject _getEvaluatedMetadatum(ElementAnnotation elementAnnotation) {
       return new DartObjectImpl.validWithUnknownValue(dartType);
     }
   }
-  throw fail();
+  return fail();
 }
 
 /// Returns the result of evaluating [metadata].
@@ -5201,6 +5226,6 @@ DartObject _getEvaluatedMetadatum(ElementAnnotation elementAnnotation) {
 /// Returns the result of evaluating each of the element annotations
 /// in [metadata] using [_getEvaluatedMetadatum].
 Iterable<DartObject> _getEvaluatedMetadata(
-    Iterable<ElementAnnotation> metadata) {
-  return metadata.map(_getEvaluatedMetadatum);
+    Iterable<ElementAnnotation> metadata, TransformLogger logger) {
+  return metadata.map((ElementAnnotation annotation) => _getEvaluatedMetadatum(annotation, logger));
 }
