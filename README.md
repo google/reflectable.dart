@@ -207,7 +207,8 @@ following parts are still incomplete:
   `typedef` it is possible to use that name as a type annotation, say, on a
   method parameter or as a return type, and then `reflectedTypeCapability`
   will make it possible to get a corresponding `reflectedType` and
-  `dynamicReflectedType`.
+  `dynamicReflectedType`. For non-generic function types this will also
+  work with anonymous (inline) function types like `void Function(int)`.
 
 - Private declarations. There is currently almost no support for reflection
   on private declarations, as this would require special support from the
