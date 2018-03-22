@@ -4376,6 +4376,7 @@ Set<String> sdkLibraryNames = new Set.from([
   "profiler",
   "svg",
   "typed_data",
+  "ui",
   "web_audio",
   "web_gl",
   "web_sql"
