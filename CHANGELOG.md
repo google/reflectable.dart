@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.0-dev.3.0
+
+* Now supports client packages using commands like
+  `pub run build_runner test` to generate code and run tests.
+* Added support for generating code to obtain the `Type` value
+  of function types (including the new inline function types like
+  `String Function(int)`).
+* Fixed bugs associated with error handling: In several situations
+  where the build process would get stuck indefinitely, it will 
+  now terminate with the intended error message.
+
 ## 2.0.0-dev.2.0
 
 * Removed bin/reflectable_transformer.dart, which is obsolete.
