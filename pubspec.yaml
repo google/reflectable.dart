@@ -1,5 +1,5 @@
 name: reflectable
-version: 2.0.0-dev.2.0
+version: 2.0.0-dev.3.0
 description: >
   This package allows programmers to reduce certain usages of dynamic
   reflection to a statically specified subset thereof, based on generated
