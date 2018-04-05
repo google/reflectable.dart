@@ -3961,62 +3961,66 @@ initializeReflectable() {
     LibraryElement reflectableLibrary =
         _resolver.getLibraryByName("reflectable.reflectable");
 
-    if (reflectableLibrary == null) {
-      // Stop and do not consumePrimary, i.e., let the original source
-      // pass through without changes.
-      _logger.info("Ignoring entry point $currentEntryPoint that does not "
-          "include the library 'package:reflectable/reflectable.dart'");
-      if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-        _processedEntryPointCount++;
-      }
-    } else {
-      reflectableLibrary = _resolvedLibraryOf(reflectableLibrary);
-
-      LibraryElement entryPointLibrary = _resolver.getLibrary(asset.id);
-      if (const bool.fromEnvironment("reflectable.print.entry.point")) {
-        print("Starting transformation of '$currentEntryPoint'.");
-      }
-
-      ReflectionWorld world =
-          _computeWorld(reflectableLibrary, entryPointLibrary, asset.id);
-      if (world == null) {
-        // Errors have already been reported during `_computeWorld`.
+    try {
+      if (reflectableLibrary == null) {
+        // Stop and do not consumePrimary, i.e., let the original source
+        // pass through without changes.
+        _logger.info("Ignoring entry point $currentEntryPoint that does not "
+            "include the library 'package:reflectable/reflectable.dart'");
         if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
           _processedEntryPointCount++;
         }
       } else {
-        if (entryPointLibrary.entryPoint == null) {
-          _logger.info("Entry point: $currentEntryPoint has no member "
-              "called `main`. Skipping.");
+        reflectableLibrary = _resolvedLibraryOf(reflectableLibrary);
+
+        LibraryElement entryPointLibrary = _resolver.getLibrary(asset.id);
+        if (const bool.fromEnvironment("reflectable.print.entry.point")) {
+          print("Starting transformation of '$currentEntryPoint'.");
+        }
+
+        ReflectionWorld world =
+            _computeWorld(reflectableLibrary, entryPointLibrary, asset.id);
+        if (world == null) {
+          // Errors have already been reported during `_computeWorld`.
           if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
             _processedEntryPointCount++;
           }
         } else {
-          String originalLibraryFilename = path.basename(asset.id.path);
-          AssetId generatedLibraryId =
-              asset.id.changeExtension(".reflectable.dart");
+          if (entryPointLibrary.entryPoint == null) {
+            _logger.info("Entry point: $currentEntryPoint has no member "
+                "called `main`. Skipping.");
+            if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+              _processedEntryPointCount++;
+            }
+          } else {
+            String originalLibraryFilename = path.basename(asset.id.path);
+            AssetId generatedLibraryId =
+                asset.id.changeExtension(".reflectable.dart");
 
-          // Generate a new file whose name is `generatedLibraryFilename`
-          // which offers a `reflectable_init()` function which initializes
-          // the reflection data.
-          String generatedLibraryContents = _generateNewEntryPoint(
-              world, generatedLibraryId, originalLibraryFilename);
-          transform.addOutput(new Asset.fromString(
-              generatedLibraryId, generatedLibraryContents));
-          if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-            _processedEntryPointCount++;
-          }
-          if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-            if (_processedEntryPointCount ==
-                const int.fromEnvironment("reflectable.pause.at.exit.count")) {
-              print("Transformation complete, pausing at exit.");
-              developer.debugger();
+            // Generate a new file whose name is `generatedLibraryFilename`
+            // which offers a `reflectable_init()` function which initializes
+            // the reflection data.
+            String generatedLibraryContents = _generateNewEntryPoint(
+                world, generatedLibraryId, originalLibraryFilename);
+            transform.addOutput(new Asset.fromString(
+                generatedLibraryId, generatedLibraryContents));
+            if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+              _processedEntryPointCount++;
+            }
+            if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+              if (_processedEntryPointCount ==
+                  const int.fromEnvironment(
+                      "reflectable.pause.at.exit.count")) {
+                print("Transformation complete, pausing at exit.");
+                developer.debugger();
+              }
             }
           }
         }
       }
+    } finally {
+      _resolver.release();
     }
-    _resolver.release();
   }
 }
 
