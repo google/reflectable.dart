@@ -21,7 +21,7 @@ reflectable **capability**. For a more detailed discussion about
 capabilities, please consult the [reflectable capability design
 document][1]. On this page we just use a couple of simple special cases.
 
-[1]: https://github.com/dart-lang/reflectable/blob/master/reflectable/doc/TheDesignOfReflectableCapabilities.md
+[1]: https://github.com/dart-lang/reflectable/blob/master/doc/TheDesignOfReflectableCapabilities.md
 
 This package uses code generation to provide support for reflection at the
 level which is specified using capabilities. The [`build` package][2] is
@@ -120,6 +120,13 @@ library whose file name is obtained by taking the file name of the main
 library of the program and adding `.reflectable`. In the example, this
 amounts to `import 'main.reflectable.dart'`.
 
+Note that it is **not recommended to publish generated code**, i.e.,
+published packages on `pub.dartlang.org` should not include files whose
+name is of the form `*.reflectable.dart`. The reason for this is that the
+generated code may change because some direct or indirect dependency
+changes (say, your package indirectly imports package `path` and then
+`path` changes), and this could make some generated code invalid.
+
 It is also necessary to **initialize the reflection support** by calling
 `initializeReflectable()`, as shown at the beginning of `main` in the
 example.
@@ -190,10 +197,9 @@ libraries it imports, which illustrates how reflectable can be used to
 dynamically make a choice among several kinds of reflection, and how to
 eliminate several kinds of static dependencies among libraries.
 
-[3]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/tool/reflectable_transformer
-[4]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/serialize_test.dart
-[5]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/lib/serialize.dart
-[6]: https://github.com/dart-lang/reflectable/blob/master/test_reflectable/test/meta_reflectors_test.dart
+[4]: https://github.com/dart-lang/test_reflectable/tree/master/test/serialize_test.dart
+[5]: https://github.com/dart-lang/test_reflectable/tree/master/lib/serialize.dart
+[6]: https://github.com/dart-lang/test_reflectable/tree/master/test/meta_reflectors_test.dart
 
 
 ## Known limitations
@@ -207,7 +213,8 @@ following parts are still incomplete:
   `typedef` it is possible to use that name as a type annotation, say, on a
   method parameter or as a return type, and then `reflectedTypeCapability`
   will make it possible to get a corresponding `reflectedType` and
-  `dynamicReflectedType`.
+  `dynamicReflectedType`. For non-generic function types this will also
+  work with anonymous (inline) function types like `void Function(int)`.
 
 - Private declarations. There is currently almost no support for reflection
   on private declarations, as this would require special support from the

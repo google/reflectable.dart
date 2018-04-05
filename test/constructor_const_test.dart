@@ -6,7 +6,6 @@ library reflectable.test.mock_tests.constructor_const_test;
 
 /// Checks that a non-const reflector constructor is an error.
 
-import 'dart:io';
 import 'package:barback/barback.dart';
 import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";

@@ -7,7 +7,6 @@ library reflectable.test.mock_tests.generate_private_test;
 /// Check that attempts to generate expressions that contain private names
 /// from different libraries are detected and diagnosed as an error.
 
-import 'dart:io';
 import 'package:barback/barback.dart';
 import "package:reflectable/test_transform.dart";
 import "package:reflectable/transformer.dart";

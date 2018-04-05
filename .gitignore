@@ -1,9 +1,7 @@
-.idea
-.pub
-pubspec.lock
-reflectable.iml
-build
-packages
-test/packages
 .packages
+.dart_tool
+pubspec.lock
+build
+reflectable.iml
+.idea
 *.reflectable.dart
