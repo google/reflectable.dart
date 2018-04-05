@@ -139,7 +139,7 @@ class ReflectionWorld {
         reflectors.map((_ReflectorDomain reflector) {
       String reflectorCode =
           reflector._generateCode(this, importCollector, logger, typedefs);
-      if (!typedefs.isEmpty) {
+      if (typedefs.isNotEmpty) {
         for (DartType dartType in typedefs.keys) {
           String body = reflector._typeCodeOfTypeArgument(
               dartType, importCollector, typeVariablesInScope, typedefs, logger,
@@ -852,7 +852,7 @@ class _ReflectorDomain {
       classDomain._instanceMembers.forEach(members.add);
 
       // Add all the formal parameters (as a single, global set) which
-      // are declared by any of the methods in  `classDomain._declarations`
+      // are declared by any of the methods in `classDomain._declarations`
       // as well as in `classDomain._instanceMembers`.
       classDomain._declaredParameters.forEach(parameters.add);
       classDomain._instanceParameters.forEach(parameters.add);
@@ -873,7 +873,8 @@ class _ReflectorDomain {
           } else if (variable is TopLevelVariableElement) {
             topLevelVariables.add(variable);
           } else {
-            logger.error("This kind of variable is not yet supported");
+            logger.error("This kind of variable is not yet supported"
+                " (${variable.runtimeType})");
           }
         }
       });
@@ -1679,7 +1680,7 @@ class _ReflectorDomain {
       reflectedTypes.add(erasableDartType);
       int index =
           reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
-      if (!dartType.typeFormals.isEmpty) {
+      if (dartType.typeFormals.isNotEmpty) {
         typedefs[dartType] = index;
       }
       return index;
@@ -1727,7 +1728,7 @@ class _ReflectorDomain {
       reflectedTypes.add(erasableDartType);
       int index =
           reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
-      if (!dartType.typeFormals.isEmpty) {
+      if (dartType.typeFormals.isNotEmpty) {
         // TODO(eernst) clarify: Maybe we should create an "erased" version
         // of `dartType` in this case, and adjust `erased:` above?
         typedefs[dartType] = index;
@@ -1822,7 +1823,7 @@ class _ReflectorDomain {
         return "$prefix${element.name}";
       } else {
         // Generic function types need separate `typedef`s.
-        if (!dartType.typeFormals.isEmpty) {
+        if (dartType.typeFormals.isNotEmpty) {
           if (useNameOfGenericFunctionType) {
             // Requested: just the name of the typedef; get it and return.
             int dartTypeNumber = typedefs.containsKey(dartType)
@@ -1831,25 +1832,21 @@ class _ReflectorDomain {
             return _typedefName(dartTypeNumber);
           } else {
             // Requested: the spelled-out generic function type; continue.
-            if (typeVariablesInScope == null) {
-              typeVariablesInScope = new Set<String>();
-            }
-            for (TypeParameterElement element in dartType.typeFormals) {
-              typeVariablesInScope.add(element.name);
-            }
+            (typeVariablesInScope ??= new Set<String>())
+                .addAll(dartType.typeFormals.map((element) => element.name));
           }
         }
         String returnType = _typeCodeOfTypeArgument(dartType.returnType,
             importCollector, typeVariablesInScope, typedefs, logger,
             useNameOfGenericFunctionType: useNameOfGenericFunctionType);
         String typeArguments = "";
-        if (!dartType.typeFormals.isEmpty) {
+        if (dartType.typeFormals.isNotEmpty) {
           List<String> typeArgumentList = dartType.typeFormals.map(
               (TypeParameterElement typeParameter) => typeParameter.toString());
           typeArguments = "<${typeArgumentList.join(', ')}>";
         }
         String argumentTypes = "";
-        if (!dartType.normalParameterTypes.isEmpty) {
+        if (dartType.normalParameterTypes.isNotEmpty) {
           List<String> normalParameterTypeList = dartType.normalParameterTypes
               .map((DartType parameterType) => _typeCodeOfTypeArgument(
                   parameterType,
@@ -1860,7 +1857,7 @@ class _ReflectorDomain {
                   useNameOfGenericFunctionType: useNameOfGenericFunctionType));
           argumentTypes = normalParameterTypeList.join(', ');
         }
-        if (!dartType.optionalParameterTypes.isEmpty) {
+        if (dartType.optionalParameterTypes.isNotEmpty) {
           List<String> optionalParameterTypeList = dartType
               .optionalParameterTypes
               .map((DartType parameterType) => _typeCodeOfTypeArgument(
@@ -1874,7 +1871,7 @@ class _ReflectorDomain {
           argumentTypes = "$argumentTypes$connector"
               "[${optionalParameterTypeList.join(', ')}]";
         }
-        if (!dartType.namedParameterTypes.isEmpty) {
+        if (dartType.namedParameterTypes.isNotEmpty) {
           Map<String, DartType> parameterMap = dartType.namedParameterTypes;
           List<String> namedParameterTypeList =
               parameterMap.keys.map((String name) {
@@ -1951,7 +1948,7 @@ class _ReflectorDomain {
         String prefix = importCollector._getPrefix(element.library);
         return "$prefix${element.name}";
       } else {
-        if (!dartType.typeFormals.isEmpty) {
+        if (dartType.typeFormals.isNotEmpty) {
           // `dartType` is a generic function type, so we must use a
           // separately generated `typedef` to obtain a `Type` for it.
           return _typeCodeOfTypeArgument(
@@ -2775,14 +2772,13 @@ class _Capabilities {
       Iterable<ElementAnnotation> metadata,
       Iterable<ElementAnnotation> getterMetadata,
       TransformLogger logger) {
-    var v = _supportsInstanceInvoke(
+    return _supportsInstanceInvoke(
         _capabilities,
         methodName,
         _getEvaluatedMetadata(metadata, logger),
         getterMetadata == null
             ? null
             : _getEvaluatedMetadata(getterMetadata, logger));
-    return v;
   }
 
   bool supportsNewInstance(
@@ -2791,9 +2787,8 @@ class _Capabilities {
       LibraryElement libraryElement,
       Resolver resolver,
       TransformLogger logger) {
-    var result = _supportsNewInstance(_capabilities, constructorName,
+    return _supportsNewInstance(_capabilities, constructorName,
         _getEvaluatedMetadata(metadata, logger));
-    return result;
   }
 
   bool _supportsTopLevelInvoke(
@@ -3965,6 +3960,7 @@ initializeReflectable() {
 
     LibraryElement reflectableLibrary =
         _resolver.getLibraryByName("reflectable.reflectable");
+
     if (reflectableLibrary == null) {
       // Stop and do not consumePrimary, i.e., let the original source
       // pass through without changes.
@@ -3973,58 +3969,54 @@ initializeReflectable() {
       if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
         _processedEntryPointCount++;
       }
-      _resolver.release();
-      return;
-    }
-    reflectableLibrary = _resolvedLibraryOf(reflectableLibrary);
+    } else {
+      reflectableLibrary = _resolvedLibraryOf(reflectableLibrary);
 
-    LibraryElement entryPointLibrary = _resolver.getLibrary(asset.id);
-    if (const bool.fromEnvironment("reflectable.print.entry.point")) {
-      print("Starting transformation of '$currentEntryPoint'.");
-    }
-
-    ReflectionWorld world =
-        _computeWorld(reflectableLibrary, entryPointLibrary, asset.id);
-    if (world == null) {
-      // Errors have already been reported during `_computeWorld`.
-      if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-        _processedEntryPointCount++;
+      LibraryElement entryPointLibrary = _resolver.getLibrary(asset.id);
+      if (const bool.fromEnvironment("reflectable.print.entry.point")) {
+        print("Starting transformation of '$currentEntryPoint'.");
       }
-      _resolver.release();
-      return;
-    }
 
-    if (entryPointLibrary.entryPoint == null) {
-      _logger.info("Entry point: $currentEntryPoint has no member "
-          "called `main`. Skipping.");
-      if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-        _processedEntryPointCount++;
+      ReflectionWorld world =
+          _computeWorld(reflectableLibrary, entryPointLibrary, asset.id);
+      if (world == null) {
+        // Errors have already been reported during `_computeWorld`.
+        if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+          _processedEntryPointCount++;
+        }
+      } else {
+        if (entryPointLibrary.entryPoint == null) {
+          _logger.info("Entry point: $currentEntryPoint has no member "
+              "called `main`. Skipping.");
+          if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+            _processedEntryPointCount++;
+          }
+        } else {
+          String originalLibraryFilename = path.basename(asset.id.path);
+          AssetId generatedLibraryId =
+              asset.id.changeExtension(".reflectable.dart");
+
+          // Generate a new file whose name is `generatedLibraryFilename`
+          // which offers a `reflectable_init()` function which initializes
+          // the reflection data.
+          String generatedLibraryContents = _generateNewEntryPoint(
+              world, generatedLibraryId, originalLibraryFilename);
+          transform.addOutput(new Asset.fromString(
+              generatedLibraryId, generatedLibraryContents));
+          if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+            _processedEntryPointCount++;
+          }
+          if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
+            if (_processedEntryPointCount ==
+                const int.fromEnvironment("reflectable.pause.at.exit.count")) {
+              print("Transformation complete, pausing at exit.");
+              developer.debugger();
+            }
+          }
+        }
       }
-      _resolver.release();
-      return;
-    }
-
-    String originalLibraryFilename = path.basename(asset.id.path);
-    AssetId generatedLibraryId = asset.id.changeExtension(".reflectable.dart");
-
-    // Generate a new file whose name is `generatedLibraryFilename` which offers
-    // a `reflectable_init()` function which initializes the reflection data.
-    String generatedLibraryContents = _generateNewEntryPoint(
-        world, generatedLibraryId, originalLibraryFilename);
-    transform.addOutput(
-        new Asset.fromString(generatedLibraryId, generatedLibraryContents));
-    if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-      _processedEntryPointCount++;
     }
     _resolver.release();
-
-    if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
-      if (_processedEntryPointCount ==
-          const int.fromEnvironment("reflectable.pause.at.exit.count")) {
-        print("Transformation complete, pausing at exit.");
-        developer.debugger();
-      }
-    }
   }
 }
 
