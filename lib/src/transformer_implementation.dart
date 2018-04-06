@@ -907,7 +907,8 @@ class _ReflectorDomain {
       void addClass(ClassElement classElement) {
         classes.add(classElement);
         LibraryElement classLibrary = classElement.library;
-        if (!libraries.items.contains(classLibrary)) {
+        if (!libraries.items.any(
+                (domain) => domain._libraryElement == classLibrary)) {
           uncheckedAddLibrary(classLibrary);
         }
       }
