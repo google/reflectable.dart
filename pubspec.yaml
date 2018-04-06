@@ -22,6 +22,8 @@ dependencies:
   dart_style: '>=0.2.0 <2.0.0'
   glob: ^1.1.0
   logging: ^0.11.0
+  package_config: ^1.0.0
+  package_resolver: ^1.0.0
   path: '>=1.2.0 <1.6.0'
   source_span: '>=1.0.0 <1.5.0'
 dev_dependencies:
