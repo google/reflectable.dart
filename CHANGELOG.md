@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0
+
+This version is updated for Dart 2, to the extent that this is possible
+at this point (a stable version of Dart 2 has not yet been released).
+Minor updates will be used to track the language updates as needed,
+so a dependency on reflectable version `^2.0.0` should work for Dart 2.
+
+* Update version number, prepare package for being published.
+
 ## 2.0.0-dev.3.0
 
 * Now supports client packages using commands like
