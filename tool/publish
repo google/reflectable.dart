@@ -90,9 +90,9 @@ git diff HEAD
 echo ">>>>>> Run these commands:"
 echo git add --all
 echo git commit -m$COMMIT_MESSAGE
-echo git cl upload
+echo git push --set-upstream origin "current_branch_name"
 echo ">>>>>> Please get review such that these changes can be landed.. "
-echo git cl land
+echo ">>>>>> Merge the PR on github"
 echo git co master
 echo git pull --rebase origin master
 echo pushd ..
