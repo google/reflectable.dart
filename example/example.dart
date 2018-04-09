@@ -3,6 +3,7 @@
 // the LICENSE file.
 
 // Try out some reflective invocations.
+// Build with `cd ..; pub run build_runner build example`.
 
 import 'package:reflectable/reflectable.dart';
 import 'example.reflectable.dart';
@@ -48,9 +49,9 @@ main() {
   print(instanceMirror.invoke("arg1", [84]));
   print(instanceMirror.invoke("arg1to3", [40, 2]));
   print(instanceMirror.invoke("arg1to3", [1, -1, 1]));
-  print(instanceMirror.invoke("arg1to3", [21, 21, 0, "Ignored"]));
+  print(instanceMirror.invoke("arg1to3", [21, 21, 0, "foo"]));
   
-  // Invocations of methods accepting named arguments.
+  // Invocations of methods accepting named arguments (printing '42').
   print(instanceMirror.invoke("argNamed", [55, 29]));
   print(instanceMirror.invoke("argNamed", [21, 21], {#z: 0}));
 
@@ -62,12 +63,12 @@ main() {
   print(instanceMirror.invoke("unary-", [])); // '-3'.
   print(instanceMirror.invoke("~", [])); // '5'.
 
-  // Similar invocations on static methods.
-  print(classMirror.invoke("noArguments", [])); // '42'.
-  print(classMirror.invoke("oneArgument", [84])); // '42'.
-  print(classMirror.invoke("optionalArguments", [40, 2])); // '42'.
-  print(classMirror.invoke("optionalArguments", [1, -1, 1])); // '42'.
-  print(classMirror.invoke("optionalArguments", [21, 21, 0, "foo"])); // '42'.
-  print(classMirror.invoke("namedArguments", [55, 29])); // '42'.
-  print(classMirror.invoke("namedArguments", [21, 21], {#z: 0})); // '42'.
+  // Similar invocations on static methods (printing '42').
+  print(classMirror.invoke("noArguments", []));
+  print(classMirror.invoke("oneArgument", [84]));
+  print(classMirror.invoke("optionalArguments", [40, 2]));
+  print(classMirror.invoke("optionalArguments", [1, -1, 1]));
+  print(classMirror.invoke("optionalArguments", [21, 21, 0, "foo"]));
+  print(classMirror.invoke("namedArguments", [55, 29]));
+  print(classMirror.invoke("namedArguments", [21, 21], {#z: 0}));
 }
