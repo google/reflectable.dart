@@ -468,6 +468,9 @@ abstract class InstanceMirror implements ObjectMirror {
   /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
 
+  /// Override requested by linter.
+  int get hashCode;
+
   /// Performs [invocation] on [reflectee].
   ///
   /// Equivalent to
@@ -578,6 +581,9 @@ abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
   ///
   /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
+
+  /// Override requested by linter.
+  int get hashCode;
 
   /// Returns a list of the imports and exports in this library;
   ///
@@ -961,6 +967,9 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
 
+  /// Override requested by linter.
+  int get hashCode;
+
   /// Returns whether the class denoted by the receiver is a subclass of the
   /// class denoted by the argument.
   ///
@@ -1066,6 +1075,9 @@ abstract class TypeVariableMirror extends TypeMirror {
   ///
   /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
+
+  /// Override requested by linter.
+  int get hashCode;
 }
 
 /// A [TypedefMirror] represents a typedef in a Dart language program.
@@ -1236,6 +1248,9 @@ abstract class MethodMirror implements DeclarationMirror {
   ///
   /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
+
+  /// Override requested by linter.
+  int get hashCode;
 }
 
 /// A [VariableMirror] reflects a Dart language variable declaration.
@@ -1313,6 +1328,9 @@ abstract class VariableMirror implements DeclarationMirror {
   ///
   /// Required capabilities: [operator ==] does not require any capabilities.
   bool operator ==(other);
+
+  /// Override requested by linter.
+  int get hashCode;
 }
 
 /// A [ParameterMirror] reflects a Dart formal parameter declaration.

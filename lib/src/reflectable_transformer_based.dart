@@ -2119,6 +2119,9 @@ abstract class VariableMirrorBase extends _DataCaching
           ? _data.types[_dynamicReflectedTypeIndex]
           : reflectedType;
 
+  /// Override requested by linter.
+  bool operator ==(other);
+
   // Note that [operator ==] is redefined slightly differently in the two
   // subtypes of this class, but they share this [hashCode] implementation.
   @override
@@ -2163,6 +2166,9 @@ class VariableMirrorImpl extends VariableMirrorBase {
       other is VariableMirrorImpl &&
       other.simpleName == simpleName &&
       other.owner == owner;
+
+  /// Override requested by linter.
+  int get hashCode => super.hashCode;
 }
 
 class ParameterMirrorImpl extends VariableMirrorBase
@@ -2226,6 +2232,9 @@ class ParameterMirrorImpl extends VariableMirrorBase
       other is ParameterMirrorImpl &&
       other.simpleName == simpleName &&
       other.owner == owner;
+
+  /// Override requested by linter.
+  int get hashCode => super.hashCode;
 }
 
 class DynamicMirrorImpl implements TypeMirror {
