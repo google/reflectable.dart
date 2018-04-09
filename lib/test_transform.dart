@@ -53,6 +53,7 @@ class TestTransform implements Transform {
     }
     return _packageResolver;
   }
+
   PackageResolver _packageResolver;
 
   final List<MessageRecord> messages = <MessageRecord>[];
@@ -61,8 +62,7 @@ class TestTransform implements Transform {
     messages.add(new MessageRecord(id, level, message, span));
   }
 
-  TestTransform(
-      this.fileName, this.fileContents, this.package) {
+  TestTransform(this.fileName, this.fileContents, this.package) {
     _primaryAssetId = new AssetId.parse(fileName);
     _primaryAsset = new Asset.fromString(_primaryAssetId, fileContents);
     assets[_primaryAssetId] = _primaryAsset;
@@ -76,8 +76,7 @@ class TestTransform implements Transform {
         logger.error("Unexpected Platform.script: $source");
       }
       scriptUri = Uri.parse(source.substring(match.start, match.end));
-    }
-    else if (scriptUri.hasScheme && scriptUri.scheme == 'http') {
+    } else if (scriptUri.hasScheme && scriptUri.scheme == 'http') {
       logger.error("Platform.script has scheme 'http': Not supported");
     }
     dotPackages = scriptUri.resolve("../.packages");

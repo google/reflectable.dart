@@ -16,7 +16,6 @@ import '../capability.dart';
 /// a named constructor:
 /// `super.fromList(const <ReflectCapability>[myCap0, myCap1])`
 class ReflectableBase {
-
   // Fields holding capabilities; we use discrete fields rather than a list
   // of fields because this allows us to use a syntax similar to a varargs
   // invocation as the superinitializer (omitting `<ReflectCapability>[]` and
@@ -39,6 +38,7 @@ class ReflectableBase {
     void add(ReflectCapability cap) {
       if (cap != null) result.add(cap);
     }
+
     add(_cap0);
     add(_cap1);
     add(_cap2);
@@ -54,10 +54,17 @@ class ReflectableBase {
 
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
-  const ReflectableBase([this._cap0 = null, this._cap1 = null,
-      this._cap2 = null, this._cap3 = null, this._cap4 = null,
-      this._cap5 = null, this._cap6 = null, this._cap7 = null,
-      this._cap8 = null, this._cap9 = null])
+  const ReflectableBase(
+      [this._cap0 = null,
+      this._cap1 = null,
+      this._cap2 = null,
+      this._cap3 = null,
+      this._cap4 = null,
+      this._cap5 = null,
+      this._cap6 = null,
+      this._cap7 = null,
+      this._cap8 = null,
+      this._cap9 = null])
       : _capabilitiesGivenAsList = false,
         _capabilities = null;
 
