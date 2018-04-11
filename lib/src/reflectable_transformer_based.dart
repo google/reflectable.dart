@@ -2170,7 +2170,7 @@ class VariableMirrorImpl extends VariableMirrorBase {
       other.owner == owner;
 
   /// Override requested by linter.
-  int get hashCode => super.hashCode;
+  int get hashCode;
 }
 
 class ParameterMirrorImpl extends VariableMirrorBase
@@ -2236,7 +2236,7 @@ class ParameterMirrorImpl extends VariableMirrorBase
       other.owner == owner;
 
   /// Override requested by linter.
-  int get hashCode => super.hashCode;
+  int get hashCode;
 }
 
 class DynamicMirrorImpl implements TypeMirror {
