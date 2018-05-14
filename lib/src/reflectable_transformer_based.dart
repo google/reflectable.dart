@@ -142,6 +142,7 @@ class ReflectorData {
             yield typeMirror;
           }
         }
+
         _typeToClassMirrorCache = new Map<Type, ClassMirror>.fromIterables(
             types.sublist(0, supportedClassCount), classMirrors());
       }
@@ -644,6 +645,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       throw reflectableNoSuchMethodError(
           reflectedType, memberName, positionalArguments, namedArguments);
     }
+
     _StaticGetter getter = _getters[memberName];
     if (getter == null) fail();
     if (!_checkStaticParameterListShape(
@@ -2168,7 +2170,7 @@ class VariableMirrorImpl extends VariableMirrorBase {
       other.owner == owner;
 
   /// Override requested by linter.
-  int get hashCode => super.hashCode;
+  int get hashCode;
 }
 
 class ParameterMirrorImpl extends VariableMirrorBase
@@ -2234,7 +2236,7 @@ class ParameterMirrorImpl extends VariableMirrorBase
       other.owner == owner;
 
   /// Override requested by linter.
-  int get hashCode => super.hashCode;
+  int get hashCode;
 }
 
 class DynamicMirrorImpl implements TypeMirror {
@@ -2476,8 +2478,8 @@ bool _isSetterName(String name) => name.endsWith("=");
 String _getterNameToSetterName(String name) => name + "=";
 
 bool _supportsType(ReflectableImpl reflector) {
-  return reflector.capabilities.any(
-      (ReflectCapability capability) => capability is TypeCapability);
+  return reflector.capabilities
+      .any((ReflectCapability capability) => capability is TypeCapability);
 }
 
 bool _supportsTypeRelations(ReflectableImpl reflector) {

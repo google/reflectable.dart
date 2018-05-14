@@ -5,5 +5,5 @@
 /// Constants used to recognize the [Reflectable] class.
 library reflectable.src.reflectable_class_constants;
 
-const String name = "Reflectable";  // Update if renaming class!
+const String name = "Reflectable"; // Update if renaming class!
 const String id = "4c5bb5484ffbe3f266cafa28ebc80a0efa78957e";

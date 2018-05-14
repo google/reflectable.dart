@@ -304,7 +304,6 @@ abstract class DeclarationMirror implements Mirror {
 ///
 /// See [InstanceMirror], [ClassMirror], and [LibraryMirror].
 abstract class ObjectMirror implements Mirror {
-
   /// Invokes the function or method [memberName], and returns the result.
   ///
   /// Let *o* be the object reflected by this mirror, let
@@ -425,7 +424,6 @@ abstract class ObjectMirror implements Mirror {
 
 /// An [InstanceMirror] reflects an instance of a Dart language object.
 abstract class InstanceMirror implements ObjectMirror {
-
   /// A mirror on the type of the reflectee.
   ///
   /// Returns a mirror on the class of the reflectee, based on the value
@@ -497,7 +495,6 @@ abstract class InstanceMirror implements ObjectMirror {
 /// A [ClosureMirror] provides the ability to execute its reflectee and
 /// introspect its function.
 abstract class ClosureMirror implements InstanceMirror {
-
   /// A mirror on the function associated with this closure.
   ///
   /// The function associated with an implicit closure of a function is that
@@ -508,8 +505,8 @@ abstract class ClosureMirror implements InstanceMirror {
   ///
   /// A Dart implementation might choose to create a class for each closure
   /// expression, in which case [:function:] would be the same as
-  /// [:type.declarations[#call]:]. But the Dart language model does not 
-  /// require this. A more typical implementation involves a single closure 
+  /// [:type.declarations[#call]:]. But the Dart language model does not
+  /// require this. A more typical implementation involves a single closure
   /// class for each type signature, where the call method dispatches to a
   /// function held in the closure rather the call method directly implementing
   /// the closure body. So one cannot rely on closures from distinct closure
@@ -532,7 +529,7 @@ abstract class ClosureMirror implements InstanceMirror {
   ///
   /// If the invocation returns a result *r*, this method returns *r*.
   ///
-  /// If the invocation causes a compilation error, the effect is the same as 
+  /// If the invocation causes a compilation error, the effect is the same as
   /// if a non-reflective compilation error had been encountered.
   ///
   /// If the invocation throws an exception *e* (that it does not catch), this
@@ -549,13 +546,12 @@ abstract class ClosureMirror implements InstanceMirror {
 /// access to the variables, functions, and classes of the
 /// library.
 abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
-
   /// The absolute uri of the library.
   ///
   /// Required capabilities: [uri] requires a [UriCapability].
   Uri get uri;
 
-  /// Returns an immutable map of the declarations actually given in the 
+  /// Returns an immutable map of the declarations actually given in the
   /// library.
   ///
   /// This map includes all regular methods, getters, setters, fields, classes
@@ -667,7 +663,6 @@ abstract class CombinatorMirror implements Mirror {
 /// A [TypeMirror] reflects a Dart language class, typedef,
 /// function type or type variable.
 abstract class TypeMirror implements DeclarationMirror {
-
   /// Returns true if this mirror reflects dynamic, a non-generic class or
   /// typedef, or an instantiated generic class or typedef with support in
   /// the execution mode. Otherwise, returns false.
@@ -790,7 +785,6 @@ abstract class TypeMirror implements DeclarationMirror {
 
 /// A [ClassMirror] reflects a Dart language class.
 abstract class ClassMirror implements TypeMirror, ObjectMirror {
-
   /// A mirror on the superclass on the reflectee.
   ///
   /// If this type is [:Object:], the superclass will be null.
@@ -1033,7 +1027,6 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
 /// A [FunctionTypeMirror] represents the type of a function in the
 /// Dart language.
 abstract class FunctionTypeMirror implements ClassMirror {
-
   /// Returns the return type of the reflectee.
   ///
   /// Required capabilities: [returnType] requires a [TypeCapability].
@@ -1052,7 +1045,6 @@ abstract class FunctionTypeMirror implements ClassMirror {
 
 /// A [TypeVariableMirror] represents a type parameter of a generic type.
 abstract class TypeVariableMirror extends TypeMirror {
-
   /// A mirror on the type that is the upper bound of this type variable.
   ///
   /// Required capabilities: [upperBound] requires a [TypeCapability].
@@ -1065,7 +1057,7 @@ abstract class TypeVariableMirror extends TypeMirror {
   /// Required capabilities: [isStatic] does not require any capabilities.
   bool get isStatic;
 
-  /// Whether [other] is a [TypeVariableMirror] on the same type variable as 
+  /// Whether [other] is a [TypeVariableMirror] on the same type variable as
   /// this mirror.
   ///
   /// The equality holds if and only if
@@ -1082,7 +1074,6 @@ abstract class TypeVariableMirror extends TypeMirror {
 
 /// A [TypedefMirror] represents a typedef in a Dart language program.
 abstract class TypedefMirror implements TypeMirror {
-
   /// The defining type for this typedef.
   ///
   /// If the the type referred to by the reflectee is a function type *F*, the
@@ -1097,7 +1088,6 @@ abstract class TypedefMirror implements TypeMirror {
 /// A [MethodMirror] reflects a Dart language function, method,
 /// constructor, getter, or setter.
 abstract class MethodMirror implements DeclarationMirror {
-
   /// A mirror on the return type for the reflectee.
   ///
   /// Required capabilities: [returnType] requires a [TypeCapability].
@@ -1255,7 +1245,6 @@ abstract class MethodMirror implements DeclarationMirror {
 
 /// A [VariableMirror] reflects a Dart language variable declaration.
 abstract class VariableMirror implements DeclarationMirror {
-
   /// Returns a mirror on the type of the reflectee.
   ///
   /// Required capabilities: [type] requires a [TypeCapability].
@@ -1335,7 +1324,6 @@ abstract class VariableMirror implements DeclarationMirror {
 
 /// A [ParameterMirror] reflects a Dart formal parameter declaration.
 abstract class ParameterMirror implements VariableMirror {
-
   /// A mirror on the type of this parameter.
   ///
   /// Required capabilities: [type] requires a [TypeCapability].
@@ -1375,7 +1363,6 @@ abstract class ParameterMirror implements VariableMirror {
 
 /// A [SourceLocation] describes the span of an entity in Dart source code.
 abstract class SourceLocation {
-
   /// The 1-based line number for this source location.
   ///
   /// A value of 0 means that the line number is unknown.
@@ -1392,7 +1379,6 @@ abstract class SourceLocation {
 
 /// Class used for encoding comments as metadata annotations.
 class Comment {
-
   /// The comment text as written in the source text.
   final String text;
 
@@ -1404,7 +1390,7 @@ class Comment {
 
   /// Is [:true:] if this comment is a documentation comment.
   ///
-  /// That is, that the comment is either enclosed in [: /** ... */ :] or 
+  /// That is, that the comment is either enclosed in [: /** ... */ :] or
   /// starts with [: /// :].
   final bool isDocComment;
 
