@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+* This version is a tiny update: It solves a version problem by changing some
+  package dependencies.
+
 ## 2.0.0
 
 This version is updated for Dart 2, to the extent that this is possible
