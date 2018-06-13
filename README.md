@@ -143,7 +143,7 @@ approach to version management that your software otherwise employs.
 In order to generate code you will need to run the following command from the
 root directory of your package:
 
-```shell
+```console
 > pub run build_runner build DIR
 ```
 
@@ -152,7 +152,7 @@ where the entry point(s) are located, that is, the main file(s) for the
 program(s) that you wish to generate code for. In the example where we have an
 entry point at `web/myProgram.dart` the command would be as follows:
 
-```shell
+```console
 > pub run build_runner build web
 ```
 
@@ -160,7 +160,7 @@ You may appreciate the following shortcut command which will work when you wish
 to generated code for entry points in the `test` subdirectory and also run the
 tests (given that the tests are written using package test):
 
-```shell
+```console
 > pub run build_runner test
 ```
 
@@ -193,7 +193,7 @@ main(List<String> arguments) async {
 You may now run the code generation step with the root of your package as the
 current directory:
 
-```shell
+```console
 > dart tool/builder.dart web/myProgram.dart
 ```
 
