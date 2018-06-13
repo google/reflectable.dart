@@ -178,9 +178,8 @@ Dart program which imports the actual builder, and run the build process from
 there, rather than using `pub run build_runner ...`. This will give you more
 control, but also more ways to shoot yourself in the foot.
 
-Here's an example which shows how to get started code of such a program (noting
-that this is _not_ the recommended way to proceed, but it may be necessary for
-more specialized purposes):
+Here's an example which shows how to get started. The code of such a
+builder program can be as concise as the following:
 
 ```dart
 import 'package:reflectable/reflectable_builder.dart' as builder;
@@ -190,8 +189,8 @@ main(List<String> arguments) async {
 }
 ```
 
-You may now run the code generation step with the root of your package as the
-current directory:
+You may now run the code generation step with the root of your package as
+the current directory:
 
 ```console
 > dart tool/builder.dart web/myProgram.dart
@@ -208,7 +207,7 @@ directory `.dart_tool`, so you will get complaints about inconsistencies if
 you switch from generating code for `web/myProgram.dart` to generating code
 for `web/myOtherProgram.dart`. If and when you need to generate code for
 another set of programs, delete all files named `*.reflectable.dart`, and
-the directory `.dart_tool`.
+delete the whole directory `.dart_tool`.
 
 Again, the approach where you are using your own `builder.dart` to generate
 the code is more flexible, but the recommended standard approach is to use
