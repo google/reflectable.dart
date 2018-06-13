@@ -140,9 +140,46 @@ dependencies:
 You may also wish to specify constraints on the version, depending on the
 approach to version management that your software otherwise employs.
 
-In order to generate code, you will need to write a tiny Dart program which
-imports the actual builder. We'll assume that you store this program as
-`tool/builder.dart` as seen from the root of your package. Here's the code:
+In order to generate code you will need to run the following command from the
+root directory of your package:
+
+```console
+> pub run build_runner build DIR
+```
+
+where `DIR` should be replaced by a relative path that specifies the directory
+where the entry point(s) are located, that is, the main file(s) for the
+program(s) that you wish to generate code for. In the example where we have an
+entry point at `web/myProgram.dart` the command would be as follows:
+
+```console
+> pub run build_runner build web
+```
+
+You may appreciate the following shortcut command which will work when you wish
+to generated code for entry points in the `test` subdirectory and also run the
+tests (given that the tests are written using package test):
+
+```console
+> pub run build_runner test
+```
+
+This approach (using `pub run build_runner ...`) includes support for
+incremental code generation, that is, it offers shorter execution times for the
+code generation step because strives to only generate code that relies on
+something that changed. This is the recommended approach.
+
+However, if you have a complex setup then you may wish to study the packages
+`build`, `build_runner`, etc. in order to learn more about how to control
+the build process in more detail.
+
+To give a hint about a more low-level approach, you may choose to write a tiny
+Dart program which imports the actual builder, and run the build process from
+there, rather than using `pub run build_runner ...`. This will give you more
+control, but also more ways to shoot yourself in the foot.
+
+Here's an example which shows how to get started. The code of such a
+builder program can be as concise as the following:
 
 ```dart
 import 'package:reflectable/reflectable_builder.dart' as builder;
@@ -152,30 +189,31 @@ main(List<String> arguments) async {
 }
 ```
 
-Now run the code generation step with the root of your package as the current
-directory:
+You may now run the code generation step with the root of your package as
+the current directory:
 
-```shell
+```console
 > dart tool/builder.dart web/myProgram.dart
 ```
 
-where `web/myProgram.dart` should be replaced by the root library of the
-program for which you wish to generate code. You can generate code for
-several programs in one step; for instance, to generate code for a set of
-test files in `test`, this would typically be
-`tool/builder.dart test/*_test.dart`.
+where `web/myProgram.dart` should be replaced by a path that specifies the
+entry point(s) for which you wish to generate code. For a set of test files
+in `test`, this would typically be `tool/builder.dart test/*_test.dart`.
 
-Note that you should generate code for the _same_ set of root libraries
-every time you run `builder.dart`. This is because the build
+It should be noted that you need to generate code for the _same_ set of
+entry points every time you run `builder.dart`. This is because the build
 framework stores data about the code generation in a single database in the
 directory `.dart_tool`, so you will get complaints about inconsistencies if
 you switch from generating code for `web/myProgram.dart` to generating code
-for `web/myOtherProgram.dart`.
+for `web/myOtherProgram.dart`. If and when you need to generate code for
+another set of programs, delete all files named `*.reflectable.dart`, and
+delete the whole directory `.dart_tool`.
 
-If and when you need to generate code for another set of programs, delete
-all files named `*.reflectable.dart`, and the directory `.dart_tool`.
+Again, the approach where you are using your own `builder.dart` to generate
+the code is more flexible, but the recommended standard approach is to use
+`pub run build_runner ...`.
 
-Also note that it is necessary to perform this code generation step if you
+Note that it is necessary to perform the code generation step if you
 use reflectable directly *or indirectly* by depending on a package that
 uses reflectable. Even in the indirect case there may (typically will!) be
 a need to generate code based on files in your package.
