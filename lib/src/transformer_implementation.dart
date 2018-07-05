@@ -5113,6 +5113,36 @@ class MixinApplication implements ClassElement {
 
   @override
   bool get isVisibleForTesting => throw unreachableError("isVisibleForTesting");
+
+  @override
+  bool get hasJS => false;
+
+  @override
+  bool get hasRequired => false;
+
+  @override
+  bool get hasProtected => false;
+
+  @override
+  bool get hasAlwaysThrows => false;
+
+  @override
+  bool get hasIsTestGroup => false;
+
+  @override
+  bool get hasOverride => false;
+
+  @override
+  bool get hasFactory => false;
+
+  @override
+  bool get hasVisibleForTesting => false;
+
+  @override
+  bool get hasIsTest => false;
+
+  @override
+  bool get hasDeprecated => false;
 }
 
 bool _isSetterName(String name) => name.endsWith("=");
