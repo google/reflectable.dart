@@ -16,8 +16,6 @@ import 'package:analyzer/src/dart/constant/evaluation.dart';
 import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/generated/source.dart' show Source;
 import 'package:analyzer/src/generated/utilities_dart.dart';
-import 'package:barback/barback.dart';
-import 'package:code_transformers/resolver.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as path;
@@ -26,7 +24,7 @@ import 'encoding_constants.dart' as constants;
 import 'fixed_point.dart';
 import 'incompleteness.dart';
 import 'reflectable_class_constants.dart' as reflectable_class_constants;
-import 'transformer_errors.dart' as errors;
+import 'reflectable_errors.dart' as errors;
 
 /// Specifiers for warnings that may be suppressed; `allWarnings` disables all
 /// warnings, and the remaining values are concerned with individual warnings.
@@ -41,10 +39,6 @@ enum WarningKind {
   unrecognizedReflector,
   unusedReflector
 }
-
-// Single source of instances of [Resolver], shared across multiple
-// invocations of `apply` to save memory.
-Resolvers _resolvers = new Resolvers(dartSdkDirectory);
 
 class ReflectionWorld {
   final Resolver resolver;
