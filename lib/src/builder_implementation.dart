@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.src.transformer_implementation;
+library reflectable.src.builder_implementation;
 
 import 'dart:async';
 import 'dart:developer' as developer;
@@ -2044,7 +2044,7 @@ class _ReflectorDomain {
     }
 
     // TODO(sigurdm) clarify: Find out how to get good uri's in a
-    // transformer.
+    // builder.
     String uriCode =
         (_capabilities._supportsUri || _capabilities._supportsLibraries)
             ? 'Uri.parse(r"reflectable://$libraryIndex/$library")'
@@ -3070,7 +3070,7 @@ class _ImportCollector {
 /// Only in use when `const bool.fromEnvironment("reflectable.pause.at.exit")`.
 int _processedEntryPointCount = 0;
 
-class TransformerImplementation {
+class BuilderImplementation {
   TransformLogger _logger;
   Resolver _resolver;
   bool _formatted;
@@ -3079,7 +3079,7 @@ class TransformerImplementation {
   bool _warningEnabled(WarningKind kind) {
     // TODO(eernst) implement: No test reaches this point.
     // The mock_tests should be extended to exercise all warnings and errors
-    // that the transformer can encounter.
+    // that the builder can encounter.
     return !_suppressedWarnings.contains(kind);
   }
 
@@ -3358,7 +3358,7 @@ class TransformerImplementation {
   /// provided as [reflectableClass], and it has a single nameless constructor
   /// that does not take any arguments. In case we extend this list of
   /// general reflector well-formedness requirements, this is the method to
-  /// update accordingly. The rest of the transformer can then rely on every
+  /// update accordingly. The rest of the builder can then rely on every
   /// reflector class to be well-formed, and just have assertions rather than
   /// emitting error messages about it.
   bool _isReflectorClass(
@@ -3896,21 +3896,13 @@ ${imports.join('\n')}
 // ignore:unused_import
 import "package:reflectable/mirrors.dart" as m;
 // ignore:unused_import
-import "package:reflectable/src/reflectable_transformer_based.dart" as r;
-// ignore:unused_import
-import "package:reflectable/reflectable.dart" show isTransformed;
+import "package:reflectable/src/reflectable_builder_based.dart" as r;
 
 $code
 
 final _memberSymbolMap = ${world.generateSymbolMap()};
 
 initializeReflectable() {
-  if (!isTransformed) {
-    throw new UnsupportedError(
-        "The transformed code is running with the untransformed "
-        "reflectable package. Remember to set your package-root to "
-        "'build/.../packages'.");
-  }
   r.data = _data;
   r.memberSymbolMap = _memberSymbolMap;
 }
@@ -3922,20 +3914,19 @@ initializeReflectable() {
     return result;
   }
 
-  /// Performs the transformation which eliminates all imports of
-  /// `package:reflectable/reflectable.dart` and instead provides a set of
-  /// statically generated mirror classes.
-  Future apply(Transform transform, List<String> entryPoints, bool formatted,
+  /// Performs the build which produces a set of statically generated
+  /// mirror classes, as requested using reflectable capabilities.
+  Future apply(BuildStep buildStep, List<String> entryPoints, bool formatted,
       List<WarningKind> suppressedWarnings) async {
     // The type argument in the return type is omitted because the
-    // documentation on barback and on transformers do not specify it.
+    // documentation does not specify it.
 
-    _logger = transform.logger;
+    _logger = log;
     _formatted = formatted;
     _suppressedWarnings = suppressedWarnings;
 
-    Asset asset = await transform.primaryInput;
-    assert(asset != null); // Every transform has a primary asset.
+    Asset asset = await buildStep.primaryInput;
+    assert(asset != null); // Every buildStep has a primary asset.
     AssetId currentEntryPoint; // Null means not found.
 
     for (String entryPoint in entryPoints) {
@@ -3951,7 +3942,7 @@ initializeReflectable() {
     // The [_resolver] provides all the static information. Use the default
     // for `entryPoints` and `false` for `resolveAllLibraries` (we resolve
     // here in reflectable, in a more fine-grained and lazy manner).
-    _resolver = await _resolvers.get(transform, null, false);
+    _resolver = await buildStep.resolver;
 
     LibraryElement reflectableLibrary =
         _resolver.getLibraryByName("reflectable.reflectable");
@@ -3970,7 +3961,7 @@ initializeReflectable() {
 
         LibraryElement entryPointLibrary = _resolver.getLibrary(asset.id);
         if (const bool.fromEnvironment("reflectable.print.entry.point")) {
-          print("Starting transformation of '$currentEntryPoint'.");
+          print("Starting build for '$currentEntryPoint'.");
         }
 
         ReflectionWorld world =
@@ -3997,7 +3988,7 @@ initializeReflectable() {
             // the reflection data.
             String generatedLibraryContents = _generateNewEntryPoint(
                 world, generatedLibraryId, originalLibraryFilename);
-            transform.addOutput(new Asset.fromString(
+            buildStep.addOutput(new Asset.fromString(
                 generatedLibraryId, generatedLibraryContents));
             if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
               _processedEntryPointCount++;
@@ -4006,7 +3997,7 @@ initializeReflectable() {
               if (_processedEntryPointCount ==
                   const int.fromEnvironment(
                       "reflectable.pause.at.exit.count")) {
-                print("Transformation complete, pausing at exit.");
+                print("Build complete, pausing at exit.");
                 developer.debugger();
               }
             }

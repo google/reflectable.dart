@@ -2,6 +2,14 @@
 
 ## 2.0.2
 
+* Eliminate the use of barback (which is now deprecated). This change
+  requires many changes in the implementation, but it should not give
+  rise to incompatibilities for clients of reflectable.
+
+* Update many version dependencies: TODO
+
+## 2.0.2
+
 * Update the SDK version constraint to 3.0.0 to satisfy Dart 2 requirements.
 
 ## 2.0.1

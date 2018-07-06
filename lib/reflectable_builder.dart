@@ -14,14 +14,35 @@ class ReflectableBuilder implements Builder {
 
   ReflectableBuilder(this.builderOptions);
 
+  @override
   Future build(BuildStep buildStep) async {
+    var mylog = log;
+    var resolver = buildStep.resolver;
     var inputId = buildStep.inputId;
+
+
     var copy = inputId.changeExtension('.reflectable.dart');
     var contents = await buildStep.readAsString(inputId);
     buildStep.writeAsString(copy, contents);
+
+    // Get the `LibraryElement` for the primary input.
+    var entryLib = await buildStep.inputLibrary;
+
+    // Resolves all libraries reachable from the primary input.
+    var visibleLibraries = await resolver.libraries.length;
+
+    var info = buildStep.inputId.addExtension('.info');
+
+    await buildStep.writeAsString(info, '''
+         Input ID: ${buildStep.inputId}
+     Member count: ${entryLib.unit.declarations.length}
+Visible libraries: $visibleLibraries
+''');
   }
+
+
   Map<String, List<String>> get buildExtensions => 
-      const <String, List<String>>{'.dart': ['.reflectable.dart']};
+      const <String, List<String>>{'.dart': ['.reflectable.dart', '.dart.info']};
 }
 
 ReflectableBuilder reflectableBuilder(BuilderOptions options) {

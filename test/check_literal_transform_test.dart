@@ -2,13 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library reflectable.test.mock_tests.check_literal_transform_test;
+library reflectable.test.mock_tests.check_literal_build_test;
 
-/// Test the literal output of the transformation for a few simple cases.
+/// Test the literal output of the build for a few simple cases.
 
 import 'package:barback/barback.dart';
-import "package:reflectable/test_transform.dart";
-import "package:reflectable/transformer.dart";
+import "package:reflectable/test_build.dart";
+import "package:reflectable/builder.dart";
 import "package:test/test.dart";
 
 var useReflect = [
@@ -41,9 +41,7 @@ import 'main.dart' as prefix0;
 // ignore:unused_import
 import "package:reflectable/mirrors.dart" as m;
 // ignore:unused_import
-import "package:reflectable/src/reflectable_transformer_based.dart" as r;
-// ignore:unused_import
-import "package:reflectable/reflectable.dart" show isTransformed;
+import "package:reflectable/src/reflectable_builder_based.dart" as r;
 
 final _data = {
   const prefix0.MyReflectable(): new r.ReflectorData(
@@ -82,12 +80,6 @@ final _data = {
 final _memberSymbolMap = null;
 
 initializeReflectable() {
-  if (!isTransformed) {
-    throw new UnsupportedError(
-        "The transformed code is running with the untransformed "
-        "reflectable package. Remember to set your package-root to "
-        "'build/.../packages'.");
-  }
   r.data = _data;
   r.memberSymbolMap = _memberSymbolMap;
 }
@@ -97,34 +89,34 @@ initializeReflectable() {
 
 const String package = "a";
 
-checkTransform(List<Map<String, String>> maps) async {
+checkBuild(List<Map<String, String>> maps) async {
   Map<String, String> inputs = maps[0];
   Map<String, String> expectedOutputs = maps[1];
 
   for (String inputName in inputs.keys) {
     String inputContents = inputs[inputName];
-    TestTransform transform =
-        new TestTransform(inputName, inputContents, package);
-    ReflectableTransformer transformer =
-        new ReflectableTransformer.asPlugin(new BarbackSettings({
+    TestBuild build =
+        new TestBuild(inputName, inputContents, package);
+    ReflectableBuilder builder =
+        new ReflectableBuilder.asPlugin(new BarbackSettings({
       "entry_points": ["main.dart"],
       "formatted": true,
     }, BarbackMode.RELEASE));
 
     // Test `declareOutputs`.
-    TestDeclaringTransform declaringTransform =
-        new TestDeclaringTransform(inputName);
-    transformer.declareOutputs(declaringTransform);
-    expect(declaringTransform.outputs, new Set.from(expectedOutputs.keys));
-    expect(declaringTransform.consumed, false);
+    TestDeclaringBuild declaringBuild =
+        new TestDeclaringBuild(inputName);
+    builder.declareOutputs(declaringBuild);
+    expect(declaringBuild.outputs, new Set.from(expectedOutputs.keys));
+    expect(declaringBuild.consumed, false);
 
-    testApply(ReflectableTransformer transformer) async {
-      await transformer.apply(transform);
-      Map<String, String> outputs = await transform.outputMap();
-      if (transform.messages.isNotEmpty) {
+    testApply(ReflectableBuilder builder) async {
+      await builder.apply(build);
+      Map<String, String> outputs = await build.outputMap();
+      if (build.messages.isNotEmpty) {
         // It is very difficult to detect what went wrong if, say, package-bots
         // fail here, so we print the messages so that they will be in the log.
-        for (MessageRecord messageRecord in transform.messages) {
+        for (MessageRecord messageRecord in build.messages) {
           String level = null;
           switch (messageRecord.level) {
             case LogLevel.INFO:
@@ -141,11 +133,11 @@ checkTransform(List<Map<String, String>> maps) async {
               break;
           }
           assert(level != null);
-          print("[$level from check_literal_transform_test]:\n"
+          print("[$level from check_literal_build_test]:\n"
               "${messageRecord.message}");
         }
       }
-      expect(transform.messages.isEmpty, true);
+      expect(build.messages.isEmpty, true);
       expect(outputs.length, expectedOutputs.length);
       outputs.forEach((key, value) {
         // The error message is nicer when the strings are compared separately
@@ -155,20 +147,20 @@ checkTransform(List<Map<String, String>> maps) async {
     }
 
     // Test `apply`.
-    await testApply(transformer);
+    await testApply(builder);
 
-    // Test that transformation tolerates a duplicate entry point.
-    ReflectableTransformer duplicateTransformer =
-        new ReflectableTransformer.asPlugin(new BarbackSettings({
+    // Test that the build process tolerates a duplicate entry point.
+    ReflectableBuilder duplicateBuilder =
+        new ReflectableBuilder.asPlugin(new BarbackSettings({
       "entry_points": ["main.dart", "main.dart"],
       "formatted": true,
     }, BarbackMode.RELEASE));
-    await testApply(duplicateTransformer);
+    await testApply(duplicateBuilder);
   }
 }
 
 main() async {
-  test("Check transforms", () async {
-    await checkTransform(useReflect);
+  test("Check builds", () async {
+    await checkBuild(useReflect);
   });
 }

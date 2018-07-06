@@ -133,11 +133,11 @@ class ReflectableTransformer extends Transformer
         _findSuppressWarnings(_settings.configuration['suppressWarnings']);
   }
 
-  /// Performs the transformation.
+  /// Performs the build.
   @override
-  Future apply(Transform transform) {
-    return new implementation.TransformerImplementation()
-        .apply(transform, _entryPoints, _formatted, _suppressWarnings);
+  Future apply(BuildStep buildStep) {
+    return new implementation.BuilderImplementation()
+        .apply(buildStep, _entryPoints, _formatted, _suppressWarnings);
   }
 
   @override
