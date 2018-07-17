@@ -1,5 +1,5 @@
 name: reflectable
-version: 2.0.1
+version: 2.0.2
 description: >
   This package allows programmers to reduce certain usages of dynamic
   reflection to a statically specified subset thereof, based on generated
@@ -10,7 +10,7 @@ description: >
 author: The Dart Team <dart@google.com>
 homepage: https://www.github.com/dart-lang/reflectable
 environment:
-  sdk: '>=1.12.0 <2.0.0'
+  sdk: '>=1.12.0 <3.0.0'
 dependencies:
   analyzer: ^0.31.0
   barback: '^0.15.0'
