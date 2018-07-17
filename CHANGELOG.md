@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2
+
+* Update the SDK version constraint to 3.0.0 to satisfy Dart 2 requirements.
+
 ## 2.0.1
 
 * This version is a tiny update: It solves a version problem by changing some
