@@ -44,6 +44,12 @@ Visible libraries: $visibleLibraries
       const <String, List<String>>{'.dart': ['.reflectable.dart', '.dart.info']};
 }
 
+ReflectableBuilder reflectableBuilder(BuilderOptions options) {
+  var config = new Map<String, Object>.from(options.config);
+  config.putIfAbsent('entry_points', () => ['**.dart']);
+  return new ReflectableBuilder(options);
+}
+
 Future<BuildResult> reflectableBuild(List<String> arguments) async {
   if (arguments.length < 1) {
     // Globbing may produce an empty argument list, and it might be ok,
