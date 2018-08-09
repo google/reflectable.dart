@@ -16,13 +16,12 @@ class ReflectableBuilder implements Builder {
 
   @override
   Future build(BuildStep buildStep) async {
-    var mylog = log;
     var resolver = buildStep.resolver;
     var inputId = buildStep.inputId;
 
-
     var copy = inputId.changeExtension('.reflectable.dart');
     var contents = await buildStep.readAsString(inputId);
+
     buildStep.writeAsString(copy, contents);
 
     // Get the `LibraryElement` for the primary input.
@@ -43,12 +42,6 @@ Visible libraries: $visibleLibraries
 
   Map<String, List<String>> get buildExtensions => 
       const <String, List<String>>{'.dart': ['.reflectable.dart', '.dart.info']};
-}
-
-ReflectableBuilder reflectableBuilder(BuilderOptions options) {
-  var config = new Map<String, Object>.from(options.config);
-  config.putIfAbsent('entry_points', () => ['**.dart']);
-  return new ReflectableBuilder(options);
 }
 
 Future<BuildResult> reflectableBuild(List<String> arguments) async {

@@ -16,7 +16,7 @@ dependencies:
   build: ^0.12.0
   build_resolvers: ^0.2.0
   build_config: ^0.3.0
-  build_runner: ^0.9.0
+  build_runner: ^0.10.0
   dart_style: '>=0.2.0 <2.0.0'
   glob: ^1.1.0
   logging: ^0.11.0
