@@ -5,9 +5,11 @@
 library reflectable.reflectable_builder;
 
 import 'dart:async';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:build_config/build_config.dart';
 import 'package:build_runner/build_runner.dart';
+import 'src/builder_implementation.dart';
 
 class ReflectableBuilder implements Builder {
   BuilderOptions builderOptions;
@@ -19,29 +21,26 @@ class ReflectableBuilder implements Builder {
     var resolver = buildStep.resolver;
     var inputId = buildStep.inputId;
 
-    var copy = inputId.changeExtension('.reflectable.dart');
-    var contents = await buildStep.readAsString(inputId);
-
-    buildStep.writeAsString(copy, contents);
+    var outputId = inputId.changeExtension('.reflectable.dart');
 
     // Get the `LibraryElement` for the primary input.
-    var entryLib = await buildStep.inputLibrary;
+    var inputLibrary = await buildStep.inputLibrary;
 
-    // Resolves all libraries reachable from the primary input.
-    var visibleLibraries = await resolver.libraries.length;
+    // Resolve all libraries reachable from the primary input.
+    List<LibraryElement> visibleLibraries = [];
+    await for (LibraryElement library in resolver.libraries) {
+      visibleLibraries.add(library);
+    }
 
-    var info = buildStep.inputId.addExtension('.info');
-
-    await buildStep.writeAsString(info, '''
-         Input ID: ${buildStep.inputId}
-     Member count: ${entryLib.unit.declarations.length}
-Visible libraries: $visibleLibraries
-''');
+    await buildStep.writeAsString(
+        outputId,
+        new BuilderImplementation().buildMirrorLibrary(resolver, inputId,
+            outputId, inputLibrary, visibleLibraries, true, []));
   }
 
-
-  Map<String, List<String>> get buildExtensions => 
-      const <String, List<String>>{'.dart': ['.reflectable.dart', '.dart.info']};
+  Map<String, List<String>> get buildExtensions => const {
+        '.dart': ['.reflectable.dart']
+      };
 }
 
 ReflectableBuilder reflectableBuilder(BuilderOptions options) {
