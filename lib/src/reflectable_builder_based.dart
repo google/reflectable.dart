@@ -385,7 +385,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
           "Requesting `superinterfaces` of `$qualifiedName` "
           "without `typeRelationsCapability`");
     }
-    return _superinterfaceIndices.map((int i) {
+    return _superinterfaceIndices.map<ClassMirror>((int i) {
       if (i == NO_CAPABILITY_INDEX) {
         // When we have a list of superinterfaces which is not a list
         // containing just the single element [NO_CAPABILITY_INDEX] then
