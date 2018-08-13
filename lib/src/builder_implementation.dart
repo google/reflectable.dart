@@ -14,6 +14,7 @@ import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/dart/constant/evaluation.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer/src/source/source_resource.dart';
 import 'package:build/build.dart';
 import 'package:build_resolvers/src/resolver.dart';
 import 'package:dart_style/dart_style.dart';
@@ -4761,6 +4762,8 @@ Uri _getImportUri(LibraryElement lib, AssetId from) {
   if (source is AssetBasedSource) {
     var uriString = _assetIdToUri(source.assetId, from, lib);
     return uriString != null ? Uri.parse(uriString) : null;
+  } else if (source is FileSource) {
+    return source.uri;
   }
   // Should not be able to encounter any other source types.
   throw new StateError('Unable to resolve URI for ${source.runtimeType}');
