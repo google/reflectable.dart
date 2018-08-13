@@ -15,6 +15,7 @@ import 'package:analyzer/src/dart/constant/evaluation.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:build/build.dart';
+import 'package:build_resolvers/src/resolver.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:path/path.dart' as path;
 import 'element_capability.dart' as ec;
@@ -592,10 +593,10 @@ class _ReflectorDomain {
   ClassElementEnhancedSet get classes {
     if (!_classesInitialized) {
       if (_capabilities._impliesDownwardsClosure) {
-         _SubtypesFixedPoint(_world.subtypes).expand(_classes);
+        _SubtypesFixedPoint(_world.subtypes).expand(_classes);
       }
       if (_capabilities._impliesUpwardsClosure) {
-         _SuperclassFixedPoint(_capabilities._upwardsClosureBounds,
+        _SuperclassFixedPoint(_capabilities._upwardsClosureBounds,
                 _capabilities._impliesMixins)
             .expand(_classes);
       } else {
@@ -681,8 +682,9 @@ class _ReflectorDomain {
           "b ? (length == null ? List() : List(length)) : null";
     }
 
-    String positionals = Iterable.generate(
-        requiredPositionalCount, (int i) => parameterNames[i]).join(", ");
+    String positionals =
+        Iterable.generate(requiredPositionalCount, (int i) => parameterNames[i])
+            .join(", ");
 
     String optionalsWithDefaults =
         Iterable.generate(optionalPositionalCount, (int i) {
@@ -1699,8 +1701,8 @@ class _ReflectorDomain {
       // and iff it has type arguments we must specify that it should be erased
       // (if there are no type arguments we will use "not erased": erasure
       // makes no difference and we don't want to have two identical copies).
-      ErasableDartType erasableDartType = ErasableDartType(dartType,
-          erased: dartType.typeArguments.isNotEmpty);
+      ErasableDartType erasableDartType =
+          ErasableDartType(dartType, erased: dartType.typeArguments.isNotEmpty);
       reflectedTypes.add(erasableDartType);
       return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
     } else if (dartType is FunctionType) {
@@ -3850,9 +3852,9 @@ class BuilderImplementation {
   /// Generates code for a new entry-point file that will initialize the
   /// reflection data according to [world], and invoke the main of
   /// [entrypointLibrary] located at [originalEntryPointFilename]. The code is
-  /// generated to be located at [generatedId].
-  String _generateNewEntryPoint(ReflectionWorld world, AssetId generatedId,
-      String originalEntryPointFilename) {
+  /// generated to be located at [generatedLibraryId].
+  String _generateNewEntryPoint(ReflectionWorld world,
+      AssetId generatedLibraryId, String originalEntryPointFilename) {
     // Notice it is important to generate the code before printing the
     // imports because generating the code can add further imports.
     String code = world.generateCode();
@@ -3861,7 +3863,7 @@ class BuilderImplementation {
     world.importCollector._libraries.forEach((LibraryElement library) {
       Uri uri = library == world.entryPointLibrary
           ? Uri.parse(originalEntryPointFilename)
-          : _getImportUri(library);
+          : _getImportUri(library, generatedLibraryId);
       String prefix = world.importCollector._getPrefix(library);
       if (prefix.length > 0) {
         imports
@@ -3905,7 +3907,7 @@ initializeReflectable() {
   String buildMirrorLibrary(
       Resolver resolver,
       AssetId inputId,
-      AssetId outputId,
+      AssetId generatedLibraryId,
       LibraryElement inputLibrary,
       List<LibraryElement> visibleLibraries,
       bool formatted,
@@ -3957,7 +3959,7 @@ initializeReflectable() {
           return "// No output from reflectable, there is no `main`.";
         } else {
           String outputContents = _generateNewEntryPoint(
-              world, outputId, path.basename(inputId.path));
+              world, generatedLibraryId, path.basename(inputId.path));
           if (const bool.fromEnvironment("reflectable.pause.at.exit")) {
             _processedEntryPointCount++;
           }
@@ -4727,11 +4729,42 @@ bool _isImportable(
 /// Answers true iff [library] can be imported into [generatedLibraryId].
 bool _isImportableLibrary(
     LibraryElement library, AssetId generatedLibraryId, Resolver resolver) {
-  Uri importUri = _getImportUri(library);
+  Uri importUri = _getImportUri(library, generatedLibraryId);
   return importUri.scheme != "dart" || sdkLibraryNames.contains(importUri.path);
 }
 
-Uri _getImportUri(LibraryElement lib) => lib.source.uri;
+/// Gets a URI which would be appropriate for importing the file represented by
+/// [assetId]. This function returns null if we cannot determine a uri for
+/// [assetId]. Note that [assetId] may represent a non-importable file such as
+/// a part.
+String _assetIdToUri(AssetId assetId, AssetId from, Element messageTarget) {
+  if (!assetId.path.startsWith('lib/')) {
+    // Cannot do absolute imports of non lib-based assets.
+    if (assetId.package != from.package) {
+      _severe(_formatDiagnosticMessage(
+          "Attempt to generate non-lib import from different package",
+          messageTarget));
+      return null;
+    }
+    return new Uri(
+            path: path.url
+                .relative(assetId.path, from: path.url.dirname(from.path)))
+        .toString();
+  }
+
+  return Uri.parse('package:${assetId.package}/${assetId.path.substring(4)}')
+      .toString();
+}
+
+Uri _getImportUri(LibraryElement lib, AssetId from) {
+  var source = lib.source;
+  if (source is AssetBasedSource) {
+    var uriString = _assetIdToUri(source.assetId, from, lib);
+    return uriString != null ? Uri.parse(uriString) : null;
+  }
+  // Should not be able to encounter any other source types.
+  throw new StateError('Unable to resolve URI for ${source.runtimeType}');
+}
 
 /// Modelling a mixin application as a [ClassElement].
 ///
