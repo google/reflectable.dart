@@ -5232,10 +5232,16 @@ void _fine(String message, [Element element]) {
 
 String _formatDiagnosticMessage(String message, Element element) {
   Source source = element?.source;
-  if (source != null) {
-    return "${source.fullName}:${element.nameOffset}: $message";
+  if (source == null) return message;
+  String locationString = "";
+  int nameOffset = element.nameOffset;
+  if (nameOffset != null) {
+    var location = element.unit?.element?.lineInfo?.getLocation(nameOffset);
+    if (location != null) {
+      locationString = "${location.lineNumber}:${location.columnNumber}";
+    }
   }
-  return message;
+  return "${source.fullName}:$locationString: $message";
 }
 
 /// Emits a warning-level log message which will be preserved by `pub run`
