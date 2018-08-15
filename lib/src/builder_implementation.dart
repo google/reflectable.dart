@@ -3251,7 +3251,7 @@ class BuilderImplementation {
 
     for (LibraryElement library in _libraries) {
       for (ImportElement import in library.imports) {
-        if (import.importedLibrary != reflectableLibrary) continue;
+        if (import.importedLibrary.id != reflectableLibrary.id) continue;
         for (ElementAnnotationImpl metadatum in import.metadata) {
           if (metadatum.element == globalQuantifyCapabilityConstructor) {
             DartObject value = _getEvaluatedMetadatum(metadatum);
@@ -3617,12 +3617,6 @@ class BuilderImplementation {
         importCollector);
     domains.values.forEach((_ReflectorDomain domain) => domain._world = world);
     return world;
-  }
-
-  EvaluationResult _evaluateConstant(
-      LibraryElement library, Expression expression) {
-    return ConstantEvaluator(library.source, library.context.typeProvider)
-        .evaluate(expression);
   }
 
   /// Returns the [ReflectCapability] denoted by the given initializer
@@ -5200,6 +5194,12 @@ EvaluationResultImpl _constTopLevelVariableEvaluationResult(
   return result;
 }
 
+EvaluationResult _evaluateConstant(
+    LibraryElement library, Expression expression) {
+  return ConstantEvaluator(library.source, library.context.typeProvider)
+      .evaluate(expression);
+}
+
 /// Returns the result of evaluating [elementAnnotation].
 DartObject _getEvaluatedMetadatum(ElementAnnotation elementAnnotation) =>
     elementAnnotation.constantValue;
@@ -5236,4 +5236,12 @@ String _formatDiagnosticMessage(String message, Element element) {
     return "${source.fullName}:${element.nameOffset}: $message";
   }
   return message;
+}
+
+/// Emits a warning-level log message which will be preserved by `pub run`
+/// (as opposed to stdout and stderr which are swallowed).
+void _emitMessage(String message, [Element element]) {
+  var formattedMessage =
+      element != null ? _formatDiagnosticMessage(message, element) : message;
+  log.warning(formattedMessage);
 }
