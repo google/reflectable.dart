@@ -165,17 +165,20 @@ class ReflectorData {
   }
 }
 
+const String pleaseInitializeMessage =
+    "Reflectable has not been initialized.\n"
+    "Please make sure that the first action taken by your program\n"
+    "in `main` is to call `initializeReflectable()`.";
+
 /// This mapping contains the mirror-data for each reflector.
 /// It will be initialized in the generated code.
 Map<Reflectable, ReflectorData> data =
-    throw new StateError("Reflectable has not been initialized. "
-        "Did you forget to add the main file to the "
-        "reflectable builder's entry_points in pubspec.yaml?");
+    throw new StateError(pleaseInitializeMessage);
 
 /// This mapping translates symbols to strings for the covered members.
 /// It will be initialized in the generated code.
 Map<Symbol, String> memberSymbolMap =
-    throw new StateError("Reflectable has not been initialized.");
+    throw new StateError(pleaseInitializeMessage);
 
 abstract class _DataCaching {
   // TODO(eernst) clarify: When we have some substantial pieces of code using

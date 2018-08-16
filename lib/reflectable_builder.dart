@@ -20,17 +20,9 @@ class ReflectableBuilder implements Builder {
   Future build(BuildStep buildStep) async {
     var resolver = buildStep.resolver;
     var inputId = buildStep.inputId;
-
     var outputId = inputId.changeExtension('.reflectable.dart');
-
-    // Get the `LibraryElement` for the primary input.
     var inputLibrary = await buildStep.inputLibrary;
-
-    // Resolve all libraries reachable from the primary input.
-    List<LibraryElement> visibleLibraries = [];
-    await for (LibraryElement library in resolver.libraries) {
-      visibleLibraries.add(library);
-    }
+    List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
 
     await buildStep.writeAsString(
         outputId,
@@ -62,7 +54,6 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
         <String, dynamic>{"entry_points": arguments, "formatted": true},
         isRoot: true);
     final builder = new ReflectableBuilder(options);
-    // Plus: new ReflectableTransformer.asPlugin(settings),
     return await build(
         [applyToRoot(builder, generateFor: new InputSet(include: arguments))],
         deleteFilesByDefault: true);
