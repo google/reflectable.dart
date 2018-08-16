@@ -3917,7 +3917,6 @@ initializeReflectable() {
     for (LibraryElement library in _libraries) {
       if (library.name != null) _librariesByName[library.name] = library;
     }
-    print(_librariesByName); // DEBUG
     LibraryElement reflectableLibrary =
         _librariesByName["reflectable.reflectable"];
 
