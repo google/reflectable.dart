@@ -140,6 +140,14 @@ dependencies:
 You may also wish to specify constraints on the version, depending on the
 approach to version management that your software otherwise employs.
 
+The root of your library may need to contain a file `build.yaml` which
+will specify how to run the code generation step. For an example of
+how to write this file, please consult [test_reflectable/build.yaml][8]
+and the general documentation about [package build][9].
+
+[8]: https://github.com/dart-lang/test_reflectable/blob/master/build.yaml
+[9]: https://github.com/dart-lang/build/tree/master/docs
+
 In order to generate code you will need to run the following command from the
 root directory of your package:
 
@@ -157,7 +165,7 @@ entry point at `web/myProgram.dart` the command would be as follows:
 ```
 
 You may appreciate the following shortcut command which will work when you wish
-to generated code for entry points in the `test` subdirectory and also run the
+to generate code for entry points in the `test` subdirectory and also run the
 tests (given that the tests are written using package test):
 
 ```console
@@ -242,8 +250,8 @@ eliminate several kinds of static dependencies among libraries.
 
 ## Known limitations
 
-Several parts of the library have not yet been implemented. In particular, the
-following parts are still incomplete:
+Several parts of the library have not yet been implemented. In particular,
+the following parts are still incomplete:
 
 - Reflection on functions/closures. We do not have the required primitives
   to support this feature, so it is expected to remain unsupported for a while.

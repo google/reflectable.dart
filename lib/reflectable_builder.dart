@@ -2,25 +2,43 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.src.reflectable_builder;
+library reflectable.reflectable_builder;
 
 import 'dart:async';
-import 'package:barback/src/transformer/barback_settings.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:build_config/build_config.dart';
-import 'package:build_barback/build_barback.dart';
 import 'package:build_runner/build_runner.dart';
-import 'package:reflectable/transformer.dart';
+import 'src/builder_implementation.dart';
 
-TransformerBuilder reflectableBuilder(BuilderOptions options) {
+class ReflectableBuilder implements Builder {
+  BuilderOptions builderOptions;
+
+  ReflectableBuilder(this.builderOptions);
+
+  @override
+  Future build(BuildStep buildStep) async {
+    var resolver = buildStep.resolver;
+    var inputId = buildStep.inputId;
+    var outputId = inputId.changeExtension('.reflectable.dart');
+    var inputLibrary = await buildStep.inputLibrary;
+    List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
+
+    await buildStep.writeAsString(
+        outputId,
+        new BuilderImplementation().buildMirrorLibrary(resolver, inputId,
+            outputId, inputLibrary, visibleLibraries, true, []));
+  }
+
+  Map<String, List<String>> get buildExtensions => const {
+        '.dart': ['.reflectable.dart']
+      };
+}
+
+ReflectableBuilder reflectableBuilder(BuilderOptions options) {
   var config = new Map<String, Object>.from(options.config);
   config.putIfAbsent('entry_points', () => ['**.dart']);
-  return new TransformerBuilder(
-      new ReflectableTransformer.asPlugin(
-          new BarbackSettings(config, BarbackMode.DEBUG)),
-      const <String, List<String>>{
-        '.dart': const ['.reflectable.dart']
-      });
+  return new ReflectableBuilder(options);
 }
 
 Future<BuildResult> reflectableBuild(List<String> arguments) async {
@@ -32,16 +50,10 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
   } else {
     // TODO(eernst) feature: We should support some customization of
     // the settings, e.g., specifying options like `suppress_warnings`.
-    BarbackSettings settings = new BarbackSettings(
-      <String, Object>{"entry_points": arguments, "formatted": true},
-      BarbackMode.DEBUG,
-    );
-    final builder = new TransformerBuilder(
-      new ReflectableTransformer.asPlugin(settings),
-      const <String, List<String>>{
-        '.dart': const ['.reflectable.dart']
-      },
-    );
+    BuilderOptions options = new BuilderOptions(
+        <String, dynamic>{"entry_points": arguments, "formatted": true},
+        isRoot: true);
+    final builder = new ReflectableBuilder(options);
     return await build(
         [applyToRoot(builder, generateFor: new InputSet(include: arguments))],
         deleteFilesByDefault: true);

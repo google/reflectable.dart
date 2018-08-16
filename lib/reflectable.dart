@@ -10,8 +10,8 @@ library reflectable.reflectable;
 
 import 'capability.dart';
 import 'mirrors.dart';
+import 'src/reflectable_builder_based.dart' as implementation;
 import 'src/reflectable_class_constants.dart' as reflectable_class_constants;
-import 'src/reflectable_transformer_based.dart' as implementation;
 
 export 'capability.dart';
 export 'mirrors.dart';
@@ -126,9 +126,6 @@ abstract class Reflectable extends implementation.ReflectableImpl
     return null;
   }
 }
-
-/// Returns true if the transformed version is running, false otherwise.
-bool get isTransformed => implementation.isTransformed;
 
 /// Used to describe the invocation when a no-such-method situation arises.
 /// We need to use this variant of the standard `Invocation` class, because

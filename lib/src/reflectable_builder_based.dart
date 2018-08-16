@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.src.reflectable_transformer_based;
+library reflectable.src.reflectable_builder_based;
 
 import 'dart:collection' show UnmodifiableMapView;
 
@@ -14,8 +14,6 @@ import 'encoding_constants.dart' show NO_CAPABILITY_INDEX;
 import 'incompleteness.dart';
 import 'reflectable_base.dart';
 
-bool get isTransformed => true;
-
 /// Returns the set of reflectors in the current program. Note that it only
 /// returns reflectors matching something---a reflector that does not match
 /// anything is not even given a mapping in `data`. This makes sense because
@@ -23,7 +21,7 @@ bool get isTransformed => true;
 Set<Reflectable> get reflectors => data.keys.toSet();
 
 // Mirror classes with default implementations of all methods, to be used as
-// superclasses of transformer generated static mirror classes.  They serve to
+// superclasses of builder generated static mirror classes.  They serve to
 // ensure that the static mirror classes always implement all methods, such that
 // they throw an exception at runtime, rather than causing an error at compile
 // time, which is the required behavior for static mirrors when they are used
@@ -167,19 +165,20 @@ class ReflectorData {
   }
 }
 
+const String pleaseInitializeMessage =
+    "Reflectable has not been initialized.\n"
+    "Please make sure that the first action taken by your program\n"
+    "in `main` is to call `initializeReflectable()`.";
+
 /// This mapping contains the mirror-data for each reflector.
 /// It will be initialized in the generated code.
 Map<Reflectable, ReflectorData> data =
-    throw new StateError("Reflectable has not been initialized. "
-        "Did you forget to add the main file to the "
-        "reflectable transformer's entry_points in pubspec.yaml?");
+    throw new StateError(pleaseInitializeMessage);
 
 /// This mapping translates symbols to strings for the covered members.
 /// It will be initialized in the generated code.
 Map<Symbol, String> memberSymbolMap =
-    throw new StateError("Reflectable has not been initialized. "
-        "Did you forget to add the main file to the "
-        "reflectable transformer's entry_points in pubspec.yaml?");
+    throw new StateError(pleaseInitializeMessage);
 
 abstract class _DataCaching {
   // TODO(eernst) clarify: When we have some substantial pieces of code using
@@ -389,7 +388,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
           "Requesting `superinterfaces` of `$qualifiedName` "
           "without `typeRelationsCapability`");
     }
-    return _superinterfaceIndices.map((int i) {
+    return _superinterfaceIndices.map<ClassMirror>((int i) {
       if (i == NO_CAPABILITY_INDEX) {
         // When we have a list of superinterfaces which is not a list
         // containing just the single element [NO_CAPABILITY_INDEX] then

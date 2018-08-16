@@ -10,3 +10,5 @@ builders:
       generate_for:
         exclude:
         - lib/**.dart
+        include:
+        - lib/main.dart

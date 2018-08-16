@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.0.3
+
+A stable version of Dart 2 has been released at this point. This version
+of reflectable contains a rather substantial number of changes needed in
+order to make it possible to use this package with the current Dart 2
+tools, and under the associated version constraints.
+
+* Eliminates the use of package barback (which is now deprecated). This
+  change requires many changes in the implementation, but it should not
+  give rise to incompatibilities for clients of reflectable.
+
+* Updates many version dependencies: analyzer, build_resolvers, build_config,
+  build_runner, and test, in order to enable the use of Dart 2 tools.
+
+* Changes a handful of implementation details such that every downcast is
+  concretely justified. Removed `new` from the implementation (but not from
+  generated code), because code generation must anyway use Dart 2, but
+  generated code may still need to run as Dart 1.
+
+* Improves code generation ERROR, WARNING, and INFO messages such that it
+  includes a precise source code location.
+
+* Now includes `lib/main.dart` among possible build targets, because Flutter
+  uses that as the standard entry point.
+
 ## 2.0.2
 
 * Update the SDK version constraint to 3.0.0 to satisfy Dart 2 requirements.
