@@ -142,9 +142,11 @@ approach to version management that your software otherwise employs.
 
 The root of your library may need to contain a file `build.yaml` which
 will specify how to run the code generation step. For an example of
-how to write this file, please consult [test_reflectable/build.yaml][8].
+how to write this file, please consult [test_reflectable/build.yaml][8]
+and the general documentation about [package build][9].
 
 [8]: https://github.com/dart-lang/test_reflectable/blob/master/build.yaml
+[9]: https://github.com/dart-lang/build/tree/master/docs
 
 In order to generate code you will need to run the following command from the
 root directory of your package:
