@@ -1,12 +1,8 @@
 name: reflectable
 version: 2.0.3
 description: >
-  This package allows programmers to reduce certain usages of dynamic
-  reflection to a statically specified subset thereof, based on generated
-  code with the same behavior as mirrors provided by 'dart:mirrors'. The
-  generated code does not use dynamic reflection and thus improves the
-  resource economy (esp. by using a smaller amount of space than dart2js
-  generated code).
+  Reflection support based on code generation, using 'capabilities' to
+  specify which operations to support, on which objects.
 author: The Dart Team <dart@google.com>
 homepage: https://www.github.com/dart-lang/reflectable
 environment:
@@ -27,8 +23,3 @@ dependencies:
 dev_dependencies:
   build_test: ^0.10.0
   test: ^1.2.0
-transformers:
-- $dart2js:
-    commandLineOptions: [--show-package-warnings]
-    # We do not want to compile anything in this package.
-    $include: []
