@@ -3251,7 +3251,7 @@ class BuilderImplementation {
 
     for (LibraryElement library in _libraries) {
       for (ImportElement import in library.imports) {
-        if (import.importedLibrary.id != reflectableLibrary.id) continue;
+        if (import.importedLibrary?.id != reflectableLibrary.id) continue;
         for (ElementAnnotationImpl metadatum in import.metadata) {
           if (metadatum.element == globalQuantifyCapabilityConstructor) {
             DartObject value = _getEvaluatedMetadatum(metadatum);

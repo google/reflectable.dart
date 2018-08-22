@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.4
+
+* Null error bug fix.
+
 ## 2.0.3
 
 A stable version of Dart 2 has been released at this point. This version
