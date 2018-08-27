@@ -941,6 +941,8 @@ class _ReflectorDomain {
       classesToAdd.forEach(addClass);
     }
 
+    // Add
+
     // From this point, [classes] must be kept immutable.
     classes.makeUnmodifiable();
 
@@ -1144,6 +1146,65 @@ class _ReflectorDomain {
         false, // No field has type `void`.
         descriptor & constants.dynamicAttribute != 0,
         descriptor & constants.classTypeAttribute != 0);
+  }
+
+  bool _hasSupportedReflectedTypeArguments(DartType dartType) {
+    if (dartType is ParameterizedType) {
+      for (DartType typeArgument in dartType.typeArguments) {
+        if (!_hasSupportedReflectedTypeArguments(typeArgument)) return false;
+      }
+      return true;
+    } else if (dartType is TypeParameterType || dartType.isDynamic) {
+      return false;
+    } else {
+      throw unimplementedError(
+          '`reflectedTypeArguments` where an actual type argument '
+          '(possibly nested) is $dartType');
+    }
+  }
+
+  String _computeReflectedTypeArguments(
+      DartType dartType,
+      Enumerator<ErasableDartType> reflectedTypes,
+      int reflectedTypesOffset,
+      _ImportCollector importCollector) {
+    if (dartType is ParameterizedType) {
+      List<TypeParameterElement> typeParameters = dartType.typeParameters;
+      if (typeParameters.length == 0) {
+        // We have no formal type parameters, so there cannot be any actual
+        // type arguments.
+        return 'const <int>[]';
+      } else {
+        // We have some formal type parameters: `dartType` is a generic class.
+        List<DartType> typeArguments = dartType.typeArguments;
+        // This method is called with variable/parameter type annotations and
+        // function return types, and they denote instantiated generic classes
+        // rather than "original" generic classes; so they do have actual type
+        // arguments when there are formal type parameters.
+        assert(typeArguments.length == typeParameters.length);
+        if (typeArguments.every(_hasSupportedReflectedTypeArguments)) {
+          List<int> typesIndexList =
+              typeArguments.map((DartType actualTypeArgument) {
+            if (actualTypeArgument is InterfaceType) {
+              return _dynamicTypeCodeIndex(actualTypeArgument, classes,
+                  reflectedTypes, reflectedTypesOffset);
+            } else {
+              // TODO(eernst) clarify: Are `dynamic` et al `InterfaceType`s?
+              // Otherwise this means "a case that we have not it considered".
+              throw unimplementedError(
+                  '`reflectedTypeArguments` where one actual type argument'
+                  ' is $actualTypeArgument');
+            }
+          });
+          return _formatAsConstList("int", typesIndexList);
+        } else {
+          return 'null';
+        }
+      }
+    } else {
+      // If the type is not a ParameterizedType then it has no type arguments.
+      return 'const <int>[]';
+    }
   }
 
   int _computeReturnTypeIndex(ExecutableElement element, int descriptor) {
@@ -1531,6 +1592,14 @@ class _ReflectorDomain {
       int descriptor = _declarationDescriptor(element);
       int returnTypeIndex = _computeReturnTypeIndex(element, descriptor);
       int ownerIndex = _computeOwnerIndex(element, descriptor);
+      String reflectedTypeArgumentsOfReturnType = 'null';
+      if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
+        reflectedTypeArgumentsOfReturnType = _computeReflectedTypeArguments(
+            element.returnType,
+            reflectedTypes,
+            reflectedTypesOffset,
+            importCollector);
+      }
       String parameterIndicesCode = _formatAsConstList("int",
           element.parameters.map((ParameterElement parameterElement) {
         return parameters.indexOf(parameterElement);
@@ -1555,7 +1624,8 @@ class _ReflectorDomain {
           : null;
       return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, '
-          '$dynamicReflectedReturnTypeIndex, $parameterIndicesCode, '
+          '$dynamicReflectedReturnTypeIndex, '
+          '$reflectedTypeArgumentsOfReturnType, $parameterIndicesCode, '
           '${_constConstructionCode(importCollector)}, $metadataCode)';
     }
   }
@@ -1579,6 +1649,11 @@ class _ReflectorDomain {
         ? _dynamicTypeCodeIndex(element.type, classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
+    String reflectedTypeArguments = 'null';
+    if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
+      reflectedTypeArguments = _computeReflectedTypeArguments(
+          element.type, reflectedTypes, reflectedTypesOffset, importCollector);
+    }
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
@@ -1591,7 +1666,8 @@ class _ReflectorDomain {
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
-        '$dynamicReflectedTypeIndex, $metadataCode)';
+        '$dynamicReflectedTypeIndex, $reflectedTypeArguments, '
+        '$metadataCode)';
   }
 
   String _fieldMirrorCode(
@@ -1612,6 +1688,11 @@ class _ReflectorDomain {
         ? _dynamicTypeCodeIndex(element.type, classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
+    String reflectedTypeArguments = 'null';
+    if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
+      reflectedTypeArguments = _computeReflectedTypeArguments(
+          element.type, reflectedTypes, reflectedTypesOffset, importCollector);
+    }
     String metadataCode;
     if (_capabilities._supportsMetadata) {
       metadataCode = _extractMetadataCode(
@@ -1624,7 +1705,7 @@ class _ReflectorDomain {
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
-        '$dynamicReflectedTypeIndex, $metadataCode)';
+        '$dynamicReflectedTypeIndex, $reflectedTypeArguments, $metadataCode)';
   }
 
   /// Returns the index into `ReflectorData.types` of the [Type] object
@@ -2097,6 +2178,11 @@ class _ReflectorDomain {
         ? _dynamicTypeCodeIndex(element.type, classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
+    String reflectedTypeArguments = 'null';
+    if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
+      reflectedTypeArguments = _computeReflectedTypeArguments(
+          element.type, reflectedTypes, reflectedTypesOffset, importCollector);
+    }
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
       FormalParameter node = element.computeNode();
@@ -2121,7 +2207,8 @@ class _ReflectorDomain {
     return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${_constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
-        '$metadataCode, $defaultValueCode, $parameterSymbolCode)';
+        '$reflectedTypeArguments, $metadataCode, $defaultValueCode, '
+        '$parameterSymbolCode)';
   }
 }
 

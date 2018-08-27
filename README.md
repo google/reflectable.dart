@@ -278,13 +278,24 @@ the following parts are still incomplete:
   this kind of uri does not give any information about the location of a
   corresponding file on disk.
 
-- Type arguments of generic types are only supported in some simple cases,
-  because we do not have the primitives required for a general
-  implementation. E.g., when it is known that a given list of actual type
-  arguments is empty then the empty list is returned. However, when a
-  parameterized type has a non-trivial list of actual type arguments then
-  returning the actual type arguments would require runtime support that does
-  not currently exist.
+- Type arguments of generic types are only supported in some statically
+  resolved cases, because we do not have the primitives required for a
+  general implementation. E.g., when it is known statically that a given
+  list of actual type arguments is empty then the empty list is
+  returned. Moreover, if support for reflected types is included and a type
+  annotation contains only types which are fully resolved statically, it is
+  possible to get these type arguments. So, for instance, with a field of
+  type `Map<int, String>` and suitable capabilities, we can invoke
+  `reflectedTypeArguments` and get `<Type>[int, String]`, and we
+  can invoke `typeArguments` and get the corresponding list of
+  `TypeMirror`s, but we cannot obtain the list of type arguments to a field
+  type annotation like `List<X>`, where `X` is a formal type variable
+  declared by the enclosing class, because that `X` will have different
+  values at different occasions at run time (that is, it is not fully
+  resolved statically). Similarly, it is never supported to obtain the
+  actual type arguments for an instance; e.g., it is never supported to get
+  a non-empty list of type arguments using
+  `reflector.reflect(myInstance).type.typeArguments`.
 
 - The mirror method `libraryDependencies` has not yet been implemented.
 
