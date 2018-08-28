@@ -29,7 +29,7 @@ upgrade:
 	( cd ..; pub upgrade )
 
 check:
-	( cd ..; dartanalyzer --preview-dart-2 `find lib test -name \*.dart` )
+	( cd ..; dartanalyzer `find lib test -name \*.dart` )
 
 build:
 	@echo "[No actions for build in reflectable]"

@@ -1167,7 +1167,8 @@ class _ReflectorDomain {
       DartType dartType,
       Enumerator<ErasableDartType> reflectedTypes,
       int reflectedTypesOffset,
-      _ImportCollector importCollector) {
+      _ImportCollector importCollector,
+      Map<FunctionType, int> typedefs) {
     if (dartType is ParameterizedType) {
       List<TypeParameterElement> typeParameters = dartType.typeParameters;
       if (typeParameters.length == 0) {
@@ -1183,11 +1184,11 @@ class _ReflectorDomain {
         // arguments when there are formal type parameters.
         assert(typeArguments.length == typeParameters.length);
         if (typeArguments.every(_hasSupportedReflectedTypeArguments)) {
-          List<int> typesIndexList =
+          Iterable<int> typesIndices =
               typeArguments.map((DartType actualTypeArgument) {
             if (actualTypeArgument is InterfaceType) {
               return _dynamicTypeCodeIndex(actualTypeArgument, classes,
-                  reflectedTypes, reflectedTypesOffset);
+                  reflectedTypes, reflectedTypesOffset, typedefs);
             } else {
               // TODO(eernst) clarify: Are `dynamic` et al `InterfaceType`s?
               // Otherwise this means "a case that we have not it considered".
@@ -1196,7 +1197,7 @@ class _ReflectorDomain {
                   ' is $actualTypeArgument');
             }
           });
-          return _formatAsConstList("int", typesIndexList);
+          return _formatAsConstList("int", typesIndices);
         } else {
           return 'null';
         }
@@ -1598,7 +1599,8 @@ class _ReflectorDomain {
             element.returnType,
             reflectedTypes,
             reflectedTypesOffset,
-            importCollector);
+            importCollector,
+            typedefs);
       }
       String parameterIndicesCode = _formatAsConstList("int",
           element.parameters.map((ParameterElement parameterElement) {
@@ -1651,8 +1653,8 @@ class _ReflectorDomain {
         : constants.NO_CAPABILITY_INDEX;
     String reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
-      reflectedTypeArguments = _computeReflectedTypeArguments(
-          element.type, reflectedTypes, reflectedTypesOffset, importCollector);
+      reflectedTypeArguments = _computeReflectedTypeArguments(element.type,
+          reflectedTypes, reflectedTypesOffset, importCollector, typedefs);
     }
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -1690,8 +1692,8 @@ class _ReflectorDomain {
         : constants.NO_CAPABILITY_INDEX;
     String reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
-      reflectedTypeArguments = _computeReflectedTypeArguments(
-          element.type, reflectedTypes, reflectedTypesOffset, importCollector);
+      reflectedTypeArguments = _computeReflectedTypeArguments(element.type,
+          reflectedTypes, reflectedTypesOffset, importCollector, typedefs);
     }
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -2180,8 +2182,8 @@ class _ReflectorDomain {
         : constants.NO_CAPABILITY_INDEX;
     String reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
-      reflectedTypeArguments = _computeReflectedTypeArguments(
-          element.type, reflectedTypes, reflectedTypesOffset, importCollector);
+      reflectedTypeArguments = _computeReflectedTypeArguments(element.type,
+          reflectedTypes, reflectedTypesOffset, importCollector, typedefs);
     }
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
@@ -5330,8 +5332,9 @@ String _formatDiagnosticMessage(String message, Element element) {
   return "${source.fullName}:$locationString: $message";
 }
 
-/// Emits a warning-level log message which will be preserved by `pub run`
-/// (as opposed to stdout and stderr which are swallowed).
+// Emits a warning-level log message which will be preserved by `pub run`
+// (as opposed to stdout and stderr which are swallowed).
+// ignore:unused_element
 void _emitMessage(String message, [Element element]) {
   var formattedMessage =
       element != null ? _formatDiagnosticMessage(message, element) : message;
