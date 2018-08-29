@@ -11,4 +11,10 @@ builders:
         exclude:
         - lib/**.dart
         include:
+        - benchmark/**.dart
+        - bin/**.dart
+        - example/**.dart
         - lib/main.dart
+        - test/**.dart
+        - tool/**.dart
+        - web/**.dart
