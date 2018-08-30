@@ -284,20 +284,56 @@ the following parts are still incomplete:
   list of actual type arguments is empty then the empty list is
   returned. Moreover, if support for reflected types is included and a type
   annotation contains only types which are fully resolved statically, it is
-  possible to get these type arguments. So, for instance, with a field of
-  type `Map<int, String>` and suitable capabilities, we can invoke
-  `reflectedTypeArguments` and get `<Type>[int, String]`, and we
-  can invoke `typeArguments` and get the corresponding list of
-  `TypeMirror`s, but we cannot obtain the list of type arguments to a field
-  type annotation like `List<X>`, where `X` is a formal type variable
-  declared by the enclosing class, because that `X` will have different
-  values at different occasions at run time (that is, it is not fully
-  resolved statically). Similarly, it is never supported to obtain the
-  actual type arguments for an instance; e.g., it is never supported to get
-  a non-empty list of type arguments using
-  `reflector.reflect(myInstance).type.typeArguments`.
+  possible to get these type arguments. An example is shown below.
 
 - The mirror method `libraryDependencies` has not yet been implemented.
+
+Here is an example illustrating the partial support for type arguments:
+
+```dart
+class Reflector extends Reflectable {
+  const Reflector()
+      : super(invokingCapability, typingCapability, reflectedTypeCapability);
+}
+
+const reflector = Reflector();
+
+@reflector
+class A<X> {
+  A<int> ai;
+  A<X> ax;
+}
+
+main() {
+  initializeReflectable();
+  ClassMirror aMirror = reflector.reflectType(A);
+  final declarations = aMirror.declarations;
+  VariableMirror aiMirror = declarations['ai'];
+  VariableMirror axMirror = declarations['ax'];
+  print(aiMirror.type.reflectedTypeArguments[0]); // Prints 'int'.
+  try {
+    axMirror.type.reflectedTypeArguments[0]; // Throws 'UnimplementedError'.
+    print("Not reached");
+  } on UnimplementedError catch (_) {
+    print("OK: did throw");
+  }
+}
+```
+
+As the example above illustrates, we can invoke `reflectedTypeArguments` on
+the mirror of the type annotation of `ai` and get `<Type>[int]`, because
+that type argument list is statically resolved, but we cannot do it with
+`ax` because `X` will have different values at different occasions at run
+time (that is, it is not fully resolved statically).
+
+Similarly, it is not supported to obtain the actual type arguments for an
+existing instance; e.g., if we have an expression of type `Iterable` then
+we may evaluate it and get an instance `x` of `List<int>`. We can test
+`x is List<num>` and get true, and we can get false for `x is
+List<double>`, but we cannot directly extract the type argument (`int`)
+using reflection. That is because it can only be done with support for
+some primitives (that is, built-in operations with special powers) that
+do not exist today.
 
 
 ## Feature requests and bug reports

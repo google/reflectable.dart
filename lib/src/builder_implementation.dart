@@ -941,8 +941,6 @@ class _ReflectorDomain {
       classesToAdd.forEach(addClass);
     }
 
-    // Add
-
     // From this point, [classes] must be kept immutable.
     classes.makeUnmodifiable();
 
