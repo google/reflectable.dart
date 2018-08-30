@@ -282,9 +282,10 @@ the following parts are still incomplete:
   resolved cases, because we do not have the primitives required for a
   general implementation. E.g., when it is known statically that a given
   list of actual type arguments is empty then the empty list is
-  returned. Moreover, if support for reflected types is included and a type
-  annotation contains only types which are fully resolved statically, it is
-  possible to get these type arguments. An example is shown below.
+  returned. Moreover, if a type annotation contains only types which are
+  fully resolved statically, it is possible to get these type arguments, as
+  mirrors or as instances of `Type` using various reflected type
+  features. An example is shown below.
 
 - The mirror method `libraryDependencies` has not yet been implemented.
 
@@ -300,24 +301,40 @@ const reflector = Reflector();
 
 @reflector
 class A<X> {
-  A<int> ai;
+  A<B> ab;
   A<X> ax;
 }
+
+@reflector
+class B {}
 
 main() {
   initializeReflectable();
   ClassMirror aMirror = reflector.reflectType(A);
   final declarations = aMirror.declarations;
-  VariableMirror aiMirror = declarations['ai'];
+  VariableMirror abMirror = declarations['ab'];
   VariableMirror axMirror = declarations['ax'];
-  print(aiMirror.type.reflectedTypeArguments[0]); // Prints 'int'.
+  print(abMirror.type.typeArguments[0].reflectedType); // Prints 'B'.
+  print(abMirror.type.reflectedTypeArguments[0] == B); // Prints 'true'.
+  try {
+    print(axMirror.type.typeArguments[0]); // Throws 'UnimplementedError'.
+    print("Not reached");
+  } on UnimplementedError catch (_) {
+    print("As expected: Could not get type mirror for type argument.");
+  }
   try {
     axMirror.type.reflectedTypeArguments[0]; // Throws 'UnimplementedError'.
     print("Not reached");
   } on UnimplementedError catch (_) {
-    print("OK: did throw");
+    print("As expected: Could not get reflected type argument.");
   }
 }
+
+// Output:
+//   B
+//   true
+//   As expected: Could not get type mirror for type argument.
+//   As expected: Could not get reflected type argument.
 ```
 
 As the example above illustrates, we can invoke `reflectedTypeArguments` on
