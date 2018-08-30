@@ -1,5 +1,32 @@
 # Changelog
 
+## 2.0.5
+
+* Enhancement of the support for reflection on type arguments, covering
+  cases where a type annotation is a parameterized type where all type
+  arguments are resolved statically (e.g., `List<int> f();`). We (still) do
+  not support cases where one or more type arguments are or contain
+  type variables from an enclosing function or class (like the type of
+  the formal parameter to `List.addAll`: `List<E>`), and with such type
+  arguments a dynamic error is raised if an attempt is made to access it.
+  Similarly, we (still) do not support extracting the value of the actual
+  type arguments for an instance of a generic class (e.g., for a given
+  list, we cannot obtain the precise value of the actual type argument;
+  we can test things like `myList is List<num>` and `myList is List<String>`
+  without reflection at all, but that only reveals an upper bound, not
+  the precise value of the type argument, and we cannot get that precise
+  value without support for some additional primitives).
+
+* The `build.yaml` file in reflectable was adjusted such that a much larger
+  set of files are included for code generation. This means that we will
+  err on the side of generating code for too many files rather than too few,
+  but this choice seems to be more user-friendly. Developers who get
+  irritated about seeing warnings like "This reflector does not match
+  anything" (which is a likely outcome for code generation applied to some
+  arbitrary library which is not an entry point) can then add a
+  `build.yaml` file specifying more precisely which libraries to generate
+  code for.
+
 ## 2.0.4
 
 * Null error bug fix.
@@ -55,7 +82,7 @@ so a dependency on reflectable version `^2.0.0` should work for Dart 2.
   of function types (including the new inline function types like
   `String Function(int)`).
 * Fixed bugs associated with error handling: In several situations
-  where the build process would get stuck indefinitely, it will 
+  where the build process would get stuck indefinitely, it will
   now terminate with the intended error message.
 * Added note to README.md that generated code should not be published
   (it should be regenerated, such that it matches the current version of
@@ -173,7 +200,7 @@ transformers will not be supported in the future.
 * Fixes bug: misleading error messages from `isSubtypeOf` and `isAssignableTo`
   corrected.
 * Fixes bug: now named constructors can be used in metadata (e.g.,
-  `@F.foo(42) var x;` can be used to get reflective support for `x`). 
+  `@F.foo(42) var x;` can be used to get reflective support for `x`).
 * Fixes bug: certain external function type mirrors seem to be unequal to
   themselves, which caused an infinite loop; now that case is handled.
 * Adds a stand-alone version of the transformer; for more information please
@@ -232,12 +259,12 @@ transformers will not be supported in the future.
 * Fixes issue 51, which is concerned with coverage of getters/setters for
   variables inherited from non-covered classes.
 * **Breaking:** Changes coverage such that it requires a
-  `SuperclassQuantifyCapability` in order to include support for an 
+  `SuperclassQuantifyCapability` in order to include support for an
   anonymous mixin application (like `A with M` in `class B extends A with M..`).
   Such mixin applications used to be included even without the
   `SuperclassQuantifyCapability`, but that was an anomaly.
 * **Breaking:** Changes the semantics of `superclass` to strictly follow the
-  documentation: It is now required to have a `TypeRelationsCapability` in 
+  documentation: It is now required to have a `TypeRelationsCapability` in
   order to perform `superclass`, even in the cases where this yields a mixin
   application.
 * **Breaking:** Changes the semantics of `instanceMembers` and `staticMembers`
@@ -250,7 +277,7 @@ transformers will not be supported in the future.
 * Updates the [capability design document][1] to document the new treatment of
   no-such-method situations.
 * Implements `isSubtypeOf` and `isAssignableTo` for type mirrors.
-* Fixes issue 48, which is about wrong code generation involving mixin 
+* Fixes issue 48, which is about wrong code generation involving mixin
   applications.
 * Implements `delegate` on instance mirrors, and adds a `delegateCapability`
   to enable it. The reason why this requires a separate capability is that
@@ -388,7 +415,7 @@ considered to be bug fixes or implementations of missing features.
 
 ## 0.3.0
 
-* **Breaking**: Add support for type annotation quantification. This is a 
+* **Breaking**: Add support for type annotation quantification. This is a
   breaking change: we used to do that implicitly, but that is expensive, and
   now it is only available on request.
 * Change the way the set of supported classes are computed.
