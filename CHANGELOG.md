@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.6
+
+* Adjusts an implementation class (`MixinApplication`) such that a
+  compile-time error occurring with analyzer 0.32.5 is avoided.
+
 ## 2.0.5
 
 * Enhancement of the support for reflection on type arguments, covering
