@@ -4534,7 +4534,32 @@ String _extractMetadataCode(Element element, Resolver resolver,
       if (_isPrivateName(annotationNode.name.name)) {
         _severe("Cannot access private name ${annotationNode.name}", element);
       }
-      metadataParts.add("$prefix${annotationNode.name}");
+      Identifier annotationName = annotationNode.name;
+      String name;
+      if (annotationName is SimpleIdentifier) {
+        name = "$annotationName";
+      } else if (annotationName is PrefixedIdentifier) {
+        // The annotation is on the form `@p.id` where `p` is a library
+        // prefix, or it is on the form `@C.id` where `C` is a class and
+        // `id` a constant class variable.
+        if (annotationName.prefix.staticElement is PrefixElement) {
+          // We must replace the library prefix by the appropriate prefix for
+          // code in the generated library, so we omit `prefix`.
+          name = "${annotationName.identifier}";
+        } else {
+          // We must preserve the prefix which is a class name.
+          name = "$annotationName";
+        }
+        // In both cases we must include the library prefix.
+        prefix = importCollector._getPrefix(annotationNode.element.library);
+      } else {
+        _severe("This kind of metadata not yet supported: $annotationNode",
+            element);
+      }
+      if (_isPrivateName(name)) {
+        _severe("Cannot access private name $name", element);
+      }
+      metadataParts.add("$prefix$name");
     }
   }
 

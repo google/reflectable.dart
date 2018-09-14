@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.7
+
+* Bug fix #132: 
+
 ## 2.0.6
 
 * Adjusts an implementation class (`MixinApplication`) such that a
