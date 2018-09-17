@@ -3304,10 +3304,12 @@ class BuilderImplementation {
     return null;
   }
 
-  void _warn(WarningKind kind, String message, [Element element]) {
+  /// Adds a warning to the log, using the source code location of `target`
+  /// to identify the relevant location where the error occurs.
+  void _warn(WarningKind kind, String message, [Element target]) {
     if (_warningEnabled(kind)) {
-      if (element != null) {
-        log.warning(_formatDiagnosticMessage(message, element));
+      if (target != null) {
+        log.warning(_formatDiagnosticMessage(message, target));
       } else {
         log.warning(message);
       }
@@ -4524,12 +4526,12 @@ String _extractMetadataCode(Element element, Resolver resolver,
   return _formatAsConstList("Object", metadataParts);
 }
 
-/// Extract the plain name from by [identifier] by stripping off the
+/// Extract the plain name from [identifier] by stripping off the
 /// library import prefix at front, if any.
 String _extractNameWithoutPrefix(Identifier identifier, Element errorTarget) {
   String name;
   if (identifier is SimpleIdentifier) {
-    name = "$identifier";
+    name = identifier.token.stringValue;
   } else if (identifier is PrefixedIdentifier) {
     // The identifier is of the form `p.id` where `p` is a library
     // prefix, or it is on the form `C.id` where `C` is a class and
@@ -4538,10 +4540,10 @@ String _extractNameWithoutPrefix(Identifier identifier, Element errorTarget) {
       // We will replace the library prefix by the appropriate prefix for
       // code in the generated library, so we omit the prefix specified in
       // client code.
-      name = "${identifier.identifier}";
+      name = "${identifier.identifier.token.stringValue}";
     } else {
       // We must preserve the prefix which is a class name.
-      name = "$identifier";
+      name = "${identifier.name}";
     }
   } else {
     _severe("This kind of identifier is not yet supported: $identifier",
@@ -5105,29 +5107,35 @@ Iterable<DartObject> _getEvaluatedMetadata(
       (ElementAnnotation annotation) => _getEvaluatedMetadatum(annotation));
 }
 
-void _severe(String message, [Element element]) {
-  if (element != null) {
-    log.severe(_formatDiagnosticMessage(message, element));
+/// Adds a severe error to the log, using the source code location of `target`
+/// to identify the relevant location where the error occurs.
+void _severe(String message, [Element target]) {
+  if (target != null) {
+    log.severe(_formatDiagnosticMessage(message, target));
   } else {
     log.severe(message);
   }
 }
 
-void _fine(String message, [Element element]) {
-  if (element != null) {
-    log.fine(_formatDiagnosticMessage(message, element));
+/// Adds a 'fine' message to the log, using the source code location of `target`
+/// to identify the relevant location where the issue occurs.
+void _fine(String message, [Element target]) {
+  if (target != null) {
+    log.fine(_formatDiagnosticMessage(message, target));
   } else {
     log.fine(message);
   }
 }
 
-String _formatDiagnosticMessage(String message, Element element) {
-  Source source = element?.source;
+/// Returns a string containing the given [message] and identifying the
+/// associated source code location as the location of the given [target].
+String _formatDiagnosticMessage(String message, Element target) {
+  Source source = target?.source;
   if (source == null) return message;
   String locationString = "";
-  int nameOffset = element.nameOffset;
+  int nameOffset = target.nameOffset;
   if (nameOffset != null) {
-    var location = element.unit?.lineInfo?.getLocation(nameOffset);
+    var location = target.unit?.lineInfo?.getLocation(nameOffset);
     if (location != null) {
       locationString = "${location.lineNumber}:${location.columnNumber}";
     }
@@ -5136,10 +5144,11 @@ String _formatDiagnosticMessage(String message, Element element) {
 }
 
 // Emits a warning-level log message which will be preserved by `pub run`
-// (as opposed to stdout and stderr which are swallowed).
+// (as opposed to stdout and stderr which are swallowed). If given, [target]
+// is used to indicate a source code location.
 // ignore:unused_element
-void _emitMessage(String message, [Element element]) {
+void _emitMessage(String message, [Element target]) {
   var formattedMessage =
-      element != null ? _formatDiagnosticMessage(message, element) : message;
+      target != null ? _formatDiagnosticMessage(message, target) : message;
   log.warning(formattedMessage);
 }
