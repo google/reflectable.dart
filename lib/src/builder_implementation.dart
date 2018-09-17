@@ -4531,7 +4531,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
 String _extractNameWithoutPrefix(Identifier identifier, Element errorTarget) {
   String name;
   if (identifier is SimpleIdentifier) {
-    name = identifier.token.stringValue;
+    name = identifier.token.lexeme;
   } else if (identifier is PrefixedIdentifier) {
     // The identifier is of the form `p.id` where `p` is a library
     // prefix, or it is on the form `C.id` where `C` is a class and
@@ -4540,14 +4540,15 @@ String _extractNameWithoutPrefix(Identifier identifier, Element errorTarget) {
       // We will replace the library prefix by the appropriate prefix for
       // code in the generated library, so we omit the prefix specified in
       // client code.
-      name = "${identifier.identifier.token.stringValue}";
+      name = identifier.identifier.token.lexeme;
     } else {
       // We must preserve the prefix which is a class name.
-      name = "${identifier.name}";
+      name = identifier.name;
     }
   } else {
     _severe("This kind of identifier is not yet supported: $identifier",
         errorTarget);
+    name = identifier.name;
   }
   return name;
 }
