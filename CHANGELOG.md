@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.7
+
+* Bug fix #132: We used to generate terms like `prefix2.di.inject` in order 
+  to denote a top level declaration named `inject`, but that's an error 
+  because `di` is an import prefix from client code. We now strip off such
+  prefixes (yielding `prefix2.inject`) in the cases reported in issue #132.
+
 ## 2.0.6
 
 * Adjusts an implementation class (`MixinApplication`) such that a
