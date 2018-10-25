@@ -3,7 +3,8 @@
 ## 2.0.8
 
 * Fix version conflict #153: Updated version constraints on analyzer, build,
-  build_runner, and test.
+  build_runner, and test. Ported reflectable_builder.dart to work with new
+  build API.
 
 ## 2.0.7
 
