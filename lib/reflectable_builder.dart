@@ -8,7 +8,7 @@ import 'dart:async';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:build_config/build_config.dart';
-import 'package:build_runner/build_runner.dart';
+import 'package:build_runner_core/build_runner_core.dart';
 import 'src/builder_implementation.dart';
 
 class ReflectableBuilder implements Builder {
@@ -17,7 +17,7 @@ class ReflectableBuilder implements Builder {
   ReflectableBuilder(this.builderOptions);
 
   @override
-  Future build(BuildStep buildStep) async {
+  Future<void> build(BuildStep buildStep) async {
     var resolver = buildStep.resolver;
     var inputId = buildStep.inputId;
     var outputId = inputId.changeExtension('.reflectable.dart');
@@ -50,12 +50,29 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
   } else {
     // TODO(eernst) feature: We should support some customization of
     // the settings, e.g., specifying options like `suppress_warnings`.
-    BuilderOptions options = new BuilderOptions(
+    var options = new BuilderOptions(
         <String, dynamic>{"entry_points": arguments, "formatted": true},
         isRoot: true);
     final builder = new ReflectableBuilder(options);
-    return await build(
-        [applyToRoot(builder, generateFor: new InputSet(include: arguments))],
-        deleteFilesByDefault: true);
+    List<BuilderApplication> builders = [
+      applyToRoot(builder, generateFor: new InputSet(include: arguments))
+    ];
+    var packageGraph = PackageGraph.forThisPackage();
+    var environment = OverrideableEnvironment(IOEnvironment(packageGraph));
+    var buildOptions = await BuildOptions.create(
+      LogSubscription(environment),
+      deleteFilesByDefault: true,
+      packageGraph: packageGraph,
+    );
+    try {
+      var build = await BuildRunner.create(
+          buildOptions, environment, builders, const {},
+          isReleaseBuild: false);
+      var result = await build.run(const {});
+      await build?.beforeExit();
+      return result;
+    } finally {
+      await buildOptions.logListener.cancel();
+    }
   }
 }
