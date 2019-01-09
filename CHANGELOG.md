@@ -1,5 +1,3 @@
-# Changelog
-
 ## 2.0.8+1
 
 * Corrected the email address listed in `pubspec.yaml` for Dart Team.
