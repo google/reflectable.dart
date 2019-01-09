@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.8+1
+
+* Corrected the email address listed in `pubspec.yaml` for Dart Team.
+
 ## 2.0.8
 
 * Fix version conflict #153: Updated version constraints on analyzer, build,
