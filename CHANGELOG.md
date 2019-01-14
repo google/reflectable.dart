@@ -1,3 +1,7 @@
+## 2.0.9
+
+* Updated dependency to allow using analyzer 0.34.
+
 ## 2.0.8+1
 
 * Corrected the email address listed in `pubspec.yaml` for Dart Team.
