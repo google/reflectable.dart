@@ -1,3 +1,7 @@
+## 2.0.10
+
+* Updated dependency to allow using source_span 1.5.3.
+
 ## 2.0.9
 
 * Updated dependency to allow using analyzer 0.34.
