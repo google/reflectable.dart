@@ -165,8 +165,7 @@ class ReflectorData {
   }
 }
 
-const String pleaseInitializeMessage =
-    "Reflectable has not been initialized.\n"
+const String pleaseInitializeMessage = "Reflectable has not been initialized.\n"
     "Please make sure that the first action taken by your program\n"
     "in `main` is to call `initializeReflectable()`.";
 
@@ -1159,7 +1158,8 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
           "without `typeRelationsCapability`");
     }
     return reflectedTypeArguments
-        .map((Type type) => _reflector.reflectType(type)).toList();
+        .map((Type type) => _reflector.reflectType(type))
+        .toList();
   }
 
   @override
@@ -2467,16 +2467,16 @@ abstract class ReflectableImpl extends ReflectableBase
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
   const ReflectableImpl(
-      [ReflectCapability cap0 = null,
-      ReflectCapability cap1 = null,
-      ReflectCapability cap2 = null,
-      ReflectCapability cap3 = null,
-      ReflectCapability cap4 = null,
-      ReflectCapability cap5 = null,
-      ReflectCapability cap6 = null,
-      ReflectCapability cap7 = null,
-      ReflectCapability cap8 = null,
-      ReflectCapability cap9 = null])
+      [ReflectCapability cap0,
+      ReflectCapability cap1,
+      ReflectCapability cap2,
+      ReflectCapability cap3,
+      ReflectCapability cap4,
+      ReflectCapability cap5,
+      ReflectCapability cap6,
+      ReflectCapability cap7,
+      ReflectCapability cap8,
+      ReflectCapability cap9])
       : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
 
   const ReflectableImpl.fromList(List<ReflectCapability> capabilities)
@@ -2522,7 +2522,7 @@ abstract class ReflectableImpl extends ReflectableBase
     // The specification says that an exception shall be thrown if there
     // is anything other than one library with a matching name.
     int matchCount = 0;
-    LibraryMirror matchingLibrary = null;
+    LibraryMirror matchingLibrary;
     for (LibraryMirror libraryMirror in reflectorData.libraryMirrors) {
       if (libraryMirror.qualifiedName == libraryName) {
         matchCount++;
