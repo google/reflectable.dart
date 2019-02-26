@@ -202,7 +202,7 @@ class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
   final Element upperBound;
   final bool excludeUpperBound;
   const SuperclassQuantifyCapability(this.upperBound,
-      {bool excludeUpperBound: false})
+      {bool excludeUpperBound = false})
       : excludeUpperBound = excludeUpperBound;
 }
 
@@ -211,7 +211,7 @@ const superclassQuantifyCapability = const SuperclassQuantifyCapability(null);
 
 class TypeAnnotationQuantifyCapability implements ReflecteeQuantifyCapability {
   final bool transitive;
-  const TypeAnnotationQuantifyCapability({bool transitive: false})
+  const TypeAnnotationQuantifyCapability({bool transitive = false})
       : transitive = transitive;
 }
 

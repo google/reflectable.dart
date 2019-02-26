@@ -337,7 +337,7 @@ class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
   final Type upperBound;
   final bool excludeUpperBound;
   const SuperclassQuantifyCapability(this.upperBound,
-      {bool excludeUpperBound: false})
+      {bool excludeUpperBound = false})
       : excludeUpperBound = excludeUpperBound;
 }
 
@@ -352,7 +352,7 @@ const superclassQuantifyCapability = const SuperclassQuantifyCapability(Object);
 /// etc.
 class TypeAnnotationQuantifyCapability implements ReflecteeQuantifyCapability {
   final bool transitive;
-  const TypeAnnotationQuantifyCapability({bool transitive: false})
+  const TypeAnnotationQuantifyCapability({bool transitive = false})
       : transitive = transitive;
 }
 
@@ -566,14 +566,14 @@ dynamic reflectableNoSuchInvokableError(
     List positionalArguments,
     Map<Symbol, dynamic> namedArguments,
     StringInvocationKind kind,
-    [List<Symbol> existingArgumentNames = null]) {
+    [List<Symbol> existingArgumentNames]) {
   throw new ReflectableNoSuchMethodError(receiver, memberName,
       positionalArguments, namedArguments, kind, existingArgumentNames);
 }
 
 dynamic reflectableNoSuchMethodError(Object receiver, String memberName,
     List positionalArguments, Map<Symbol, dynamic> namedArguments,
-    [List<Symbol> existingArgumentNames = null]) {
+    [List<Symbol> existingArgumentNames]) {
   throw new ReflectableNoSuchMethodError(
       receiver,
       memberName,
@@ -585,7 +585,7 @@ dynamic reflectableNoSuchMethodError(Object receiver, String memberName,
 
 dynamic reflectableNoSuchGetterError(Object receiver, String memberName,
     List positionalArguments, Map<Symbol, dynamic> namedArguments,
-    [List<Symbol> existingArgumentNames = null]) {
+    [List<Symbol> existingArgumentNames]) {
   throw new ReflectableNoSuchMethodError(
       receiver,
       memberName,
@@ -597,7 +597,7 @@ dynamic reflectableNoSuchGetterError(Object receiver, String memberName,
 
 dynamic reflectableNoSuchSetterError(Object receiver, String memberName,
     List positionalArguments, Map<Symbol, dynamic> namedArguments,
-    [List<Symbol> existingArgumentNames = null]) {
+    [List<Symbol> existingArgumentNames]) {
   throw new ReflectableNoSuchMethodError(
       receiver,
       memberName,
@@ -612,7 +612,7 @@ dynamic reflectableNoSuchConstructorError(
     String constructorName,
     List positionalArguments,
     Map<Symbol, dynamic> namedArguments,
-    [List<Symbol> existingArgumentNames = null]) {
+    [List<Symbol> existingArgumentNames]) {
   throw new ReflectableNoSuchMethodError(
       receiver,
       constructorName,

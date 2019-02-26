@@ -296,7 +296,7 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
   bool any(bool f(ClassElement element)) => classElements.items.any(f);
 
   @override
-  List<ClassElement> toList({bool growable: true}) {
+  List<ClassElement> toList({bool growable = true}) {
     return classElements.items.toList(growable: growable);
   }
 
@@ -691,6 +691,8 @@ class _ReflectorDomain {
         Iterable.generate(optionalPositionalCount, (int i) {
       ParameterElement parameterElement =
           constructor.parameters[requiredPositionalCount + i];
+      // TODO(eernst): Work with Brian to find `computeNode` replacement.
+      // ignore:deprecated_member_use
       FormalParameter parameterNode = parameterElement.computeNode();
       String defaultValueCode = "";
       if (parameterNode is DefaultFormalParameter &&
@@ -710,6 +712,8 @@ class _ReflectorDomain {
       // any named parameters then all optional parameters are named.
       ParameterElement parameterElement =
           constructor.parameters[requiredPositionalCount + i];
+      // TODO(eernst): Work with Brian to find `computeNode` replacement.
+      // ignore:deprecated_member_use
       FormalParameter parameterNode = parameterElement.computeNode();
       String defaultValueCode = "";
       if (parameterNode is DefaultFormalParameter &&
@@ -793,7 +797,7 @@ class _ReflectorDomain {
 
     // Class element for [Object], needed as implicit upper bound. Initialized
     // if needed.
-    ClassElement objectClassElement = null;
+    ClassElement objectClassElement;
 
     /// Adds a library domain for [library] to [libraries], relying on checks
     /// for importability and insertion into [importCollector] to have taken
@@ -1169,7 +1173,7 @@ class _ReflectorDomain {
       Map<FunctionType, int> typedefs) {
     if (dartType is ParameterizedType) {
       List<TypeParameterElement> typeParameters = dartType.typeParameters;
-      if (typeParameters.length == 0) {
+      if (typeParameters.isEmpty) {
         // We have no formal type parameters, so there cannot be any actual
         // type arguments.
         return 'const <int>[]';
@@ -1928,7 +1932,7 @@ class _ReflectorDomain {
                   typeVariablesInScope,
                   typedefs,
                   useNameOfGenericFunctionType: useNameOfGenericFunctionType));
-          String connector = argumentTypes.length == 0 ? "" : ", ";
+          String connector = argumentTypes.isEmpty ? "" : ", ";
           argumentTypes = "$argumentTypes$connector"
               "[${optionalParameterTypeList.join(', ')}]";
         }
@@ -1942,7 +1946,7 @@ class _ReflectorDomain {
                 useNameOfGenericFunctionType: useNameOfGenericFunctionType);
             return "$typeCode $name";
           });
-          String connector = argumentTypes.length == 0 ? "" : ", ";
+          String connector = argumentTypes.isEmpty ? "" : ", ";
           argumentTypes = "$argumentTypes$connector"
               "{${namedParameterTypeList.join(', ')}}";
         }
@@ -2185,6 +2189,8 @@ class _ReflectorDomain {
     }
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
+      // TODO(eernst): Work with Brian to find `computeNode` replacement.
+      // ignore:deprecated_member_use
       FormalParameter node = element.computeNode();
       if (node == null) {
         metadataCode = "const []";
@@ -2193,6 +2199,8 @@ class _ReflectorDomain {
             element, _resolver, importCollector, _generatedLibraryId);
       }
     }
+    // TODO(eernst): Work with Brian to find `computeNode` replacement.
+    // ignore:deprecated_member_use
     FormalParameter parameterNode = element.computeNode();
     String defaultValueCode = "null";
     if (parameterNode is DefaultFormalParameter &&
@@ -2649,7 +2657,7 @@ class _ClassDomain {
             (member is PropertyAccessorElement && member.isSynthetic)
                 ? member.variable.metadata
                 : member.metadata;
-        List<ElementAnnotation> getterMetadata = null;
+        List<ElementAnnotation> getterMetadata;
         if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
             member is PropertyAccessorElement &&
             !member.isSynthetic &&
@@ -2723,7 +2731,7 @@ class _ClassDomain {
       // the metadata on the original field.
       List<ElementAnnotation> metadata =
           accessor.isSynthetic ? accessor.variable.metadata : accessor.metadata;
-      List<ElementAnnotation> getterMetadata = null;
+      List<ElementAnnotation> getterMetadata;
       if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
           accessor.isSetter &&
           !accessor.isSynthetic) {
@@ -3182,6 +3190,8 @@ class BuilderImplementation {
   /// [Reflectable].
   ClassElement _findReflectableClassElement(LibraryElement reflectableLibrary) {
     for (CompilationUnitElement unit in reflectableLibrary.units) {
+      // TODO(eernst): Work with Brian to find `computeNode` replacement.
+      // ignore:deprecated_member_use
       for (ClassElement type in unit.types) {
         if (type.name == reflectable_class_constants.name &&
             _equalsClassReflectable(type)) {
@@ -3477,6 +3487,8 @@ class BuilderImplementation {
       return false;
     }
     ConstructorDeclaration constructorDeclarationNode =
+        // TODO(eernst): Work with Brian to find `computeNode` replacement.
+        // ignore:deprecated_member_use
         constructor.computeNode();
     NodeList<ConstructorInitializer> initializers =
         constructorDeclarationNode.initializers;
@@ -3894,11 +3906,13 @@ class BuilderImplementation {
     }
 
     ConstructorDeclaration constructorDeclarationNode =
+        // TODO(eernst): Work with Brian to find `computeNode` replacement.
+        // ignore:deprecated_member_use
         constructorElement.computeNode();
     NodeList<ConstructorInitializer> initializers =
         constructorDeclarationNode.initializers;
 
-    if (initializers.length == 0) {
+    if (initializers.isEmpty) {
       // Degenerate case: Without initializers, we will obtain a reflector
       // without any capabilities, which is not useful in practice. We do
       // have this degenerate case in tests "just because we can", and
@@ -3949,7 +3963,7 @@ class BuilderImplementation {
           ? Uri.parse(originalEntryPointFilename)
           : _getImportUri(library, generatedLibraryId);
       String prefix = world.importCollector._getPrefix(library);
-      if (prefix.length > 0) {
+      if (prefix.isNotEmpty) {
         imports
             .add("import '$uri' as ${prefix.substring(0, prefix.length - 1)};");
       }
@@ -4320,6 +4334,8 @@ String _extractConstantCode(
         Element staticElement = expression.staticElement;
         if (staticElement is PropertyAccessorElement) {
           VariableElement variable = staticElement.variable;
+          // TODO(eernst): Work with Brian to find `computeNode` replacement.
+          // ignore:deprecated_member_use
           VariableDeclaration variableDeclaration = variable.computeNode();
           return helper(variableDeclaration.initializer);
         } else {
@@ -4436,6 +4452,8 @@ String _extractMetadataCode(Element element, Resolver resolver,
 
   List<String> metadataParts = <String>[];
 
+  // TODO(eernst): Work with Brian to find `computeNode` replacement.
+  // ignore:deprecated_member_use
   AstNode node = element.computeNode();
   if (node == null) {
     // This can occur with members of subclasses of `Element` from 'dart:html'.
@@ -4665,7 +4683,7 @@ Iterable<PropertyAccessorElement> _extractLibraryAccessors(Resolver resolver,
   for (CompilationUnitElement unit in libraryElement.units) {
     for (PropertyAccessorElement accessor in unit.accessors) {
       if (accessor.isPrivate) continue;
-      List<ElementAnnotation> metadata, getterMetadata = null;
+      List<ElementAnnotation> metadata, getterMetadata;
       if (accessor.isSynthetic) {
         metadata = accessor.variable.metadata;
         getterMetadata = metadata;
@@ -4708,7 +4726,7 @@ Iterable<PropertyAccessorElement> _extractAccessors(
         : capabilities.supportsInstanceInvoke;
     List<ElementAnnotation> metadata =
         accessor.isSynthetic ? accessor.variable.metadata : accessor.metadata;
-    List<ElementAnnotation> getterMetadata = null;
+    List<ElementAnnotation> getterMetadata;
     if (capabilities._impliesCorrespondingSetters &&
         accessor.isSetter &&
         !accessor.isSynthetic) {
@@ -4962,6 +4980,8 @@ class MixinApplication implements ClassElement {
 
   @override
   NamedCompilationUnitMember computeNode() =>
+      // TODO(eernst): Work with Brian to find `computeNode` replacement.
+      // ignore:deprecated_member_use
       declaredName != null ? subclass.computeNode() : null;
 
   @override
@@ -4983,7 +5003,6 @@ class MixinApplication implements ClassElement {
   int get hashCode => superclass.hashCode ^ mixin.hashCode ^ library.hashCode;
 
   toString() => "MixinApplication($superclass, $mixin)";
-
 
   // Let the compiler generate forwarders for all remaining methods: Instances
   // of this class are only ever passed around locally in this library, so
@@ -5136,6 +5155,8 @@ String _formatDiagnosticMessage(String message, Element target) {
   String locationString = "";
   int nameOffset = target.nameOffset;
   if (nameOffset != null) {
+    // TODO(eernst): Work with Brian to find `unit` replacement.
+    // ignore:deprecated_member_use
     var location = target.unit?.lineInfo?.getLocation(nameOffset);
     if (location != null) {
       locationString = "${location.lineNumber}:${location.columnNumber}";

@@ -42,7 +42,7 @@ ReflectableBuilder reflectableBuilder(BuilderOptions options) {
 }
 
 Future<BuildResult> reflectableBuild(List<String> arguments) async {
-  if (arguments.length < 1) {
+  if (arguments.isEmpty) {
     // Globbing may produce an empty argument list, and it might be ok,
     // but we should give at least notify the caller.
     print("reflectable_builder: No arguments given, exiting.");
