@@ -1,6 +1,6 @@
 ## 2.0.10+1
 
-* Lint fixes (e.g., `var x;` rather than `var x = null;`).
+* Lint fixes (e.g., `T x;` rather than `T x = null;`).
 
 ## 2.0.10
 
