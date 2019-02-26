@@ -1,3 +1,7 @@
+## 2.0.10+1
+
+* Lint fixes (e.g., `var x;` rather than `var x = null;`).
+
 ## 2.0.10
 
 * Updated dependency to allow using source_span 1.5.3.
