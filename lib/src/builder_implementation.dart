@@ -691,6 +691,7 @@ class _ReflectorDomain {
         Iterable.generate(optionalPositionalCount, (int i) {
       ParameterElement parameterElement =
           constructor.parameters[requiredPositionalCount + i];
+      // TODO(eernst): Work with Brian to find `computeNode` replacement.
       // ignore:deprecated_member_use
       FormalParameter parameterNode = parameterElement.computeNode();
       String defaultValueCode = "";
@@ -711,6 +712,7 @@ class _ReflectorDomain {
       // any named parameters then all optional parameters are named.
       ParameterElement parameterElement =
           constructor.parameters[requiredPositionalCount + i];
+      // TODO(eernst): Work with Brian to find `computeNode` replacement.
       // ignore:deprecated_member_use
       FormalParameter parameterNode = parameterElement.computeNode();
       String defaultValueCode = "";
@@ -2187,6 +2189,7 @@ class _ReflectorDomain {
     }
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
+      // TODO(eernst): Work with Brian to find `computeNode` replacement.
       // ignore:deprecated_member_use
       FormalParameter node = element.computeNode();
       if (node == null) {
@@ -2196,6 +2199,7 @@ class _ReflectorDomain {
             element, _resolver, importCollector, _generatedLibraryId);
       }
     }
+    // TODO(eernst): Work with Brian to find `computeNode` replacement.
     // ignore:deprecated_member_use
     FormalParameter parameterNode = element.computeNode();
     String defaultValueCode = "null";
@@ -3186,6 +3190,7 @@ class BuilderImplementation {
   /// [Reflectable].
   ClassElement _findReflectableClassElement(LibraryElement reflectableLibrary) {
     for (CompilationUnitElement unit in reflectableLibrary.units) {
+      // TODO(eernst): Work with Brian to find `computeNode` replacement.
       // ignore:deprecated_member_use
       for (ClassElement type in unit.types) {
         if (type.name == reflectable_class_constants.name &&
@@ -3482,6 +3487,7 @@ class BuilderImplementation {
       return false;
     }
     ConstructorDeclaration constructorDeclarationNode =
+        // TODO(eernst): Work with Brian to find `computeNode` replacement.
         // ignore:deprecated_member_use
         constructor.computeNode();
     NodeList<ConstructorInitializer> initializers =
@@ -3900,6 +3906,7 @@ class BuilderImplementation {
     }
 
     ConstructorDeclaration constructorDeclarationNode =
+        // TODO(eernst): Work with Brian to find `computeNode` replacement.
         // ignore:deprecated_member_use
         constructorElement.computeNode();
     NodeList<ConstructorInitializer> initializers =
@@ -4327,6 +4334,7 @@ String _extractConstantCode(
         Element staticElement = expression.staticElement;
         if (staticElement is PropertyAccessorElement) {
           VariableElement variable = staticElement.variable;
+          // TODO(eernst): Work with Brian to find `computeNode` replacement.
           // ignore:deprecated_member_use
           VariableDeclaration variableDeclaration = variable.computeNode();
           return helper(variableDeclaration.initializer);
@@ -4444,6 +4452,7 @@ String _extractMetadataCode(Element element, Resolver resolver,
 
   List<String> metadataParts = <String>[];
 
+  // TODO(eernst): Work with Brian to find `computeNode` replacement.
   // ignore:deprecated_member_use
   AstNode node = element.computeNode();
   if (node == null) {
@@ -4971,6 +4980,7 @@ class MixinApplication implements ClassElement {
 
   @override
   NamedCompilationUnitMember computeNode() =>
+      // TODO(eernst): Work with Brian to find `computeNode` replacement.
       // ignore:deprecated_member_use
       declaredName != null ? subclass.computeNode() : null;
 
@@ -5145,6 +5155,7 @@ String _formatDiagnosticMessage(String message, Element target) {
   String locationString = "";
   int nameOffset = target.nameOffset;
   if (nameOffset != null) {
+    // TODO(eernst): Work with Brian to find `unit` replacement.
     // ignore:deprecated_member_use
     var location = target.unit?.lineInfo?.getLocation(nameOffset);
     if (location != null) {
