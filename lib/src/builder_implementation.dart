@@ -16,7 +16,6 @@ import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/source/source_resource.dart';
 import 'package:build/build.dart';
-import 'package:build_resolvers/src/resolver.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:path/path.dart' as path;
 import 'element_capability.dart' as ec;
@@ -1142,8 +1141,7 @@ class _ReflectorDomain {
     } else if (dartType is TypeParameterType || dartType.isDynamic) {
       return false;
     } else {
-      throw unimplementedError(
-          '`reflectedTypeArguments` where an actual type argument '
+      _severe('`reflectedTypeArguments` where an actual type argument '
           '(possibly nested) is $dartType');
     }
   }
@@ -1177,8 +1175,7 @@ class _ReflectorDomain {
             } else {
               // TODO(eernst) clarify: Are `dynamic` et al `InterfaceType`s?
               // Otherwise this means "a case that we have not it considered".
-              throw unimplementedError(
-                  '`reflectedTypeArguments` where one actual type argument'
+              _severe('`reflectedTypeArguments` where one actual type argument'
                   ' is $actualTypeArgument');
             }
           });
@@ -1209,7 +1206,7 @@ class _ReflectorDomain {
     } else if (element.enclosingElement is CompilationUnitElement) {
       return _libraries.indexOf(element.enclosingElement.enclosingElement);
     }
-    throw unreachableError("Unexpected kind of request for owner");
+    _severe("Unexpected kind of request for owner");
   }
 
   Iterable<ExecutableElement> _gettersOfLibrary(_LibraryDomain library) sync* {
@@ -2751,12 +2748,6 @@ class _ClassDomain {
   String toString() {
     return "ClassDomain($_classElement)";
   }
-
-  bool operator ==(Object other) =>
-      throw unimplementedError("== on _ClassDomain not implemented");
-
-  int get hashCode =>
-      throw unimplementedError("hashCode on _ClassDomain not implemented");
 }
 
 /// A wrapper around a list of Capabilities.
@@ -3003,7 +2994,7 @@ class _Capabilities {
         if (element is ClassElement) {
           result[element] = capability.excludeUpperBound;
         } else {
-          throw unreachableError("Unexpected kind of upper bound specified "
+          _severe("Unexpected kind of upper bound specified "
               "for a `SuperclassQuantifyCapability`: $element.");
         }
       }
@@ -3188,11 +3179,16 @@ class BuilderImplementation {
   /// [Reflectable].
   ClassElement _findReflectableClassElement(LibraryElement reflectableLibrary) {
     for (CompilationUnitElement unit in reflectableLibrary.units) {
+      _warn(WarningKind.unusedReflector,
+          "_findReflectableClassElement: $unit"); // DEBUG
       // TODO(eernst): Work with Brian to find `unit` replacement.
       // ignore:deprecated_member_use
       for (ClassElement type in unit.types) {
-        if (type.name == reflectable_class_constants.name &&
-            _equalsClassReflectable(type)) {
+        if (type.name ==
+                reflectable_class_constants
+                    .name /*&& // DEBUG
+            _equalsClassReflectable(type)*/
+            ) {
           return type;
         }
       }
@@ -3878,7 +3874,7 @@ class BuilderImplementation {
         // superinitializer of a const constructor, and we have tested
         // for all classes in that library which can provide a const value,
         // so we should not reach this point.
-        throw unreachableError("Unexpected capability $classElement");
+        _severe("Unexpected capability $classElement");
     }
   }
 
@@ -3929,11 +3925,24 @@ class BuilderImplementation {
           capabilityLibrary, expression, reflector.library, constructorElement);
     }
 
+    ec.ReflectCapability capabilityOfCollectionElement(
+        CollectionElement collectionElement) {
+      if (collectionElement is Expression) {
+        return capabilityOfExpression(collectionElement);
+      } else {
+        _severe("Not yet supported! "
+            "Encountered a collection element which is not an expression: "
+            "$collectionElement");
+        return null;
+      }
+    }
+
     if (superInvocation.constructorName == null) {
       // Subcase: `super(..)` where 0..k arguments are accepted for some
       // k that we need not worry about here.
       NodeList<Expression> arguments = superInvocation.argumentList.arguments;
-      return _Capabilities(arguments.map(capabilityOfExpression).toList());
+      return _Capabilities(
+          arguments.map(capabilityOfCollectionElement).toList());
     }
     assert(superInvocation.constructorName.name == "fromList");
 
@@ -3941,8 +3950,9 @@ class BuilderImplementation {
     NodeList<Expression> arguments = superInvocation.argumentList.arguments;
     assert(arguments.length == 1);
     ListLiteral listLiteral = arguments[0];
-    NodeList<Expression> expressions = listLiteral.elements;
-    return _Capabilities(expressions.map(capabilityOfExpression).toList());
+    NodeList<CollectionElement> collectionElements = listLiteral.elements2;
+    return _Capabilities(
+        collectionElements.map(capabilityOfCollectionElement).toList());
   }
 
   /// Generates code for a new entry-point file that will initialize the
@@ -4031,7 +4041,11 @@ initializeReflectable() {
       return "// No output from reflectable, "
           "'package:reflectable/reflectable.dart' not used.";
     } else {
+      _warn(WarningKind.unusedReflector,
+          "reflectableLibrary: $reflectableLibrary"); // DEBUG
       reflectableLibrary = _resolvedLibraryOf(reflectableLibrary);
+      _warn(WarningKind.unusedReflector,
+          "reflectableLibrary, resolved: $reflectableLibrary"); // DEBUG
 
       if (const bool.fromEnvironment("reflectable.print.entry.point")) {
         print("Starting build for '$inputId'.");
@@ -4069,6 +4083,73 @@ initializeReflectable() {
         }
       }
     }
+  }
+
+  /// Returns a constant resolved version of the given [libraryElement].
+  LibraryElement _resolvedLibraryOf(LibraryElement libraryElement) {
+    _fine("Resolving $libraryElement"); // DEBUG
+    for (LibraryElement libraryElement2 in _libraries) {
+      _fine("  Possible resolution: $libraryElement2"); // DEBUG
+      if (libraryElement.identifier == libraryElement2.identifier)
+        return libraryElement2;
+    }
+    // This can occur when the library is not used.
+    _fine("Could not resolve library $libraryElement");
+    return libraryElement;
+  }
+
+  /// Returns `evaluationResult` for the given [annotation].
+  ///
+  /// Returns the `evaluationResult` for [annotation], after having forced
+  /// constant resolution to take place in `annotation.compilationUnit.library`.
+  /// Note that future invocations of `annotation.compilationUnit.library` will
+  /// return a resolved library, but previously obtained results from that method
+  /// will remain unresolved if they were unresolved when they were obtained.
+  EvaluationResultImpl _annotationEvaluationResult(
+      ElementAnnotationImpl annotation) {
+    EvaluationResultImpl result = annotation.evaluationResult;
+    if (result == null) {
+      // This is safe: The `library` will not be used again.
+      _resolvedLibraryOf(annotation.compilationUnit.library);
+      result = annotation.evaluationResult;
+    }
+    return result;
+  }
+
+  /// Returns `evaluationResult` for the given [constFieldElement].
+  ///
+  /// Returns the `evaluationResult` for [constFieldElement], after having
+  /// forced constant resolution to take place in `constFieldElement.library`.
+  /// Note that future invocations of `constFieldElement.library` will return
+  /// a resolved library, but previously obtained results from that method
+  /// will remain unresolved if they were unresolved when they were obtained.
+  EvaluationResultImpl _constFieldEvaluationResult(
+      ConstFieldElementImpl constFieldElement) {
+    EvaluationResultImpl result = constFieldElement.evaluationResult;
+    if (result == null) {
+      // This is safe: The `library` will not be used again.
+      _resolvedLibraryOf(constFieldElement.library);
+      result = constFieldElement.evaluationResult;
+    }
+    return result;
+  }
+
+  /// Returns `evaluationResult` for the given [constTopLevelVariable].
+  ///
+  /// Returns the `evaluationResult` for [constTopLevelVariable], after having
+  /// forced constant resolution to take place in `constTopLevelvariable.library`.
+  /// Note that future invocations of `constTopLevelVariable.library` will
+  /// return a resolved library, but previously obtained results from that method
+  /// will remain unresolved if they were unresolved when they were obtained.
+  EvaluationResultImpl _constTopLevelVariableEvaluationResult(
+      ConstTopLevelVariableElementImpl constTopLevelVariable) {
+    EvaluationResultImpl result = constTopLevelVariable.evaluationResult;
+    if (result == null) {
+      // This is safe: The `library` will not be used again.
+      _resolvedLibraryOf(constTopLevelVariable.library);
+      result = constTopLevelVariable.evaluationResult;
+    }
+    return result;
   }
 }
 
@@ -4251,6 +4332,8 @@ String _formatAsConstList(String typeName, Iterable parts) =>
 
 String _formatAsDynamicList(Iterable parts) => "[${parts.join(", ")}]";
 
+String _formatAsDynamicSet(Iterable parts) => "{${parts.join(", ")}}";
+
 String _formatAsMap(Iterable parts) => "{${parts.join(", ")}}";
 
 /// Returns a [String] containing code that will evaluate to the same
@@ -4270,8 +4353,17 @@ String _extractConstantCode(
   String helper(Expression expression) {
     if (expression is ListLiteral) {
       Iterable<String> elements =
-          expression.elements.map((Expression subExpression) {
-        return helper(subExpression);
+          expression.elements2.map((CollectionElement collectionElement) {
+        if (collectionElement is Expression) {
+          Expression subExpression = collectionElement;
+          return helper(subExpression);
+        } else {
+          // TODO(eernst) implement: `if` and `spread` elements of list.
+          _severe("Not yet supported! "
+              "Encountered list literal element which is not an expression: "
+              "$collectionElement");
+          return "";
+        }
       });
       if (expression.typeArguments == null ||
           expression.typeArguments.arguments.isEmpty) {
@@ -4282,29 +4374,66 @@ String _extractConstantCode(
             typeAnnotationHelper(expression.typeArguments.arguments[0]);
         return "const <$typeArgument>${_formatAsDynamicList(elements)}";
       }
-    } else if (expression is MapLiteral) {
-      Iterable<String> elements =
-          expression.entries.map((MapLiteralEntry entry) {
-        String key = helper(entry.key);
-        String value = helper(entry.value);
-        return "$key: $value";
-      });
-      if (expression.typeArguments == null ||
-          expression.typeArguments.arguments.isEmpty) {
-        return "const ${_formatAsMap(elements)}";
+    } else if (expression is SetOrMapLiteral) {
+      if (expression.isMap) {
+        Iterable<String> elements =
+            expression.elements2.map((CollectionElement collectionElement) {
+          if (collectionElement is MapLiteralEntry) {
+            String key = helper(collectionElement.key);
+            String value = helper(collectionElement.value);
+            return "$key: $value";
+          } else {
+            // TODO(eernst) implement: `if` and `spread` elements of a map.
+            _severe("Not yet supported! "
+                "Encountered map literal element which is not a map entry: "
+                "$collectionElement");
+            return "";
+          }
+        });
+        if (expression.typeArguments == null ||
+            expression.typeArguments.arguments.isEmpty) {
+          return "const ${_formatAsMap(elements)}";
+        } else {
+          assert(expression.typeArguments.arguments.length == 2);
+          String keyType =
+              typeAnnotationHelper(expression.typeArguments.arguments[0]);
+          String valueType =
+              typeAnnotationHelper(expression.typeArguments.arguments[1]);
+          return "const <$keyType, $valueType>${_formatAsMap(elements)}";
+        }
+      } else if (expression.isSet) {
+        Iterable<String> elements =
+            expression.elements2.map((CollectionElement collectionElement) {
+          if (collectionElement is Expression) {
+            Expression subExpression = collectionElement;
+            return helper(subExpression);
+          } else {
+            // TODO(eernst) implement: `if` and `spread` elements of a set.
+            _severe("Not yet supported! "
+                "Encountered set literal element which is not an expression: "
+                "$collectionElement");
+            return "";
+          }
+        });
+        if (expression.typeArguments == null ||
+            expression.typeArguments.arguments.isEmpty) {
+          return "const ${_formatAsDynamicSet(elements)}";
+        } else {
+          assert(expression.typeArguments.arguments.length == 1);
+          String typeArgument =
+              typeAnnotationHelper(expression.typeArguments.arguments[0]);
+          return "const <$typeArgument>${_formatAsDynamicSet(elements)}";
+        }
       } else {
-        assert(expression.typeArguments.arguments.length == 2);
-        String keyType =
-            typeAnnotationHelper(expression.typeArguments.arguments[0]);
-        String valueType =
-            typeAnnotationHelper(expression.typeArguments.arguments[1]);
-        return "const <$keyType, $valueType>${_formatAsMap(elements)}";
+        unreachableError("SetOrMapLiteral is neither a set nor a map");
+        return "";
       }
     } else if (expression is InstanceCreationExpression) {
       String constructor = expression.constructorName.toSource();
       if (_isPrivateName(constructor)) {
         _severe("Cannot access private name $constructor, "
             "needed for expression $expression");
+        return "";
       }
       LibraryElement libraryOfConstructor = expression.staticElement.library;
       if (_isImportableLibrary(
@@ -4320,6 +4449,7 @@ String _extractConstantCode(
         if (_isPrivateName(constructor)) {
           _severe("Cannot access private name $constructor, "
               "needed for expression $expression");
+          return "";
         }
         return "const $prefix$constructor($arguments)";
       } else {
@@ -4867,14 +4997,12 @@ String _assetIdToUri(AssetId assetId, AssetId from, Element messageTarget) {
 
 Uri _getImportUri(LibraryElement lib, AssetId from) {
   var source = lib.source;
-  if (source is AssetBasedSource) {
-    var uriString = _assetIdToUri(source.assetId, from, lib);
-    return uriString != null ? Uri.parse(uriString) : null;
-  } else if (source is FileSource) {
+  // TODO(eernst) clarify: With analyzer 0.35.4, does this handle packages?
+  if (source is FileSource) {
     return source.uri;
   }
-  // Should not be able to encounter any other source types.
-  throw new StateError('Unable to resolve URI for ${source.runtimeType}');
+  // Should not encounter any other source types.
+  _severe('Unable to resolve URI for ${source.runtimeType}');
 }
 
 /// Modelling a mixin application as a [ClassElement].
@@ -5007,7 +5135,7 @@ class MixinApplication implements ClassElement {
   // we will never need to support any members that we don't use locally.
   @override
   noSuchMethod(Invocation invocation) {
-    throw unreachableError("Missing MixinApplication member");
+    _severe("Missing MixinApplication member");
   }
 }
 
@@ -5036,73 +5164,6 @@ String _qualifiedTypeParameterName(TypeParameterElement typeParameterElement) {
 
 bool _isPrivateName(String name) {
   return name.startsWith("_") || name.contains("._");
-}
-
-/// Returns a constant resolved version of the given [libraryElement].
-///
-/// Requests resolution of constants in [libraryElement] and returns a
-/// [LibraryElement] wherein they have been resolved. If the library has
-/// been obtained by evaluating `library` on an `Element` and all further
-/// usage of that library will happen by invoking `library` again then it is
-/// safe to ignore the returned value (because the future invocations of
-/// `library` will return the resolved library).
-LibraryElement _resolvedLibraryOf(LibraryElement libraryElement) {
-  return libraryElement.context
-      .computeLibraryElement(libraryElement.definingCompilationUnit.source);
-}
-
-/// Returns `evaluationResult` for the given [annotation].
-///
-/// Returns the `evaluationResult` for [annotation], after having forced
-/// constant resolution to take place in `annotation.compilationUnit.library`.
-/// Note that future invocations of `annotation.compilationUnit.library` will
-/// return a resolved library, but previously obtained results from that method
-/// will remain unresolved if they were unresolved when they were obtained.
-EvaluationResultImpl _annotationEvaluationResult(
-    ElementAnnotationImpl annotation) {
-  EvaluationResultImpl result = annotation.evaluationResult;
-  if (result == null) {
-    // This is safe: The `library` will not be used again.
-    _resolvedLibraryOf(annotation.compilationUnit.library);
-    result = annotation.evaluationResult;
-  }
-  return result;
-}
-
-/// Returns `evaluationResult` for the given [constFieldElement].
-///
-/// Returns the `evaluationResult` for [constFieldElement], after having
-/// forced constant resolution to take place in `constFieldElement.library`.
-/// Note that future invocations of `constFieldElement.library` will return
-/// a resolved library, but previously obtained results from that method
-/// will remain unresolved if they were unresolved when they were obtained.
-EvaluationResultImpl _constFieldEvaluationResult(
-    ConstFieldElementImpl constFieldElement) {
-  EvaluationResultImpl result = constFieldElement.evaluationResult;
-  if (result == null) {
-    // This is safe: The `library` will not be used again.
-    _resolvedLibraryOf(constFieldElement.library);
-    result = constFieldElement.evaluationResult;
-  }
-  return result;
-}
-
-/// Returns `evaluationResult` for the given [constTopLevelVariable].
-///
-/// Returns the `evaluationResult` for [constTopLevelVariable], after having
-/// forced constant resolution to take place in `constTopLevelvariable.library`.
-/// Note that future invocations of `constTopLevelVariable.library` will
-/// return a resolved library, but previously obtained results from that method
-/// will remain unresolved if they were unresolved when they were obtained.
-EvaluationResultImpl _constTopLevelVariableEvaluationResult(
-    ConstTopLevelVariableElementImpl constTopLevelVariable) {
-  EvaluationResultImpl result = constTopLevelVariable.evaluationResult;
-  if (result == null) {
-    // This is safe: The `library` will not be used again.
-    _resolvedLibraryOf(constTopLevelVariable.library);
-    result = constTopLevelVariable.evaluationResult;
-  }
-  return result;
 }
 
 EvaluationResult _evaluateConstant(
