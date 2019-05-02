@@ -697,8 +697,16 @@ class _ReflectorDomain {
       String defaultValueCode = "";
       if (parameterNode is DefaultFormalParameter &&
           parameterNode.defaultValue != null) {
-        defaultValueCode =
-            " = ${_extractConstantCode(parameterNode.defaultValue, importCollector, _generatedLibraryId, _resolver)}";
+        var constantCode = _extractConstantCode(parameterNode.defaultValue,
+            importCollector, _generatedLibraryId, _resolver);
+        defaultValueCode = " = $constantCode";
+      } else if (parameterElement is DefaultFieldFormalParameterElementImpl) {
+        Expression defaultValue = parameterElement.constantInitializer;
+        if (defaultValue != null) {
+          var constantCode = _extractConstantCode(
+              defaultValue, importCollector, _generatedLibraryId, _resolver);
+          defaultValueCode = " = $constantCode";
+        }
       }
       return "${parameterNames[requiredPositionalCount + i]}"
           "$defaultValueCode";
@@ -718,8 +726,16 @@ class _ReflectorDomain {
       String defaultValueCode = "";
       if (parameterNode is DefaultFormalParameter &&
           parameterNode.defaultValue != null) {
-        defaultValueCode =
-            ": ${_extractConstantCode(parameterNode.defaultValue, importCollector, _generatedLibraryId, _resolver)}";
+        var constantCode = _extractConstantCode(parameterNode.defaultValue,
+            importCollector, _generatedLibraryId, _resolver);
+        defaultValueCode = " = $constantCode";
+      } else if (parameterElement is DefaultFieldFormalParameterElementImpl) {
+        Expression defaultValue = parameterElement.constantInitializer;
+        if (defaultValue != null) {
+          var constantCode = _extractConstantCode(
+              defaultValue, importCollector, _generatedLibraryId, _resolver);
+          defaultValueCode = " = $constantCode";
+        }
       }
       return "${namedParameterNames[i]}$defaultValueCode";
     }).join(", ");
