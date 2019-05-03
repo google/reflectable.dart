@@ -687,21 +687,31 @@ class _ReflectorDomain {
         Iterable.generate(requiredPositionalCount, (int i) => parameterNames[i])
             .join(", ");
 
-    String optionalsWithDefaults =
-        Iterable.generate(optionalPositionalCount, (int i) {
-      ParameterElement parameterElement =
-          constructor.parameters[requiredPositionalCount + i];
+    String defaultValueCode(ParameterElement parameterElement) {
       // TODO(eernst): Work with Brian to find `computeNode` replacement.
       // ignore:deprecated_member_use
       FormalParameter parameterNode = parameterElement.computeNode();
-      String defaultValueCode = "";
       if (parameterNode is DefaultFormalParameter &&
           parameterNode.defaultValue != null) {
-        defaultValueCode =
-            " = ${_extractConstantCode(parameterNode.defaultValue, importCollector, _generatedLibraryId, _resolver)}";
+        var constantCode = _extractConstantCode(parameterNode.defaultValue,
+            importCollector, _generatedLibraryId, _resolver);
+        return " = $constantCode";
+      } else if (parameterElement is DefaultFieldFormalParameterElementImpl) {
+        Expression defaultValue = parameterElement.constantInitializer;
+        if (defaultValue != null) {
+          var constantCode = _extractConstantCode(
+              defaultValue, importCollector, _generatedLibraryId, _resolver);
+          return " = $constantCode";
+        }
       }
-      return "${parameterNames[requiredPositionalCount + i]}"
-          "$defaultValueCode";
+      return "";
+    }
+
+    String optionalsWithDefaults =
+        Iterable.generate(optionalPositionalCount, (int i) {
+      String code =
+          defaultValueCode(constructor.parameters[requiredPositionalCount + i]);
+      return "${parameterNames[requiredPositionalCount + i]}$code";
     }).join(", ");
 
     String namedWithDefaults =
@@ -710,18 +720,9 @@ class _ReflectorDomain {
       // on a language design where no parameter list can include
       // both optional positional and named parameters, so if there are
       // any named parameters then all optional parameters are named.
-      ParameterElement parameterElement =
-          constructor.parameters[requiredPositionalCount + i];
-      // TODO(eernst): Work with Brian to find `computeNode` replacement.
-      // ignore:deprecated_member_use
-      FormalParameter parameterNode = parameterElement.computeNode();
-      String defaultValueCode = "";
-      if (parameterNode is DefaultFormalParameter &&
-          parameterNode.defaultValue != null) {
-        defaultValueCode =
-            ": ${_extractConstantCode(parameterNode.defaultValue, importCollector, _generatedLibraryId, _resolver)}";
-      }
-      return "${namedParameterNames[i]}$defaultValueCode";
+      String code =
+          defaultValueCode(constructor.parameters[requiredPositionalCount + i]);
+      return "${namedParameterNames[i]}$code";
     }).join(", ");
 
     String optionalArguments = Iterable.generate(optionalPositionalCount,

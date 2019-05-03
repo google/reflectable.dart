@@ -1,3 +1,8 @@
+## 2.0.11
+
+* Bug fix #170: Default values for initializing formals are now included
+  when generating function literals for `newInstance`.
+
 ## 2.0.10+1
 
 * Lint fixes (e.g., `T x;` rather than `T x = null;`).
