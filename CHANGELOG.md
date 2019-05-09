@@ -1,3 +1,8 @@
+## 2.0.12
+
+* Follow-up bug fix related to #170: Corrected `ParameterMirror.defaultValue`
+  for initializing formals.
+
 ## 2.0.11
 
 * Bug fix #170: Default values for initializing formals are now included
