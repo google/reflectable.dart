@@ -2202,15 +2202,13 @@ class _ReflectorDomain {
     FormalParameter parameterNode = parameterElement.computeNode();
     if (parameterNode is DefaultFormalParameter &&
         parameterNode.defaultValue != null) {
-      var constantCode = _extractConstantCode(parameterNode.defaultValue,
+      return _extractConstantCode(parameterNode.defaultValue,
           importCollector, _generatedLibraryId, _resolver);
-      return " = $constantCode";
     } else if (parameterElement is DefaultFieldFormalParameterElementImpl) {
       Expression defaultValue = parameterElement.constantInitializer;
       if (defaultValue != null) {
-        var constantCode = _extractConstantCode(
+        return _extractConstantCode(
             defaultValue, importCollector, _generatedLibraryId, _resolver);
-        return " = $constantCode";
       }
     }
     return "";
