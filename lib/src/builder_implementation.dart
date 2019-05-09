@@ -2195,6 +2195,9 @@ class _ReflectorDomain {
         '$parameterSymbolCode)';
   }
 
+  /// Given an [importCollector] and a [parameterElement], returns "" if there
+  /// is no default value, otherwise returns code for an expression that
+  /// evaluates to said default value.
   String _extractDefaultValueCode(
       _ImportCollector importCollector, ParameterElement parameterElement) {
     // TODO(eernst): Work with Brian to find `computeNode` replacement.
