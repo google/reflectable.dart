@@ -687,31 +687,12 @@ class _ReflectorDomain {
         Iterable.generate(requiredPositionalCount, (int i) => parameterNames[i])
             .join(", ");
 
-    String defaultValueCode(ParameterElement parameterElement) {
-      // TODO(eernst): Work with Brian to find `computeNode` replacement.
-      // ignore:deprecated_member_use
-      FormalParameter parameterNode = parameterElement.computeNode();
-      if (parameterNode is DefaultFormalParameter &&
-          parameterNode.defaultValue != null) {
-        var constantCode = _extractConstantCode(parameterNode.defaultValue,
-            importCollector, _generatedLibraryId, _resolver);
-        return " = $constantCode";
-      } else if (parameterElement is DefaultFieldFormalParameterElementImpl) {
-        Expression defaultValue = parameterElement.constantInitializer;
-        if (defaultValue != null) {
-          var constantCode = _extractConstantCode(
-              defaultValue, importCollector, _generatedLibraryId, _resolver);
-          return " = $constantCode";
-        }
-      }
-      return "";
-    }
-
     String optionalsWithDefaults =
         Iterable.generate(optionalPositionalCount, (int i) {
-      String code =
-          defaultValueCode(constructor.parameters[requiredPositionalCount + i]);
-      return "${parameterNames[requiredPositionalCount + i]}$code";
+      String code = _extractDefaultValueCode(
+          importCollector, constructor.parameters[requiredPositionalCount + i]);
+      String defaultPart = code.isEmpty ? "" : "= $code";
+      return "${parameterNames[requiredPositionalCount + i]}$defaultPart";
     }).join(", ");
 
     String namedWithDefaults =
@@ -720,9 +701,10 @@ class _ReflectorDomain {
       // on a language design where no parameter list can include
       // both optional positional and named parameters, so if there are
       // any named parameters then all optional parameters are named.
-      String code =
-          defaultValueCode(constructor.parameters[requiredPositionalCount + i]);
-      return "${namedParameterNames[i]}$code";
+      String code = _extractDefaultValueCode(
+          importCollector, constructor.parameters[requiredPositionalCount + i]);
+      String defaultPart = code.isEmpty ? "" : "= $code";
+      return "${namedParameterNames[i]}$defaultPart";
     }).join(", ");
 
     String optionalArguments = Iterable.generate(optionalPositionalCount,
@@ -2200,15 +2182,8 @@ class _ReflectorDomain {
             element, _resolver, importCollector, _generatedLibraryId);
       }
     }
-    // TODO(eernst): Work with Brian to find `computeNode` replacement.
-    // ignore:deprecated_member_use
-    FormalParameter parameterNode = element.computeNode();
-    String defaultValueCode = "null";
-    if (parameterNode is DefaultFormalParameter &&
-        parameterNode.defaultValue != null) {
-      defaultValueCode = _extractConstantCode(parameterNode.defaultValue,
-          importCollector, _generatedLibraryId, _resolver);
-    }
+    String code = _extractDefaultValueCode(importCollector, element);
+    String defaultValueCode = code.isEmpty ? "null" : code;
     String parameterSymbolCode = descriptor & constants.namedAttribute != 0
         ? "#${element.name}"
         : "null";
@@ -2218,6 +2193,28 @@ class _ReflectorDomain {
         '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
         '$reflectedTypeArguments, $metadataCode, $defaultValueCode, '
         '$parameterSymbolCode)';
+  }
+
+  /// Given an [importCollector] and a [parameterElement], returns "" if there
+  /// is no default value, otherwise returns code for an expression that
+  /// evaluates to said default value.
+  String _extractDefaultValueCode(
+      _ImportCollector importCollector, ParameterElement parameterElement) {
+    // TODO(eernst): Work with Brian to find `computeNode` replacement.
+    // ignore:deprecated_member_use
+    FormalParameter parameterNode = parameterElement.computeNode();
+    if (parameterNode is DefaultFormalParameter &&
+        parameterNode.defaultValue != null) {
+      return _extractConstantCode(parameterNode.defaultValue,
+          importCollector, _generatedLibraryId, _resolver);
+    } else if (parameterElement is DefaultFieldFormalParameterElementImpl) {
+      Expression defaultValue = parameterElement.constantInitializer;
+      if (defaultValue != null) {
+        return _extractConstantCode(
+            defaultValue, importCollector, _generatedLibraryId, _resolver);
+      }
+    }
+    return "";
   }
 }
 
@@ -3191,7 +3188,7 @@ class BuilderImplementation {
   /// [Reflectable].
   ClassElement _findReflectableClassElement(LibraryElement reflectableLibrary) {
     for (CompilationUnitElement unit in reflectableLibrary.units) {
-      // TODO(eernst): Work with Brian to find `computeNode` replacement.
+      // TODO(eernst): Work with Brian to find `unit` replacement.
       // ignore:deprecated_member_use
       for (ClassElement type in unit.types) {
         if (type.name == reflectable_class_constants.name &&
