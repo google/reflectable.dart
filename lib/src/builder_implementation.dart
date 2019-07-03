@@ -3480,10 +3480,10 @@ class BuilderImplementation {
       constructorFail();
       return false;
     }
-    ConstructorDeclaration constructorDeclarationNode =
-        // TODO(eernst): Work with Brian to find `computeNode` replacement.
-        // ignore:deprecated_member_use
-        constructor.computeNode();
+    final parsedLibrary =
+        constructor.session.getParsedLibraryByElement(constructor.library);
+    final declaration = parsedLibrary.getElementDeclaration(constructor);
+    ConstructorDeclaration constructorDeclarationNode = declaration.node;
     NodeList<ConstructorInitializer> initializers =
         constructorDeclarationNode.initializers;
     if (initializers.length > 1) {
@@ -3718,13 +3718,14 @@ class BuilderImplementation {
   /// [expression] reporting diagnostic messages for [messageTarget].
   ec.ReflectCapability _capabilityOfExpression(
       LibraryElement capabilityLibrary,
-      Expression expression,
+       Expression expression,
       LibraryElement containingLibrary,
       Element messageTarget) {
     EvaluationResult evaluated =
         _evaluateConstant(containingLibrary, expression);
 
     if (evaluated == null || !evaluated.isValid) {
+      _fine("evaluated: ${evaluated} containingLibrary: '${containingLibrary.displayName}'"); // DEBUG
       _severe(
           "Invalid constant `$expression` in capability list.", messageTarget);
       // We do not terminate immediately at `_severe` so we need to
@@ -3899,10 +3900,10 @@ class BuilderImplementation {
       return _Capabilities(<ec.ReflectCapability>[]);
     }
 
-    ConstructorDeclaration constructorDeclarationNode =
-        // TODO(eernst): Work with Brian to find `computeNode` replacement.
-        // ignore:deprecated_member_use
-        constructorElement.computeNode();
+    final parsedLibrary = constructorElement.session.getParsedLibraryByElement(
+        constructorElement.library);
+    final declaration = parsedLibrary.getElementDeclaration(constructorElement);
+    ConstructorDeclaration constructorDeclarationNode = declaration.node;
     NodeList<ConstructorInitializer> initializers =
         constructorDeclarationNode.initializers;
 
@@ -3950,7 +3951,7 @@ class BuilderImplementation {
     NodeList<Expression> arguments = superInvocation.argumentList.arguments;
     assert(arguments.length == 1);
     ListLiteral listLiteral = arguments[0];
-    NodeList<CollectionElement> collectionElements = listLiteral.elements2;
+    NodeList<CollectionElement> collectionElements = listLiteral.elements;
     return _Capabilities(
         collectionElements.map(capabilityOfCollectionElement).toList());
   }
@@ -4353,7 +4354,7 @@ String _extractConstantCode(
   String helper(Expression expression) {
     if (expression is ListLiteral) {
       Iterable<String> elements =
-          expression.elements2.map((CollectionElement collectionElement) {
+          expression.elements.map((CollectionElement collectionElement) {
         if (collectionElement is Expression) {
           Expression subExpression = collectionElement;
           return helper(subExpression);
@@ -4377,7 +4378,7 @@ String _extractConstantCode(
     } else if (expression is SetOrMapLiteral) {
       if (expression.isMap) {
         Iterable<String> elements =
-            expression.elements2.map((CollectionElement collectionElement) {
+            expression.elements.map((CollectionElement collectionElement) {
           if (collectionElement is MapLiteralEntry) {
             String key = helper(collectionElement.key);
             String value = helper(collectionElement.value);
@@ -4403,7 +4404,7 @@ String _extractConstantCode(
         }
       } else if (expression.isSet) {
         Iterable<String> elements =
-            expression.elements2.map((CollectionElement collectionElement) {
+            expression.elements.map((CollectionElement collectionElement) {
           if (collectionElement is Expression) {
             Expression subExpression = collectionElement;
             return helper(subExpression);
@@ -5214,11 +5215,21 @@ String _formatDiagnosticMessage(String message, Element target) {
   String locationString = "";
   int nameOffset = target.nameOffset;
   if (nameOffset != null) {
-    // TODO(eernst): Work with Brian to find `unit` replacement.
-    // ignore:deprecated_member_use
-    var location = target.unit?.lineInfo?.getLocation(nameOffset);
-    if (location != null) {
-      locationString = "${location.lineNumber}:${location.columnNumber}";
+    final parsedLibrary =
+        target.session.getParsedLibraryByElement(target.library);
+    final units = parsedLibrary.units;
+    // TODO: Disambiguate this message when >1 units.
+    var isFirst = true;
+    for (var unit in units) {
+      var location = unit.lineInfo?.getLocation(nameOffset);
+      if (location != null) {
+        if (isFirst) {
+          isFirst = false;
+          locationString = "${location.lineNumber}:${location.columnNumber}";
+        } else {
+          locationString += ", ${location.lineNumber}:${location.columnNumber}";
+        }
+      }
     }
   }
   return "${source.fullName}:$locationString: $message";
