@@ -22,12 +22,10 @@ class ReflectableBuilder implements Builder {
     var resolver = buildStep.resolver;
     var inputId = buildStep.inputId;
     var outputId = inputId.changeExtension('.reflectable.dart');
-    var resolvedInputLibrary = await resolver.libraryFor(inputId); // DEBUG
     List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
-    await buildStep.writeAsString(
-        outputId,
-        new BuilderImplementation().buildMirrorLibrary(resolver, inputId,
-            outputId, inputLibrary, visibleLibraries, true, []));
+    var generatedSource = await BuilderImplementation().buildMirrorLibrary(
+        resolver, inputId, outputId, inputLibrary, visibleLibraries, false, []);
+    await buildStep.writeAsString(outputId, generatedSource);
   }
 
   Map<String, List<String>> get buildExtensions => const {
