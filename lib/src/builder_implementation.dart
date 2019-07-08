@@ -141,7 +141,7 @@ class ReflectionWorld {
           await reflector._generateCode(this, importCollector, typedefs);
       if (typedefs.isNotEmpty) {
         for (DartType dartType in typedefs.keys) {
-          String body = reflector._typeCodeOfTypeArgument(
+          String body = await reflector._typeCodeOfTypeArgument(
               dartType, importCollector, typeVariablesInScope, typedefs,
               useNameOfGenericFunctionType: false);
           typedefsCode +=
@@ -1065,20 +1065,19 @@ class _ReflectorDomain {
     }
 
     // Generate code for listing [Type] instances.
-    Iterable<String> typesCodeList = () sync* {
-      yield* classes.map((ClassElement classElement) {
-        return _dynamicTypeCodeOfClass(classElement, importCollector);
-      });
-      yield* reflectedTypes.items.map((ErasableDartType erasableDartType) {
-        if (erasableDartType.erased) {
-          return _dynamicTypeCodeOfClass(
-              erasableDartType.dartType.element, importCollector);
-        } else {
-          return _typeCodeOfClass(
-              erasableDartType.dartType, importCollector, typedefs);
-        }
-      });
-    }();
+    List<String> typesCodeList = [];
+    for (ClassElement classElement in classes) {
+      typesCodeList.add(_dynamicTypeCodeOfClass(classElement, importCollector));
+    }
+    for (ErasableDartType erasableDartType in reflectedTypes.items) {
+      if (erasableDartType.erased) {
+        typesCodeList.add(_dynamicTypeCodeOfClass(
+            erasableDartType.dartType.element, importCollector));
+      } else {
+        typesCodeList.add(await _typeCodeOfClass(
+            erasableDartType.dartType, importCollector, typedefs));
+      }
+    }
     String typesCode = _formatAsList("Type", typesCodeList);
 
     // Generate code for creation of library mirrors.
@@ -1835,14 +1834,14 @@ class _ReflectorDomain {
   /// is used to decide whether the output should be a simple `typedef`
   /// name or a fully spelled-out generic function type (and it has no
   /// effect when [dartType] is not a generic function type).
-  String _typeCodeOfTypeArgument(
+  Future<String> _typeCodeOfTypeArgument(
       DartType dartType,
       _ImportCollector importCollector,
       Set<String> typeVariablesInScope,
       Map<FunctionType, int> typedefs,
-      {bool useNameOfGenericFunctionType = true}) {
-    fail() {
-      log.warning(_formatDiagnosticMessage(
+      {bool useNameOfGenericFunctionType = true}) async {
+    Future<String> fail() async {
+      log.warning(await _formatDiagnosticMessage(
           "Attempt to generate code for an "
           "unsupported kind of type: $dartType (${dartType.runtimeType}). "
           "Generating `dynamic`.",
@@ -1856,7 +1855,7 @@ class _ReflectorDomain {
       if ((classElement is MixinApplication &&
               classElement.declaredName == null) ||
           classElement.isPrivate) {
-        return fail();
+        return await fail();
       }
       String prefix = importCollector._getPrefix(classElement.library);
       if (classElement.typeParameters.isEmpty) {
@@ -1871,7 +1870,7 @@ class _ReflectorDomain {
               .join(', ');
           return "$prefix${classElement.name}<$arguments>";
         } else {
-          return fail();
+          return await fail();
         }
       }
     } else if (dartType is FunctionType) {
@@ -1894,7 +1893,7 @@ class _ReflectorDomain {
                 .addAll(dartType.typeFormals.map((element) => element.name));
           }
         }
-        String returnType = _typeCodeOfTypeArgument(dartType.returnType,
+        String returnType = await _typeCodeOfTypeArgument(dartType.returnType,
             importCollector, typeVariablesInScope, typedefs,
             useNameOfGenericFunctionType: useNameOfGenericFunctionType);
         String typeArguments = "";
@@ -1905,39 +1904,42 @@ class _ReflectorDomain {
         }
         String argumentTypes = "";
         if (dartType.normalParameterTypes.isNotEmpty) {
-          Iterable<String> normalParameterTypeList = dartType
-              .normalParameterTypes
-              .map((DartType parameterType) => _typeCodeOfTypeArgument(
-                  parameterType,
-                  importCollector,
-                  typeVariablesInScope,
-                  typedefs,
-                  useNameOfGenericFunctionType: useNameOfGenericFunctionType));
+          List<String> normalParameterTypeList = [];
+          for (DartType parameterType in dartType.normalParameterTypes) {
+            normalParameterTypeList.add(await _typeCodeOfTypeArgument(
+                parameterType,
+                importCollector,
+                typeVariablesInScope,
+                typedefs,
+                useNameOfGenericFunctionType: useNameOfGenericFunctionType));
+          }
           argumentTypes = normalParameterTypeList.join(', ');
         }
         if (dartType.optionalParameterTypes.isNotEmpty) {
-          Iterable<String> optionalParameterTypeList = dartType
-              .optionalParameterTypes
-              .map((DartType parameterType) => _typeCodeOfTypeArgument(
-                  parameterType,
-                  importCollector,
-                  typeVariablesInScope,
-                  typedefs,
-                  useNameOfGenericFunctionType: useNameOfGenericFunctionType));
+          List<String> optionalParameterTypeList = [];
+          for (DartType parameterType in dartType.optionalParameterTypes) {
+            optionalParameterTypeList.add(await _typeCodeOfTypeArgument(
+                parameterType,
+                importCollector,
+                typeVariablesInScope,
+                typedefs,
+                useNameOfGenericFunctionType: useNameOfGenericFunctionType));
+          }
           String connector = argumentTypes.isEmpty ? "" : ", ";
           argumentTypes = "$argumentTypes$connector"
               "[${optionalParameterTypeList.join(', ')}]";
         }
         if (dartType.namedParameterTypes.isNotEmpty) {
           Map<String, DartType> parameterMap = dartType.namedParameterTypes;
-          Iterable<String> namedParameterTypeList =
-              parameterMap.keys.map((String name) {
+          List<String> namedParameterTypeList = [];
+          for (String name in parameterMap.keys) {
             DartType parameterType = parameterMap[name];
-            String typeCode = _typeCodeOfTypeArgument(
+            String typeCode = await _typeCodeOfTypeArgument(
                 parameterType, importCollector, typeVariablesInScope, typedefs,
                 useNameOfGenericFunctionType: useNameOfGenericFunctionType);
-            return "$typeCode $name";
-          });
+            namedParameterTypeList.add("$typeCode $name");
+
+          }
           String connector = argumentTypes.isEmpty ? "" : ", ";
           argumentTypes = "$argumentTypes$connector"
               "{${namedParameterTypeList.join(', ')}}";
@@ -1958,8 +1960,8 @@ class _ReflectorDomain {
   /// evaluating the [typeDefiningElement] as an expression in the library
   /// where it occurs. [importCollector] is used to find the library prefixes
   /// needed in order to obtain values from other libraries.
-  String _typeCodeOfClass(DartType dartType, _ImportCollector importCollector,
-      Map<FunctionType, int> typedefs) {
+  Future<String> _typeCodeOfClass(DartType dartType, _ImportCollector importCollector,
+      Map<FunctionType, int> typedefs) async {
     var typeVariablesInScope = Set<String>(); // None at this level.
     if (dartType.isDynamic) return "dynamic";
     if (dartType is InterfaceType) {
@@ -1984,7 +1986,7 @@ class _ReflectorDomain {
         return "$prefix${classElement.name}";
       } else {
         if (dartType.typeArguments.every(_hasNoFreeTypeVariables)) {
-          String typeArgumentCode = _typeCodeOfTypeArgument(
+          String typeArgumentCode = await _typeCodeOfTypeArgument(
               dartType, importCollector, typeVariablesInScope, typedefs,
               useNameOfGenericFunctionType: true);
           return "const m.TypeValue<$typeArgumentCode>().type";
@@ -2008,17 +2010,17 @@ class _ReflectorDomain {
         if (dartType.typeFormals.isNotEmpty) {
           // `dartType` is a generic function type, so we must use a
           // separately generated `typedef` to obtain a `Type` for it.
-          return _typeCodeOfTypeArgument(
+          return await _typeCodeOfTypeArgument(
               dartType, importCollector, typeVariablesInScope, typedefs,
               useNameOfGenericFunctionType: true);
         } else {
-          String typeArgumentCode = _typeCodeOfTypeArgument(
+          String typeArgumentCode = await _typeCodeOfTypeArgument(
               dartType, importCollector, typeVariablesInScope, typedefs);
           return "const m.TypeValue<$typeArgumentCode>().type";
         }
       }
     } else {
-      log.warning(_formatDiagnosticMessage(
+      log.warning(await _formatDiagnosticMessage(
           "Attempt to generate code for an "
           "unsupported kind of type: $dartType (${dartType.runtimeType}). "
           "Generating `dynamic`.",
@@ -2181,10 +2183,18 @@ class _ReflectorDomain {
     }
     String metadataCode = "null";
     if (_capabilities._supportsMetadata) {
+      // TODO(eernst): 'dart:*' is not considered valid. To survive, we
+      // return the empty metadata for elements from 'dart:*'.
+      if (_isPlatformLibrary(element.library)) {
+        return "const []";
+      }
+
       var resolvedLibrary =
           await element.session.getResolvedLibraryByElement(element.library);
       var declaration = resolvedLibrary.getElementDeclaration(element);
-      FormalParameter node = declaration.node;
+      // The declaration may be null because the element is synthetic, and
+      // then it has no metadata.
+      FormalParameter node = declaration?.node;
       if (node == null) {
         metadataCode = "const []";
       } else {
@@ -2210,9 +2220,15 @@ class _ReflectorDomain {
   /// evaluates to said default value.
   Future<String> _extractDefaultValueCode(_ImportCollector importCollector,
       ParameterElement parameterElement) async {
+    // TODO(eernst): 'dart:*' is not considered valid. To survive, we return
+    // "" for all declarations from there.
+    if (_isPlatformLibrary(parameterElement.library)) return "";
     var resolvedLibrary = await parameterElement.session
         .getResolvedLibraryByElement(parameterElement.library);
     var declaration = resolvedLibrary.getElementDeclaration(parameterElement);
+    // The declaration can be null because the declaration is synthetic, e.g.,
+    // the parameter of an induced setter; they have no default value.
+    if (declaration == null) return "";
     FormalParameter parameterNode = declaration.node;
     if (parameterNode is DefaultFormalParameter &&
         parameterNode.defaultValue != null) {
@@ -3290,10 +3306,10 @@ class BuilderImplementation {
 
   /// Adds a warning to the log, using the source code location of `target`
   /// to identify the relevant location where the error occurs.
-  void _warn(WarningKind kind, String message, [Element target]) {
+  Future<void> _warn(WarningKind kind, String message, [Element target]) async {
     if (_warningEnabled(kind)) {
       if (target != null) {
-        log.warning(_formatDiagnosticMessage(message, target));
+        log.warning(await _formatDiagnosticMessage(message, target));
       } else {
         log.warning(message);
       }
@@ -3420,8 +3436,8 @@ class BuilderImplementation {
   /// update accordingly. The rest of the builder can then rely on every
   /// reflector class to be well-formed, and just have assertions rather than
   /// emitting error messages about it.
-  bool _isReflectorClass(
-      ClassElement potentialReflectorClass, ClassElement reflectableClass) {
+  Future<bool> _isReflectorClass(
+      ClassElement potentialReflectorClass, ClassElement reflectableClass) async {
     if (potentialReflectorClass == reflectableClass) return false;
     InterfaceType potentialReflectorType = potentialReflectorClass.type;
     InterfaceType reflectableType = reflectableClass.type;
@@ -3465,12 +3481,10 @@ class BuilderImplementation {
       return false;
     }
 
-    // A parsed library is enough here, because we only investigate the
-    // structure of the syntax, no static semantic information needed.
-    final parsedLibrary =
-        constructor.session.getParsedLibraryByElement(constructor.library);
-    final declaration = parsedLibrary.getElementDeclaration(constructor);
-    _fine(""); // DEBUG
+    final resolvedLibrary =
+        await constructor.session.getResolvedLibraryByElement(constructor.library);
+    final declaration = resolvedLibrary.getElementDeclaration(constructor);
+    if (declaration == null) return false;
     ConstructorDeclaration constructorDeclarationNode = declaration.node;
     NodeList<ConstructorInitializer> initializers =
         constructorDeclarationNode.initializers;
@@ -3657,7 +3671,7 @@ class BuilderImplementation {
             await addClassDomain(type, reflector);
           }
           if (!allReflectors.contains(type) &&
-              _isReflectorClass(type, classReflectable)) {
+              await _isReflectorClass(type, classReflectable)) {
             allReflectors.add(type);
           }
         }
@@ -4078,9 +4092,7 @@ initializeReflectable() {
 
   /// Returns a constant resolved version of the given [libraryElement].
   LibraryElement _resolvedLibraryOf(LibraryElement libraryElement) {
-    _fine("Resolving $libraryElement"); // DEBUG
     for (LibraryElement libraryElement2 in _libraries) {
-      _fine("  Possible resolution: $libraryElement2"); // DEBUG
       if (libraryElement.identifier == libraryElement2.identifier)
         return libraryElement2;
     }
@@ -4402,6 +4414,10 @@ Future<String> _extractConstantCode(
           var resolvedLibrary = await variable.session
               .getResolvedLibraryByElement(variable.library);
           var declaration = resolvedLibrary.getElementDeclaration(variable);
+          if (declaration == null || declaration.node == null) {
+            _severe("Cannot handle private identifier $expression");
+            return "";
+          }
           VariableDeclaration variableDeclaration = declaration.node;
           return helper(variableDeclaration.initializer);
         } else {
@@ -4518,10 +4534,17 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
 
   List<String> metadataParts = <String>[];
 
+  // TODO(eernst): 'dart:*' is not considered valid. To survive, we return
+  // the empty metadata for elements from 'dart:*'.
+  if (_isPlatformLibrary(element.library)) {
+    return "const []";
+  }
+
   var resolvedLibrary =
       await element.session.getResolvedLibraryByElement(element.library);
   var declaration = resolvedLibrary.getElementDeclaration(element);
-  AstNode node = declaration.node;
+  // `declaration` can be null if element is synthetic.
+  AstNode node = declaration?.node;
   if (node == null) {
     // This can occur with members of subclasses of `Element` from 'dart:html'.
     return "const []";
@@ -4915,11 +4938,11 @@ bool _isImportableLibrary(
 /// [assetId]. This function returns null if we cannot determine a uri for
 /// [assetId]. Note that [assetId] may represent a non-importable file such as
 /// a part.
-String _assetIdToUri(AssetId assetId, AssetId from, Element messageTarget) {
+Future<String> _assetIdToUri(AssetId assetId, AssetId from, Element messageTarget) async {
   if (!assetId.path.startsWith('lib/')) {
     // Cannot do absolute imports of non lib-based assets.
     if (assetId.package != from.package) {
-      _severe(_formatDiagnosticMessage(
+      _severe(await _formatDiagnosticMessage(
           "Attempt to generate non-lib import from different package",
           messageTarget));
       return null;
@@ -5028,6 +5051,9 @@ class MixinApplication implements ClassElement {
   @override
   Source get librarySource => library.source;
 
+  @override
+  get session => mixin.session;
+
   /// Returns true iff this class was declared using the syntax
   /// `class B = A with M;`, i.e., if it is an explicitly named mixin
   /// application.
@@ -5123,11 +5149,20 @@ Iterable<DartObject> _getEvaluatedMetadata(
       (ElementAnnotation annotation) => _getEvaluatedMetadatum(annotation));
 }
 
+
+/// Determine whether the given library is a platform library.
+///
+/// TODO(eernst): This function is only needed until a solution is found to the
+/// problem that platform libraries are considered invalid when obtained from
+/// `getResolvedLibraryByElement`, such that subsequent use will throw.
+bool _isPlatformLibrary(LibraryElement libraryElement) =>
+    libraryElement.source.uri.scheme == "dart";
+
 /// Adds a severe error to the log, using the source code location of `target`
 /// to identify the relevant location where the error occurs.
-void _severe(String message, [Element target]) {
+Future<void> _severe(String message, [Element target]) async {
   if (target != null) {
-    log.severe(_formatDiagnosticMessage(message, target));
+    log.severe(await _formatDiagnosticMessage(message, target));
   } else {
     log.severe(message);
   }
@@ -5135,9 +5170,9 @@ void _severe(String message, [Element target]) {
 
 /// Adds a 'fine' message to the log, using the source code location of `target`
 /// to identify the relevant location where the issue occurs.
-void _fine(String message, [Element target]) {
+Future<void> _fine(String message, [Element target]) async {
   if (target != null) {
-    log.fine(_formatDiagnosticMessage(message, target));
+    log.fine(await _formatDiagnosticMessage(message, target));
   } else {
     log.fine(message);
   }
@@ -5145,17 +5180,17 @@ void _fine(String message, [Element target]) {
 
 /// Returns a string containing the given [message] and identifying the
 /// associated source code location as the location of the given [target].
-String _formatDiagnosticMessage(String message, Element target) {
+Future<String> _formatDiagnosticMessage(String message, Element target) async {
   Source source = target?.source;
   if (source == null) return message;
   String locationString = "";
   int nameOffset = target?.nameOffset;
-  if (nameOffset != null) {
-    // A parsed library is enough here, because we only need to look up file
-    // position data, no static semantics information needed.
-    final parsedLibrary =
-        target.session.getParsedLibraryByElement(target.library);
-    final targetDeclaration = parsedLibrary.getElementDeclaration(target);
+  // TODO(eernst): 'dart:*' is not considered valid. To survive, we return
+  // a message with no location info when `element` is from 'dart:*'.
+  if (nameOffset != null && !_isPlatformLibrary(target.library)) {
+    final resolvedLibrary =
+        await target.session.getResolvedLibraryByElement(target.library);
+    final targetDeclaration = resolvedLibrary.getElementDeclaration(target);
     final unit = targetDeclaration.parsedUnit.unit;
     final location = unit.lineInfo?.getLocation(nameOffset);
     if (location != null) {
@@ -5169,8 +5204,8 @@ String _formatDiagnosticMessage(String message, Element target) {
 // (as opposed to stdout and stderr which are swallowed). If given, [target]
 // is used to indicate a source code location.
 // ignore:unused_element
-void _emitMessage(String message, [Element target]) {
+Future<void> _emitMessage(String message, [Element target]) async {
   var formattedMessage =
-      target != null ? _formatDiagnosticMessage(message, target) : message;
+      target != null ? await _formatDiagnosticMessage(message, target) : message;
   log.warning(formattedMessage);
 }
