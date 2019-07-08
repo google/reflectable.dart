@@ -5054,6 +5054,12 @@ class MixinApplication implements ClassElement {
   @override
   get session => mixin.session;
 
+  @override
+  get source => mixin.source;
+
+  @override
+  get nameOffset => -1;
+
   /// Returns true iff this class was declared using the syntax
   /// `class B = A with M;`, i.e., if it is an explicitly named mixin
   /// application.
@@ -5098,7 +5104,7 @@ class MixinApplication implements ClassElement {
   // we will never need to support any members that we don't use locally.
   @override
   noSuchMethod(Invocation invocation) {
-    _severe("Missing MixinApplication member");
+    _severe("Missing MixinApplication member: ${invocation.memberName}");
   }
 }
 
@@ -5191,7 +5197,7 @@ Future<String> _formatDiagnosticMessage(String message, Element target) async {
     final resolvedLibrary =
         await target.session.getResolvedLibraryByElement(target.library);
     final targetDeclaration = resolvedLibrary.getElementDeclaration(target);
-    final unit = targetDeclaration.parsedUnit.unit;
+    final unit = targetDeclaration.resolvedUnit.unit;
     final location = unit.lineInfo?.getLocation(nameOffset);
     if (location != null) {
       locationString = "${location.lineNumber}:${location.columnNumber}";
