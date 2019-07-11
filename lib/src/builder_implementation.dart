@@ -708,7 +708,7 @@ class _ReflectorDomain {
       String code = await _extractDefaultValueCode(
           importCollector, constructor.parameters[requiredPositionalCount + i]);
       String defaultPart = code.isEmpty ? "" : " = $code";
-      return "${namedParameterNames[i]}$defaultPart";
+      namedWithDefaultList.add("${namedParameterNames[i]}$defaultPart");
     }
     String namedWithDefaults = namedWithDefaultList.join(", ");
 
@@ -2202,20 +2202,20 @@ class _ReflectorDomain {
       // TODO(eernst): 'dart:*' is not considered valid. To survive, we
       // return the empty metadata for elements from 'dart:*'. Issue 173.
       if (_isPlatformLibrary(element.library)) {
-        return "const []";
-      }
-
-      var resolvedLibrary =
-          await element.session.getResolvedLibraryByElement(element.library);
-      var declaration = resolvedLibrary.getElementDeclaration(element);
-      // The declaration may be null because the element is synthetic, and
-      // then it has no metadata.
-      FormalParameter node = declaration?.node;
-      if (node == null) {
         metadataCode = "const []";
       } else {
-        metadataCode = await _extractMetadataCode(
-            element, _resolver, importCollector, _generatedLibraryId);
+        var resolvedLibrary =
+            await element.session.getResolvedLibraryByElement(element.library);
+        var declaration = resolvedLibrary.getElementDeclaration(element);
+        // The declaration may be null because the element is synthetic, and
+        // then it has no metadata.
+        FormalParameter node = declaration?.node;
+        if (node == null) {
+          metadataCode = "const []";
+        } else {
+          metadataCode = await _extractMetadataCode(
+              element, _resolver, importCollector, _generatedLibraryId);
+        }
       }
     }
     String code = await _extractDefaultValueCode(importCollector, element);
