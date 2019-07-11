@@ -24,7 +24,7 @@ class ReflectableBuilder implements Builder {
     var outputId = inputId.changeExtension('.reflectable.dart');
     List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
     var generatedSource = await BuilderImplementation().buildMirrorLibrary(
-        resolver, inputId, outputId, inputLibrary, visibleLibraries, false, []);
+        resolver, inputId, outputId, inputLibrary, visibleLibraries, true, []);
     await buildStep.writeAsString(outputId, generatedSource);
   }
 
