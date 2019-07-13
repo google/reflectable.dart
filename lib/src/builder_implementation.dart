@@ -6,6 +6,7 @@ library reflectable.src.builder_implementation;
 
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
@@ -4554,14 +4555,72 @@ Set<String> sdkLibraryNames = Set.from([
   "web_sql"
 ]);
 
+// Helper for _extractMetadataCode.
+CompilationUnit _definingCompilationUnit(
+    ResolvedLibraryResult resolvedLibrary) {
+  var definingUnit = resolvedLibrary.element.definingCompilationUnit;
+  for (var unit in resolvedLibrary.units) {
+    if (unit.unit.declaredElement == definingUnit) {
+      return unit.unit;
+    }
+  }
+  return null;
+}
+
+// Helper for _extractMetadataCode.
+NodeList<Annotation> _getLibraryMetadata(
+    ResolvedLibraryResult resolvedLibrary) {
+  var unit = _definingCompilationUnit(resolvedLibrary);
+  if (unit != null) {
+    var directive = unit.directives[0];
+    if (directive is LibraryDirective) {
+      return directive.metadata;
+    }
+  }
+  return null;
+}
+
+// Helper for _extractMetadataCode.
+NodeList<Annotation> _getOtherMetadata(
+    ResolvedLibraryResult resolvedLibrary, Element element) {
+  var declaration = resolvedLibrary.getElementDeclaration(element);
+  // `declaration` can be null if element is synthetic.
+  AstNode node = declaration?.node;
+  if (node == null || node is EnumConstantDeclaration) {
+    // `node` can be null with members of subclasses of `Element` from
+    // 'dart:html', and individual enum values cannot have metadata.
+    return null;
+  }
+
+  // The `element.node` of a field is the [VariableDeclaration] that is nested
+  // in a [VariableDeclarationList] that is nested in a [FieldDeclaration]. The
+  // metadata is stored on the [FieldDeclaration].
+  //
+  // Similarly, the `element.node` of a [TopLevelVariableElement] is a
+  // [VariableDeclaration] nested in a [VariableDeclarationList] nested in a
+  // [TopLevelVariableDeclaration], which stores the metadata.
+  if (element is FieldElement || element is TopLevelVariableElement) {
+    node = node.parent.parent;
+  }
+
+  // We can obtain the `metadata` via two methods in unrelated classes.
+  if (node is AnnotatedNode) {
+    // One source is an annotated node, which includes most declarations
+    // and directives.
+    return node.metadata;
+  } else {
+    // Insist that the only other source is a formal parameter.
+    FormalParameter formalParameter = node;
+    return formalParameter.metadata;
+  }
+}
+
 /// Returns a String with the code used to build the metadata of [element].
 ///
 /// Also adds any neccessary imports to [importCollector].
 Future<String> _extractMetadataCode(Element element, Resolver resolver,
     _ImportCollector importCollector, AssetId dataId) async {
-  Iterable<ElementAnnotation> elementAnnotations = element.metadata;
-
-  if (elementAnnotations == null) return "const []";
+  if (element.metadata == null) return "const []";
 
   // Synthetic accessors do not have metadata. Only their associated fields.
   if ((element is PropertyAccessorElement ||
@@ -4571,56 +4630,23 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
     return "const []";
   }
 
-  List<String> metadataParts = <String>[];
-
   // TODO(eernst): 'dart:*' is not considered valid. To survive, we return
   // the empty metadata for elements from 'dart:*'. Issue 173.
   if (_isPlatformLibrary(element.library)) {
     return "const []";
   }
 
+  NodeList<Annotation> metadata;
   var resolvedLibrary =
       await element.session.getResolvedLibraryByElement(element.library);
-  var declaration = resolvedLibrary.getElementDeclaration(element);
-  // `declaration` can be null if element is synthetic.
-  AstNode node = declaration?.node;
-  if (node == null) {
-    // This can occur with members of subclasses of `Element` from 'dart:html'.
-    return "const []";
-  }
-  if (node is EnumConstantDeclaration) {
-    // The grammar does not allow for individual enum values to have metadata.
-    return "const []";
-  }
-
-  // The `element.node` of a field is the [VariableDeclaration] that is nested
-  // in a [VariableDeclarationList] that is nested in a [FieldDeclaration]. The
-  // metadata is stored on the [FieldDeclaration].
-  //
-  // Similarly, the `element.node` of a [TopLevelVariableElementImpl] is a
-  // [VariableDeclaration] nested in a [VariableDeclarationList] nested in a
-  // [TopLevelVariableDeclaration], which stores the metadata.
-  //
-  // Finally, the `element.node` of a [LibraryElement] is the identifier that
-  // forms its name. The parent's parent is the actual Library declaration that
-  // contains the metadata.
-  if (element is FieldElement ||
-      element is TopLevelVariableElementImpl ||
-      element is LibraryElement) {
-    node = node.parent.parent;
-  }
-
-  List<Object> metadata;
-  // We can obtain the `metadata` via two methods in unrelated classes.
-  if (node is AnnotatedNode) {
-    // One source is an annotated node, which includes most declarations
-    // and directives.
-    metadata = node.metadata;
+  if (element is LibraryElement) {
+    metadata = _getLibraryMetadata(resolvedLibrary);
   } else {
-    // Insist that the only other source is a formal parameter.
-    FormalParameter formalParameter = node;
-    metadata = formalParameter.metadata;
+    metadata = _getOtherMetadata(resolvedLibrary, element);
   }
+  if (metadata == null || metadata.isEmpty) return "const []";
+
+  List<String> metadataParts = <String>[];
   for (Annotation annotationNode in metadata) {
     // TODO(sigurdm) diagnostic: Emit a warning/error if the element is not
     // in the global public scope of the library.
