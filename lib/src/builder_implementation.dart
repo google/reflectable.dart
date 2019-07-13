@@ -2012,9 +2012,9 @@ class _ReflectorDomain {
         }
       }
     } else if (dartType is FunctionType) {
-      if (dartType.element.isPrivate) {
-        return 'const r.FakeType(r"${_qualifiedName(dartType.element)}")';
-      }
+      // A function type is inherently not private, so we ignore privacy.
+      // Note that some function types are _claimed_ to be private in analyzer
+      // 0.36.4, so it is a bug to test for it.
       if (dartType.element is FunctionTypeAliasElement) {
         FunctionTypeAliasElement element = dartType.element;
         String prefix = importCollector._getPrefix(element.library);
