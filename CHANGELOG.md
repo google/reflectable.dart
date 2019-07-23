@@ -2,7 +2,14 @@
 
 * Major rewrite of the code generator in order to work with changes in the
   analyzer APIs, enabling the use of newer versions of many dependencies. In
-  particular, it enables analyzer 0.37.0. This addresses issue #173.
+  particular, it enables analyzer 0.37.0, which addresses issue #173. See
+  issue #180 about missing support for two features. This affects code in
+  platform libraries (that is, libraries imported with 'dart:...' except
+  'dart:ui'): If a declaration in a platform library has metadata, a query
+  for this metadata using `DeclarationMirror.metadata` will return null;
+  also, if a constructor in a platform library has a parameter with a default
+  value and that parameter is omitted in a reflective invocation, the value
+  passed will be `null` rather than the declared value.
 
 ## 2.0.12
 
