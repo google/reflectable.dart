@@ -973,25 +973,25 @@ class _ReflectorDomain {
 
     // Generate code for creation of class mirrors.
     List<String> typeMirrorsList = [];
-    for (_ClassDomain classDomain in (await classes).domains) {
-      typeMirrorsList.add(await _classMirrorCode(
-          classDomain,
-          typeParameters,
-          fields,
-          fieldsOffset,
-          methodsOffset,
-          typeParametersOffset,
-          members,
-          parameterListShapes,
-          parameterListShapeOf,
-          reflectedTypes,
-          reflectedTypesOffset,
-          libraries,
-          libraryMap,
-          importCollector,
-          typedefs));
-    }
     if (_capabilities._impliesTypes || _capabilities._impliesInstanceInvoke) {
+      for (_ClassDomain classDomain in (await classes).domains) {
+        typeMirrorsList.add(await _classMirrorCode(
+            classDomain,
+            typeParameters,
+            fields,
+            fieldsOffset,
+            methodsOffset,
+            typeParametersOffset,
+            members,
+            parameterListShapes,
+            parameterListShapeOf,
+            reflectedTypes,
+            reflectedTypesOffset,
+            libraries,
+            libraryMap,
+            importCollector,
+            typedefs));
+      }
       for (TypeParameterElement typeParameterElement in typeParameters.items) {
         typeMirrorsList.add(await _typeParameterMirrorCode(
             typeParameterElement, importCollector, objectClassElement));
