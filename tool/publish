@@ -5,15 +5,12 @@
 # the LICENSE file.
 
 warning_at_entry () {
-  echo 'NB: This script is highly specialized, it is only intended to be used'
-  echo 'when a new version of the reflectable package is being published.'
-  echo 'The procedure can be stopped at every step by pressing ^C rather'
-  echo 'than [ENTER].'
-  echo
+  echo 'NB: This script shows the steps to take in order to publish a new'
+  echo 'version of reflectable, and assigns values to some variables; the'
+  echo 'steps must then be taken manually.'
 }
 
 usage () {
-  warning_at_entry
   echo "Usage:"
   echo "  $0 [--help|-h] [<new-version>]"
   echo "where <new-version> = <major-number>.<minor-number>.<patch-number>"
@@ -52,17 +49,6 @@ if [[ ! `pwd` =~ /tool$ ]]; then
   exit -1
 fi
 
-if git status | head -1 | grep master >/dev/null; then
-  echo "On branch master; please create a fresh branch for publishing."
-  exit -1
-fi
-
-if [ "`git diff master | wc -l`" -ne "0" ]; then
-  echo "On a branch that differs from master; please create a fresh"
-  echo "branch for publishing."
-  exit -1
-fi
-
 MAJOR="${1%%.*}"
 MINOR="${1#*.}"; MINOR="${MINOR%.*}"
 PATCH="${1##*.}"
@@ -79,24 +65,18 @@ COMMIT_MESSAGE="'Bumping version to $VERSION'"
 TAG_MESSAGE="'Released as version $VERSION'"
 
 echo "Using tag value '$TAG_VALUE'."
-echo -n "Update CHANGELOG.md and then press [ENTER] here to see the diff.. "
+echo -n "Check entry in CHANGELOG.md and version in pubspec.yaml: $VERSION"
 read
 
-edit_version ../pubspec.yaml $VERSION
+echo ">>>>>> Ensure that github master is the version to publish"
+read
 
-git diff HEAD
-
-( cd ..; pub publish --dry-run )
-echo ">>>>>> Run these commands:"
-echo git add --all
-echo git commit -m$COMMIT_MESSAGE
-echo git push --set-upstream origin "current_branch_name"
-echo ">>>>>> Please get review such that these changes can be landed.. "
-echo ">>>>>> Merge the PR on github"
+echo ">>>>>> Then publish as follows:"
 echo git co master
-echo git pull --rebase origin master
+echo git fetch origin
+echo git pull
 echo pushd ..
 echo pub publish
-echo git tag -a -m$TAG_MESSAGE $TAG_VALUE
-echo git push origin refs/tags/$TAG_VALUE:refs/tags/$TAG_VALUE
+echo git tag -a -m"$TAG_MESSAGE" "$TAG_VALUE"
+echo git push origin refs/tags/${TAG_VALUE}:refs/tags/$TAG_VALUE
 echo popd

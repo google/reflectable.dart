@@ -1,3 +1,9 @@
+## 2.1.0
+
+* Major rewrite of the code generator in order to work with changes in the
+  analyzer APIs, enabling the use of newer versions of many dependencies. In
+  particular, it enables analyzer 0.37.0. This addresses issue 173.
+
 ## 2.0.12
 
 * Follow-up bug fix related to #170: Corrected `ParameterMirror.defaultValue`
