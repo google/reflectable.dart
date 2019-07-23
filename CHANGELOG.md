@@ -2,7 +2,7 @@
 
 * Major rewrite of the code generator in order to work with changes in the
   analyzer APIs, enabling the use of newer versions of many dependencies. In
-  particular, it enables analyzer 0.37.0. This addresses issue 173.
+  particular, it enables analyzer 0.37.0. This addresses issue #173.
 
 ## 2.0.12
 
