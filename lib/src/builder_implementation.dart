@@ -993,8 +993,8 @@ class _ReflectorDomain {
     }
     if (_capabilities._impliesTypes || _capabilities._impliesInstanceInvoke) {
       for (TypeParameterElement typeParameterElement in typeParameters.items) {
-        await _typeParameterMirrorCode(
-            typeParameterElement, importCollector, objectClassElement);
+        typeMirrorsList.add(await _typeParameterMirrorCode(
+            typeParameterElement, importCollector, objectClassElement));
       }
     }
     String classMirrorsCode = _formatAsList("m.TypeMirror", typeMirrorsList);
