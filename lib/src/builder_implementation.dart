@@ -152,7 +152,7 @@ class ReflectionWorld {
         typedefs.clear();
       }
       reflectorsCode
-          .add("${reflector._constConstructionCode(importCollector)}: "
+          .add("${await reflector._constConstructionCode(importCollector)}: "
               "$reflectorCode");
     }
     return "final _data = <r.Reflectable, r.ReflectorData>"
@@ -600,7 +600,7 @@ class _ReflectorDomain {
         await _SubtypesFixedPoint(_world.subtypes).expand(_classes);
       }
       if (_capabilities._impliesUpwardsClosure) {
-        await _SuperclassFixedPoint(_capabilities._upwardsClosureBounds,
+        await _SuperclassFixedPoint(await _capabilities._upwardsClosureBounds,
                 _capabilities._impliesMixins)
             .expand(_classes);
       } else {
@@ -746,10 +746,12 @@ class _ReflectorDomain {
   }
 
   /// The code of the const-construction of this reflector.
-  String _constConstructionCode(_ImportCollector importCollector) {
+  Future<String> _constConstructionCode(
+      _ImportCollector importCollector) async {
     String prefix = importCollector._getPrefix(_reflector.library);
     if (_isPrivateName(_reflector.name)) {
-      _severe("Cannot access private name `${_reflector.name}`", _reflector);
+      await _severe(
+          "Cannot access private name `${_reflector.name}`", _reflector);
     }
     return "const $prefix${_reflector.name}()";
   }
@@ -849,7 +851,7 @@ class _ReflectorDomain {
 
       // Ensure that we include variables corresponding to the implicit
       // accessors that we have included into `members`.
-      members.items.forEach((ExecutableElement element) {
+      for (ExecutableElement element in members.items) {
         if (element is PropertyAccessorElement && element.isSynthetic) {
           PropertyInducingElement variable = element.variable;
           if (variable is FieldElement) {
@@ -857,13 +859,13 @@ class _ReflectorDomain {
           } else if (variable is TopLevelVariableElement) {
             topLevelVariables.add(variable);
           } else {
-            _severe(
+            await _severe(
                 "This kind of variable is not yet supported"
                 " (${variable.runtimeType})",
                 variable);
           }
         }
-      });
+      }
 
       // Gather all getter and setter names based on [instanceMembers],
       // including both explicitly declared ones, implicitly generated ones
@@ -1145,16 +1147,18 @@ class _ReflectorDomain {
         descriptor & constants.classTypeAttribute != 0);
   }
 
-  bool _hasSupportedReflectedTypeArguments(DartType dartType) {
+  Future<bool> _hasSupportedReflectedTypeArguments(DartType dartType) async {
     if (dartType is ParameterizedType) {
       for (DartType typeArgument in dartType.typeArguments) {
-        if (!_hasSupportedReflectedTypeArguments(typeArgument)) return false;
+        if (!await _hasSupportedReflectedTypeArguments(typeArgument)) {
+          return false;
+        }
       }
       return true;
     } else if (dartType is TypeParameterType || dartType.isDynamic) {
       return false;
     } else {
-      _severe('`reflectedTypeArguments` where an actual type argument '
+      await _severe('`reflectedTypeArguments` where an actual type argument '
           '(possibly nested) is $dartType');
       return false;
     }
@@ -1180,7 +1184,14 @@ class _ReflectorDomain {
         // rather than "original" generic classes; so they do have actual type
         // arguments when there are formal type parameters.
         assert(typeArguments.length == typeParameters.length);
-        if (typeArguments.every(_hasSupportedReflectedTypeArguments)) {
+        bool allTypeArgumentsSupported = true;
+        for (var typeArgument in typeArguments) {
+          if (!await _hasSupportedReflectedTypeArguments(typeArgument)) {
+            allTypeArgumentsSupported = false;
+            break;
+          }
+        }
+        if (allTypeArgumentsSupported) {
           List<int> typesIndices = [];
           for (DartType actualTypeArgument in typeArguments) {
             if (actualTypeArgument is InterfaceType) {
@@ -1272,7 +1283,7 @@ class _ReflectorDomain {
         _capabilities._supportsMetadata ? "<Object>[]" : "null";
     return 'new r.TypeVariableMirrorImpl(r"${typeParameterElement.name}", '
         'r"${_qualifiedTypeParameterName(typeParameterElement)}", '
-        '${_constConstructionCode(importCollector)}, '
+        '${await _constConstructionCode(importCollector)}, '
         '$upperBoundIndex, $ownerIndex, $metadataCode)';
   }
 
@@ -1391,19 +1402,28 @@ class _ReflectorDomain {
     String staticGettersCode = "const {}";
     String staticSettersCode = "const {}";
     if (classElement is! MixinApplication) {
-      staticGettersCode = _formatAsMap(<Iterable<ExecutableElement>>[
-        classDomain._declaredMethods
-            .where((ExecutableElement element) => element.isStatic),
-        classDomain._accessors.where((PropertyAccessorElement element) =>
-            element.isStatic && element.isGetter)
-      ].expand((Iterable<ExecutableElement> x) => x).map(
-          (ExecutableElement element) => _staticGettingClosure(
-              importCollector, classElement, element.name)));
-      staticSettersCode = _formatAsMap(classDomain._accessors
-          .where((PropertyAccessorElement element) =>
-              element.isStatic && element.isSetter)
-          .map((PropertyAccessorElement element) => _staticSettingClosure(
-              importCollector, classElement, element.name)));
+      List<String> staticGettersCodeList = [];
+      for (MethodElement method in classDomain._declaredMethods) {
+        if (method.isStatic) {
+          staticGettersCodeList.add(await _staticGettingClosure(
+              importCollector, classElement, method.name));
+        }
+      }
+      for (PropertyAccessorElement accessor in classDomain._accessors) {
+        if (accessor.isStatic && accessor.isGetter) {
+          staticGettersCodeList.add(await _staticGettingClosure(
+              importCollector, classElement, accessor.name));
+        }
+      }
+      staticGettersCode = _formatAsMap(staticGettersCodeList);
+      List<String> staticSettersCodeList = [];
+      for (PropertyAccessorElement accessor in classDomain._accessors) {
+        if (accessor.isStatic && accessor.isSetter) {
+          staticSettersCodeList.add(await _staticSettingClosure(
+              importCollector, classElement, accessor.name));
+        }
+      }
+      staticSettersCode = _formatAsMap(staticSettersCodeList);
     }
 
     int mixinIndex = constants.NO_CAPABILITY_INDEX;
@@ -1466,7 +1486,7 @@ class _ReflectorDomain {
     if (classElement.typeParameters.isEmpty) {
       return 'new r.NonGenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
-          '${_constConstructionCode(importCollector)}, '
+          '${await _constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
           '$constructorsCode, $ownerIndex, $mixinIndex, '
@@ -1499,23 +1519,25 @@ class _ReflectorDomain {
         String prefix = importCollector._getPrefix(classElement.library);
         isCheckList.add("(o) { return o is $prefix${classElement.name}");
 
-        Future<void> helper(ClassElement classElement) async {
-          Iterable<ClassElement> worldSubtypes = _world.subtypes[classElement];
-          Iterable<ClassElement> subtypes = worldSubtypes ?? <ClassElement>[];
+        // Add 'is checks' to [list], based on [classElement].
+        Future<void> helper(
+            List<String> list, ClassElement classElement) async {
+          Iterable<ClassElement> subtypes =
+              _world.subtypes[classElement] ?? <ClassElement>[];
           for (ClassElement subtype in subtypes) {
             if (subtype.isPrivate ||
                 subtype.isAbstract ||
                 (subtype is MixinApplication && !subtype.isMixinApplication) ||
                 !await _isImportable(subtype, _generatedLibraryId, _resolver)) {
-              await helper(subtype);
+              await helper(list, subtype);
             } else {
               String prefix = importCollector._getPrefix(subtype.library);
-              isCheckList.add(" && o is! $prefix${subtype.name}");
+              list.add(" && o is! $prefix${subtype.name}");
             }
           }
         }
 
-        await helper(classElement);
+        await helper(isCheckList, classElement);
         isCheckList.add("; }");
       }
       String isCheckCode = isCheckList.join();
@@ -1536,7 +1558,7 @@ class _ReflectorDomain {
 
       return 'new r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
-          '${_constConstructionCode(importCollector)}, '
+          '${await _constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
           '$constructorsCode, $ownerIndex, $mixinIndex, '
@@ -1579,13 +1601,13 @@ class _ReflectorDomain {
       assert(selfIndex != null);
       if (accessorElement.isGetter) {
         return 'new r.ImplicitGetterMirrorImpl('
-            '${_constConstructionCode(importCollector)}, '
+            '${await _constConstructionCode(importCollector)}, '
             '$variableMirrorIndex, $reflectedTypeIndex, '
             '$dynamicReflectedTypeIndex, $selfIndex)';
       } else {
         assert(accessorElement.isSetter);
         return 'new r.ImplicitSetterMirrorImpl('
-            '${_constConstructionCode(importCollector)}, '
+            '${await _constConstructionCode(importCollector)}, '
             '$variableMirrorIndex, $reflectedTypeIndex, '
             '$dynamicReflectedTypeIndex, $selfIndex)';
       }
@@ -1631,7 +1653,7 @@ class _ReflectorDomain {
           '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, '
           '$dynamicReflectedReturnTypeIndex, '
           '$reflectedTypeArgumentsOfReturnType, $parameterIndicesCode, '
-          '${_constConstructionCode(importCollector)}, $metadataCode)';
+          '${await _constConstructionCode(importCollector)}, $metadataCode)';
     }
   }
 
@@ -1673,7 +1695,7 @@ class _ReflectorDomain {
       metadataCode = null;
     }
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
-        '$ownerIndex, ${_constConstructionCode(importCollector)}, '
+        '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
         '$dynamicReflectedTypeIndex, $reflectedTypeArguments, '
         '$metadataCode)';
@@ -1716,7 +1738,7 @@ class _ReflectorDomain {
       metadataCode = null;
     }
     return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
-        '$ownerIndex, ${_constConstructionCode(importCollector)}, '
+        '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
         '$dynamicReflectedTypeIndex, $reflectedTypeArguments, $metadataCode)';
   }
@@ -2083,15 +2105,19 @@ class _ReflectorDomain {
       _ImportCollector importCollector) async {
     LibraryElement library = libraryDomain._libraryElement;
 
-    String gettersCode = _formatAsMap(
-        _gettersOfLibrary(libraryDomain).map((ExecutableElement getter) {
-      return _topLevelGettingClosure(importCollector, library, getter.name);
-    }));
+    List<String> gettersCodeList = [];
+    for (ExecutableElement getter in _gettersOfLibrary(libraryDomain)) {
+      gettersCodeList.add(
+          await _topLevelGettingClosure(importCollector, library, getter.name));
+    }
+    String gettersCode = _formatAsMap(gettersCodeList);
 
-    String settersCode = _formatAsMap(
-        _settersOfLibrary(libraryDomain).map((PropertyAccessorElement setter) {
-      return _topLevelSettingClosure(importCollector, library, setter.name);
-    }));
+    List<String> settersCodeList = [];
+    for (PropertyAccessorElement setter in _settersOfLibrary(libraryDomain)) {
+      settersCodeList.add(
+          await _topLevelSettingClosure(importCollector, library, setter.name));
+    }
+    String settersCode = _formatAsMap(settersCodeList);
 
     // Fields go first in [memberMirrors], so they will get the
     // same index as in [fields].
@@ -2147,7 +2173,7 @@ class _ReflectorDomain {
     }
 
     return 'new r.LibraryMirrorImpl(r"${library.name}", $uriCode, '
-        '${_constConstructionCode(importCollector)}, '
+        '${await _constConstructionCode(importCollector)}, '
         '$declarationsCode, $gettersCode, $settersCode, $metadataCode, '
         '$parameterListShapesCode)';
   }
@@ -2226,7 +2252,7 @@ class _ReflectorDomain {
         : "null";
 
     return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
-        '$ownerIndex, ${_constConstructionCode(importCollector)}, '
+        '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
         '$reflectedTypeArguments, $metadataCode, $defaultValueCode, '
         '$parameterSymbolCode)';
@@ -2485,57 +2511,57 @@ String _settingClosure(String setterName) {
 }
 
 // Auxiliary function used by `_generateCode`.
-String _staticGettingClosure(_ImportCollector importCollector,
-    ClassElement classElement, String getterName) {
+Future<String> _staticGettingClosure(_ImportCollector importCollector,
+    ClassElement classElement, String getterName) async {
   String className = classElement.name;
   String prefix = importCollector._getPrefix(classElement.library);
   // Operators cannot be static.
   if (_isPrivateName(getterName)) {
-    _severe("Cannot access private name $getterName", classElement);
+    await _severe("Cannot access private name $getterName", classElement);
   }
   if (_isPrivateName(className)) {
-    _severe("Cannot access private name $className", classElement);
+    await _severe("Cannot access private name $className", classElement);
   }
   return 'r"${getterName}": () => $prefix$className.$getterName';
 }
 
 // Auxiliary function used by `_generateCode`.
-String _staticSettingClosure(_ImportCollector importCollector,
-    ClassElement classElement, String setterName) {
+Future<String> _staticSettingClosure(_ImportCollector importCollector,
+    ClassElement classElement, String setterName) async {
   assert(setterName.substring(setterName.length - 1) == "=");
   // The [setterName] includes the "=", remove it.
   String name = setterName.substring(0, setterName.length - 1);
   String className = classElement.name;
   String prefix = importCollector._getPrefix(classElement.library);
   if (_isPrivateName(setterName)) {
-    _severe("Cannot access private name $setterName", classElement);
+    await _severe("Cannot access private name $setterName", classElement);
   }
   if (_isPrivateName(className)) {
-    _severe("Cannot access private name $className", classElement);
+    await _severe("Cannot access private name $className", classElement);
   }
   return 'r"$setterName": (value) => $prefix$className.$name = value';
 }
 
 // Auxiliary function used by `_generateCode`.
-String _topLevelGettingClosure(_ImportCollector importCollector,
-    LibraryElement library, String getterName) {
+Future<String> _topLevelGettingClosure(_ImportCollector importCollector,
+    LibraryElement library, String getterName) async {
   String prefix = importCollector._getPrefix(library);
   // Operators cannot be top-level.
   if (_isPrivateName(getterName)) {
-    _severe("Cannot access private name $getterName", library);
+    await _severe("Cannot access private name $getterName", library);
   }
   return 'r"${getterName}": () => $prefix$getterName';
 }
 
 // Auxiliary function used by `_generateCode`.
-String _topLevelSettingClosure(_ImportCollector importCollector,
-    LibraryElement library, String setterName) {
+Future<String> _topLevelSettingClosure(_ImportCollector importCollector,
+    LibraryElement library, String setterName) async {
   assert(setterName.substring(setterName.length - 1) == "=");
   // The [setterName] includes the "=", remove it.
   String name = setterName.substring(0, setterName.length - 1);
   String prefix = importCollector._getPrefix(library);
   if (_isPrivateName(name)) {
-    _severe("Cannot access private name $name", library);
+    await _severe("Cannot access private name $name", library);
   }
   return 'r"$setterName": (value) => $prefix$name = value';
 }
@@ -3041,20 +3067,20 @@ class _Capabilities {
   /// provides a listing of the upper bounds, and the map itself may then
   /// be consulted for each key (`if (myClosureBounds[key]) ..`) in order to
   /// take `excludeUpperBound` into account.
-  Map<ClassElement, bool> get _upwardsClosureBounds {
-    Map<ClassElement, bool> result = <ClassElement, bool>{};
-    _capabilities.forEach((ec.ReflectCapability capability) {
+  Future<Map<ClassElement, bool>> get _upwardsClosureBounds async {
+    Map<ClassElement, bool> result = {};
+    for (ec.ReflectCapability capability in _capabilities) {
       if (capability is ec.SuperclassQuantifyCapability) {
         Element element = capability.upperBound;
-        if (element == null) return; // Means [Object], trivially satisfied.
+        if (element == null) continue; // Means [Object], trivially satisfied.
         if (element is ClassElement) {
           result[element] = capability.excludeUpperBound;
         } else {
-          _severe("Unexpected kind of upper bound specified "
+          await _severe("Unexpected kind of upper bound specified "
               "for a `SuperclassQuantifyCapability`: $element.");
         }
       }
-    });
+    }
     return result;
   }
 
@@ -3281,8 +3307,8 @@ class BuilderImplementation {
     /// conforms to the constraints relative to [classReflectable],
     /// which is intended to refer to the class Reflectable defined
     /// in package:reflectable/reflectable.dart.
-    bool checkInheritance(
-        ParameterizedType type, InterfaceType classReflectable) {
+    Future<bool> checkInheritance(
+        ParameterizedType type, InterfaceType classReflectable) async {
       if (!_isSubclassOf(type, classReflectable)) {
         // Not a subclass of [classReflectable] at all.
         return false;
@@ -3290,7 +3316,8 @@ class BuilderImplementation {
       if (!_isDirectSubclassOf(type, classReflectable)) {
         // Instance of [classReflectable], or of indirect subclass
         // of [classReflectable]: Not supported, report an error.
-        _severe(errors.METADATA_NOT_DIRECT_SUBCLASS, elementAnnotation.element);
+        await _severe(
+            errors.METADATA_NOT_DIRECT_SUBCLASS, elementAnnotation.element);
         return false;
       }
       // A direct subclass of [classReflectable], all OK.
@@ -3299,8 +3326,8 @@ class BuilderImplementation {
 
     Element element = elementAnnotation.element;
     if (element is ConstructorElement) {
-      bool isOk =
-          checkInheritance(element.enclosingElement.type, focusClass.type);
+      bool isOk = await checkInheritance(
+          element.enclosingElement.type, focusClass.type);
       return isOk ? element.enclosingElement.type.element : null;
     } else if (element is PropertyAccessorElement) {
       PropertyInducingElement variable = element.variable;
@@ -3314,7 +3341,7 @@ class BuilderImplementation {
         // would mean that the value is actually null, which we will also
         // reject as irrelevant.
         if (constantValue == null) return null;
-        bool isOk = checkInheritance(constantValue.type, focusClass.type);
+        bool isOk = await checkInheritance(constantValue.type, focusClass.type);
         // When `isOK` is true, result.value.type.element is a ClassElement.
         return isOk ? constantValue.type.element : null;
       } else {
@@ -3484,8 +3511,8 @@ class BuilderImplementation {
       return false;
     }
 
-    void constructorFail() {
-      _severe(
+    Future<void> constructorFail() async {
+      await _severe(
           "A reflector class must have exactly one "
           "constructor which is `const`, has \n"
           "the empty name, takes zero arguments, and "
@@ -3497,13 +3524,13 @@ class BuilderImplementation {
     if (potentialReflectorClass.constructors.length != 1) {
       // We "own" the direct subclasses of `Reflectable` so when they are
       // malformed as reflector classes we raise an error.
-      constructorFail();
+      await constructorFail();
       return false;
     }
     ConstructorElement constructor = potentialReflectorClass.constructors[0];
     if (constructor.parameters.isNotEmpty || !constructor.isConst) {
       // We still "own" `potentialReflectorClass`.
-      constructorFail();
+      await constructorFail();
       return false;
     }
 
@@ -3515,7 +3542,7 @@ class BuilderImplementation {
     NodeList<ConstructorInitializer> initializers =
         constructorDeclarationNode.initializers;
     if (initializers.length > 1) {
-      constructorFail();
+      await constructorFail();
       return false;
     }
 
