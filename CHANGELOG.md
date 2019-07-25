@@ -1,3 +1,18 @@
+## 2.1.0
+
+* Code generator rewritten in order to work with changes in the analyzer
+  APIs, enabling the use of analyzer version 0.37.0 (and newer versions of
+  many other packages), which addresses issue #173. See issue #180 about
+  missing support for two features: This affects code in platform libraries
+  (that is, libraries imported with 'dart:...' except 'dart:ui'). If a
+  declaration in a platform library has metadata, a query for this metadata
+  using `DeclarationMirror.metadata` will return null. Also, if a constructor
+  in a platform library has a parameter with a default value, and that
+  parameter is omitted in a reflective invocation, the value passed will be
+  `null` rather than the declared value. This is a bug, but it is blocked on
+  getting access to AST nodes in platform libraries from the resolver provided
+  by build.
+
 ## 2.0.12
 
 * Follow-up bug fix related to #170: Corrected `ParameterMirror.defaultValue`
@@ -32,8 +47,8 @@
 
 ## 2.0.7
 
-* Bug fix #132: We used to generate terms like `prefix2.di.inject` in order 
-  to denote a top level declaration named `inject`, but that's an error 
+* Bug fix #132: We used to generate terms like `prefix2.di.inject` in order
+  to denote a top level declaration named `inject`, but that's an error
   because `di` is an import prefix from client code. We now strip off such
   prefixes (yielding `prefix2.inject`) in the cases reported in issue #132.
 

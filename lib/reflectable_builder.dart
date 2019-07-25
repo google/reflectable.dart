@@ -18,16 +18,14 @@ class ReflectableBuilder implements Builder {
 
   @override
   Future<void> build(BuildStep buildStep) async {
+    var inputLibrary = await buildStep.inputLibrary;
     var resolver = buildStep.resolver;
     var inputId = buildStep.inputId;
     var outputId = inputId.changeExtension('.reflectable.dart');
-    var inputLibrary = await buildStep.inputLibrary;
     List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
-
-    await buildStep.writeAsString(
-        outputId,
-        new BuilderImplementation().buildMirrorLibrary(resolver, inputId,
-            outputId, inputLibrary, visibleLibraries, true, []));
+    var generatedSource = await BuilderImplementation().buildMirrorLibrary(
+        resolver, inputId, outputId, inputLibrary, visibleLibraries, true, []);
+    await buildStep.writeAsString(outputId, generatedSource);
   }
 
   Map<String, List<String>> get buildExtensions => const {
