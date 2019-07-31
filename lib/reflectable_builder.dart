@@ -34,9 +34,9 @@ class ReflectableBuilder implements Builder {
 }
 
 ReflectableBuilder reflectableBuilder(BuilderOptions options) {
-  var config = new Map<String, Object>.from(options.config);
+  var config = Map<String, Object>.from(options.config);
   config.putIfAbsent('entry_points', () => ['**.dart']);
-  return new ReflectableBuilder(options);
+  return ReflectableBuilder(options);
 }
 
 Future<BuildResult> reflectableBuild(List<String> arguments) async {
@@ -44,16 +44,16 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
     // Globbing may produce an empty argument list, and it might be ok,
     // but we should give at least notify the caller.
     print("reflectable_builder: No arguments given, exiting.");
-    return new BuildResult(BuildStatus.success, []);
+    return BuildResult(BuildStatus.success, []);
   } else {
     // TODO(eernst) feature: We should support some customization of
     // the settings, e.g., specifying options like `suppress_warnings`.
-    var options = new BuilderOptions(
+    var options = BuilderOptions(
         <String, dynamic>{"entry_points": arguments, "formatted": true},
         isRoot: true);
-    final builder = new ReflectableBuilder(options);
+    final builder = ReflectableBuilder(options);
     List<BuilderApplication> builders = [
-      applyToRoot(builder, generateFor: new InputSet(include: arguments))
+      applyToRoot(builder, generateFor: InputSet(include: arguments))
     ];
     var packageGraph = PackageGraph.forThisPackage();
     var environment = OverrideableEnvironment(IOEnvironment(packageGraph));

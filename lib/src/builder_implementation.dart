@@ -266,7 +266,11 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
 
   @override
   Iterable<T> whereType<T>() sync* {
-    for (var element in this) if (element is T) yield (element as T);
+    for (var element in this) {
+      if (element is T) {
+        yield (element as T);
+      }
+    }
   }
 
   @override
@@ -646,7 +650,7 @@ class _ReflectorDomain {
   /// This is to provide something that can be called with [Function.apply].
   ///
   /// For example for a constructor Foo(x, {y: 3}):
-  /// returns "(x, {y: 3}) => new prefix1.Foo(x, y)", and records an import of
+  /// returns "(x, {y: 3}) => prefix1.Foo(x, y)", and records an import of
   /// the library of `Foo` associated with prefix1 in [importCollector].
   Future<String> _constructorCode(
       ConstructorElement constructor, _ImportCollector importCollector) async {
@@ -740,7 +744,7 @@ class _ReflectorDomain {
 
     String prefix = importCollector._getPrefix(constructor.library);
     return ('($doRunArgument) => (${parameterParts.join(', ')}) => '
-        '$doRunArgument ? new $prefix${await _nameOfConstructor(constructor)}'
+        '$doRunArgument ? $prefix${await _nameOfConstructor(constructor)}'
         '(${argumentParts.join(", ")}) : null');
   }
 
@@ -804,8 +808,10 @@ class _ReflectorDomain {
     /// Used to add a library domain for [library] to [libraries], checking
     /// that it is importable and registering it with [importCollector].
     Future<void> addLibrary(LibraryElement library) async {
-      if (!await _isImportableLibrary(library, _generatedLibraryId, _resolver))
+      if (!await _isImportableLibrary(
+          library, _generatedLibraryId, _resolver)) {
         return;
+      }
       importCollector._addLibrary(library);
       uncheckedAddLibrary(library);
     }
@@ -1109,7 +1115,7 @@ class _ReflectorDomain {
         .items
         .map((ParameterListShape shape) => shape.code));
 
-    return "new r.ReflectorData($classMirrorsCode, $membersCode, "
+    return "r.ReflectorData($classMirrorsCode, $membersCode, "
         "$parameterMirrorsCode, $typesCode, $reflectedTypesOffset, "
         "$gettersCode, $settersCode, $librariesCode, "
         "$parameterListShapesCode)";
@@ -1280,7 +1286,7 @@ class _ReflectorDomain {
     // TODO(eernst) implement: Update when type variables support metadata.
     String metadataCode =
         _capabilities._supportsMetadata ? "<Object>[]" : "null";
-    return 'new r.TypeVariableMirrorImpl(r"${typeParameterElement.name}", '
+    return 'r.TypeVariableMirrorImpl(r"${typeParameterElement.name}", '
         'r"${_qualifiedTypeParameterName(typeParameterElement)}", '
         '${await _constConstructionCode(importCollector)}, '
         '$upperBoundIndex, $ownerIndex, $metadataCode)';
@@ -1483,7 +1489,7 @@ class _ReflectorDomain {
     }
 
     if (classElement.typeParameters.isEmpty) {
-      return 'new r.NonGenericClassMirrorImpl(r"${classDomain._simpleName}", '
+      return 'r.NonGenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
           '${await _constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
@@ -1555,7 +1561,7 @@ class _ReflectorDomain {
       int dynamicReflectedTypeIndex = _dynamicTypeCodeIndex(classElement.type,
           await classes, reflectedTypes, reflectedTypesOffset, typedefs);
 
-      return 'new r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
+      return 'r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
           'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
           '${await _constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
@@ -1599,13 +1605,13 @@ class _ReflectorDomain {
       int selfIndex = members.indexOf(accessorElement) + fields.length;
       assert(selfIndex != null);
       if (accessorElement.isGetter) {
-        return 'new r.ImplicitGetterMirrorImpl('
+        return 'r.ImplicitGetterMirrorImpl('
             '${await _constConstructionCode(importCollector)}, '
             '$variableMirrorIndex, $reflectedTypeIndex, '
             '$dynamicReflectedTypeIndex, $selfIndex)';
       } else {
         assert(accessorElement.isSetter);
-        return 'new r.ImplicitSetterMirrorImpl('
+        return 'r.ImplicitSetterMirrorImpl('
             '${await _constConstructionCode(importCollector)}, '
             '$variableMirrorIndex, $reflectedTypeIndex, '
             '$dynamicReflectedTypeIndex, $selfIndex)';
@@ -1648,7 +1654,7 @@ class _ReflectorDomain {
           ? await _extractMetadataCode(
               element, _resolver, importCollector, _generatedLibraryId)
           : null;
-      return 'new r.MethodMirrorImpl(r"${element.name}", $descriptor, '
+      return 'r.MethodMirrorImpl(r"${element.name}", $descriptor, '
           '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, '
           '$dynamicReflectedReturnTypeIndex, '
           '$reflectedTypeArgumentsOfReturnType, $parameterIndicesCode, '
@@ -1693,7 +1699,7 @@ class _ReflectorDomain {
       // it is a `List<Object>`, which has no other natural encoding.
       metadataCode = null;
     }
-    return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
+    return 'r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
         '$dynamicReflectedTypeIndex, $reflectedTypeArguments, '
@@ -1736,7 +1742,7 @@ class _ReflectorDomain {
       // it is a `List<Object>`, which has no other natural encoding.
       metadataCode = null;
     }
-    return 'new r.VariableMirrorImpl(r"${element.name}", $descriptor, '
+    return 'r.VariableMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
         '$dynamicReflectedTypeIndex, $reflectedTypeArguments, $metadataCode)';
@@ -2171,7 +2177,7 @@ class _ReflectorDomain {
       }));
     }
 
-    return 'new r.LibraryMirrorImpl(r"${library.name}", $uriCode, '
+    return 'r.LibraryMirrorImpl(r"${library.name}", $uriCode, '
         '${await _constConstructionCode(importCollector)}, '
         '$declarationsCode, $gettersCode, $settersCode, $metadataCode, '
         '$parameterListShapesCode)';
@@ -2250,7 +2256,7 @@ class _ReflectorDomain {
         ? "#${element.name}"
         : "null";
 
-    return 'new r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
+    return 'r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
         '$reflectedTypeArguments, $metadataCode, $defaultValueCode, '
@@ -2328,8 +2334,9 @@ class _SuperclassFixedPoint extends FixedPoint<ClassElement> {
     if (!_includedByUpwardsClosure(element)) return [];
 
     InterfaceType workingSuperType = element.supertype;
-    if (workingSuperType == null)
+    if (workingSuperType == null) {
       return []; // "Superclass of [Object]", ignore.
+    }
     ClassElement workingSuperclass = workingSuperType.element;
 
     List<ClassElement> result = [];
@@ -4152,8 +4159,9 @@ initializeReflectable() {
   Future<LibraryElement> _resolvedLibraryOf(
       LibraryElement libraryElement) async {
     for (LibraryElement libraryElement2 in _libraries) {
-      if (libraryElement.identifier == libraryElement2.identifier)
+      if (libraryElement.identifier == libraryElement2.identifier) {
         return libraryElement2;
+      }
     }
     // This can occur when the library is not used.
     await _fine("Could not resolve library $libraryElement");
@@ -5045,7 +5053,7 @@ Future<String> _assetIdToUri(
           messageTarget));
       return null;
     }
-    return new Uri(
+    return Uri(
             path: path.url
                 .relative(assetId.path, from: path.url.dirname(from.path)))
         .toString();

@@ -25,7 +25,7 @@ Null unreachableError(String message) {
   String extendedMessage =
       "*** Unexpected situation encountered!\nPlease report a bug on "
       "github.com/dart-lang/reflectable: $message.";
-  throw new UnreachableError(extendedMessage);
+  throw UnreachableError(extendedMessage);
 }
 
 /// Used to throw an [UnimplementedError]. Can be invoked with
@@ -38,5 +38,5 @@ Null unimplementedError(String message) {
       "implemented: $message.\n"
       "If you wish to ensure that it is prioritized, please report it "
       "on github.com/dart-lang/reflectable.";
-  throw new UnimplementedError(extendedMessage);
+  throw UnimplementedError(extendedMessage);
 }

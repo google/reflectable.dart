@@ -50,11 +50,11 @@ const String IS_ENUM = "Encountered a reflector class which is an enum.";
 /// Finds any template holes of the form {name} in [template] and replaces them
 /// with the corresponding value in [replacements].
 String applyTemplate(String template, Map<String, String> replacements) {
-  return template.replaceAllMapped(new RegExp(r"{(.*?)}"), (Match match) {
+  return template.replaceAllMapped(RegExp(r"{(.*?)}"), (Match match) {
     String index = match.group(1);
     String replacement = replacements[index];
     if (replacement == null) {
-      throw new ArgumentError("Missing template replacement for $index");
+      throw ArgumentError("Missing template replacement for $index");
     }
     return replacements[index];
   });

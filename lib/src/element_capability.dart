@@ -43,7 +43,7 @@ class InstanceInvokeCapability extends NamePatternCapability {
   const InstanceInvokeCapability(String namePattern) : super(namePattern);
 }
 
-const instanceInvokeCapability = const InstanceInvokeCapability("");
+const instanceInvokeCapability = InstanceInvokeCapability("");
 
 class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
   const InstanceInvokeMetaCapability(ClassElement metadataType)
@@ -55,7 +55,7 @@ class StaticInvokeCapability extends NamePatternCapability
   const StaticInvokeCapability(String namePattern) : super(namePattern);
 }
 
-const staticInvokeCapability = const StaticInvokeCapability("");
+const staticInvokeCapability = StaticInvokeCapability("");
 
 class StaticInvokeMetaCapability extends MetadataQuantifiedCapability
     implements TypeCapability {
@@ -77,7 +77,7 @@ class NewInstanceCapability extends NamePatternCapability
   const NewInstanceCapability(String namePattern) : super(namePattern);
 }
 
-const newInstanceCapability = const NewInstanceCapability("");
+const newInstanceCapability = NewInstanceCapability("");
 
 class NewInstanceMetaCapability extends MetadataQuantifiedCapability
     implements TypeCapability {
@@ -97,7 +97,7 @@ class NameCapability implements TypeCapability {
 /// We do not mark it as deprecated at this time because it will be needed in
 /// order to handle usages of the deprecated `NameCapability` class or
 /// `nameCapability` value in client code.
-const nameCapability = const NameCapability();
+const nameCapability = NameCapability();
 
 /// To be eliminated when `ClassifyCapability` in 'capability.dart' is
 /// eliminated. We do not mark it as deprecated at this time because it will be
@@ -111,51 +111,51 @@ class ClassifyCapability implements TypeCapability {
 /// eliminated. We do not mark it as deprecated at this time because it will be
 /// needed in order to handle usages of the deprecated `ClassifyCapability`
 /// class or `classifyCapability` value in client code.
-const classifyCapability = const ClassifyCapability();
+const classifyCapability = ClassifyCapability();
 
 class MetadataCapability implements TypeCapability {
   const MetadataCapability();
 }
 
-const metadataCapability = const MetadataCapability();
+const metadataCapability = MetadataCapability();
 
 class TypeCapability implements ApiReflectCapability {
   const TypeCapability();
 }
 
-const typeCapability = const TypeCapability();
+const typeCapability = TypeCapability();
 
 class TypeRelationsCapability implements TypeCapability {
   const TypeRelationsCapability();
 }
 
-const typeRelationsCapability = const TypeRelationsCapability();
+const typeRelationsCapability = TypeRelationsCapability();
 
-const reflectedTypeCapability = const _ReflectedTypeCapability();
+const reflectedTypeCapability = _ReflectedTypeCapability();
 
 class LibraryCapability implements ApiReflectCapability {
   const LibraryCapability();
 }
 
-const libraryCapability = const LibraryCapability();
+const libraryCapability = LibraryCapability();
 
 class DeclarationsCapability implements TypeCapability {
   const DeclarationsCapability();
 }
 
-const declarationsCapability = const DeclarationsCapability();
+const declarationsCapability = DeclarationsCapability();
 
 class UriCapability implements LibraryCapability {
   const UriCapability();
 }
 
-const uriCapability = const UriCapability();
+const uriCapability = UriCapability();
 
 class LibraryDependenciesCapability implements LibraryCapability {
   const LibraryDependenciesCapability();
 }
 
-const libraryDependenciesCapability = const LibraryDependenciesCapability();
+const libraryDependenciesCapability = LibraryDependenciesCapability();
 
 class InvokingCapability extends NamePatternCapability
     implements
@@ -165,7 +165,7 @@ class InvokingCapability extends NamePatternCapability
   const InvokingCapability(String namePattern) : super(namePattern);
 }
 
-const invokingCapability = const InvokingCapability("");
+const invokingCapability = InvokingCapability("");
 
 class InvokingMetaCapability extends MetadataQuantifiedCapability
     implements
@@ -188,15 +188,15 @@ class TypingCapability
   const TypingCapability();
 }
 
-const typingCapability = const TypingCapability();
+const typingCapability = TypingCapability();
 
-const delegateCapability = const _DelegateCapability();
+const delegateCapability = _DelegateCapability();
 
 abstract class ReflecteeQuantifyCapability implements ReflectCapability {
   const ReflecteeQuantifyCapability();
 }
 
-const subtypeQuantifyCapability = const _SubtypeQuantifyCapability();
+const subtypeQuantifyCapability = _SubtypeQuantifyCapability();
 
 class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
   final Element upperBound;
@@ -207,7 +207,7 @@ class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
 }
 
 // Note that `null` represents the [ClassElement] for `Object`.
-const superclassQuantifyCapability = const SuperclassQuantifyCapability(null);
+const superclassQuantifyCapability = SuperclassQuantifyCapability(null);
 
 class TypeAnnotationQuantifyCapability implements ReflecteeQuantifyCapability {
   final bool transitive;
@@ -215,16 +215,15 @@ class TypeAnnotationQuantifyCapability implements ReflecteeQuantifyCapability {
       : transitive = transitive;
 }
 
-const typeAnnotationQuantifyCapability =
-    const TypeAnnotationQuantifyCapability();
+const typeAnnotationQuantifyCapability = TypeAnnotationQuantifyCapability();
 
 const typeAnnotationDeepQuantifyCapability =
-    const TypeAnnotationQuantifyCapability(transitive: true);
+    TypeAnnotationQuantifyCapability(transitive: true);
 
 const correspondingSetterQuantifyCapability =
-    const _CorrespondingSetterQuantifyCapability();
+    _CorrespondingSetterQuantifyCapability();
 
-const admitSubtypeCapability = const _AdmitSubtypeCapability();
+const admitSubtypeCapability = _AdmitSubtypeCapability();
 
 class ImportAttachedCapability {
   final Element reflector;
