@@ -40,7 +40,7 @@ main() {
   initializeReflectable();
 
   // Get hold of a few mirrors.
-  A instance = new A();
+  A instance = A();
   InstanceMirror instanceMirror = myReflectable.reflect(instance);
   ClassMirror classMirror = myReflectable.reflectType(A);
 
