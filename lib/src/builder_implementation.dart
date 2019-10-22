@@ -4325,7 +4325,11 @@ int _declarationDescriptor(ExecutableElement element) {
   if (element.isPrivate) result |= constants.privateAttribute;
   if (element.isStatic) result |= constants.staticAttribute;
   if (element.isSynthetic) result |= constants.syntheticAttribute;
-  if (element.isAbstract) result |= constants.abstractAttribute;
+  // TODO(eernst): Work around issue in analyzer, cf. #39051.
+  // When resolved, only the inner `if` is needed.
+  if (element is! ConstructorElement) {
+    if (element.isAbstract) result |= constants.abstractAttribute;
+  }
   if (element.enclosingElement is! ClassElement) {
     result |= constants.topLevelAttribute;
   }
