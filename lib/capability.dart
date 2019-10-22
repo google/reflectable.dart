@@ -95,7 +95,7 @@ class InstanceInvokeCapability extends NamePatternCapability {
 
 /// Short hand for `InstanceInvokeCapability("")`, meaning the capability to
 /// reflect over all instance members.
-const instanceInvokeCapability = const InstanceInvokeCapability("");
+const instanceInvokeCapability = InstanceInvokeCapability("");
 
 /// Gives support for reflective invocation of instance members (methods,
 /// getters, and setters) annotated with instances of [metadataType] or a
@@ -114,7 +114,7 @@ class StaticInvokeCapability extends NamePatternCapability
 
 /// Short hand for `StaticInvokeCapability("")`, meaning the capability to
 /// reflect over all static members.
-const staticInvokeCapability = const StaticInvokeCapability("");
+const staticInvokeCapability = StaticInvokeCapability("");
 
 /// Gives support for reflective invocation of static members (static methods,
 /// getters, and setters) that are annotated with instances of [metadataType]
@@ -133,7 +133,7 @@ class TopLevelInvokeCapability extends NamePatternCapability {
 
 /// Short hand for `TopLevelInvokeCapability("")`, meaning the capability to
 /// reflect over all top-level members.
-const topLevelInvokeCapability = const TopLevelInvokeCapability("");
+const topLevelInvokeCapability = TopLevelInvokeCapability("");
 
 /// Gives support for reflective invocation of top-level members (top-level
 /// methods, getters, and setters) that are annotated with instances of
@@ -156,7 +156,7 @@ class NewInstanceCapability extends NamePatternCapability
 
 /// Short hand for `const NewInstanceCapability("")`, meaning the capability to
 /// reflect over all constructors.
-const newInstanceCapability = const NewInstanceCapability("");
+const newInstanceCapability = NewInstanceCapability("");
 
 /// Gives support for reflective invocation
 /// of constructors (of all kinds) annotated by instances of [metadataType]
@@ -173,7 +173,7 @@ class MetadataCapability implements TypeCapability {
 }
 
 /// Shorthand for `const MetadataCapability()`.
-const metadataCapability = const MetadataCapability();
+const metadataCapability = MetadataCapability();
 
 /// Gives support for invocation of the method `reflectType` on reflectors, and
 /// for invocation of the method `type` on instances of `InstanceMirror` and
@@ -193,7 +193,7 @@ class TypeCapability implements ApiReflectCapability {
 }
 
 /// Shorthand for `const TypeCapability()`.
-const typeCapability = const TypeCapability();
+const typeCapability = TypeCapability();
 
 /// Gives support for: `typeVariables`, `typeArguments`,
 /// `originalDeclaration`, `isSubtypeOf`, `isAssignableTo`, `superclass`,
@@ -203,12 +203,12 @@ class TypeRelationsCapability implements TypeCapability {
 }
 
 /// Shorthand for `const TypeRelationsCapability()`.
-const typeRelationsCapability = const TypeRelationsCapability();
+const typeRelationsCapability = TypeRelationsCapability();
 
 /// Gives support for the method `reflectedType` on `VariableMirror` and
 /// `ParameterMirror`, and for the method `reflectedReturnType` on
 /// `MethodMirror`.
-const reflectedTypeCapability = const _ReflectedTypeCapability();
+const reflectedTypeCapability = _ReflectedTypeCapability();
 
 /// Gives support for library-mirrors.
 ///
@@ -223,7 +223,7 @@ class LibraryCapability implements ApiReflectCapability {
 }
 
 /// Shorthand for `const LibraryCapability()`.
-const libraryCapability = const LibraryCapability();
+const libraryCapability = LibraryCapability();
 
 /// Gives support for: `declarations`, `instanceMembers`, `staticMembers`,
 /// `callMethod`, `parameters`, and `defaultValue`.
@@ -237,7 +237,7 @@ class DeclarationsCapability implements TypeCapability {
 }
 
 /// Shorthand for `const DeclarationsCapability()`.
-const declarationsCapability = const DeclarationsCapability();
+const declarationsCapability = DeclarationsCapability();
 
 /// Gives support for the mirror method `uri` on LibraryMirrors.
 class UriCapability implements LibraryCapability {
@@ -245,7 +245,7 @@ class UriCapability implements LibraryCapability {
 }
 
 /// Shorthand for `const UriCapability()`.
-const uriCapability = const UriCapability();
+const uriCapability = UriCapability();
 
 /// Gives support for: `sourceLibrary`, `targetLibrary`, `prefix`, and
 /// `combinators`.
@@ -254,7 +254,7 @@ class LibraryDependenciesCapability implements LibraryCapability {
 }
 
 /// Shorthand for `const LibraryDependenciesCapability()`.
-const libraryDependenciesCapability = const LibraryDependenciesCapability();
+const libraryDependenciesCapability = LibraryDependenciesCapability();
 
 /// Gives all the capabilities of [InstanceInvokeCapability]([namePattern]),
 /// [StaticInvokeCapability]([namePattern]), and
@@ -269,7 +269,7 @@ class InvokingCapability extends NamePatternCapability
 
 /// Short hand for `InvokingCapability("")`, meaning the capability to
 /// reflect over all top-level and static members.
-const invokingCapability = const InvokingCapability("");
+const invokingCapability = InvokingCapability("");
 
 /// Gives the capabilities of all the capabilities requested by
 /// [InstanceInvokeMetaCapability]([metadata]),
@@ -298,13 +298,13 @@ class TypingCapability
 }
 
 /// Shorthand for `const TypingCapability()`.
-const typingCapability = const TypingCapability();
+const typingCapability = TypingCapability();
 
 /// Capability instance giving support for the `delegate` method on instance
 /// mirrors when it leads to invocation of a method where instance invocation
 /// is supported. Also implies support for translation of [Symbol]s of covered
 /// members to their corresponding [String]s.
-const delegateCapability = const _DelegateCapability();
+const delegateCapability = _DelegateCapability();
 
 // ---------- Reflectee quantification oriented capability classes.
 
@@ -326,7 +326,7 @@ abstract class ReflecteeQuantifyCapability implements ReflectCapability {
 ///
 /// Note that this is applied before `superclassQuantifyCapability` and before
 /// any `TypeAnnotationQuantifyCapability`.
-const subtypeQuantifyCapability = const _SubtypeQuantifyCapability();
+const subtypeQuantifyCapability = _SubtypeQuantifyCapability();
 
 /// Gives support for reflection on all superclasses of covered classes up to
 /// [upperBound]
@@ -344,7 +344,7 @@ class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
 /// Gives support for reflection on all superclasses of covered classes.
 ///
 /// Short for: `const SuperclassQuantifyCapability(Object)`.
-const superclassQuantifyCapability = const SuperclassQuantifyCapability(Object);
+const superclassQuantifyCapability = SuperclassQuantifyCapability(Object);
 
 /// Gives support for reflecting on the classes used as type annotations
 /// of covered methods, parameters and fields. If [transitive] is true the
@@ -360,8 +360,7 @@ class TypeAnnotationQuantifyCapability implements ReflecteeQuantifyCapability {
 /// of covered methods, parameters and fields.
 ///
 /// Short for `const TypeAnnotationQuantifyCapability()`.
-const typeAnnotationQuantifyCapability =
-    const TypeAnnotationQuantifyCapability();
+const typeAnnotationQuantifyCapability = TypeAnnotationQuantifyCapability();
 
 /// Gives support for reflecting on the full closure of type annotations
 /// of covered methods/parameters.
@@ -374,13 +373,13 @@ const typeAnnotationQuantifyCapability =
 /// including classes used as type annotations in classes used as type
 /// annotations, etc.).
 const typeAnnotationDeepQuantifyCapability =
-    const TypeAnnotationQuantifyCapability(transitive: true);
+    TypeAnnotationQuantifyCapability(transitive: true);
 
 /// Quantifying capability instance specifying that the reflection support
 /// for any given explicitly declared getter must also be given to its
 /// corresponding explicitly declared setter, if any.
 const correspondingSetterQuantifyCapability =
-    const _CorrespondingSetterQuantifyCapability();
+    _CorrespondingSetterQuantifyCapability();
 
 /// Gives support for calling `.reflect` on subtypes of covered instances.
 ///
@@ -404,7 +403,7 @@ const correspondingSetterQuantifyCapability =
 /// For more information about this potentially dangerous device, please
 /// refer to the design document.
 /// TODO(eernst) doc: Insert a link to the design document.
-const admitSubtypeCapability = const _AdmitSubtypeCapability();
+const admitSubtypeCapability = _AdmitSubtypeCapability();
 
 /// Abstract superclass for all capabilities which are used to specify
 /// that a given reflector must be considered to be applied as metadata
@@ -521,8 +520,8 @@ class ReflectableNoSuchMethodError extends Error
       this.kind,
       this.existingArgumentNames);
 
-  get invocation => new _StringInvocation(
-      memberName, positionalArguments, namedArguments, kind);
+  get invocation =>
+      _StringInvocation(memberName, positionalArguments, namedArguments, kind);
 
   toString() {
     String kindName;
@@ -567,44 +566,29 @@ dynamic reflectableNoSuchInvokableError(
     Map<Symbol, dynamic> namedArguments,
     StringInvocationKind kind,
     [List<Symbol> existingArgumentNames]) {
-  throw new ReflectableNoSuchMethodError(receiver, memberName,
-      positionalArguments, namedArguments, kind, existingArgumentNames);
+  throw ReflectableNoSuchMethodError(receiver, memberName, positionalArguments,
+      namedArguments, kind, existingArgumentNames);
 }
 
 dynamic reflectableNoSuchMethodError(Object receiver, String memberName,
     List positionalArguments, Map<Symbol, dynamic> namedArguments,
     [List<Symbol> existingArgumentNames]) {
-  throw new ReflectableNoSuchMethodError(
-      receiver,
-      memberName,
-      positionalArguments,
-      namedArguments,
-      StringInvocationKind.method,
-      existingArgumentNames);
+  throw ReflectableNoSuchMethodError(receiver, memberName, positionalArguments,
+      namedArguments, StringInvocationKind.method, existingArgumentNames);
 }
 
 dynamic reflectableNoSuchGetterError(Object receiver, String memberName,
     List positionalArguments, Map<Symbol, dynamic> namedArguments,
     [List<Symbol> existingArgumentNames]) {
-  throw new ReflectableNoSuchMethodError(
-      receiver,
-      memberName,
-      positionalArguments,
-      namedArguments,
-      StringInvocationKind.getter,
-      existingArgumentNames);
+  throw ReflectableNoSuchMethodError(receiver, memberName, positionalArguments,
+      namedArguments, StringInvocationKind.getter, existingArgumentNames);
 }
 
 dynamic reflectableNoSuchSetterError(Object receiver, String memberName,
     List positionalArguments, Map<Symbol, dynamic> namedArguments,
     [List<Symbol> existingArgumentNames]) {
-  throw new ReflectableNoSuchMethodError(
-      receiver,
-      memberName,
-      positionalArguments,
-      namedArguments,
-      StringInvocationKind.setter,
-      existingArgumentNames);
+  throw ReflectableNoSuchMethodError(receiver, memberName, positionalArguments,
+      namedArguments, StringInvocationKind.setter, existingArgumentNames);
 }
 
 dynamic reflectableNoSuchConstructorError(
@@ -613,7 +597,7 @@ dynamic reflectableNoSuchConstructorError(
     List positionalArguments,
     Map<Symbol, dynamic> namedArguments,
     [List<Symbol> existingArgumentNames]) {
-  throw new ReflectableNoSuchMethodError(
+  throw ReflectableNoSuchMethodError(
       receiver,
       constructorName,
       positionalArguments,

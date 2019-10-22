@@ -12,7 +12,7 @@ class MyReflectable extends Reflectable {
   const MyReflectable() : super(invokingCapability);
 }
 
-const myReflectable = const MyReflectable();
+const myReflectable = MyReflectable();
 
 @myReflectable
 class A {
@@ -40,7 +40,7 @@ main() {
   initializeReflectable();
 
   // Get hold of a few mirrors.
-  A instance = new A();
+  A instance = A();
   InstanceMirror instanceMirror = myReflectable.reflect(instance);
   ClassMirror classMirror = myReflectable.reflectType(A);
 
