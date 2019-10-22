@@ -4059,6 +4059,8 @@ class BuilderImplementation {
 import "dart:core";
 ${imports.join('\n')}
 
+// ignore_for_file: unnecessary_const
+
 // ignore:unused_import
 import "package:reflectable/mirrors.dart" as m;
 // ignore:unused_import

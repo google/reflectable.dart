@@ -12,7 +12,7 @@ class MyReflectable extends Reflectable {
   const MyReflectable() : super(invokingCapability);
 }
 
-const myReflectable = const MyReflectable();
+const myReflectable = MyReflectable();
 
 @myReflectable
 class A {
