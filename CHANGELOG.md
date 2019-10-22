@@ -1,3 +1,11 @@
+## 2.2.0
+
+* Adjust implementation to satisfy 'pedantic' lints. The generated code
+  does this as well, except that some `const` modifiers are generated even
+  though they could be omitted (an `// ignore_for_file` comment is generated
+  such that the linter does not complain about this). Upgrade dependencies
+  to allow using analyzer 0.38.5, and current versions of many other packages.
+
 ## 2.1.0
 
 * Code generator rewritten in order to work with changes in the analyzer
