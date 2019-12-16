@@ -22,7 +22,7 @@ class ReflectableBuilder implements Builder {
     var resolver = buildStep.resolver;
     var inputId = buildStep.inputId;
     var outputId = inputId.changeExtension('.reflectable.dart');
-    List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
+    var visibleLibraries = await resolver.libraries.toList();
     var generatedSource = await BuilderImplementation().buildMirrorLibrary(
         resolver, inputId, outputId, inputLibrary, visibleLibraries, true, []);
     await buildStep.writeAsString(outputId, generatedSource);
@@ -44,16 +44,16 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
   if (arguments.isEmpty) {
     // Globbing may produce an empty argument list, and it might be ok,
     // but we should give at least notify the caller.
-    print("reflectable_builder: No arguments given, exiting.");
+    print('reflectable_builder: No arguments given, exiting.');
     return BuildResult(BuildStatus.success, []);
   } else {
     // TODO(eernst) feature: We should support some customization of
     // the settings, e.g., specifying options like `suppress_warnings`.
     var options = BuilderOptions(
-        <String, dynamic>{"entry_points": arguments, "formatted": true},
+        <String, dynamic>{'entry_points': arguments, 'formatted': true},
         isRoot: true);
     final builder = ReflectableBuilder(options);
-    List<BuilderApplication> builders = [
+    var builders = <BuilderApplication>[
       applyToRoot(builder, generateFor: InputSet(include: arguments))
     ];
     var packageGraph = PackageGraph.forThisPackage();

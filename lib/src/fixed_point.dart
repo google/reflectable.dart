@@ -14,10 +14,10 @@ abstract class FixedPoint<T> {
   /// Finally it also returns the expanded `initialSet`.
   Future<Set<T>> expand(final Set<T> initialSet) async {
     // Invariant: Every element that may have successors is in `workingSet`.
-    Set<T> workingSet = initialSet;
+    var workingSet = initialSet;
     bool isNew(T element) => !initialSet.contains(element);
     while (workingSet.isNotEmpty) {
-      Set<T> newSet = Set<T>();
+      var newSet = <T>{};
       Future<void> addSuccessors(T element) async =>
           (await successors(element)).where(isNew).forEach(newSet.add);
       for (var t in workingSet) {
@@ -32,7 +32,7 @@ abstract class FixedPoint<T> {
   /// Expands the given `initialSet` a single time, adding the immediate
   /// [successors] to it. Then it returns the expanded `initialSet`.
   Future<Set<T>> singleExpand(final Set<T> initialSet) async {
-    Set<T> newSet = Set<T>();
+    var newSet = <T>{};
     Future<void> addSuccessors(T t) async =>
         (await successors(t)).forEach(newSet.add);
     for (var t in initialSet) {

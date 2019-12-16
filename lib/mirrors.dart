@@ -455,7 +455,7 @@ abstract class InstanceMirror implements ObjectMirror {
   /// exception is thrown.
   ///
   /// Required capabilities: [reflectee] does not require any capabilities.
-  get reflectee;
+  Object get reflectee;
 
   /// Whether this mirror is equal to [other].
   ///
@@ -489,7 +489,7 @@ abstract class InstanceMirror implements ObjectMirror {
   ///     }
   ///
   /// Required capabilities: [delegate] requires the [delegateCapability].
-  delegate(Invocation invocation);
+  dynamic delegate(Invocation invocation);
 }
 
 /// A [ClosureMirror] reflects a closure.

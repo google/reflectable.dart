@@ -34,7 +34,7 @@ class ReflectableBase {
   /// of classes having an instance of this ReflectableBase as metadata.
   List<ReflectCapability> get capabilities {
     if (_capabilitiesGivenAsList) return _capabilities;
-    List<ReflectCapability> result = <ReflectCapability>[];
+    var result = <ReflectCapability>[];
     void add(ReflectCapability cap) {
       if (cap != null) result.add(cap);
     }

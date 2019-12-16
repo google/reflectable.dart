@@ -120,7 +120,7 @@ abstract class Reflectable extends implementation.ReflectableImpl
   /// but no entities are covered (that is, it is unused, so we don't have
   /// any reflection data for it) then [null] is returned.
   static Reflectable getInstance(Type type) {
-    for (Reflectable reflector in implementation.reflectors) {
+    for (var reflector in implementation.reflectors) {
       if (reflector.runtimeType == type) return reflector;
     }
     return null;

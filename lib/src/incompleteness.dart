@@ -16,7 +16,7 @@ class UnreachableError extends Error {
   UnreachableError(this.message);
 
   @override
-  toString() => message;
+  String toString() => message;
 }
 
 /// Used to throw an [UnreachableError]. Can be invoked with
@@ -24,9 +24,9 @@ class UnreachableError extends Error {
 /// expression throws (even though it actually happens here). This way we avoid
 /// warnings about a missing return problem, and the code may be more readable.
 Null unreachableError(String message) {
-  String extendedMessage =
-      "*** Unexpected situation encountered!\nPlease report a bug on "
-      "github.com/dart-lang/reflectable: $message.";
+  var extendedMessage =
+      '*** Unexpected situation encountered!\nPlease report a bug on '
+      'github.com/dart-lang/reflectable: $message.';
   throw UnreachableError(extendedMessage);
 }
 
@@ -36,9 +36,9 @@ Null unreachableError(String message) {
 /// avoid warnings about a missing return problem, and the code may be more
 /// readable.
 Null unimplementedError(String message) {
-  String extendedMessage = "*** Unfortunately, this feature has not yet been "
-      "implemented: $message.\n"
-      "If you wish to ensure that it is prioritized, please report it "
-      "on github.com/dart-lang/reflectable.";
+  var extendedMessage = '*** Unfortunately, this feature has not yet been '
+      'implemented: $message.\n'
+      'If you wish to ensure that it is prioritized, please report it '
+      'on github.com/dart-lang/reflectable.';
   throw UnimplementedError(extendedMessage);
 }

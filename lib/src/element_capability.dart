@@ -43,7 +43,7 @@ class InstanceInvokeCapability extends NamePatternCapability {
   const InstanceInvokeCapability(String namePattern) : super(namePattern);
 }
 
-const instanceInvokeCapability = InstanceInvokeCapability("");
+const instanceInvokeCapability = InstanceInvokeCapability('');
 
 class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
   const InstanceInvokeMetaCapability(ClassElement metadataType)
@@ -55,7 +55,7 @@ class StaticInvokeCapability extends NamePatternCapability
   const StaticInvokeCapability(String namePattern) : super(namePattern);
 }
 
-const staticInvokeCapability = StaticInvokeCapability("");
+const staticInvokeCapability = StaticInvokeCapability('');
 
 class StaticInvokeMetaCapability extends MetadataQuantifiedCapability
     implements TypeCapability {
@@ -77,7 +77,7 @@ class NewInstanceCapability extends NamePatternCapability
   const NewInstanceCapability(String namePattern) : super(namePattern);
 }
 
-const newInstanceCapability = NewInstanceCapability("");
+const newInstanceCapability = NewInstanceCapability('');
 
 class NewInstanceMetaCapability extends MetadataQuantifiedCapability
     implements TypeCapability {
@@ -165,7 +165,7 @@ class InvokingCapability extends NamePatternCapability
   const InvokingCapability(String namePattern) : super(namePattern);
 }
 
-const invokingCapability = InvokingCapability("");
+const invokingCapability = InvokingCapability('');
 
 class InvokingMetaCapability extends MetadataQuantifiedCapability
     implements
