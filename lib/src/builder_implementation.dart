@@ -10,6 +10,7 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
 import 'package:analyzer/src/dart/element/element.dart';
@@ -28,6 +29,8 @@ import 'fixed_point.dart';
 import 'incompleteness.dart';
 import 'reflectable_class_constants.dart' as reflectable_class_constants;
 import 'reflectable_errors.dart' as errors;
+
+// ignore_for_file: omit_local_variable_types
 
 /// Specifiers for warnings that may be suppressed; `allWarnings` disables all
 /// warnings, and the remaining values are concerned with individual warnings.
@@ -86,7 +89,7 @@ class ReflectionWorld {
     // Fill in [_subtypesCache].
     for (LibraryElement library in libraries) {
       void addClassElement(ClassElement classElement) {
-        InterfaceType supertype = classElement.instantiate().superclass;
+        InterfaceType supertype = classElement.supertype;
         if (classElement.mixins.isEmpty) {
           if (supertype?.element != null) {
             addSubtypeRelation(supertype.element, classElement);
@@ -920,7 +923,7 @@ class _ReflectorDomain {
       var classesToAdd = <ClassElement>{};
       ClassElement anyClassElement;
       for (ClassElement classElement in await classes) {
-        if (classElement.instantiate().isObject) {
+        if (_typeForReflectable(classElement).isObject) {
           hasObject = true;
           objectClassElement = classElement;
           break;
@@ -941,7 +944,7 @@ class _ReflectorDomain {
         }
       }
       if (mustHaveObject && !hasObject) {
-        while (!anyClassElement.instantiate().isObject) {
+        while (!_typeForReflectable(anyClassElement).isObject) {
           anyClassElement = anyClassElement.supertype.element;
         }
         objectClassElement = anyClassElement;
@@ -1393,7 +1396,7 @@ class _ReflectorDomain {
       // 'dart:mirrors'. Other superclasses use `NO_CAPABILITY_INDEX` to
       // indicate missing support.
       superclassIndex = (classElement is! MixinApplication &&
-              classElement.instantiate().isObject)
+              _typeForReflectable(classElement).isObject)
           ? 'null'
           : ((await classes).contains(superclass))
               ? '${(await classes).indexOf(superclass)}'
@@ -1569,7 +1572,7 @@ class _ReflectorDomain {
       }
 
       int dynamicReflectedTypeIndex = _dynamicTypeCodeIndex(
-          classElement.instantiate(),
+          _typeForReflectable(classElement),
           await classes,
           reflectedTypes,
           reflectedTypesOffset,
@@ -2093,9 +2096,9 @@ class _ReflectorDomain {
   String _dynamicTypeCodeOfClass(TypeDefiningElement typeDefiningElement,
       _ImportCollector importCollector) {
     DartType type = typeDefiningElement is ClassElement
-        ? typeDefiningElement.instantiate()
+        ? _typeForReflectable(typeDefiningElement)
         : null;
-    if (type?.isDynamic) return 'dynamic';
+    if (type?.isDynamic ?? true) return 'dynamic';
     if (type is InterfaceType) {
       ClassElement classElement = type.element;
       if ((classElement is MixinApplication &&
@@ -2307,6 +2310,16 @@ class _ReflectorDomain {
     }
     return '';
   }
+}
+
+DartType _typeForReflectable(ClassElement classElement) {
+  // TODO(eernst): This getter is used to inspect subclass relationships,
+  // so there is no need to handle type parameters/arguments. So we might
+  // be able to improve performance by working on classes as such.
+  var typeArguments = List<DartType>.filled(classElement.typeParameters.length,
+      classElement.library.typeProvider.dynamicType);
+  return classElement.instantiate(
+      typeArguments: typeArguments, nullabilitySuffix: NullabilitySuffix.star);
 }
 
 /// Auxiliary class used by `classes`. Its `expand` method expands
@@ -2881,7 +2894,7 @@ class _Capabilities {
       Iterable<DartObject> metadata) {
     if (metadata == null) return false;
     bool result = false;
-    DartType capabilityType = capability.metadataType.instantiate();
+    DartType capabilityType = _typeForReflectable(capability.metadataType);
     for (var metadatum in metadata) {
       if (typeSystem.isSubtypeOf(metadatum.type, capabilityType)) {
         result = true;
@@ -3380,8 +3393,11 @@ class BuilderImplementation {
     Element element = elementAnnotation.element;
     if (element is ConstructorElement) {
       bool isOk = await checkInheritance(
-          element.enclosingElement.instantiate(), focusClass.instantiate());
-      return isOk ? element.enclosingElement.instantiate().element : null;
+          _typeForReflectable(element.enclosingElement),
+          _typeForReflectable(focusClass));
+      return isOk
+          ? _typeForReflectable(element.enclosingElement).element
+          : null;
     } else if (element is PropertyAccessorElement) {
       PropertyInducingElement variable = element.variable;
       if (variable is VariableElement) {
@@ -3395,7 +3411,7 @@ class BuilderImplementation {
         // reject as irrelevant.
         if (constantValue == null) return null;
         bool isOk = await checkInheritance(
-            constantValue.type, focusClass.instantiate());
+            constantValue.type, _typeForReflectable(focusClass));
         // When `isOK` is true, result.value.type.element is a ClassElement.
         return isOk ? constantValue.type.element : null;
       } else {
@@ -3461,8 +3477,7 @@ class BuilderImplementation {
               ClassElement reflector =
                   value.getField('(super)').getField('reflector').type.element;
               if (reflector == null ||
-                  reflector.instantiate().element.supertype.element !=
-                      reflectableClass) {
+                  reflector.supertype.element != reflectableClass) {
                 String found =
                     reflector == null ? '' : ' Found ${reflector.name}';
                 await _warn(
@@ -3498,8 +3513,7 @@ class BuilderImplementation {
                   .type
                   .element;
               if (reflector == null ||
-                  reflector.instantiate().element.supertype.element !=
-                      reflectableClass) {
+                  reflector.supertype.element != reflectableClass) {
                 String found =
                     reflector == null ? '' : ' Found ${reflector.name}';
                 await _warn(
@@ -3546,8 +3560,8 @@ class BuilderImplementation {
       ClassElement reflectableClass) async {
     if (potentialReflectorClass == reflectableClass) return false;
     InterfaceType potentialReflectorType =
-        potentialReflectorClass.instantiate();
-    InterfaceType reflectableType = reflectableClass.instantiate();
+        _typeForReflectable(potentialReflectorClass);
+    InterfaceType reflectableType = _typeForReflectable(reflectableClass);
     if (!_isSubclassOf(potentialReflectorType, reflectableType)) {
       // Not a subclass of [classReflectable] at all.
       return false;
@@ -5203,9 +5217,17 @@ class MixinApplication implements ClassElement {
   InterfaceType get type => InterfaceTypeImpl(this);
 
   @override
+  InterfaceType instantiate({
+    List<DartType> typeArguments,
+    NullabilitySuffix nullabilitySuffix,
+  }) =>
+      InterfaceTypeImpl(this);
+
+  @override
   InterfaceType get supertype {
     if (superclass is MixinApplication) return superclass.supertype;
-    return superclass?.instantiate();
+    ClassElement superClass = superclass;
+    return superClass == null ? null : _typeForReflectable(superClass);
   }
 
   @override
@@ -5214,7 +5236,7 @@ class MixinApplication implements ClassElement {
     if (superclass != null && superclass is MixinApplication) {
       result.addAll(superclass.mixins);
     }
-    result.add(mixin.instantiate());
+    result.add(_typeForReflectable(mixin));
     return result;
   }
 
