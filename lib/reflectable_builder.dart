@@ -5,7 +5,6 @@
 library reflectable.reflectable_builder;
 
 import 'dart:async';
-import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:build_config/build_config.dart';
 import 'package:build_runner_core/build_runner_core.dart';
