@@ -14,6 +14,8 @@ library reflectable.src.incompleteness;
 class UnreachableError extends Error {
   final String message;
   UnreachableError(this.message);
+
+  @override
   toString() => message;
 }
 

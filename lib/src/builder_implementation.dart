@@ -84,7 +84,7 @@ class ReflectionWorld {
     // Fill in [_subtypesCache].
     for (LibraryElement library in libraries) {
       void addClassElement(ClassElement classElement) {
-        InterfaceType supertype = classElement.type.superclass;
+        InterfaceType supertype = classElement.instantiate().superclass;
         if (classElement.mixins.isEmpty) {
           if (supertype?.element != null) {
             addSubtypeRelation(supertype.element, classElement);
@@ -527,11 +527,16 @@ class ErasableDartType {
   final DartType dartType;
   final bool erased;
   ErasableDartType(this.dartType, {this.erased});
+
+  @override
   operator ==(other) =>
       other is ErasableDartType &&
       other.dartType == dartType &&
       other.erased == erased;
+
+  @override
   int get hashCode => dartType.hashCode ^ erased.hashCode;
+  @override
   String toString() => "ErasableDartType($dartType, $erased)";
 }
 
@@ -545,6 +550,7 @@ class ParameterListShape {
   const ParameterListShape(this.numberOfPositionalParameters,
       this.numberOfOptionalPositionalParameters, this.namesOfNamedParameters);
 
+  @override
   bool operator ==(other) => other is ParameterListShape
       ? numberOfPositionalParameters == other.numberOfPositionalParameters &&
           numberOfOptionalPositionalParameters ==
@@ -554,6 +560,7 @@ class ParameterListShape {
               .isEmpty
       : false;
 
+  @override
   int get hashCode =>
       numberOfPositionalParameters.hashCode ^
       numberOfOptionalPositionalParameters.hashCode;
@@ -913,7 +920,7 @@ class _ReflectorDomain {
       Set<ClassElement> classesToAdd = Set<ClassElement>();
       ClassElement anyClassElement;
       for (ClassElement classElement in await classes) {
-        if (classElement.type.isObject) {
+        if (classElement.instantiate().isObject) {
           hasObject = true;
           objectClassElement = classElement;
           break;
@@ -934,7 +941,7 @@ class _ReflectorDomain {
         }
       }
       if (mustHaveObject && !hasObject) {
-        while (!anyClassElement.type.isObject) {
+        while (!anyClassElement.instantiate().isObject) {
           anyClassElement = anyClassElement.supertype.element;
         }
         objectClassElement = anyClassElement;
@@ -1177,8 +1184,9 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       _ImportCollector importCollector,
       Map<FunctionType, int> typedefs) async {
-    if (dartType is ParameterizedType) {
-      List<TypeParameterElement> typeParameters = dartType.typeParameters;
+    if (dartType is InterfaceType) {
+      List<TypeParameterElement> typeParameters =
+          dartType.element.typeParameters;
       if (typeParameters.isEmpty) {
         // We have no formal type parameters, so there cannot be any actual
         // type arguments.
@@ -1385,7 +1393,7 @@ class _ReflectorDomain {
       // 'dart:mirrors'. Other superclasses use `NO_CAPABILITY_INDEX` to
       // indicate missing support.
       superclassIndex =
-          (classElement is! MixinApplication && classElement.type.isObject)
+          (classElement is! MixinApplication && classElement.instantiate().isObject)
               ? "null"
               : ((await classes).contains(superclass))
                   ? "${(await classes).indexOf(superclass)}"
@@ -1560,8 +1568,12 @@ class _ReflectorDomain {
                 .map(indexOf));
       }
 
-      int dynamicReflectedTypeIndex = _dynamicTypeCodeIndex(classElement.type,
-          await classes, reflectedTypes, reflectedTypesOffset, typedefs);
+      int dynamicReflectedTypeIndex = _dynamicTypeCodeIndex(
+          classElement.instantiate(),
+          await classes,
+          reflectedTypes,
+          reflectedTypesOffset,
+          typedefs);
 
       return "r.GenericClassMirrorImpl(r'${classDomain._simpleName}', "
           "r'${_qualifiedName(classElement)}', $descriptor, $classIndex, "
@@ -2080,8 +2092,10 @@ class _ReflectorDomain {
   /// to obtain values from other libraries.
   String _dynamicTypeCodeOfClass(TypeDefiningElement typeDefiningElement,
       _ImportCollector importCollector) {
-    DartType type = typeDefiningElement.type;
-    if (type.isDynamic) return "dynamic";
+    DartType type = typeDefiningElement is ClassElement
+        ? typeDefiningElement.instantiate()
+        : null;
+    if (type?.isDynamic) return "dynamic";
     if (type is InterfaceType) {
       ClassElement classElement = type.element;
       if ((classElement is MixinApplication &&
@@ -2303,6 +2317,7 @@ class _SubtypesFixedPoint extends FixedPoint<ClassElement> {
   _SubtypesFixedPoint(this.subtypes);
 
   /// Returns all the immediate subtypes of the given [classMirror].
+  @override
   Future<Iterable<ClassElement>> successors(
       final ClassElement classElement) async {
     Iterable<ClassElement> classElements = subtypes[classElement];
@@ -2329,6 +2344,7 @@ class _SuperclassFixedPoint extends FixedPoint<ClassElement> {
   /// class used as a mixin cannot have other superclasses than [Object]).
   /// TODO(eernst) implement: When mixins can have nontrivial superclasses
   /// we may or may not wish to enforce the bounds even for mixins.
+  @override
   Future<Iterable<ClassElement>> successors(ClassElement element) async {
     // A mixin application is handled by its regular subclasses.
     if (element is MixinApplication) return [];
@@ -2451,6 +2467,7 @@ class _AnnotationClassFixedPoint extends FixedPoint<ClassElement> {
 
   /// Returns the classes that occur as return types of covered methods or in
   /// type annotations of covered variables and parameters of covered methods,
+  @override
   Future<Iterable<ClassElement>> successors(ClassElement classElement) async {
     if (!await _isImportable(classElement, generatedLibraryId, resolver)) {
       return [];
@@ -2624,10 +2641,12 @@ class _LibraryDomain {
     yield* _accessors;
   }
 
+  @override
   String toString() {
     return "LibraryDomain($_libraryElement)";
   }
 
+  @override
   bool operator ==(Object other) {
     if (other is _LibraryDomain) {
       return _libraryElement == other._libraryElement &&
@@ -2637,6 +2656,7 @@ class _LibraryDomain {
     }
   }
 
+  @override
   int get hashCode => _libraryElement.hashCode ^ _reflectorDomain.hashCode;
 }
 
@@ -2835,6 +2855,7 @@ class _ClassDomain {
     return result;
   }
 
+  @override
   String toString() {
     return "ClassDomain($_classElement)";
   }
@@ -2856,7 +2877,7 @@ class _Capabilities {
     if (metadata == null) return false;
     return metadata.map<ParameterizedType>((DartObject o) => o.type).any(
         (ParameterizedType parameterizedType) =>
-            parameterizedType.isSubtypeOf(capability.metadataType.type));
+            parameterizedType.isSubtypeOf(capability.metadataType.instantiate()));
   }
 
   bool _supportsInstanceInvoke(
@@ -3335,8 +3356,8 @@ class BuilderImplementation {
     Element element = elementAnnotation.element;
     if (element is ConstructorElement) {
       bool isOk = await checkInheritance(
-          element.enclosingElement.type, focusClass.type);
-      return isOk ? element.enclosingElement.type.element : null;
+          element.enclosingElement.instantiate(), focusClass.instantiate());
+      return isOk ? element.enclosingElement.instantiate().element : null;
     } else if (element is PropertyAccessorElement) {
       PropertyInducingElement variable = element.variable;
       if (variable is VariableElement) {
@@ -3349,7 +3370,8 @@ class BuilderImplementation {
         // would mean that the value is actually null, which we will also
         // reject as irrelevant.
         if (constantValue == null) return null;
-        bool isOk = await checkInheritance(constantValue.type, focusClass.type);
+        bool isOk =
+            await checkInheritance(constantValue.type, focusClass.instantiate());
         // When `isOK` is true, result.value.type.element is a ClassElement.
         return isOk ? constantValue.type.element : null;
       } else {
@@ -3388,8 +3410,7 @@ class BuilderImplementation {
     LibraryElement capabilityLibrary =
         _librariesByName["reflectable.capability"];
     ClassElement reflectableClass = reflectableLibrary.getType("Reflectable");
-    ClassElement typeClass =
-        reflectableLibrary.context.typeProvider.typeType.element;
+    ClassElement typeClass = reflectableLibrary.typeProvider.typeType.element;
 
     ConstructorElement globalQuantifyCapabilityConstructor = capabilityLibrary
         .getType("GlobalQuantifyCapability")
@@ -3416,7 +3437,7 @@ class BuilderImplementation {
               ClassElement reflector =
                   value.getField("(super)").getField("reflector").type.element;
               if (reflector == null ||
-                  reflector.type.element.supertype.element !=
+                  reflector.instantiate().element.supertype.element !=
                       reflectableClass) {
                 String found =
                     reflector == null ? "" : " Found ${reflector.name}";
@@ -3453,7 +3474,7 @@ class BuilderImplementation {
                   .type
                   .element;
               if (reflector == null ||
-                  reflector.type.element.supertype.element !=
+                  reflector.instantiate().element.supertype.element !=
                       reflectableClass) {
                 String found =
                     reflector == null ? "" : " Found ${reflector.name}";
@@ -3500,8 +3521,8 @@ class BuilderImplementation {
   Future<bool> _isReflectorClass(ClassElement potentialReflectorClass,
       ClassElement reflectableClass) async {
     if (potentialReflectorClass == reflectableClass) return false;
-    InterfaceType potentialReflectorType = potentialReflectorClass.type;
-    InterfaceType reflectableType = reflectableClass.type;
+    InterfaceType potentialReflectorType = potentialReflectorClass.instantiate();
+    InterfaceType reflectableType = reflectableClass.instantiate();
     if (!_isSubclassOf(potentialReflectorType, reflectableType)) {
       // Not a subclass of [classReflectable] at all.
       return false;
@@ -5115,8 +5136,10 @@ class MixinApplication implements ClassElement {
   final String declaredName;
   final ClassElement superclass;
   final ClassElement mixin;
-  final LibraryElement library;
   final ClassElement subclass;
+
+  @override
+  final LibraryElement library;
 
   MixinApplication(this.declaredName, this.superclass, this.mixin, this.library,
       this.subclass);
@@ -5156,7 +5179,7 @@ class MixinApplication implements ClassElement {
   @override
   InterfaceType get supertype {
     if (superclass is MixinApplication) return superclass.supertype;
-    return superclass?.type;
+    return superclass?.instantiate();
   }
 
   @override
@@ -5165,7 +5188,7 @@ class MixinApplication implements ClassElement {
     if (superclass != null && superclass is MixinApplication) {
       result.addAll(superclass.mixins);
     }
-    result.add(mixin.type);
+    result.add(mixin.instantiate());
     return result;
   }
 
@@ -5218,6 +5241,7 @@ class MixinApplication implements ClassElement {
   @override
   int get hashCode => superclass.hashCode ^ mixin.hashCode ^ library.hashCode;
 
+  @override
   toString() => "MixinApplication($superclass, $mixin)";
 
   // Let the compiler generate forwarders for all remaining methods: Instances
@@ -5258,7 +5282,7 @@ bool _isPrivateName(String name) {
 
 EvaluationResult _evaluateConstant(
     LibraryElement library, Expression expression) {
-  return ConstantEvaluator(library.source, library.context.typeProvider)
+  return ConstantEvaluator(library.source, library.typeProvider)
       .evaluate(expression);
 }
 

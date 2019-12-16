@@ -8,7 +8,7 @@ homepage: https://www.github.com/dart-lang/reflectable
 environment:
   sdk: '>=2.3.0 <3.0.0'
 dependencies:
-  analyzer: '>=0.36.0 <0.39.0'
+  analyzer: '>=0.36.0 <0.40.0'
   build: ^1.2.0
   build_resolvers: ^1.2.0
   build_config: ^0.4.0

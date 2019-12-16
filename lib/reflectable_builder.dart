@@ -28,6 +28,7 @@ class ReflectableBuilder implements Builder {
     await buildStep.writeAsString(outputId, generatedSource);
   }
 
+  @override
   Map<String, List<String>> get buildExtensions => const {
         '.dart': ['.reflectable.dart']
       };

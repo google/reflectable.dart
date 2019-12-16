@@ -483,18 +483,31 @@ class _NoSuchCapabilityErrorImpl extends Error
 
   _NoSuchCapabilityErrorImpl(String message) : _message = message;
 
+  @override
   toString() => _message;
 }
 
 enum StringInvocationKind { method, getter, setter, constructor }
 
 class _StringInvocation extends StringInvocation {
-  final String memberName;
-  final List positionalArguments;
-  final Map<Symbol, dynamic> namedArguments;
   final StringInvocationKind kind;
+
+  @override
+  final String memberName;
+
+  @override
+  final List positionalArguments;
+
+  @override
+  final Map<Symbol, dynamic> namedArguments;
+
+  @override
   bool isMethod;
+
+  @override
   bool isGetter;
+
+  @override
   bool isSetter;
 
   _StringInvocation(this.memberName, this.positionalArguments,
@@ -523,6 +536,7 @@ class ReflectableNoSuchMethodError extends Error
   get invocation =>
       _StringInvocation(memberName, positionalArguments, namedArguments, kind);
 
+  @override
   toString() {
     String kindName;
     switch (kind) {

@@ -199,7 +199,10 @@ abstract class _DataCaching {
 }
 
 class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
+  @override
   final ReflectableImpl _reflector;
+
+  @override
   final Object reflectee;
 
   _InstanceMirrorImpl(this.reflectee, this._reflector) {
@@ -223,6 +226,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
 
   ClassMirrorBase _type;
 
+  @override
   ClassMirror get type {
     if (!_supportsType) {
       throw NoSuchCapabilityError(
@@ -231,6 +235,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
     return _type;
   }
 
+  @override
   Object invoke(String methodName, List<Object> positionalArguments,
       [Map<Symbol, Object> namedArguments]) {
     void fail() {
@@ -263,14 +268,17 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
         methodTearer(reflectee), positionalArguments, namedArguments);
   }
 
+  @override
   bool get hasReflectee => true;
 
+  @override
   bool operator ==(other) {
     return other is _InstanceMirrorImpl &&
         other._reflector == _reflector &&
         other.reflectee == reflectee;
   }
 
+  @override
   int get hashCode => _reflector.hashCode ^ reflectee.hashCode;
 
   @override
@@ -357,6 +365,7 @@ typedef MethodMirror MethodMirrorProvider(String methodName);
 abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   /// The reflector which represents the mirror system that this
   /// mirror belongs to.
+  @override
   final ReflectableImpl _reflector;
 
   /// An encoding of the attributes and kind of this class mirror.
@@ -379,6 +388,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   /// itself.
   final int _mixinIndex;
 
+  @override
   List<ClassMirror> get superinterfaces {
     if (_superinterfaceIndices.length == 1 &&
         _superinterfaceIndices[0] == NO_CAPABILITY_INDEX) {
@@ -428,8 +438,12 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   /// superinterfaces of the reflected class.
   final List<int> _superinterfaceIndices;
 
+  @override
   final String simpleName;
+
+  @override
   final String qualifiedName;
+
   final List<Object> _metadata;
   final Map<String, _StaticGetter> _getters;
   final Map<String, _StaticSetter> _setters;
@@ -455,10 +469,12 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       this._metadata,
       this._parameterListShapes);
 
+  @override
   bool get isAbstract => (_descriptor & constants.abstractAttribute != 0);
 
   Map<String, DeclarationMirror> _declarations;
 
+  @override
   Map<String, DeclarationMirror> get declarations {
     if (_declarations == null) {
       Map<String, DeclarationMirror> result = <String, DeclarationMirror>{};
@@ -484,6 +500,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   Map<String, MethodMirror> _instanceMembers;
 
+  @override
   Map<String, MethodMirror> get instanceMembers {
     if (_instanceMembers == null) {
       if (_instanceMemberIndices == null) {
@@ -504,6 +521,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   Map<String, MethodMirror> _staticMembers;
 
+  @override
   Map<String, MethodMirror> get staticMembers {
     if (_staticMembers == null) {
       if (_staticMemberIndices == null) {
@@ -522,6 +540,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     return _staticMembers;
   }
 
+  @override
   ClassMirror get mixin {
     if (_mixinIndex == NO_CAPABILITY_INDEX) {
       if (!_supportsTypeRelations(_reflector)) {
@@ -615,6 +634,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
         namedArgumentNames, (String name) => staticMembers[name]);
   }
 
+  @override
   Object newInstance(String constructorName, List positionalArguments,
       [Map<Symbol, dynamic> namedArguments]) {
     void fail() {
@@ -767,6 +787,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
         classMirror is ClassMirrorBase && classMirror._isSubtypeOf(other));
   }
 
+  @override
   bool isSubclassOf(ClassMirror other) {
     if (_superclassIndex == NO_CAPABILITY_INDEX) {
       // There are two possible reasons for this: (1) If we have no type
@@ -816,6 +837,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     return _data.libraryMirrors[_ownerIndex];
   }
 
+  @override
   ClassMirrorBase get superclass {
     if (_superclassIndex == NO_CAPABILITY_INDEX) {
       if (!_supportsTypeRelations(_reflector)) {
@@ -939,6 +961,7 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
   // type/reflector-combination we can rely on the default `hashCode` and `==`
   // operations.
 
+  @override
   String toString() => "NonGenericClassMirrorImpl($qualifiedName)";
 }
 
@@ -1097,6 +1120,7 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
   // type/reflector-combination we can rely on the default `hashCode` and `==`
   // operations.
 
+  @override
   String toString() => "GenericClassMirrorImpl($qualifiedName)";
 }
 
@@ -1212,6 +1236,7 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
   @override
   Type get dynamicReflectedType => _originalDeclaration.dynamicReflectedType;
 
+  @override
   bool operator ==(other) {
     // The same object twice: Were obtained in the same context, must model the
     // same type, are equal.
@@ -1250,8 +1275,10 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
   // Note that this will equip some instances with the same [hashCode] even
   // though they are not equal according to `operator ==`, namely the ones
   // where both have no `_reflectedType`. This does not compromise correctness.
+  @override
   int get hashCode => originalDeclaration.hashCode ^ _reflectedType.hashCode;
 
+  @override
   String toString() => "InstantiatedGenericClassMirrorImpl($qualifiedName)";
 }
 
@@ -1288,14 +1315,17 @@ InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
 class TypeVariableMirrorImpl extends _DataCaching
     implements TypeVariableMirror {
   /// The simple name of this type variable.
+  @override
   final String simpleName;
 
   /// The qualified name of this type variable, i.e., the qualified name of
   /// the declaring class followed by its simple name.
+  @override
   final String qualifiedName;
 
   /// The reflector which represents the mirror system that this
   /// mirror belongs to.
+  @override
   final ReflectableImpl _reflector;
 
   /// The index into [typeMirrors] of the upper bound of this type variable.
@@ -1429,6 +1459,7 @@ class TypeVariableMirrorImpl extends _DataCaching
 }
 
 class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
+  @override
   final ReflectableImpl _reflector;
 
   /// A list of the indices in [ReflectorData.memberMirrors] of the
@@ -1619,6 +1650,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   @override
   String get qualifiedName => simpleName;
 
+  @override
   bool operator ==(other) {
     return other is LibraryMirrorImpl &&
         other.uri == uri &&
@@ -1626,11 +1658,13 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
         other._declarationIndices == _declarationIndices;
   }
 
+  @override
   int get hashCode =>
       uri.hashCode ^ _reflector.hashCode ^ _declarationIndices.hashCode;
 
   // TODO(sigurdm) implement: Need to implement this, with the requirement that
   // a [LibraryCapability] must be available.
+  @override
   List<LibraryDependencyMirror> get libraryDependencies =>
       throw unimplementedError("libraryDependencies");
 }
@@ -1671,6 +1705,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   final List<int> _parameterIndices;
 
   /// The [Reflectable] associated with this mirror.
+  @override
   final ReflectableImpl _reflector;
 
   /// The metadata of the mirrored method. The empty list means no metadata,
@@ -1692,6 +1727,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
 
   int get kind => constants.kindFromEncoding(_descriptor);
 
+  @override
   DeclarationMirror get owner {
     if (_ownerIndex == NO_CAPABILITY_INDEX) {
       throw NoSuchCapabilityError(
@@ -1909,7 +1945,9 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
 
 abstract class ImplicitAccessorMirrorImpl extends _DataCaching
     implements MethodMirror {
+  @override
   final ReflectableImpl _reflector;
+
   final int _variableMirrorIndex;
   final int _reflectedTypeIndex;
   final int _dynamicReflectedTypeIndex;
@@ -1929,6 +1967,7 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
 
   int get kind => constants.kindFromEncoding(_variableMirror._descriptor);
 
+  @override
   DeclarationMirror get owner => _variableMirror.owner;
 
   @override
@@ -2089,7 +2128,10 @@ abstract class VariableMirrorBase extends _DataCaching
   final String _name;
   final int _descriptor;
   final int _ownerIndex;
+
+  @override
   final ReflectableImpl _reflector;
+
   final int _classMirrorIndex;
   final int _reflectedTypeIndex;
   final int _dynamicReflectedTypeIndex;
@@ -2194,6 +2236,7 @@ abstract class VariableMirrorBase extends _DataCaching
           : reflectedType;
 
   /// Override requested by linter.
+  @override
   bool operator ==(other);
 
   // Note that [operator ==] is redefined slightly differently in the two
@@ -2251,6 +2294,7 @@ class VariableMirrorImpl extends VariableMirrorBase {
       other.owner == owner;
 
   /// Override requested by linter.
+  @override
   int get hashCode;
 }
 
@@ -2326,6 +2370,7 @@ class ParameterMirrorImpl extends VariableMirrorBase
       other.owner == owner;
 
   /// Override requested by linter.
+  @override
   int get hashCode;
 }
 
@@ -2565,6 +2610,7 @@ class FakeType implements Type {
 
   final String description;
 
+  @override
   String toString() => "Type($description)";
 }
 
