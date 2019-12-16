@@ -167,7 +167,7 @@ class ReflectionWorld {
         reflector._capabilities._impliesMemberSymbols)) {
       // Generate the mapping when requested, even if it is empty.
       String mapping = _formatAsMap(
-          memberNames.map((String name) => 'const Symbol(r"$name"): r"$name"'));
+          memberNames.map((String name) => "const Symbol(r'$name'): r'$name'"));
       return "$mapping";
     } else {
       // The value `null` unambiguously indicates lack of capability.
@@ -1286,10 +1286,10 @@ class _ReflectorDomain {
     // TODO(eernst) implement: Update when type variables support metadata.
     String metadataCode =
         _capabilities._supportsMetadata ? "<Object>[]" : "null";
-    return 'r.TypeVariableMirrorImpl(r"${typeParameterElement.name}", '
-        'r"${_qualifiedTypeParameterName(typeParameterElement)}", '
-        '${await _constConstructionCode(importCollector)}, '
-        '$upperBoundIndex, $ownerIndex, $metadataCode)';
+    return "r.TypeVariableMirrorImpl(r'${typeParameterElement.name}', "
+        "r'${_qualifiedTypeParameterName(typeParameterElement)}', "
+        "${await _constConstructionCode(importCollector)}, "
+        "$upperBoundIndex, $ownerIndex, $metadataCode)";
   }
 
   Future<String> _classMirrorCode(
@@ -1398,7 +1398,7 @@ class _ReflectorDomain {
       for (ConstructorElement constructor in classDomain._constructors) {
         if (constructor.isFactory || !constructor.enclosingElement.isAbstract) {
           String code = await _constructorCode(constructor, importCollector);
-          mapEntries.add('r"${constructor.name}": $code');
+          mapEntries.add("r'${constructor.name}': $code");
         }
       }
       constructorsCode = _formatAsMap(mapEntries);
@@ -1484,19 +1484,19 @@ class _ReflectorDomain {
             shape != null); // Every method must have its shape in `..shapeOf`.
         int index = parameterListShapes.indexOf(shape);
         assert(index != null); // Every shape must be in `..Shapes`.
-        return 'r"${element.name}": $index';
+        return "r'${element.name}': $index";
       }));
     }
 
     if (classElement.typeParameters.isEmpty) {
-      return 'r.NonGenericClassMirrorImpl(r"${classDomain._simpleName}", '
-          'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
-          '${await _constConstructionCode(importCollector)}, '
-          '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
-          '$superclassIndex, $staticGettersCode, $staticSettersCode, '
-          '$constructorsCode, $ownerIndex, $mixinIndex, '
-          '$superinterfaceIndices, $classMetadataCode, '
-          '$parameterListShapesCode)';
+      return "r.NonGenericClassMirrorImpl(r'${classDomain._simpleName}', "
+          "r'${_qualifiedName(classElement)}', $descriptor, $classIndex, "
+          "${await _constConstructionCode(importCollector)}, "
+          "$declarationsCode, $instanceMembersCode, $staticMembersCode, "
+          "$superclassIndex, $staticGettersCode, $staticSettersCode, "
+          "$constructorsCode, $ownerIndex, $mixinIndex, "
+          "$superinterfaceIndices, $classMetadataCode, "
+          "$parameterListShapesCode)";
     } else {
       // We are able to match up a given instance with a given generic type
       // by checking that the instance `is` an instance of the fully dynamic
@@ -1561,15 +1561,15 @@ class _ReflectorDomain {
       int dynamicReflectedTypeIndex = _dynamicTypeCodeIndex(classElement.type,
           await classes, reflectedTypes, reflectedTypesOffset, typedefs);
 
-      return 'r.GenericClassMirrorImpl(r"${classDomain._simpleName}", '
-          'r"${_qualifiedName(classElement)}", $descriptor, $classIndex, '
-          '${await _constConstructionCode(importCollector)}, '
-          '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
-          '$superclassIndex, $staticGettersCode, $staticSettersCode, '
-          '$constructorsCode, $ownerIndex, $mixinIndex, '
-          '$superinterfaceIndices, $classMetadataCode, '
-          '$parameterListShapesCode, $isCheckCode, '
-          '$typeParameterIndices, $dynamicReflectedTypeIndex)';
+      return "r.GenericClassMirrorImpl(r'${classDomain._simpleName}', "
+          "r'${_qualifiedName(classElement)}', $descriptor, $classIndex, "
+          "${await _constConstructionCode(importCollector)}, "
+          "$declarationsCode, $instanceMembersCode, $staticMembersCode, "
+          "$superclassIndex, $staticGettersCode, $staticSettersCode, "
+          "$constructorsCode, $ownerIndex, $mixinIndex, "
+          "$superinterfaceIndices, $classMetadataCode, "
+          "$parameterListShapesCode, $isCheckCode, "
+          "$typeParameterIndices, $dynamicReflectedTypeIndex)";
     }
   }
 
@@ -1654,11 +1654,11 @@ class _ReflectorDomain {
           ? await _extractMetadataCode(
               element, _resolver, importCollector, _generatedLibraryId)
           : null;
-      return 'r.MethodMirrorImpl(r"${element.name}", $descriptor, '
-          '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, '
-          '$dynamicReflectedReturnTypeIndex, '
-          '$reflectedTypeArgumentsOfReturnType, $parameterIndicesCode, '
-          '${await _constConstructionCode(importCollector)}, $metadataCode)';
+      return "r.MethodMirrorImpl(r'${element.name}', $descriptor, "
+          "$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, "
+          "$dynamicReflectedReturnTypeIndex, "
+          "$reflectedTypeArgumentsOfReturnType, $parameterIndicesCode, "
+          "${await _constConstructionCode(importCollector)}, $metadataCode)";
     }
   }
 
@@ -1699,11 +1699,11 @@ class _ReflectorDomain {
       // it is a `List<Object>`, which has no other natural encoding.
       metadataCode = null;
     }
-    return 'r.VariableMirrorImpl(r"${element.name}", $descriptor, '
-        '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $reflectedTypeIndex, '
-        '$dynamicReflectedTypeIndex, $reflectedTypeArguments, '
-        '$metadataCode)';
+    return "r.VariableMirrorImpl(r'${element.name}', $descriptor, "
+        "$ownerIndex, ${await _constConstructionCode(importCollector)}, "
+        "$classMirrorIndex, $reflectedTypeIndex, "
+        "$dynamicReflectedTypeIndex, $reflectedTypeArguments, "
+        "$metadataCode)";
   }
 
   Future<String> _fieldMirrorCode(
@@ -1742,10 +1742,10 @@ class _ReflectorDomain {
       // it is a `List<Object>`, which has no other natural encoding.
       metadataCode = null;
     }
-    return 'r.VariableMirrorImpl(r"${element.name}", $descriptor, '
-        '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $reflectedTypeIndex, '
-        '$dynamicReflectedTypeIndex, $reflectedTypeArguments, $metadataCode)';
+    return "r.VariableMirrorImpl(r'${element.name}', $descriptor, "
+        "$ownerIndex, ${await _constConstructionCode(importCollector)}, "
+        "$classMirrorIndex, $reflectedTypeIndex, "
+        "$dynamicReflectedTypeIndex, $reflectedTypeArguments, $metadataCode)";
   }
 
   /// Returns the index into `ReflectorData.types` of the [Type] object
@@ -2019,7 +2019,7 @@ class _ReflectorDomain {
         // However, if the situation should arise the following approach will
         // work for the anonymous mixin application as well as for the private
         // class.
-        return 'const r.FakeType(r"${_qualifiedName(classElement)}")';
+        return "const r.FakeType(r'${_qualifiedName(classElement)}')";
       }
       String prefix = importCollector._getPrefix(classElement.library);
       if (classElement.typeParameters.isEmpty) {
@@ -2034,8 +2034,8 @@ class _ReflectorDomain {
           String arguments = dartType.typeArguments
               .map((DartType typeArgument) => typeArgument.toString())
               .join(', ');
-          return 'const r.FakeType('
-              'r"${_qualifiedName(classElement)}<$arguments>")';
+          return "const r.FakeType("
+              "r'${_qualifiedName(classElement)}<$arguments>')";
         }
       }
     } else if (dartType is FunctionType) {
@@ -2085,7 +2085,7 @@ class _ReflectorDomain {
       if ((classElement is MixinApplication &&
               classElement.declaredName == null) ||
           classElement.isPrivate) {
-        return 'const r.FakeType(r"${_qualifiedName(classElement)}")';
+        return "const r.FakeType(r'${_qualifiedName(classElement)}')";
       }
       String prefix = importCollector._getPrefix(classElement.library);
       return "$prefix${classElement.name}";
@@ -2095,7 +2095,7 @@ class _ReflectorDomain {
       // an [InterfaceType], given that it is a member of `classes`. However,
       // the following treatment is benign, and nicer than crashing if there
       // is some exception that we have overlooked.
-      return 'const r.FakeType(r"${_qualifiedName(typeDefiningElement)}")';
+      return "const r.FakeType(r'${_qualifiedName(typeDefiningElement)}')";
     }
   }
 
@@ -2154,8 +2154,8 @@ class _ReflectorDomain {
     // builder.
     String uriCode =
         (_capabilities._supportsUri || _capabilities._supportsLibraries)
-            ? 'Uri.parse(r"reflectable://$libraryIndex/$library")'
-            : 'null';
+            ? "Uri.parse(r'reflectable://$libraryIndex/$library')"
+            : "null";
 
     String metadataCode;
     if (_capabilities._supportsMetadata) {
@@ -2173,14 +2173,14 @@ class _ReflectorDomain {
         assert(shape != null); // Every method has a shape in `..shapeOf`.
         int index = parameterListShapes.indexOf(shape);
         assert(index != null); // Every shape is in `..Shapes`.
-        return 'r"${element.name}": $index';
+        return "r'${element.name}': $index";
       }));
     }
 
-    return 'r.LibraryMirrorImpl(r"${library.name}", $uriCode, '
-        '${await _constConstructionCode(importCollector)}, '
-        '$declarationsCode, $gettersCode, $settersCode, $metadataCode, '
-        '$parameterListShapesCode)';
+    return "r.LibraryMirrorImpl(r'${library.name}', $uriCode, "
+        "${await _constConstructionCode(importCollector)}, "
+        "$declarationsCode, $gettersCode, $settersCode, $metadataCode, "
+        "$parameterListShapesCode)";
   }
 
   Future<String> _parameterMirrorCode(
@@ -2256,11 +2256,11 @@ class _ReflectorDomain {
         ? "#${element.name}"
         : "null";
 
-    return 'r.ParameterMirrorImpl(r"${element.name}", $descriptor, '
-        '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
-        '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
-        '$reflectedTypeArguments, $metadataCode, $defaultValueCode, '
-        '$parameterSymbolCode)';
+    return "r.ParameterMirrorImpl(r'${element.name}', $descriptor, "
+        "$ownerIndex, ${await _constConstructionCode(importCollector)}, "
+        "$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, "
+        "$reflectedTypeArguments, $metadataCode, $defaultValueCode, "
+        "$parameterSymbolCode)";
   }
 
   /// Given an [importCollector] and a [parameterElement], returns "" if there
@@ -2506,14 +2506,14 @@ String _gettingClosure(String getterName) {
   } else {
     closure = "(dynamic instance) => (x) => instance ${getterName} x";
   }
-  return 'r"${getterName}": $closure';
+  return "r'${getterName}': $closure";
 }
 
 // Auxiliary function used by `_generateCode`.
 String _settingClosure(String setterName) {
   assert(setterName.substring(setterName.length - 1) == "=");
   String name = setterName.substring(0, setterName.length - 1);
-  return 'r"$setterName": (dynamic instance, value) => instance.$name = value';
+  return "r'$setterName': (dynamic instance, value) => instance.$name = value";
 }
 
 // Auxiliary function used by `_generateCode`.
@@ -2528,7 +2528,7 @@ Future<String> _staticGettingClosure(_ImportCollector importCollector,
   if (_isPrivateName(className)) {
     await _severe("Cannot access private name $className", classElement);
   }
-  return 'r"${getterName}": () => $prefix$className.$getterName';
+  return "r'${getterName}': () => $prefix$className.$getterName";
 }
 
 // Auxiliary function used by `_generateCode`.
@@ -2545,7 +2545,7 @@ Future<String> _staticSettingClosure(_ImportCollector importCollector,
   if (_isPrivateName(className)) {
     await _severe("Cannot access private name $className", classElement);
   }
-  return 'r"$setterName": (value) => $prefix$className.$name = value';
+  return "r'$setterName': (value) => $prefix$className.$name = value";
 }
 
 // Auxiliary function used by `_generateCode`.
@@ -2556,7 +2556,7 @@ Future<String> _topLevelGettingClosure(_ImportCollector importCollector,
   if (_isPrivateName(getterName)) {
     await _severe("Cannot access private name $getterName", library);
   }
-  return 'r"${getterName}": () => $prefix$getterName';
+  return "r'${getterName}': () => $prefix$getterName";
 }
 
 // Auxiliary function used by `_generateCode`.
@@ -2569,7 +2569,7 @@ Future<String> _topLevelSettingClosure(_ImportCollector importCollector,
   if (_isPrivateName(name)) {
     await _severe("Cannot access private name $name", library);
   }
-  return 'r"$setterName": (value) => $prefix$name = value';
+  return "r'$setterName': (value) => $prefix$name = value";
 }
 
 // Auxiliary function used by `_typeCodeIndex`.
@@ -4056,23 +4056,23 @@ class BuilderImplementation {
 // This file has been generated by the reflectable package.
 // https://github.com/dart-lang/reflectable.
 
-import "dart:core";
+import 'dart:core';
 ${imports.join('\n')}
 
 // ignore_for_file: unnecessary_const
 
 // ignore:unused_import
-import "package:reflectable/mirrors.dart" as m;
+import 'package:reflectable/mirrors.dart' as m;
 // ignore:unused_import
-import "package:reflectable/src/reflectable_builder_based.dart" as r;
+import 'package:reflectable/src/reflectable_builder_based.dart' as r;
 // ignore:unused_import
-import "package:reflectable/reflectable.dart" as r show Reflectable;
+import 'package:reflectable/reflectable.dart' as r show Reflectable;
 
 $code
 
 final _memberSymbolMap = ${world.generateSymbolMap()};
 
-initializeReflectable() {
+void initializeReflectable() {
   r.data = _data;
   r.memberSymbolMap = _memberSymbolMap;
 }
