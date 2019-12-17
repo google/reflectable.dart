@@ -1,3 +1,12 @@
+## 2.2.1
+
+* Update reflectable to enable the use of analyzer version 0.39.*. Adjust
+  the implementation to satisfy many new lint requirements, e.g., that
+  string literals use single quotes, sets are created using literals, some
+  local variables have no type annotation, overriding declarations have
+  `@override`, etc. Also fix a bug concerned with the ordering of named
+  parameters in a constructor declaration.
+
 ## 2.2.0
 
 * Adjust implementation to satisfy 'pedantic' lints. The generated code
