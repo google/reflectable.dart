@@ -1951,8 +1951,6 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
   final ReflectableImpl _reflector;
 
   final int _variableMirrorIndex;
-  final int _reflectedTypeIndex;
-  final int _dynamicReflectedTypeIndex;
 
   /// Index of this [ImplicitAccessorMirrorImpl] in `_data.memberMirrors`.
   final int _selfIndex;
@@ -1961,11 +1959,7 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
       _data.memberMirrors[_variableMirrorIndex];
 
   ImplicitAccessorMirrorImpl(
-      this._reflector,
-      this._variableMirrorIndex,
-      this._reflectedTypeIndex,
-      this._dynamicReflectedTypeIndex,
-      this._selfIndex);
+      this._reflector, this._variableMirrorIndex, this._selfIndex);
 
   int get kind => constants.kindFromEncoding(_variableMirror._descriptor);
 
@@ -2038,10 +2032,9 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
 }
 
 class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
-  ImplicitGetterMirrorImpl(ReflectableImpl reflector, int variableMirrorIndex,
-      int reflectedTypeIndex, int dynamicReflectedTypeIndex, int selfIndex)
-      : super(reflector, variableMirrorIndex, reflectedTypeIndex,
-            dynamicReflectedTypeIndex, selfIndex);
+  ImplicitGetterMirrorImpl(
+      ReflectableImpl reflector, int variableMirrorIndex, int selfIndex)
+      : super(reflector, variableMirrorIndex, selfIndex);
 
   @override
   bool get isGetter => true;
@@ -2069,10 +2062,9 @@ class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
 }
 
 class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
-  ImplicitSetterMirrorImpl(ReflectableImpl reflector, int variableMirrorIndex,
-      int reflectedTypeIndex, int dynamicReflectedTypeIndex, int selfIndex)
-      : super(reflector, variableMirrorIndex, reflectedTypeIndex,
-            dynamicReflectedTypeIndex, selfIndex);
+  ImplicitSetterMirrorImpl(
+      ReflectableImpl reflector, int variableMirrorIndex, int selfIndex)
+      : super(reflector, variableMirrorIndex, selfIndex);
 
   @override
   bool get isGetter => false;

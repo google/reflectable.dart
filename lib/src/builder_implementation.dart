@@ -1609,29 +1609,17 @@ class _ReflectorDomain {
           ? topLevelVariables.indexOf(variable)
           : fields.indexOf(variable);
       assert(variableMirrorIndex != null);
-      int reflectedTypeIndex = reflectedTypeRequested
-          ? _typeCodeIndex(accessorElement.variable.type, await classes,
-              reflectedTypes, reflectedTypesOffset, typedefs)
-          : constants.NO_CAPABILITY_INDEX;
-      // Do not check `reflectedTypeIndex != null`, null means dynamic.
-      int dynamicReflectedTypeIndex = reflectedTypeRequested
-          ? _dynamicTypeCodeIndex(accessorElement.variable.type, await classes,
-              reflectedTypes, reflectedTypesOffset, typedefs)
-          : constants.NO_CAPABILITY_INDEX;
-      // Do not check `dynamicReflectedTypeIndex != null`, null means dynamic.
       int selfIndex = members.indexOf(accessorElement) + fields.length;
       assert(selfIndex != null);
       if (accessorElement.isGetter) {
         return 'r.ImplicitGetterMirrorImpl('
             '${await _constConstructionCode(importCollector)}, '
-            '$variableMirrorIndex, $reflectedTypeIndex, '
-            '$dynamicReflectedTypeIndex, $selfIndex)';
+            '$variableMirrorIndex, $selfIndex)';
       } else {
         assert(accessorElement.isSetter);
         return 'r.ImplicitSetterMirrorImpl('
             '${await _constConstructionCode(importCollector)}, '
-            '$variableMirrorIndex, $reflectedTypeIndex, '
-            '$dynamicReflectedTypeIndex, $selfIndex)';
+            '$variableMirrorIndex, $selfIndex)';
       }
     } else {
       // [element] is a method, a function, or an explicitly declared
