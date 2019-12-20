@@ -709,10 +709,12 @@ class _ReflectorDomain {
       // on a language design where no parameter list can include
       // both optional positional and named parameters, so if there are
       // any named parameters then all optional parameters are named.
-      String code = await _extractDefaultValueCode(
-          importCollector, constructor.parameters[requiredPositionalCount + i]);
-      String defaultPart = code.isEmpty ? "" : " = $code";
-      namedWithDefaultList.add("${namedParameterNames[i]}$defaultPart");
+      ParameterElement parameterElement =
+          constructor.parameters[requiredPositionalCount + i];
+      String code =
+          await _extractDefaultValueCode(importCollector, parameterElement);
+      String defaultPart = code.isEmpty ? '' : ' = $code';
+      namedWithDefaultList.add('${parameterElement.name}$defaultPart');
     }
     String namedWithDefaults = namedWithDefaultList.join(", ");
 
