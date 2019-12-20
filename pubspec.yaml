@@ -3,7 +3,6 @@ version: 2.2.1
 description: >
   Reflection support based on code generation, using 'capabilities' to
   specify which operations to support, on which objects.
-author: Dart Team <misc@dartlang.org>
 homepage: https://www.github.com/dart-lang/reflectable
 environment:
   sdk: '>=2.3.0 <3.0.0'
