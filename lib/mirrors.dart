@@ -455,7 +455,7 @@ abstract class InstanceMirror implements ObjectMirror {
   /// exception is thrown.
   ///
   /// Required capabilities: [reflectee] does not require any capabilities.
-  get reflectee;
+  Object get reflectee;
 
   /// Whether this mirror is equal to [other].
   ///
@@ -464,9 +464,11 @@ abstract class InstanceMirror implements ObjectMirror {
   /// [:identical(reflectee, other.reflectee):].
   ///
   /// Required capabilities: [operator ==] does not require any capabilities.
+  @override
   bool operator ==(other);
 
   /// Override requested by linter.
+  @override
   int get hashCode;
 
   /// Performs [invocation] on [reflectee].
@@ -487,7 +489,7 @@ abstract class InstanceMirror implements ObjectMirror {
   ///     }
   ///
   /// Required capabilities: [delegate] requires the [delegateCapability].
-  delegate(Invocation invocation);
+  dynamic delegate(Invocation invocation);
 }
 
 /// A [ClosureMirror] reflects a closure.
@@ -576,9 +578,11 @@ abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
   ///    reflected by [other] are the same library in the same isolate.
   ///
   /// Required capabilities: [operator ==] does not require any capabilities.
+  @override
   bool operator ==(other);
 
   /// Override requested by linter.
+  @override
   int get hashCode;
 
   /// Returns a list of the imports and exports in this library;
@@ -970,9 +974,11 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// implies that the reflected class and [other] have equal type arguments.
   ///
   /// Required capabilities: [operator ==] does not require any capabilities.
+  @override
   bool operator ==(other);
 
   /// Override requested by linter.
+  @override
   int get hashCode;
 
   /// Returns whether the class denoted by the receiver is a subclass of the
@@ -1077,9 +1083,11 @@ abstract class TypeVariableMirror extends TypeMirror {
   /// 2. [:simpleName == other.simpleName:] and [:owner == other.owner:].
   ///
   /// Required capabilities: [operator ==] does not require any capabilities.
+  @override
   bool operator ==(other);
 
   /// Override requested by linter.
+  @override
   int get hashCode;
 }
 
@@ -1248,9 +1256,11 @@ abstract class MethodMirror implements DeclarationMirror {
   /// 2. [:simpleName == other.simpleName:] and [:owner == other.owner:].
   ///
   /// Required capabilities: [operator ==] does not require any capabilities.
+  @override
   bool operator ==(other);
 
   /// Override requested by linter.
+  @override
   int get hashCode;
 }
 
@@ -1327,9 +1337,11 @@ abstract class VariableMirror implements DeclarationMirror {
   /// 2. [:simpleName == other.simpleName:] and [:owner == other.owner:].
   ///
   /// Required capabilities: [operator ==] does not require any capabilities.
+  @override
   bool operator ==(other);
 
   /// Override requested by linter.
+  @override
   int get hashCode;
 }
 
@@ -1338,6 +1350,7 @@ abstract class ParameterMirror implements VariableMirror {
   /// A mirror on the type of this parameter.
   ///
   /// Required capabilities: [type] requires a [TypeCapability].
+  @override
   TypeMirror get type;
 
   /// Returns [:true:] if the reflectee is an optional parameter.

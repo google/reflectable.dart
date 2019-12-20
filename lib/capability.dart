@@ -25,9 +25,9 @@
 /// and matching all members with a metadata annotation of that type or a
 /// subtype thereof.
 ///
-/// For example `InstanceInvokeCapability(r"^foo")` will cover all instance
+/// For example `InstanceInvokeCapability(r'^foo')` will cover all instance
 /// members of annotated classes that start with
-/// "foo". `InstanceInvokeMetaCapability(Deprecated)` would cover all instance
+/// 'foo'. `InstanceInvokeMetaCapability(Deprecated)` would cover all instance
 /// members that are marked as `Deprecated`.
 ///
 /// Hint: It is important to realize that the amount of generated code might not
@@ -93,9 +93,9 @@ class InstanceInvokeCapability extends NamePatternCapability {
   const InstanceInvokeCapability(String namePattern) : super(namePattern);
 }
 
-/// Short hand for `InstanceInvokeCapability("")`, meaning the capability to
+/// Short hand for `InstanceInvokeCapability('')`, meaning the capability to
 /// reflect over all instance members.
-const instanceInvokeCapability = InstanceInvokeCapability("");
+const instanceInvokeCapability = InstanceInvokeCapability('');
 
 /// Gives support for reflective invocation of instance members (methods,
 /// getters, and setters) annotated with instances of [metadataType] or a
@@ -112,9 +112,9 @@ class StaticInvokeCapability extends NamePatternCapability
   const StaticInvokeCapability(String namePattern) : super(namePattern);
 }
 
-/// Short hand for `StaticInvokeCapability("")`, meaning the capability to
+/// Short hand for `StaticInvokeCapability('')`, meaning the capability to
 /// reflect over all static members.
-const staticInvokeCapability = StaticInvokeCapability("");
+const staticInvokeCapability = StaticInvokeCapability('');
 
 /// Gives support for reflective invocation of static members (static methods,
 /// getters, and setters) that are annotated with instances of [metadataType]
@@ -131,9 +131,9 @@ class TopLevelInvokeCapability extends NamePatternCapability {
   const TopLevelInvokeCapability(String namePattern) : super(namePattern);
 }
 
-/// Short hand for `TopLevelInvokeCapability("")`, meaning the capability to
+/// Short hand for `TopLevelInvokeCapability('')`, meaning the capability to
 /// reflect over all top-level members.
-const topLevelInvokeCapability = TopLevelInvokeCapability("");
+const topLevelInvokeCapability = TopLevelInvokeCapability('');
 
 /// Gives support for reflective invocation of top-level members (top-level
 /// methods, getters, and setters) that are annotated with instances of
@@ -145,7 +145,7 @@ class TopLevelInvokeMetaCapability extends MetadataQuantifiedCapability {
 /// Gives support for reflective invocation of constructors (of all kinds)
 ///  matching [namePattern] interpreted as a regular expression.
 ///
-/// Constructors with the empty name are considered to have the name "new".
+/// Constructors with the empty name are considered to have the name 'new'.
 ///
 /// Note that this capability implies [TypeCapability], because there is no way
 /// to perform a `newInstance` operation without class mirrors.
@@ -154,9 +154,9 @@ class NewInstanceCapability extends NamePatternCapability
   const NewInstanceCapability(String namePattern) : super(namePattern);
 }
 
-/// Short hand for `const NewInstanceCapability("")`, meaning the capability to
+/// Short hand for `const NewInstanceCapability('')`, meaning the capability to
 /// reflect over all constructors.
-const newInstanceCapability = NewInstanceCapability("");
+const newInstanceCapability = NewInstanceCapability('');
 
 /// Gives support for reflective invocation
 /// of constructors (of all kinds) annotated by instances of [metadataType]
@@ -267,9 +267,9 @@ class InvokingCapability extends NamePatternCapability
   const InvokingCapability(String namePattern) : super(namePattern);
 }
 
-/// Short hand for `InvokingCapability("")`, meaning the capability to
+/// Short hand for `InvokingCapability('')`, meaning the capability to
 /// reflect over all top-level and static members.
-const invokingCapability = InvokingCapability("");
+const invokingCapability = InvokingCapability('');
 
 /// Gives the capabilities of all the capabilities requested by
 /// [InstanceInvokeMetaCapability]([metadata]),
@@ -483,18 +483,31 @@ class _NoSuchCapabilityErrorImpl extends Error
 
   _NoSuchCapabilityErrorImpl(String message) : _message = message;
 
-  toString() => _message;
+  @override
+  String toString() => _message;
 }
 
 enum StringInvocationKind { method, getter, setter, constructor }
 
 class _StringInvocation extends StringInvocation {
-  final String memberName;
-  final List positionalArguments;
-  final Map<Symbol, dynamic> namedArguments;
   final StringInvocationKind kind;
+
+  @override
+  final String memberName;
+
+  @override
+  final List positionalArguments;
+
+  @override
+  final Map<Symbol, dynamic> namedArguments;
+
+  @override
   bool isMethod;
+
+  @override
   bool isGetter;
+
+  @override
   bool isSetter;
 
   _StringInvocation(this.memberName, this.positionalArguments,
@@ -520,40 +533,41 @@ class ReflectableNoSuchMethodError extends Error
       this.kind,
       this.existingArgumentNames);
 
-  get invocation =>
+  StringInvocation get invocation =>
       _StringInvocation(memberName, positionalArguments, namedArguments, kind);
 
-  toString() {
+  @override
+  String toString() {
     String kindName;
     switch (kind) {
       case StringInvocationKind.getter:
-        kindName = "getter";
+        kindName = 'getter';
         break;
       case StringInvocationKind.setter:
-        kindName = "setter";
+        kindName = 'setter';
         break;
       case StringInvocationKind.method:
-        kindName = "method";
+        kindName = 'method';
         break;
       case StringInvocationKind.constructor:
-        kindName = "constructor";
+        kindName = 'constructor';
         break;
       default:
         // Reaching this point is a bug, so we ought to do this:
-        // `throw unreachableError("Unexpected StringInvocationKind value");`
+        // `throw unreachableError('Unexpected StringInvocationKind value');`
         // but it is a bit harsh to raise an exception because of a slightly
         // imprecise diagnostic message, so we use a default instead.
-        kindName = "";
+        kindName = '';
     }
-    String description = "NoSuchCapabilityError: no capability to invoke the "
-        "$kindName '$memberName'\n"
-        "Receiver: $receiver\n"
-        "Arguments: $positionalArguments\n";
+    var description = 'NoSuchCapabilityError: no capability to invoke the '
+        '$kindName "$memberName"\n'
+        'Receiver: $receiver\n'
+        'Arguments: $positionalArguments\n';
     if (namedArguments != null) {
-      description += "Named arguments: $namedArguments\n";
+      description += 'Named arguments: $namedArguments\n';
     }
     if (existingArgumentNames != null) {
-      description += "Existing argument names: $existingArgumentNames\n";
+      description += 'Existing argument names: $existingArgumentNames\n';
     }
     return description;
   }

@@ -1,3 +1,11 @@
+## 2.2.1
+
+* Fix a bug concerned with the ordering of named parameters in a constructor
+  declaration.
+* Update reflectable to use package analyzer version `<0.40.0`.
+* Ensure that generated code is lint free with package pedantic 1.9.0.
+* Make reflectable itself lint free with package pedantic 1.9.0.
+
 ## 2.2.0
 
 * Adjust implementation to satisfy 'pedantic' lints. The generated code
