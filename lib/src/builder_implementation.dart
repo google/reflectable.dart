@@ -3863,8 +3863,8 @@ class BuilderImplementation {
     // users cannot write their own capability classes).
     if (dartType.element is! ClassElement) {
       await _severe(
-          errors.applyTemplate(
-              errors.SUPER_ARGUMENT_NON_CLASS, {'type': dartType.displayName}),
+          errors.applyTemplate(errors.SUPER_ARGUMENT_NON_CLASS,
+              {'type': dartType.getDisplayString()}),
           dartType.element);
       return ec.invokingCapability; // Error default.
     }
