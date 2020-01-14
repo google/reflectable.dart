@@ -1,3 +1,8 @@
+## 2.2.1+1
+
+* Restricting analyzer version to <= 0.39.3, because 0.39.3 contains a
+  breaking change in the parameter list of a constructor.
+
 ## 2.2.1
 
 * Fix a bug concerned with the ordering of named parameters in a constructor
