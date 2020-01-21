@@ -1,3 +1,7 @@
+## 2.2.1+2
+
+* Update reflectable to work with analyzer 0.39.4 and up to 0.40.0.
+
 ## 2.2.1+1
 
 * Restricting analyzer version to <= 0.39.3, because 0.39.3 contains a

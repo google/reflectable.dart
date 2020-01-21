@@ -1856,7 +1856,7 @@ class _ReflectorDomain {
       [Set<String> typeVariablesInScope]) {
     if (type is TypeParameterType &&
         (typeVariablesInScope == null ||
-            !typeVariablesInScope.contains(type.name))) {
+            !typeVariablesInScope.contains(type.getDisplayString()))) {
       return false;
     }
     if (type is InterfaceType) {
@@ -1993,8 +1993,8 @@ class _ReflectorDomain {
       }
     } else if (dartType is TypeParameterType &&
         typeVariablesInScope != null &&
-        typeVariablesInScope.contains(dartType.name)) {
-      return dartType.name;
+        typeVariablesInScope.contains(dartType.getDisplayString())) {
+      return dartType.getDisplayString();
     } else {
       return fail();
     }
@@ -5204,14 +5204,20 @@ class MixinApplication implements ClassElement {
   // service than leaving this method unimplemented. We are then allowed to
   // take one more step, which may be enough.
   @override
-  InterfaceType get type => InterfaceTypeImpl(this);
+  InterfaceType get type => InterfaceTypeImpl(
+      element: this,
+      typeArguments: [],
+      nullabilitySuffix: NullabilitySuffix.star);
 
   @override
   InterfaceType instantiate({
     List<DartType> typeArguments,
     NullabilitySuffix nullabilitySuffix,
   }) =>
-      InterfaceTypeImpl(this);
+      InterfaceTypeImpl(
+          element: this,
+          typeArguments: typeArguments,
+          nullabilitySuffix: nullabilitySuffix);
 
   @override
   InterfaceType get supertype {
