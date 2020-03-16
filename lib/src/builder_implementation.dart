@@ -4106,9 +4106,10 @@ class BuilderImplementation {
 import 'dart:core';
 ${imports.join('\n')}
 
-// ignore_for_file: unnecessary_const
-// ignore_for_file: prefer_collection_literals
 // ignore_for_file: prefer_adjacent_string_concatenation
+// ignore_for_file: prefer_collection_literals
+// ignore_for_file: unnecessary_const
+// ignore_for_file: implementation_imports
 
 // ignore:unused_import
 import 'package:reflectable/mirrors.dart' as m;

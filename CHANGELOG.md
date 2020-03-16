@@ -1,3 +1,7 @@
+## 2.2.2
+
+* Generate code which will not cause `implementation_imports` diagnostics.
+
 ## 2.2.1+2
 
 * Update reflectable to work with analyzer 0.39.4 and up to 0.40.0.
