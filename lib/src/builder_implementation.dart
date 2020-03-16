@@ -1172,6 +1172,8 @@ class _ReflectorDomain {
         }
       }
       return true;
+    } else if (dartType is VoidType) {
+      return true;
     } else if (dartType is TypeParameterType || dartType.isDynamic) {
       return false;
     } else {
@@ -1212,7 +1214,9 @@ class _ReflectorDomain {
         if (allTypeArgumentsSupported) {
           List<int> typesIndices = [];
           for (DartType actualTypeArgument in typeArguments) {
-            if (actualTypeArgument is InterfaceType) {
+            if (actualTypeArgument is InterfaceType ||
+                actualTypeArgument is VoidType ||
+                actualTypeArgument.isDynamic) {
               typesIndices.add(_dynamicTypeCodeIndex(
                   actualTypeArgument,
                   await classes,
@@ -1642,12 +1646,12 @@ class _ReflectorDomain {
         return parameters.indexOf(parameterElement);
       }));
       int reflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
-      if (!element.returnType.isVoid && reflectedTypeRequested) {
+      if (reflectedTypeRequested) {
         reflectedReturnTypeIndex = _typeCodeIndex(element.returnType,
             await classes, reflectedTypes, reflectedTypesOffset, typedefs);
       }
       int dynamicReflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
-      if (!element.returnType.isVoid && reflectedTypeRequested) {
+      if (reflectedTypeRequested) {
         dynamicReflectedReturnTypeIndex = _dynamicTypeCodeIndex(
             element.returnType,
             await classes,
@@ -1784,6 +1788,11 @@ class _ReflectorDomain {
           ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
       return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
+    } else if (dartType is VoidType) {
+      ErasableDartType erasableDartType =
+          ErasableDartType(dartType, erased: false);
+      reflectedTypes.add(ErasableDartType(dartType, erased: false));
+      return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
     } else if (dartType is FunctionType) {
       ErasableDartType erasableDartType =
           ErasableDartType(dartType, erased: false);
@@ -1831,6 +1840,11 @@ class _ReflectorDomain {
       ErasableDartType erasableDartType =
           ErasableDartType(dartType, erased: dartType.typeArguments.isNotEmpty);
       reflectedTypes.add(erasableDartType);
+      return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
+    } else if (dartType is VoidType) {
+      ErasableDartType erasableDartType =
+          ErasableDartType(dartType, erased: false);
+      reflectedTypes.add(ErasableDartType(dartType, erased: false));
       return reflectedTypes.indexOf(erasableDartType) + reflectedTypesOffset;
     } else if (dartType is FunctionType) {
       ErasableDartType erasableDartType =
@@ -1925,6 +1939,8 @@ class _ReflectorDomain {
           return await fail();
         }
       }
+    } else if (dartType is VoidType) {
+      return 'void';
     } else if (dartType is FunctionType) {
       if (dartType is FunctionTypeAliasElement) {
         FunctionTypeAliasElement element = dartType.element;
@@ -2043,6 +2059,8 @@ class _ReflectorDomain {
               "r'${_qualifiedName(classElement)}<$arguments>')";
         }
       }
+    } else if (dartType is VoidType) {
+      return 'const m.TypeValue<void>().type';
     } else if (dartType is FunctionType) {
       // A function type is inherently not private, so we ignore privacy.
       // Note that some function types are _claimed_ to be private in analyzer
@@ -2096,6 +2114,8 @@ class _ReflectorDomain {
       }
       String prefix = importCollector._getPrefix(classElement.library);
       return '$prefix${classElement.name}';
+    } else if (type is VoidType) {
+      return 'const m.TypeValue<void>().type';
     } else {
       // This may be dead code: There is no test which reaches this point,
       // and it is not obvious how we could encounter any [type] which is not

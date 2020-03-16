@@ -1,3 +1,7 @@
+## 2.2.3
+
+* Introduce support for the type `void` as a reified type.
+
 ## 2.2.2
 
 * Generate code which will not cause `implementation_imports` diagnostics.
