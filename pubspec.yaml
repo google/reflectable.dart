@@ -1,5 +1,5 @@
 name: reflectable
-version: 2.2.3
+version: 2.2.4
 description: >
   Reflection support based on code generation, using 'capabilities' to
   specify which operations to support, on which objects.
@@ -17,7 +17,6 @@ dependencies:
   glob: ^1.2.0
   logging: ^0.11.0
   package_config: ^1.1.0
-  package_resolver: ^1.0.0
   path: ^1.6.0
   source_span: ^1.5.0
 dev_dependencies:

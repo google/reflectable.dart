@@ -1,3 +1,7 @@
+## 2.2.4
+
+* Eliminate dependency on package `package_resolver` (which is deprecated).
+
 ## 2.2.3
 
 * Introduce support for the type `void` as a reified type.
