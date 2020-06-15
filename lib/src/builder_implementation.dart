@@ -2658,8 +2658,8 @@ class _LibraryDomain {
   /// behavioral point of view on the class. Also note that this is not
   /// the same semantics as that of `declarations` in [ClassMirror].
   Iterable<ExecutableElement> get _declarations sync* {
-    for (var f in _declaredFunctions) yield f;
-    for (var a in _accessors) yield a;
+    yield* _declaredFunctions;
+    yield* _accessors;
   }
 
   @override
@@ -5033,10 +5033,12 @@ _LibraryDomain _createLibraryDomain(
       _extractDeclaredFunctions(domain._resolver, library, domain._capabilities)
           .toList();
   Iterable<PropertyAccessorElement> accessorsOfLibrary =
-      _extractLibraryAccessors(domain._resolver, library, domain._capabilities);
+      _extractLibraryAccessors(domain._resolver, library, domain._capabilities)
+          .toList();
   Iterable<ParameterElement> declaredParametersOfLibrary =
       _extractDeclaredFunctionParameters(
-          domain._resolver, declaredFunctionsOfLibrary, accessorsOfLibrary);
+              domain._resolver, declaredFunctionsOfLibrary, accessorsOfLibrary)
+          .toList();
   return _LibraryDomain(
       library,
       declaredVariablesOfLibrary,
