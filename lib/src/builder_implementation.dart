@@ -2658,8 +2658,8 @@ class _LibraryDomain {
   /// behavioral point of view on the class. Also note that this is not
   /// the same semantics as that of `declarations` in [ClassMirror].
   Iterable<ExecutableElement> get _declarations sync* {
-    yield* _declaredFunctions;
-    yield* _accessors;
+    for (var f in _declaredFunctions) yield f;
+    for (var a in _accessors) yield a;
   }
 
   @override
@@ -2758,13 +2758,11 @@ class _ClassDomain {
   /// setters, and omits fields; in other words, it provides the
   /// behavioral point of view on the class. Also note that this is not
   /// the same semantics as that of `declarations` in [ClassMirror].
-  Iterable<ExecutableElement> get _declarations {
+  Iterable<ExecutableElement> get _declarations sync* {
     // TODO(sigurdm) feature: Include type variables (if we keep them).
-    return () sync* {
-      yield* _declaredMethods;
-      yield* _accessors;
-      yield* _constructors;
-    }();
+    yield* _declaredMethods;
+    yield* _accessors;
+    yield* _constructors;
   }
 
   /// Finds all instance members by going through the class hierarchy.
