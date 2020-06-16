@@ -923,7 +923,7 @@ class _ReflectorDomain {
       var classesToAdd = <ClassElement>{};
       ClassElement anyClassElement;
       for (ClassElement classElement in await classes) {
-        if (_typeForReflectable(classElement).isObject) {
+        if (_typeForReflectable(classElement).isDartCoreObject) {
           hasObject = true;
           objectClassElement = classElement;
           break;
@@ -944,7 +944,7 @@ class _ReflectorDomain {
         }
       }
       if (mustHaveObject && !hasObject) {
-        while (!_typeForReflectable(anyClassElement).isObject) {
+        while (!_typeForReflectable(anyClassElement).isDartCoreObject) {
           anyClassElement = anyClassElement.supertype.element;
         }
         objectClassElement = anyClassElement;
@@ -1397,7 +1397,7 @@ class _ReflectorDomain {
       // 'dart:mirrors'. Other superclasses use `NO_CAPABILITY_INDEX` to
       // indicate missing support.
       superclassIndex = (classElement is! MixinApplication &&
-              _typeForReflectable(classElement).isObject)
+              _typeForReflectable(classElement).isDartCoreObject)
           ? 'null'
           : ((await classes).contains(superclass))
               ? '${(await classes).indexOf(superclass)}'
@@ -4522,7 +4522,8 @@ Future<String> _extractConstantCode(
             'needed for expression $expression');
         return '';
       }
-      LibraryElement libraryOfConstructor = expression.staticElement.library;
+      LibraryElement libraryOfConstructor =
+          expression.constructorName.staticElement.library;
       if (await _isImportableLibrary(
           libraryOfConstructor, generatedLibraryId, resolver)) {
         importCollector._addLibrary(libraryOfConstructor);

@@ -55,7 +55,7 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
     var builders = <BuilderApplication>[
       applyToRoot(builder, generateFor: InputSet(include: arguments))
     ];
-    var packageGraph = PackageGraph.forThisPackage();
+    var packageGraph = await PackageGraph.forThisPackage();
     var environment = OverrideableEnvironment(IOEnvironment(packageGraph));
     var buildOptions = await BuildOptions.create(
       LogSubscription(environment),
