@@ -1061,11 +1061,11 @@ class _ReflectorDomain {
             typedefs,
             reflectedTypeRequested));
       }
-      Iterable<String> membersList = () sync* {
-        yield* topLevelVariablesList;
-        yield* fieldsList;
-        yield* methodsList;
-      }();
+      Iterable<String> membersList = [
+        ...topLevelVariablesList,
+        ...fieldsList,
+        ...methodsList,
+      ];
       membersCode = _formatAsList('m.DeclarationMirror', membersList);
     }
 
@@ -1354,10 +1354,7 @@ class _ReflectorDomain {
     });
 
     String declarationsCode = _capabilities._impliesDeclarations
-        ? _formatAsConstList('int', () sync* {
-            yield* fieldsIndices;
-            yield* methodsIndices;
-          }())
+        ? _formatAsConstList('int', [...fieldsIndices, ...methodsIndices])
         : 'const <int>[${constants.NO_CAPABILITY_INDEX}]';
 
     // All instance members belong to the behavioral interface, so they
@@ -1490,10 +1487,10 @@ class _ReflectorDomain {
 
     String parameterListShapesCode = 'null';
     if (_capabilities._impliesParameterListShapes) {
-      Iterable<ExecutableElement> membersList = () sync* {
-        yield* classDomain._instanceMembers;
-        yield* classDomain._staticMembers;
-      }();
+      Iterable<ExecutableElement> membersList = [
+        ...classDomain._instanceMembers,
+        ...classDomain._staticMembers,
+      ];
       parameterListShapesCode =
           _formatAsMap(membersList.map((ExecutableElement element) {
         ParameterListShape shape = parameterListShapeOf[element];
@@ -2170,10 +2167,10 @@ class _ReflectorDomain {
 
     String declarationsCode = 'const <int>[${constants.NO_CAPABILITY_INDEX}]';
     if (_capabilities._impliesDeclarations) {
-      Iterable<int> declarationsIndices = () sync* {
-        yield* variableIndices;
-        yield* methodIndices;
-      }();
+      Iterable<int> declarationsIndices = [
+        ...variableIndices,
+        ...methodIndices,
+      ];
       declarationsCode = _formatAsConstList('int', declarationsIndices);
     }
 
@@ -2657,10 +2654,10 @@ class _LibraryDomain {
   /// setters, and omits fields; in other words, it provides the
   /// behavioral point of view on the class. Also note that this is not
   /// the same semantics as that of `declarations` in [ClassMirror].
-  Iterable<ExecutableElement> get _declarations sync* {
-    yield* _declaredFunctions;
-    yield* _accessors;
-  }
+  Iterable<ExecutableElement> get _declarations => [
+        ..._declaredFunctions,
+        ..._accessors,
+      ];
 
   @override
   String toString() {
@@ -2758,12 +2755,12 @@ class _ClassDomain {
   /// setters, and omits fields; in other words, it provides the
   /// behavioral point of view on the class. Also note that this is not
   /// the same semantics as that of `declarations` in [ClassMirror].
-  Iterable<ExecutableElement> get _declarations sync* {
-    // TODO(sigurdm) feature: Include type variables (if we keep them).
-    yield* _declaredMethods;
-    yield* _accessors;
-    yield* _constructors;
-  }
+  Iterable<ExecutableElement> get _declarations => [
+        // TODO(sigurdm) feature: Include type variables (if we keep them).
+        ..._declaredMethods,
+        ..._accessors,
+        ..._constructors,
+      ];
 
   /// Finds all instance members by going through the class hierarchy.
   Iterable<ExecutableElement> get _instanceMembers {
