@@ -1,3 +1,8 @@
+## 2.2.5
+
+* Update dependencies. In particular, analyzer can now be 0.39.10.
+  Handle issue with `sync*` functions, cf. issue #210.
+
 ## 2.2.4
 
 * Eliminate dependency on package `package_resolver` (which is deprecated).
@@ -12,7 +17,7 @@
 
 ## 2.2.1+2
 
-* Update reflectable to work with analyzer 0.39.4 and up to 0.40.0.
+* Update reflectable to work with analyzer 0.39.4.
 
 ## 2.2.1+1
 
