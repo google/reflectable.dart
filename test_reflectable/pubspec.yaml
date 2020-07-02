@@ -1,0 +1,24 @@
+name: test_reflectable
+# This package is not intended to be published
+publish_to: none
+description: >
+  This package contains tests which depend on package reflectable and
+  which are built by the code generation support offered by that
+  package. It is not intended to be useful for other purposes than
+  testing package reflectable.
+environment:
+  sdk: '>=2.3.0 <3.0.0'
+dependencies:
+  build_runner: any
+  glob: ^1.2.0
+  reflectable:
+    git: git://github.com/dart-lang/reflectable.git
+    # git:
+    #   url: git://github.com/dart-lang/reflectable.git
+    #   ref: use_pedantic_jul19
+    # path: ../reflectable
+dev_dependencies:
+  analyzer: '>=0.36.0 <0.40.0'
+  build_test: ^1.2.0
+  pedantic: any
+  test: any

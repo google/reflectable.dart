@@ -1,0 +1,7 @@
+include: package:pedantic/analysis_options.yaml
+linter:
+  rules:
+    - await_only_futures
+analyzer:
+  strong-mode:
+    implicit-casts: true
