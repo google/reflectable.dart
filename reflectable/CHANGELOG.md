@@ -1,3 +1,7 @@
+## 2.2.5+1
+
+* Widen versioning constraint to analyzer to >=0.39.4 <0.40.0
+
 ## 2.2.5
 
 * Update dependencies. In particular, analyzer can now be 0.39.10.
