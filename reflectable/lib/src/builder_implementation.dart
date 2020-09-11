@@ -5428,6 +5428,10 @@ Future<ElementDeclarationResult> _getDeclaration(
 
 Future<ResolvedLibraryResult> _getResolvedLibrary(
     LibraryElement library, Resolver resolver) async {
+  // This is expensive, but seems to be necessary. It is using the workaround
+  // mentioned in dart-lang/build#2634. If we do not fetch a fresh session
+  // then the code generation stops with an `InconsistentAnalysisException`
+  // if there is more than one entry point.
   final freshLibrary = await resolver
       .libraryFor(await resolver.assetIdForElement(library));
   final freshSession = freshLibrary.session;
