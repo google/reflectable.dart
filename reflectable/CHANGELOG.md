@@ -1,3 +1,8 @@
+## 2.2.6
+
+* Resolve #198 (InconsistentAnalysisException), based on workaround from
+  dart-lang/build#2634.
+
 ## 2.2.5
 
 * Update dependencies. In particular, analyzer can now be 0.39.10.
