@@ -1906,7 +1906,8 @@ class _ReflectorDomain {
           'Attempt to generate code for an '
           'unsupported kind of type: $dartType (${dartType.runtimeType}). '
           'Generating `dynamic`.',
-          dartType.element));
+          dartType.element,
+          _resolver));
       return 'dynamic';
     }
 
@@ -2084,7 +2085,8 @@ class _ReflectorDomain {
           'Attempt to generate code for an '
           'unsupported kind of type: $dartType (${dartType.runtimeType}). '
           'Generating `dynamic`.',
-          dartType.element));
+          dartType.element,
+          _resolver));
       return 'dynamic';
     }
   }
@@ -2260,9 +2262,7 @@ class _ReflectorDomain {
       if (_isPlatformLibrary(element.library)) {
         metadataCode = 'const []';
       } else {
-        var resolvedLibrary =
-            await element.session.getResolvedLibraryByElement(element.library);
-        var declaration = resolvedLibrary.getElementDeclaration(element);
+        var declaration = await _getDeclaration(element, _resolver);
         // The declaration may be null because the element is synthetic, and
         // then it has no metadata.
         FormalParameter node = declaration?.node;
@@ -2295,9 +2295,7 @@ class _ReflectorDomain {
     // TODO(eernst): 'dart:*' is not considered valid. To survive, we return
     // '' for all declarations from there. Issue 173.
     if (_isPlatformLibrary(parameterElement.library)) return '';
-    var resolvedLibrary = await parameterElement.session
-        .getResolvedLibraryByElement(parameterElement.library);
-    var declaration = resolvedLibrary.getElementDeclaration(parameterElement);
+    var declaration = await _getDeclaration(parameterElement, _resolver);
     // The declaration can be null because the declaration is synthetic, e.g.,
     // the parameter of an induced setter; they have no default value.
     if (declaration == null) return '';
@@ -3435,7 +3433,7 @@ class BuilderImplementation {
   Future<void> _warn(WarningKind kind, String message, [Element target]) async {
     if (_warningEnabled(kind)) {
       if (target != null) {
-        log.warning(await _formatDiagnosticMessage(message, target));
+        log.warning(await _formatDiagnosticMessage(message, target, _resolver));
       } else {
         log.warning(message);
       }
@@ -3605,9 +3603,7 @@ class BuilderImplementation {
       return false;
     }
 
-    final resolvedLibrary = await constructor.session
-        .getResolvedLibraryByElement(constructor.library);
-    final declaration = resolvedLibrary.getElementDeclaration(constructor);
+    final declaration = await _getDeclaration(constructor, _resolver);
     if (declaration == null) return false;
     ConstructorDeclaration constructorDeclarationNode = declaration.node;
     NodeList<ConstructorInitializer> initializers =
@@ -4029,10 +4025,7 @@ class BuilderImplementation {
       return _Capabilities(<ec.ReflectCapability>[]);
     }
 
-    final resolvedLibrary = await constructorElement.session
-        .getResolvedLibraryByElement(constructorElement.library);
-    final declaration =
-        resolvedLibrary.getElementDeclaration(constructorElement);
+    final declaration = await _getDeclaration(constructorElement, _resolver);
     ConstructorDeclaration constructorDeclarationNode = declaration.node;
     NodeList<ConstructorInitializer> initializers =
         constructorDeclarationNode.initializers;
@@ -4105,7 +4098,7 @@ class BuilderImplementation {
     for (LibraryElement library in world.importCollector._libraries) {
       Uri uri = library == world.entryPointLibrary
           ? Uri.parse(originalEntryPointFilename)
-          : await _getImportUri(library, generatedLibraryId);
+          : await _getImportUri(library, _resolver, generatedLibraryId);
       String prefix = world.importCollector._getPrefix(library);
       if (prefix.isNotEmpty) {
         imports
@@ -4551,9 +4544,7 @@ Future<String> _extractConstantCode(
         Element staticElement = expression.staticElement;
         if (staticElement is PropertyAccessorElement) {
           VariableElement variable = staticElement.variable;
-          var resolvedLibrary = await variable.session
-              .getResolvedLibraryByElement(variable.library);
-          var declaration = resolvedLibrary.getElementDeclaration(variable);
+          var declaration = await _getDeclaration(variable, resolver);
           if (declaration == null || declaration.node == null) {
             await _severe('Cannot handle private identifier $expression');
             return '';
@@ -4743,8 +4734,7 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
   }
 
   NodeList<Annotation> metadata;
-  var resolvedLibrary =
-      await element.session.getResolvedLibraryByElement(element.library);
+  var resolvedLibrary = await _getResolvedLibrary(element.library, resolver);
   if (element is LibraryElement) {
     metadata = _getLibraryMetadata(resolvedLibrary);
   } else {
@@ -5113,7 +5103,7 @@ Future<bool> _isImportable(
 /// Answers true iff [library] can be imported into [generatedLibraryId].
 Future<bool> _isImportableLibrary(LibraryElement library,
     AssetId generatedLibraryId, Resolver resolver) async {
-  Uri importUri = await _getImportUri(library, generatedLibraryId);
+  Uri importUri = await _getImportUri(library, resolver, generatedLibraryId);
   return importUri.scheme != 'dart' || sdkLibraryNames.contains(importUri.path);
 }
 
@@ -5121,14 +5111,15 @@ Future<bool> _isImportableLibrary(LibraryElement library,
 /// [assetId]. This function returns null if we cannot determine a uri for
 /// [assetId]. Note that [assetId] may represent a non-importable file such as
 /// a part.
-Future<String> _assetIdToUri(
-    AssetId assetId, AssetId from, Element messageTarget) async {
+Future<String> _assetIdToUri(AssetId assetId, AssetId from,
+    Element messageTarget, Resolver resolver) async {
   if (!assetId.path.startsWith('lib/')) {
     // Cannot do absolute imports of non lib-based assets.
     if (assetId.package != from.package) {
       await _severe(await _formatDiagnosticMessage(
           'Attempt to generate non-lib import from different package',
-          messageTarget));
+          messageTarget,
+          resolver));
       return null;
     }
     return Uri(
@@ -5141,7 +5132,8 @@ Future<String> _assetIdToUri(
       .toString();
 }
 
-Future<Uri> _getImportUri(LibraryElement lib, AssetId from) async {
+Future<Uri> _getImportUri(
+    LibraryElement lib, Resolver resolver, AssetId from) async {
   var source = lib.source;
   var uri = source.uri;
   if (uri.scheme == 'asset') {
@@ -5151,7 +5143,8 @@ Future<Uri> _getImportUri(LibraryElement lib, AssetId from) async {
     // For instance `asset:reflectable/example/example_lib.dart`.
     String package = uri.pathSegments[0];
     String path = uri.path.substring(package.length + 1);
-    return Uri(path: await _assetIdToUri(AssetId(package, path), from, lib));
+    return Uri(
+        path: await _assetIdToUri(AssetId(package, path), from, lib, resolver));
   }
   if (source is FileSource || source is InSummarySource) {
     return uri;
@@ -5374,9 +5367,10 @@ bool _isPlatformLibrary(LibraryElement libraryElement) =>
 
 /// Adds a severe error to the log, using the source code location of `target`
 /// to identify the relevant location where the error occurs.
-Future<void> _severe(String message, [Element target]) async {
-  if (target != null) {
-    log.severe(await _formatDiagnosticMessage(message, target));
+Future<void> _severe(String message,
+    [Element target, Resolver resolver]) async {
+  if (target != null && resolver != null) {
+    log.severe(await _formatDiagnosticMessage(message, target, resolver));
   } else {
     log.severe(message);
   }
@@ -5384,9 +5378,9 @@ Future<void> _severe(String message, [Element target]) async {
 
 /// Adds a 'fine' message to the log, using the source code location of `target`
 /// to identify the relevant location where the issue occurs.
-Future<void> _fine(String message, [Element target]) async {
-  if (target != null) {
-    log.fine(await _formatDiagnosticMessage(message, target));
+Future<void> _fine(String message, [Element target, Resolver resolver]) async {
+  if (target != null && resolver != null) {
+    log.fine(await _formatDiagnosticMessage(message, target, resolver));
   } else {
     log.fine(message);
   }
@@ -5394,7 +5388,8 @@ Future<void> _fine(String message, [Element target]) async {
 
 /// Returns a string containing the given [message] and identifying the
 /// associated source code location as the location of the given [target].
-Future<String> _formatDiagnosticMessage(String message, Element target) async {
+Future<String> _formatDiagnosticMessage(
+    String message, Element target, Resolver resolver) async {
   Source source = target?.source;
   if (source == null) return message;
   String locationString = '';
@@ -5402,9 +5397,7 @@ Future<String> _formatDiagnosticMessage(String message, Element target) async {
   // TODO(eernst): 'dart:*' is not considered valid. To survive, we return
   // a message with no location info when `element` is from 'dart:*'. Issue 173.
   if (nameOffset != null && !_isPlatformLibrary(target.library)) {
-    final resolvedLibrary =
-        await target.session.getResolvedLibraryByElement(target.library);
-    final targetDeclaration = resolvedLibrary.getElementDeclaration(target);
+    final targetDeclaration = await _getDeclaration(target, resolver);
     final unit = targetDeclaration.resolvedUnit.unit;
     final location = unit.lineInfo?.getLocation(nameOffset);
     if (location != null) {
@@ -5418,9 +5411,25 @@ Future<String> _formatDiagnosticMessage(String message, Element target) async {
 // (as opposed to stdout and stderr which are swallowed). If given, [target]
 // is used to indicate a source code location.
 // ignore:unused_element
-Future<void> _emitMessage(String message, [Element target]) async {
-  var formattedMessage = target != null
-      ? await _formatDiagnosticMessage(message, target)
+Future<void> _emitMessage(String message,
+    [Element target, Resolver resolver]) async {
+  var formattedMessage = (target != null && resolver != null)
+      ? await _formatDiagnosticMessage(message, target, resolver)
       : message;
   log.warning(formattedMessage);
+}
+
+// Return the [ElementDeclarationResult] of the given [element].
+Future<ElementDeclarationResult> _getDeclaration(
+    Element element, Resolver resolver) async {
+  final resolvedLibrary = await _getResolvedLibrary(element.library, resolver);
+  return resolvedLibrary.getElementDeclaration(element);
+}
+
+Future<ResolvedLibraryResult> _getResolvedLibrary(
+    LibraryElement library, Resolver resolver) async {
+  final freshLibrary = await resolver
+      .libraryFor(await resolver.assetIdForElement(library));
+  final freshSession = freshLibrary.session;
+  return await freshSession.getResolvedLibraryByElement(freshLibrary);
 }
