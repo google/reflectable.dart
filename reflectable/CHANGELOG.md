@@ -1,7 +1,8 @@
 ## 2.2.6
 
 * Resolve #198 (InconsistentAnalysisException), based on workaround from
-  dart-lang/build#2634.
+  dart-lang/build#2634. Also widen the analyzer version constraint to
+  include all 0.39 versions published at this point.
 
 ## 2.2.5
 
