@@ -5419,13 +5419,20 @@ Future<void> _emitMessage(String message,
   log.warning(formattedMessage);
 }
 
-// Return the [ElementDeclarationResult] of the given [element].
+/// Return the [ElementDeclarationResult] of the given [element].
+///
+/// Uses the [resolver] to avoid an `InconsistentAnalysisException`.
 Future<ElementDeclarationResult> _getDeclaration(
     Element element, Resolver resolver) async {
   final resolvedLibrary = await _getResolvedLibrary(element.library, resolver);
   return resolvedLibrary.getElementDeclaration(element);
 }
 
+/// Return the [ResolvedLibraryResult] of the given [library].
+///
+/// Uses the [resolver] to resolve the library from the asset ID of the
+/// given [library], thus avoiding an `InconsistentAnalysisException`
+/// which will be thrown if we use `library.session` directly.
 Future<ResolvedLibraryResult> _getResolvedLibrary(
     LibraryElement library, Resolver resolver) async {
   // This is expensive, but seems to be necessary. It is using the workaround
