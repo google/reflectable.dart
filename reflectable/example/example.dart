@@ -22,7 +22,10 @@ class A {
   int argNamed(int x, int y, {int z = 42}) => x + y - z;
   int operator +(x) => 42 + x;
   int operator [](x) => 42 + x;
-  void operator []=(x, v) { f = x + v; }
+  void operator []=(x, v) {
+    f = x + v;
+  }
+
   int operator -() => -f;
   int operator ~() => f + 2;
 
@@ -50,7 +53,7 @@ main() {
   print(instanceMirror.invoke("arg1to3", [40, 2]));
   print(instanceMirror.invoke("arg1to3", [1, -1, 1]));
   print(instanceMirror.invoke("arg1to3", [21, 21, 0, "foo"]));
-  
+
   // Invocations of methods accepting named arguments (printing '42').
   print(instanceMirror.invoke("argNamed", [55, 29]));
   print(instanceMirror.invoke("argNamed", [21, 21], {#z: 0}));
