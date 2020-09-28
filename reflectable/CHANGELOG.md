@@ -1,7 +1,6 @@
 ## 2.2.7
 
-* Update dependencies to support analyzers up to version 0.40.3. Adjust
-  formatting.
+* Update dependencies to support analyzers up to version 0.40.3.
 
 ## 2.2.6
 
