@@ -5439,8 +5439,8 @@ Future<ResolvedLibraryResult> _getResolvedLibrary(
   // mentioned in dart-lang/build#2634. If we do not fetch a fresh session
   // then the code generation stops with an `InconsistentAnalysisException`
   // if there is more than one entry point.
-  final freshLibrary = await resolver
-      .libraryFor(await resolver.assetIdForElement(library));
+  final freshLibrary =
+      await resolver.libraryFor(await resolver.assetIdForElement(library));
   final freshSession = freshLibrary.session;
   return await freshSession.getResolvedLibraryByElement(freshLibrary);
 }
