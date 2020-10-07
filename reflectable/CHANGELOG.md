@@ -1,3 +1,8 @@
+## 2.2.8
+
+* Update dependencies to include analyzer 0.40.4, with 0.40.3 as lower bound
+  because of a breaking change.
+
 ## 2.2.7
 
 * Update dependencies to support analyzers up to version 0.40.3.
