@@ -1,3 +1,7 @@
+## 2.2.7
+
+* Update dependencies to support analyzers up to version 0.40.3.
+
 ## 2.2.6
 
 * Resolve #198 (InconsistentAnalysisException), based on workaround from

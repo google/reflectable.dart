@@ -12,13 +12,9 @@ dependencies:
   build_runner: any
   glob: ^1.2.0
   reflectable:
-    git: git://github.com/dart-lang/reflectable.git
-    # git:
-    #   url: git://github.com/dart-lang/reflectable.git
-    #   ref: use_pedantic_jul19
-    # path: ../reflectable
+    path: ../reflectable
 dev_dependencies:
-  analyzer: '>=0.36.0 <0.40.0'
+  analyzer: '>=0.39.4 <=0.40.3'
   build_test: ^1.2.0
   pedantic: any
   test: any
