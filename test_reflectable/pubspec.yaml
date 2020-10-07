@@ -10,11 +10,11 @@ environment:
   sdk: '>=2.3.0 <3.0.0'
 dependencies:
   build_runner: any
-  glob: ^1.2.0
+  glob: any
   reflectable:
     path: ../reflectable
 dev_dependencies:
-  analyzer: '>=0.39.4 <=0.40.3'
-  build_test: ^1.2.0
+  analyzer: '>=0.40.3 <=0.40.4'
+  build_test: any
   pedantic: any
   test: any
