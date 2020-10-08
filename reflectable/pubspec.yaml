@@ -1,5 +1,5 @@
 name: reflectable
-version: 2.2.7
+version: 2.2.8
 description: >
   Reflection support based on code generation, using 'capabilities' to
   specify which operations to support, on which objects.
@@ -7,7 +7,7 @@ homepage: https://www.github.com/dart-lang/reflectable
 environment:
   sdk: '>=2.3.0 <3.0.0'
 dependencies:
-  analyzer: '>=0.39.4 <=0.40.3'
+  analyzer: '>=0.40.3 <=0.40.4'
   build: ^1.3.0
   build_resolvers: ^1.3.0
   build_config: ^0.4.0

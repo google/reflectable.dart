@@ -1867,7 +1867,8 @@ class _ReflectorDomain {
       [Set<String> typeVariablesInScope]) {
     if (type is TypeParameterType &&
         (typeVariablesInScope == null ||
-            !typeVariablesInScope.contains(type.getDisplayString()))) {
+            !typeVariablesInScope
+                .contains(type.getDisplayString(withNullability: false)))) {
       return false;
     }
     if (type is InterfaceType) {
@@ -2007,8 +2008,9 @@ class _ReflectorDomain {
       }
     } else if (dartType is TypeParameterType &&
         typeVariablesInScope != null &&
-        typeVariablesInScope.contains(dartType.getDisplayString())) {
-      return dartType.getDisplayString();
+        typeVariablesInScope
+            .contains(dartType.getDisplayString(withNullability: false))) {
+      return dartType.getDisplayString(withNullability: false);
     } else {
       return fail();
     }
@@ -3875,7 +3877,7 @@ class BuilderImplementation {
     if (dartType.element is! ClassElement) {
       await _severe(
           errors.applyTemplate(errors.SUPER_ARGUMENT_NON_CLASS,
-              {'type': dartType.getDisplayString()}),
+              {'type': dartType.getDisplayString(withNullability: false)}),
           dartType.element);
       return ec.invokingCapability; // Error default.
     }
@@ -5211,16 +5213,6 @@ class MixinApplication implements ClassElement {
   @override
   bool get isSynthetic => declaredName == null;
 
-  // The `InterfaceTypeImpl` may well call methods on this `MixinApplication`
-  // whose body is unimplemented, but it still provides a slightly better
-  // service than leaving this method unimplemented. We are then allowed to
-  // take one more step, which may be enough.
-  @override
-  InterfaceType get type => InterfaceTypeImpl(
-      element: this,
-      typeArguments: [],
-      nullabilitySuffix: NullabilitySuffix.star);
-
   @override
   InterfaceType instantiate({
     List<DartType> typeArguments,
@@ -5338,8 +5330,7 @@ bool _isPrivateName(String name) {
 
 EvaluationResult _evaluateConstant(
     LibraryElement library, Expression expression) {
-  return ConstantEvaluator(library.source, library.typeProvider)
-      .evaluate(expression);
+  return ConstantEvaluator(library.source, library).evaluate(expression);
 }
 
 /// Returns the result of evaluating [elementAnnotation].
