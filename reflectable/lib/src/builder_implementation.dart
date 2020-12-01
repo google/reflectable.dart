@@ -695,8 +695,8 @@ class _ReflectorDomain {
     if (constructor.library.isDartCore &&
         constructor.enclosingElement.name == 'List' &&
         constructor.name == '') {
-      return '(b) => ([length]) => '
-          'b ? (length == null ? List() : List(length)) : null';
+      return '(bool b) => ([length]) => '
+          'b ? (length == null ? [] : List.filled(length, null)) : null';
     }
 
     String positionals =
@@ -755,7 +755,7 @@ class _ReflectorDomain {
     }
 
     String prefix = importCollector._getPrefix(constructor.library);
-    return ('($doRunArgument) => (${parameterParts.join(', ')}) => '
+    return ('(bool $doRunArgument) => (${parameterParts.join(', ')}) => '
         '$doRunArgument ? $prefix${await _nameOfConstructor(constructor)}'
         '(${argumentParts.join(', ')}) : null');
   }
@@ -2582,7 +2582,7 @@ Future<String> _staticSettingClosure(_ImportCollector importCollector,
   if (_isPrivateName(className)) {
     await _severe('Cannot access private name $className', classElement);
   }
-  return "r'$setterName': (value) => $prefix$className.$name = value";
+  return "r'$setterName': (dynamic value) => $prefix$className.$name = value";
 }
 
 // Auxiliary function used by `_generateCode`.
@@ -2606,7 +2606,7 @@ Future<String> _topLevelSettingClosure(_ImportCollector importCollector,
   if (_isPrivateName(name)) {
     await _severe('Cannot access private name $name', library);
   }
-  return "r'$setterName': (value) => $prefix$name = value";
+  return "r'$setterName': (dynamic value) => $prefix$name = value";
 }
 
 // Auxiliary function used by `_typeCodeIndex`.
