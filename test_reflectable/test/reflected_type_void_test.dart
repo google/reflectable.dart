@@ -6,6 +6,8 @@
 // File used to test reflectable code generation.
 // Uses `reflectedType` to access a `Type` value reifying `void`.
 
+// ignore_for_file: omit_local_variable_types
+
 library test_reflectable.test.reflect_type_void;
 
 import 'package:reflectable/reflectable.dart';
