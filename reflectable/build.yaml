@@ -8,8 +8,6 @@ builders:
     build_to: source
     defaults:
       generate_for:
-        exclude:
-        - lib/**.dart
         include:
         - benchmark/**.dart
         - bin/**.dart
