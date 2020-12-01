@@ -1,6 +1,7 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
+// @dart=2.9
 
 // This file illustrates a peculiar situation: The `main` function which
 // defines the behavior of the program 'exported_main_test.dart' is not
