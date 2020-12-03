@@ -5429,7 +5429,11 @@ Future<ResolvedLibraryResult> _getResolvedLibrary(
   // This is expensive, but seems to be necessary. It is using the workaround
   // mentioned in dart-lang/build#2634. If we do not fetch a fresh session
   // then the code generation stops with an `InconsistentAnalysisException`
-  // if there is more than one entry point.
+  // if there is more than one entry point. This workaround turned out to be
+  // insufficient with analyzer 0.40.5, and the while loop was proposed as a
+  // workaround to the workaround in
+  //   https://github.com/google/built_value.dart/issues/
+  //   941#issuecomment-731077220.
   var attempts = 0;
   while (true) {
     try {
@@ -5440,7 +5444,8 @@ Future<ResolvedLibraryResult> _getResolvedLibrary(
     } catch (_) {
       ++attempts;
       if (attempts == 10) {
-        log.severe('Analysis session did not stabilize after ten tries!');
+        log.severe('Internal error: Analysis session '
+          'did not stabilize after ten attempts!');
         return null;
       }
     }
