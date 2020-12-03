@@ -2,8 +2,8 @@
 
 * Change `build.yaml` to ensure that 'lib/main.dart' will again be considered
   an entry point for code generation.
-* Update dependencies to include analyzer 0.40.5, 0.40.6.
-* Re-fixing issue #198, cf. google/built_value.dart issue #941.
+* Update dependencies to include analyzer 0.40.5, 0.40.6, 0.41.0, 0.41.1.
+* Re-fixing issue #198, cf. `google/built_value.dart` issue #941.
 
 ## 2.2.8
 
