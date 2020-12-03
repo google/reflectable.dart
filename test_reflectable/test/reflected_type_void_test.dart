@@ -1,9 +1,12 @@
 // Copyright (c) 2020, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
+// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses `reflectedType` to access a `Type` value reifying `void`.
+
+// ignore_for_file: omit_local_variable_types
 
 library test_reflectable.test.reflect_type_void;
 

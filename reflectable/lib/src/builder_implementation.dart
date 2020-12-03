@@ -695,8 +695,8 @@ class _ReflectorDomain {
     if (constructor.library.isDartCore &&
         constructor.enclosingElement.name == 'List' &&
         constructor.name == '') {
-      return '(b) => ([length]) => '
-          'b ? (length == null ? List() : List(length)) : null';
+      return '(bool b) => ([length]) => '
+          'b ? (length == null ? [] : List.filled(length, null)) : null';
     }
 
     String positionals =
@@ -755,7 +755,7 @@ class _ReflectorDomain {
     }
 
     String prefix = importCollector._getPrefix(constructor.library);
-    return ('($doRunArgument) => (${parameterParts.join(', ')}) => '
+    return ('(bool $doRunArgument) => (${parameterParts.join(', ')}) => '
         '$doRunArgument ? $prefix${await _nameOfConstructor(constructor)}'
         '(${argumentParts.join(', ')}) : null');
   }
@@ -2582,7 +2582,7 @@ Future<String> _staticSettingClosure(_ImportCollector importCollector,
   if (_isPrivateName(className)) {
     await _severe('Cannot access private name $className', classElement);
   }
-  return "r'$setterName': (value) => $prefix$className.$name = value";
+  return "r'$setterName': (dynamic value) => $prefix$className.$name = value";
 }
 
 // Auxiliary function used by `_generateCode`.
@@ -2606,7 +2606,7 @@ Future<String> _topLevelSettingClosure(_ImportCollector importCollector,
   if (_isPrivateName(name)) {
     await _severe('Cannot access private name $name', library);
   }
-  return "r'$setterName': (value) => $prefix$name = value";
+  return "r'$setterName': (dynamic value) => $prefix$name = value";
 }
 
 // Auxiliary function used by `_typeCodeIndex`.
@@ -5429,9 +5429,25 @@ Future<ResolvedLibraryResult> _getResolvedLibrary(
   // This is expensive, but seems to be necessary. It is using the workaround
   // mentioned in dart-lang/build#2634. If we do not fetch a fresh session
   // then the code generation stops with an `InconsistentAnalysisException`
-  // if there is more than one entry point.
-  final freshLibrary =
-      await resolver.libraryFor(await resolver.assetIdForElement(library));
-  final freshSession = freshLibrary.session;
-  return await freshSession.getResolvedLibraryByElement(freshLibrary);
+  // if there is more than one entry point. This workaround turned out to be
+  // insufficient with analyzer 0.40.5, and the while loop was proposed as a
+  // workaround to the workaround in
+  //   https://github.com/google/built_value.dart/issues/
+  //   941#issuecomment-731077220.
+  var attempts = 0;
+  while (true) {
+    try {
+      final freshLibrary =
+          await resolver.libraryFor(await resolver.assetIdForElement(library));
+      final freshSession = freshLibrary.session;
+      return await freshSession.getResolvedLibraryByElement(freshLibrary);
+    } catch (_) {
+      ++attempts;
+      if (attempts == 10) {
+        log.severe('Internal error: Analysis session '
+          'did not stabilize after ten attempts!');
+        return null;
+      }
+    }
+  }
 }
