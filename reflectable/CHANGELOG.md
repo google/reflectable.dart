@@ -1,3 +1,10 @@
+## 3.0.0-nullsafety.2
+
+* Change code generation to use the `Resolver.astNodeFor` method, eliminating
+  the `InconsistentAnalysisException` workaround in most cases.
+* Prevent unnecessary code generation for inputs named `*.vm_test.*`, 
+  `*.node_test.*`, or `*.browser_test.*`, to reduce code generation time.
+
 ## 3.0.0-nullsafety.1
 
 * Enable analyzer version 0.41.2.
