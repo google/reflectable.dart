@@ -8,6 +8,7 @@
 PACKAGES=../.packages
 OPTIONS=
 TEST_DIR=../test
+TEST_LEGACY_DIR=../test_2
 
 all: clean get build check test
 
@@ -32,7 +33,7 @@ upgrade:
 	( cd ..; pub upgrade )
 
 check:
-	( cd ..; dartanalyzer $(OPTIONS) {lib,test}/*.dart )
+	( cd ..; dartanalyzer $(OPTIONS) {lib,test,test_2}/*.dart )
 
 measure_output: build
 	@./measure_output --include-js --include-source-tree --include-unminified
@@ -41,10 +42,10 @@ build:
 	( cd ..; pub run build_runner build )
 
 test:
-	( cd ..; pub run build_runner test )
+	( cd ..; pub run build_runner test test_2 )
 
 clean:
 	( rm -rf ../.dart_tool )
-	( rm -f ../test/*.reflectable.dart )
+	( rm -f ../test/*.reflectable.dart ../test_2/*.reflectable.dart )
 
 .PHONY: all g u c b t ft get upgrade check measure_output build test clean

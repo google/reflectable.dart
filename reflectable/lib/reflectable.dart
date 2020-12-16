@@ -4,8 +4,6 @@
 
 // This is the main library in package reflectable.
 
-// TODO(eernst) doc: Write "library dartdoc" for this library.
-
 library reflectable.reflectable;
 
 import 'capability.dart';
