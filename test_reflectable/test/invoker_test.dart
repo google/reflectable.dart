@@ -34,7 +34,7 @@ void main() {
 
   var instance1 = A(0);
   var instance2 = A(1);
-  ClassMirror classMirror = myReflectable.reflectType(A);
+  ClassMirror classMirror = myReflectable.reflectType(A) as ClassMirror;
   test('invoker with no arguments', () {
     Function arg0Invoker = classMirror.invoker('arg0');
     expect(arg0Invoker(instance1)(), 42);

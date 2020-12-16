@@ -41,10 +41,10 @@ void main() {
 
   LibraryMirror libraryMirror =
       reflector.findLibrary('test_reflectable.test.class_property_test');
-  ClassMirror aMirror = libraryMirror.declarations['A'];
-  ClassMirror bMirror = libraryMirror.declarations['_B'];
-  ClassMirror cMirror = libraryMirror.declarations['C'];
-  ClassMirror dMirror = libraryMirror.declarations['D'];
+  ClassMirror aMirror = libraryMirror.declarations['A'] as ClassMirror;
+  ClassMirror bMirror = libraryMirror.declarations['_B'] as ClassMirror;
+  ClassMirror cMirror = libraryMirror.declarations['C'] as ClassMirror;
+  ClassMirror dMirror = libraryMirror.declarations['D'] as ClassMirror;
   D<int> dOfInt = D<int>();
   InstanceMirror dOfIntInstanceMirror = reflector.reflect(dOfInt);
   ClassMirror dOfIntMirror = dOfIntInstanceMirror.type;

@@ -21,7 +21,7 @@ const reflector = Reflector();
 
 @reflector
 class C<X> {
-  C<C<X>> get boom => null;
+  C<C<X>>? get boom => null;
 }
 
 class Typer<X> { Type get type => X; }

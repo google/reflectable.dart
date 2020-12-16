@@ -52,8 +52,8 @@ void main() {
   initializeReflectable();
 
   const reflector = Reflector();
-  ClassMirror aMirror = reflector.reflectType(A);
-  ClassMirror bMirror = reflector.reflectType(B);
+  ClassMirror aMirror = reflector.reflectType(A) as ClassMirror;
+  ClassMirror bMirror = reflector.reflectType(B) as ClassMirror;
   Map<String, DeclarationMirror> declarationsA = aMirror.declarations;
   Map<String, DeclarationMirror> declarationsB = bMirror.declarations;
 
@@ -171,7 +171,7 @@ void main() {
   });
 
   test('instanceMethods', () {
-    ClassMirror aMirror = reflector.reflectType(A);
+    ClassMirror aMirror = reflector.reflectType(A) as ClassMirror;
     Map<String, DeclarationMirror> instanceMembersA = aMirror.instanceMembers;
     expect(
         instanceMembersA.values.map((x) => x.simpleName),
@@ -186,7 +186,7 @@ void main() {
           'setter1=',
           '+',
       });
-    ClassMirror bMirror = reflector.reflectType(B);
+    ClassMirror bMirror = reflector.reflectType(B) as ClassMirror;
     Map<String, DeclarationMirror> instanceMembersB = bMirror.instanceMembers;
     expect(
         instanceMembersB.values.map((x) => x.simpleName),

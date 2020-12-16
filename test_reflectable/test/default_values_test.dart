@@ -21,7 +21,7 @@ const myReflectable = MyReflectable();
 const String globalConstant = '20';
 
 class B {
-  const B({int named});
+  const B({required int named});
 }
 
 @myReflectable
@@ -47,7 +47,7 @@ class A {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = myReflectable.reflectType(A);
+  ClassMirror classMirror = myReflectable.reflectType(A) as ClassMirror;
   test('optional argument default value, imported local constant', () {
     expect((classMirror.newInstance('optional', [], {}) as A).f, 42);
   });

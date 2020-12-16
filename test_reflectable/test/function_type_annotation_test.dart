@@ -30,7 +30,7 @@ Int2IntFunc int2int = (int x) => x;
 class C {
   Int2IntFunc get getter => int2int;
   set setter(Int2IntFunc int2int) {}
-  void method(int Function(int) noNameType, {Int2IntFunc int2int}) {}
+  void method(int Function(int) noNameType, {required Int2IntFunc int2int}) {}
 
   void inlineTypes(
     int Function() f1,
@@ -67,14 +67,15 @@ void main() {
 
   LibraryMirror libraryMirror = reflector
       .findLibrary('test_reflectable.test.function_type_annotation_test');
-  VariableMirror variableMirror = libraryMirror.declarations['int2int'];
-  ClassMirror classMirror = reflector.reflectType(C);
-  MethodMirror getterMirror = classMirror.declarations['getter'];
-  MethodMirror setterMirror = classMirror.declarations['setter='];
-  MethodMirror methodMirror = classMirror.declarations['method'];
-  ParameterMirror setterArgumentMirror = setterMirror.parameters[0];
-  ParameterMirror methodArgument0Mirror = methodMirror.parameters[0];
-  ParameterMirror methodArgument1Mirror = methodMirror.parameters[1];
+  VariableMirror variableMirror = libraryMirror.declarations['int2int']
+      as VariableMirror;
+  ClassMirror classMirror = reflector.reflectType(C) as ClassMirror;
+  MethodMirror getterMirror = classMirror.declarations['getter'] as MethodMirror;
+  MethodMirror setterMirror = classMirror.declarations['setter='] as MethodMirror;
+  MethodMirror methodMirror = classMirror.declarations['method'] as MethodMirror;
+  ParameterMirror setterArgumentMirror = setterMirror.parameters[0] as ParameterMirror;
+  ParameterMirror methodArgument0Mirror = methodMirror.parameters[0] as ParameterMirror;
+  ParameterMirror methodArgument1Mirror = methodMirror.parameters[1] as ParameterMirror;
   Type int2intType = const TypeValue<int Function(int)>().type;
 
   test('Using a function type as an annotation', () {
@@ -102,7 +103,7 @@ void main() {
   });
 
   MethodMirror inlineTypesMirror =
-      classMirror.declarations['inlineTypes'];
+      classMirror.declarations['inlineTypes'] as MethodMirror;
   List<ParameterMirror> parameterMirrors = inlineTypesMirror.parameters;
   List<Type> expectedTypes = [
     TypeValue<int Function()>().type,

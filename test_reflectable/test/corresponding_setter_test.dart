@@ -172,7 +172,8 @@ void testStatic(Reflectable mirrorSystem, Type reflectee, void Function() classR
     {bool broad = false}) {
   test('Static invocation: ${description[mirrorSystem.runtimeType]}', () {
     classResetter();
-    ClassMirror classMirror = mirrorSystem.reflectType(reflectee);
+    ClassMirror classMirror =
+        mirrorSystem.reflectType(reflectee) as ClassMirror;
     if (broad) {
       expect(classMirror.invokeGetter('foo'), 44);
     } else {

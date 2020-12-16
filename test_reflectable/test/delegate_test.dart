@@ -42,10 +42,10 @@ class A {
   @D()
   int arg1(int x) => 101;
 
-  int arg2to4(A x, int y, [Reflector z, w]) => 102;
+  int arg2to4(A x, int y, [Reflector? z, w]) => 102;
 
   @D()
-  int argNamed(int x, y, {num z}) => 103;
+  int argNamed(int x, y, {num? z}) => 103;
 
   int operator +(int x) => 104;
 

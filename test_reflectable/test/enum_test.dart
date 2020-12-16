@@ -27,7 +27,7 @@ const serializable = Serializable();
 enum Color { BLUE, RED, GREEN }
 
 class JsonObjectStub {
-  Color color;
+  late Color color;
   JsonObjectStub(String jsonStr) {
     if (jsonStr.contains('0')) {
       color = Color.BLUE;
@@ -46,7 +46,7 @@ dynamic fromJson(String jsonStr, Type clazz) {
 
 @serializable
 class ObjectWithEnum {
-  Color color;
+  late Color color;
 }
 
 void main() {
