@@ -52,7 +52,7 @@ void testPrivacyViolation(PublicClass object, String description,
       classMirror.declarations.values.forEach((DeclarationMirror declaration) {
         expect(declaration is MethodMirror, true);
         MethodMirror method =
-            declaration; // Declaration needed, no type propagation.
+            declaration as MethodMirror; // Variable needed, no promotion.
         expect(method.reflectedReturnType, int);
         expect(method.parameters.length, 0);
         expect(
@@ -79,7 +79,7 @@ void main() {
     Map<Uri, LibraryMirror> libraries = privacyReflectable.libraries;
     Uri libraryUri = libraries.keys.firstWhere(
         (Uri uri) => uri.toString().contains('private_class_library'));
-    LibraryMirror library = libraries[libraryUri];
+    LibraryMirror library = libraries[libraryUri]!;
     expect(library.declarations.keys, libraryClassNames);
   });
 

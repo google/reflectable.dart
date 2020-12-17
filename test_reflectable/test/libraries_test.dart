@@ -73,23 +73,23 @@ void main() {
     expect(libraryMirror.simpleName, 'test_reflectable.test.libraries_test');
     expect(libraryMirror.invoke('myFunction', []), 'hello');
     expect(
-        Function.apply(libraryMirror.invokeGetter('myFunction'), []), 'hello');
+        Function.apply(libraryMirror.invokeGetter('myFunction') as Function, []), 'hello');
     expect(
         () => libraryMirror.invokeGetter('getter'), throwsReflectableNoMethod);
-    MethodMirror myFunctionMirror = libraryMirror.declarations['myFunction'];
+    MethodMirror myFunctionMirror = libraryMirror.declarations['myFunction'] as MethodMirror;
     expect(myFunctionMirror.owner, libraryMirror);
   });
   test('owner, setter, TopLevelMetaInvokeCapability', () {
-    LibraryMirror libraryMirror = reflector2.reflectType(C).owner;
+    LibraryMirror libraryMirror = reflector2.reflectType(C).owner as LibraryMirror;
     expect(libraryMirror.qualifiedName, 'test_reflectable.test.libraries_test');
     expect(libraryMirror.simpleName, 'test_reflectable.test.libraries_test');
     expect(libraryMirror.invokeSetter('setter=', 11), 11);
     expect(p, 12);
     expect(libraryMirror.invokeGetter('getter'), '10');
-    VariableMirror pMirror = libraryMirror.declarations['p'];
-    VariableMirror qMirror = libraryMirror.declarations['q'];
-    MethodMirror getterMirror = libraryMirror.declarations['getter'];
-    MethodMirror setterMirror = libraryMirror.declarations['setter='];
+    VariableMirror pMirror = libraryMirror.declarations['p'] as VariableMirror;
+    VariableMirror qMirror = libraryMirror.declarations['q'] as VariableMirror;
+    MethodMirror getterMirror = libraryMirror.declarations['getter'] as MethodMirror;
+    MethodMirror setterMirror = libraryMirror.declarations['setter='] as MethodMirror;
     expect(pMirror.owner, libraryMirror);
     expect(pMirror.hasReflectedType, true);
     expect(pMirror.reflectedType, int);

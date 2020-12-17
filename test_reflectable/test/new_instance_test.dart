@@ -37,10 +37,10 @@ class A {
   A.positional(int x) : f = x - 42;
 
   @C()
-  A.optional(int x, int y, [int z = 1, w]): f = x + y + z * 42 + (w ?? 10);
+  A.optional(int x, int y, [int z = 1, w]): f = x + y + z * 42 + ((w ?? 10) as int);
 
   @C()
-  A.argNamed(int x, int y, {int z = 42, int p}): f = x + y - z - (p ?? 10);
+  A.argNamed(int x, int y, {int z = 42, int? p}): f = x + y - z - (p ?? 10);
 
   // Note that the parameter name `b` is used here in order to test the
   // handling of name clashes for `isCheckCode`, so please do not change it.
@@ -55,7 +55,7 @@ class A {
 void performTests(String message, Reflectable reflector) {
   initializeReflectable();
 
-  ClassMirror classMirror = reflector.reflectType(A);
+  ClassMirror classMirror = reflector.reflectType(A) as ClassMirror;
   test('$message: newInstance unnamed constructor, no arguments', () {
     expect((classMirror.newInstance('', []) as A).f, 42);
   });
@@ -98,11 +98,11 @@ void main() {
   performTests('metaReflector', metaReflector);
 
   test('newInstance named constructor, no metadata, none required', () {
-    ClassMirror classMirror = reflector.reflectType(A);
+    ClassMirror classMirror = reflector.reflectType(A) as ClassMirror;
     expect((classMirror.newInstance('noMeta', [0]) as A).f, 42);
   });
   test('newInstance named constructor, no metadata, rejected', () {
-    ClassMirror classMirror = metaReflector.reflectType(A);
+    ClassMirror classMirror = metaReflector.reflectType(A) as ClassMirror;
     expect(() => classMirror.newInstance('noMeta', [0]),
         throwsReflectableNoMethod);
   });

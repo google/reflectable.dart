@@ -23,8 +23,8 @@ const reflector = Reflector();
 class A {
   int arg0() => 100;
   int arg1(int x) => 101;
-  int arg2to4(A x, int y, [Reflector z, w]) => 102;
-  int argNamed(int x, y, {num z}) => 103;
+  int arg2to4(A x, int y, [Reflector? z, w]) => 102;
+  int argNamed(int x, y, {num? z}) => 103;
   int operator [](int x) => 104;
   void operator []=(int x, v) {}
 

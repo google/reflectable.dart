@@ -28,12 +28,12 @@ class Provider<X> {}
 
 @reflector
 class MyService {
-  Provider<SecurityService> securityService;
+  late Provider<SecurityService> securityService;
 }
 
 @reflector
 class MyGenericService<X extends SecurityService> {
-  Provider<X> genericSecurityService;
+  late Provider<X> genericSecurityService;
 }
 
 Matcher throwsUnimplemented = throwsA(isUnimplementedError);
@@ -43,21 +43,21 @@ void main() {
   initializeReflectable();
 
   test('get type arguments', () {
-    ClassMirror myServiceMirror = reflector.reflectType(MyService);
+    ClassMirror myServiceMirror = reflector.reflectType(MyService) as ClassMirror;
     Map<String, DeclarationMirror> declarations = myServiceMirror.declarations;
-    VariableMirror securityServiceMirror = declarations['securityService'];
-    ClassMirror typeAnnotationMirror = securityServiceMirror.type;
+    VariableMirror securityServiceMirror = declarations['securityService'] as VariableMirror;
+    ClassMirror typeAnnotationMirror = securityServiceMirror.type as ClassMirror;
     expect(typeAnnotationMirror.reflectedTypeArguments[0], SecurityService);
     expect(typeAnnotationMirror.typeArguments[0].reflectedType,
         SecurityService);
   });
 
   test('get type arguments in unimplemented case', () {
-    ClassMirror myServiceMirror = reflector.reflectType(MyGenericService);
+    ClassMirror myServiceMirror = reflector.reflectType(MyGenericService) as ClassMirror;
     Map<String, DeclarationMirror> declarations = myServiceMirror.declarations;
     VariableMirror securityServiceMirror =
-        declarations['genericSecurityService'];
-    ClassMirror typeAnnotationMirror = securityServiceMirror.type;
+        declarations['genericSecurityService'] as VariableMirror;
+    ClassMirror typeAnnotationMirror = securityServiceMirror.type as ClassMirror;
     expect(() => typeAnnotationMirror.reflectedTypeArguments,
         throwsUnimplemented);
     expect(() => typeAnnotationMirror.typeArguments, throwsUnimplemented);

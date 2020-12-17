@@ -36,14 +36,14 @@ class Proxy implements A {
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
-    return Function.apply(methodMap[invocation.memberName](forwardee),
+    return Function.apply(methodMap[invocation.memberName]!(forwardee),
         invocation.positionalArguments, invocation.namedArguments);
   }
 }
 
 Map<Symbol, Function> createMethodMap(Type T) {
   var methodMapForT = <Symbol, Function>{};
-  ClassMirror classMirror = proxyReflectable.reflectType(T);
+  ClassMirror classMirror = proxyReflectable.reflectType(T) as ClassMirror;
   Map<String, DeclarationMirror> declarations = classMirror.declarations;
 
   for (String name in declarations.keys) {

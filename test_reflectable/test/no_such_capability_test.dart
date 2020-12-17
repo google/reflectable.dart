@@ -31,7 +31,7 @@ void main() {
     r.InstanceMirror instanceMirror = myReflectable.reflect(A());
     expect(() => instanceMirror.invoke('foo', []),
         throwsA(const TypeMatcher<r.ReflectableNoSuchMethodError>()));
-    r.ClassMirror classMirror = myReflectable.reflectType(A);
+    r.ClassMirror classMirror = myReflectable.reflectType(A) as r.ClassMirror;
     expect(() => classMirror.invoke('foo', []),
         throwsA(const TypeMatcher<r.ReflectableNoSuchMethodError>()));
     // When we have the capability we get the NoSuchMethodError, not

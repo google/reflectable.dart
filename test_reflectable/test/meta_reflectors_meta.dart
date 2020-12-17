@@ -32,7 +32,7 @@ class ScopeMetaReflector extends Reflectable {
     for (LibraryMirror library in libraries.values) {
       for (DeclarationMirror declaration in library.declarations.values) {
         if (declaration is MethodMirror) {
-          result.addAll(library.invoke(declaration.simpleName, [scope]));
+          result.addAll(library.invoke(declaration.simpleName, [scope]) as Iterable<Reflectable>);
         }
       }
     }

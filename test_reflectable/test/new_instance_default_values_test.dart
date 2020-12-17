@@ -37,42 +37,42 @@ class A {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = myReflectable.reflectType(A);
+  ClassMirror classMirror = myReflectable.reflectType(A) as ClassMirror;
   A a;
 
   test('positional argument default, local constant', () {
-    a = classMirror.newInstance('optional', [], {});
+    a = classMirror.newInstance('optional', [], {}) as A;
     expect(a.f, 10);
   });
   test('positional argument default, global constant', () {
-    a = classMirror.newInstance('optional', [], {});
+    a = classMirror.newInstance('optional', [], {}) as A;
     expect(a.g, '20');
   });
 
   test('named argument default, local constant', () {
-    a = classMirror.newInstance('namedOptional', [], {});
+    a = classMirror.newInstance('namedOptional', [], {}) as A;
     expect(a.f, 10);
   });
   test('named argument default, global constant', () {
-    a = classMirror.newInstance('namedOptional', [], {});
+    a = classMirror.newInstance('namedOptional', [], {}) as A;
     expect(a.g, '20');
   });
 
   test('initializing formal default, local constant', () {
-    a = classMirror.newInstance('initializingFormal', [], {});
+    a = classMirror.newInstance('initializingFormal', [], {}) as A;
     expect(a.f, 10);
   });
   test('initializing formal default, global constant', () {
-    a = classMirror.newInstance('initializingFormal', [], {});
+    a = classMirror.newInstance('initializingFormal', [], {}) as A;
     expect(a.g, '20');
   });
 
   test('named initializing formal default, local constant', () {
-    a = classMirror.newInstance('namedInitializingFormal', [], {});
+    a = classMirror.newInstance('namedInitializingFormal', [], {}) as A;
     expect(a.f, 10);
   });
   test('named initializing formal default, global constant', () {
-    a = classMirror.newInstance('namedInitializingFormal', [], {});
+    a = classMirror.newInstance('namedInitializingFormal', [], {}) as A;
     expect(a.g, '20');
   });
 }

@@ -30,7 +30,7 @@ class MetaReflector extends Reflectable {
     var result = <Reflectable>{};
     annotatedClasses.forEach((ClassMirror classMirror) {
       if (classMirror.isAbstract) return;
-      Reflectable reflector = classMirror.newInstance('', []);
+      Reflectable reflector = classMirror.newInstance('', []) as Reflectable;
       if (reflector is AllReflectorsCapable) {
         result.add(reflector.self);
       }
@@ -156,13 +156,13 @@ class D = A with M1;
 
 void testReflector(Reflectable reflector, String desc) {
   test('Mixin, $desc', () {
-    ClassMirror aMirror = reflector.reflectType(A);
-    ClassMirror bMirror = reflector.reflectType(B);
-    ClassMirror cMirror = reflector.reflectType(C);
-    ClassMirror dMirror = reflector.reflectType(D);
-    ClassMirror m1Mirror = reflector.reflectType(M1);
-    ClassMirror m2Mirror = reflector.reflectType(M2);
-    ClassMirror m3Mirror = reflector.reflectType(M3);
+    ClassMirror aMirror = reflector.reflectType(A) as ClassMirror;
+    ClassMirror bMirror = reflector.reflectType(B) as ClassMirror;
+    ClassMirror cMirror = reflector.reflectType(C) as ClassMirror;
+    ClassMirror dMirror = reflector.reflectType(D) as ClassMirror;
+    ClassMirror m1Mirror = reflector.reflectType(M1) as ClassMirror;
+    ClassMirror m2Mirror = reflector.reflectType(M2) as ClassMirror;
+    ClassMirror m3Mirror = reflector.reflectType(M3) as ClassMirror;
     expect(aMirror.mixin, aMirror);
     expect(bMirror.mixin, bMirror);
     expect(cMirror.mixin, cMirror);
@@ -175,8 +175,8 @@ void testReflector(Reflectable reflector, String desc) {
     expect(cMirror.superclass.superclass.superclass, bMirror);
     expect(dMirror.mixin, m1Mirror);
     expect(dMirror.superclass.mixin, aMirror);
-    expect(bMirror.superclass.declarations['foo'].owner, m1Mirror);
-    expect(bMirror.superclass.declarations['field'].owner, m1Mirror);
+    expect(bMirror.superclass.declarations['foo']!.owner, m1Mirror);
+    expect(bMirror.superclass.declarations['field']!.owner, m1Mirror);
     expect(bMirror.superclass.declarations['staticBar'], null);
     expect(bMirror.superclass.hasReflectedType, true);
     expect(bMirror.superclass.reflectedType, const TypeMatcher<Type>());
@@ -225,12 +225,12 @@ void main() {
   test('MetaReflector, select by name', () {
     var reflector2 = allReflectors
         .firstWhere((Reflectable reflector) => '$reflector'.contains('2'));
-    ClassMirror bMirror = reflector2.reflectType(B);
-    ClassMirror cMirror = reflector2.reflectType(C);
-    ClassMirror dMirror = reflector2.reflectType(D);
-    ClassMirror m1Mirror = reflector2.reflectType(M1);
-    ClassMirror m2Mirror = reflector2.reflectType(M2);
-    ClassMirror m3Mirror = reflector2.reflectType(M3);
+    ClassMirror bMirror = reflector2.reflectType(B) as ClassMirror;
+    ClassMirror cMirror = reflector2.reflectType(C) as ClassMirror;
+    ClassMirror dMirror = reflector2.reflectType(D) as ClassMirror;
+    ClassMirror m1Mirror = reflector2.reflectType(M1) as ClassMirror;
+    ClassMirror m2Mirror = reflector2.reflectType(M2) as ClassMirror;
+    ClassMirror m3Mirror = reflector2.reflectType(M3) as ClassMirror;
     expect(bMirror.mixin, bMirror);
     expect(cMirror.mixin, cMirror);
     expect(dMirror.mixin, m1Mirror);
@@ -258,13 +258,13 @@ void main() {
               capability.upperBound == A &&
               !capability.excludeUpperBound));
     });
-    ClassMirror aMirror = reflector.reflectType(A);
-    ClassMirror bMirror = reflector.reflectType(B);
-    ClassMirror cMirror = reflector.reflectType(C);
-    ClassMirror dMirror = reflector.reflectType(D);
-    ClassMirror m1Mirror = reflector.reflectType(M1);
-    ClassMirror m2Mirror = reflector.reflectType(M2);
-    ClassMirror m3Mirror = reflector.reflectType(M3);
+    ClassMirror aMirror = reflector.reflectType(A) as ClassMirror;
+    ClassMirror bMirror = reflector.reflectType(B) as ClassMirror;
+    ClassMirror cMirror = reflector.reflectType(C) as ClassMirror;
+    ClassMirror dMirror = reflector.reflectType(D) as ClassMirror;
+    ClassMirror m1Mirror = reflector.reflectType(M1) as ClassMirror;
+    ClassMirror m2Mirror = reflector.reflectType(M2) as ClassMirror;
+    ClassMirror m3Mirror = reflector.reflectType(M3) as ClassMirror;
     expect(reflector.reflectType(M1), m1Mirror);
     expect(reflector.reflectType(M2), m2Mirror);
     expect(reflector.reflectType(M3), m3Mirror);

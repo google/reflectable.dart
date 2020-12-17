@@ -27,9 +27,9 @@ void main() {
   initializeReflectable();
 
   test('Static const not present in mixin application', () {
-    ClassMirror mMirror = reflector.reflectType(M);
+    ClassMirror mMirror = reflector.reflectType(M) as ClassMirror;
     expect(mMirror.declarations['s'] != null, true);
-    ClassMirror classMirror = reflector.reflectType(B);
+    ClassMirror classMirror = reflector.reflectType(B) as ClassMirror;
     expect(classMirror.declarations['s'], null);
   });
 }

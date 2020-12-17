@@ -44,9 +44,9 @@ class A {
 @metaReflector
 class B {
   @c int i = 7, j = 7;
-  int notI, notJ;
+  late int notI, notJ;
   @C() static int k = 294, l = 343;
-  static int notK, notL;
+  static late int notK, notL;
 }
 
 final Matcher throwsReflectableNoMethod =

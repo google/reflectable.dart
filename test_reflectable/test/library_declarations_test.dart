@@ -45,13 +45,13 @@ void main() {
   // Commented out below: Cf. reflectable issue #165.
 
   test('library declarations', () {
-    expect(declarations['reflector'].simpleName, 'reflector');
-    expect(declarations['A'].simpleName, 'A');
-    expect(declarations['B'].simpleName, 'B');
-    // expect(declarations['F'].simpleName, 'F');
-    // expect(declarations['G'].simpleName, 'G');
-    // expect(declarations['H'].simpleName, 'H');
-    expect(declarations['main'].simpleName, 'main');
+    expect(declarations['reflector']!.simpleName, 'reflector');
+    expect(declarations['A']!.simpleName, 'A');
+    expect(declarations['B']!.simpleName, 'B');
+    // expect(declarations['F']!.simpleName, 'F');
+    // expect(declarations['G']!.simpleName, 'G');
+    // expect(declarations['H']!.simpleName, 'H');
+    expect(declarations['main']!.simpleName, 'main');
 
     expect(declarations['reflector'] is VariableMirror, isTrue);
     expect(declarations['A'] is ClassMirror, isTrue);
@@ -61,8 +61,8 @@ void main() {
     // expect(declarations['H'] is TypedefMirror, isTrue);
     expect(declarations['main'] is MethodMirror, isTrue);
 
-    ClassMirror aMirror = declarations['A'];
-    ClassMirror bMirror = declarations['B'];
+    ClassMirror aMirror = declarations['A'] as ClassMirror;
+    ClassMirror bMirror = declarations['B'] as ClassMirror;
     // TypedefMirror fMirror = declarations['F'];
     // TypedefMirror gMirror = declarations['G'];
     // TypedefMirror hMirror = declarations['H'];

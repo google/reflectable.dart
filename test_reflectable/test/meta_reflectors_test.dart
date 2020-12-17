@@ -32,7 +32,7 @@ const Map<String, Iterable<Reflectable>> scopeMap = {
 };
 
 @ScopeMetaReflector()
-Iterable<Reflectable> reflectablesOfScope(String scope) => scopeMap[scope];
+Iterable<Reflectable> reflectablesOfScope(String scope) => scopeMap[scope]!;
 
 void main() {
   initializeReflectable();

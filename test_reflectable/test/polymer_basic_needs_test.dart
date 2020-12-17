@@ -43,7 +43,7 @@ ThinDeclarationMirror makeThin(DeclarationMirror declaration) {
   bool isFinal() => (declaration is VariableMirror && declaration.isFinal) ||
       (declaration is MethodMirror &&
           declaration.isGetter &&
-          !_hasSetter(declaration.owner, declaration));
+          !_hasSetter(declaration.owner as ClassMirror, declaration));
 
   bool isMethod() => !isField() && !isProperty();
 
@@ -59,7 +59,7 @@ class MyReflectable extends Reflectable {
 const myReflectable = MyReflectable();
 
 List<DeclarationMirror> _query(Type dartType) {
-  ClassMirror mirror = myReflectable.reflectType(dartType);
+  ClassMirror mirror = myReflectable.reflectType(dartType) as ClassMirror;
   return mirror.declarations.values.toList();
 }
 

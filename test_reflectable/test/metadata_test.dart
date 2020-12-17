@@ -95,29 +95,29 @@ void main() {
       [Bar({'a': 14})],
     ]);
 
-    ClassMirror fooMirror = myReflectable.reflectType(Foo);
-    expect(fooMirror.declarations['foo'].metadata, const [
+    ClassMirror fooMirror = myReflectable.reflectType(Foo) as ClassMirror;
+    expect(fooMirror.declarations['foo']!.metadata, const [
       Bar({}),
       Bar({}),
       13,
       [Bar({'a': 14})],
     ]);
 
-    expect(fooMirror.declarations['x'].metadata, [b]);
+    expect(fooMirror.declarations['x']!.metadata, [b]);
 
     // The synthetic accessors do not have metadata.
-    expect(fooMirror.instanceMembers['x'].metadata, []);
-    expect(fooMirror.instanceMembers['x='].metadata, []);
+    expect(fooMirror.instanceMembers['x']!.metadata, []);
+    expect(fooMirror.instanceMembers['x=']!.metadata, []);
 
     // Test metadata on libraries
     expect(myReflectable.reflectType(Foo).owner.metadata, [c]);
   });
   test('metadata without capability', () {
-    ClassMirror foo2Mirror = myReflectable2.reflectType(Foo2);
+    ClassMirror foo2Mirror = myReflectable2.reflectType(Foo2) as ClassMirror;
     expect(() => foo2Mirror.metadata,
         throwsA(const TypeMatcher<NoSuchCapabilityError>()));
 
-    expect(() => foo2Mirror.declarations['foo'].metadata,
+    expect(() => foo2Mirror.declarations['foo']!.metadata,
         throwsA(const TypeMatcher<NoSuchCapabilityError>()));
   });
 }
