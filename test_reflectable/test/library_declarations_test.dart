@@ -61,8 +61,8 @@ void main() {
     // expect(declarations['H'] is TypedefMirror, isTrue);
     expect(declarations['main'] is MethodMirror, isTrue);
 
-    ClassMirror aMirror = declarations['A'] as ClassMirror;
-    ClassMirror bMirror = declarations['B'] as ClassMirror;
+    var aMirror = declarations['A'] as ClassMirror;
+    var bMirror = declarations['B'] as ClassMirror;
     // TypedefMirror fMirror = declarations['F'];
     // TypedefMirror gMirror = declarations['G'];
     // TypedefMirror hMirror = declarations['H'];

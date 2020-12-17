@@ -43,8 +43,8 @@ void main() {
   // test and ported to make it work with reflectable.
 
   test('Issue as reported', () {
-    ClassMirror classMirror = reflector.reflectType(ClazzA) as ClassMirror;
-    ClazzA clazzA = classMirror.newInstance('', []) as ClazzA;
+    var classMirror = reflector.reflectType(ClazzA) as ClassMirror;
+    var clazzA = classMirror.newInstance('', []) as ClazzA;
     expect(clazzA, isNotNull);
   });
 
@@ -54,7 +54,7 @@ void main() {
   // `reflector.reflectType` rather than a plain `reflectClass`; otherwise
   // unchanged.
 
-  ClassMirror cm = reflector.reflectType(A) as ClassMirror;
+  var cm = reflector.reflectType(A) as ClassMirror;
   var o;
 
   test('No arguments given', () {

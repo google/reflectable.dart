@@ -37,7 +37,7 @@ class A {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = myReflectable.reflectType(A) as ClassMirror;
+  var classMirror = myReflectable.reflectType(A) as ClassMirror;
   A a;
 
   test('positional argument default, local constant', () {

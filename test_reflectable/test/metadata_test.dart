@@ -95,7 +95,7 @@ void main() {
       [Bar({'a': 14})],
     ]);
 
-    ClassMirror fooMirror = myReflectable.reflectType(Foo) as ClassMirror;
+    var fooMirror = myReflectable.reflectType(Foo) as ClassMirror;
     expect(fooMirror.declarations['foo']!.metadata, const [
       Bar({}),
       Bar({}),
@@ -113,7 +113,7 @@ void main() {
     expect(myReflectable.reflectType(Foo).owner.metadata, [c]);
   });
   test('metadata without capability', () {
-    ClassMirror foo2Mirror = myReflectable2.reflectType(Foo2) as ClassMirror;
+    var foo2Mirror = myReflectable2.reflectType(Foo2) as ClassMirror;
     expect(() => foo2Mirror.metadata,
         throwsA(const TypeMatcher<NoSuchCapabilityError>()));
 

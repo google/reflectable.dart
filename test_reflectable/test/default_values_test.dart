@@ -47,7 +47,7 @@ class A {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = myReflectable.reflectType(A) as ClassMirror;
+  var classMirror = myReflectable.reflectType(A) as ClassMirror;
   test('optional argument default value, imported local constant', () {
     expect((classMirror.newInstance('optional', [], {}) as A).f, 42);
   });

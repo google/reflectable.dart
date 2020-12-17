@@ -52,8 +52,8 @@ void main() {
   initializeReflectable();
 
   const reflector = Reflector();
-  ClassMirror aMirror = reflector.reflectType(A) as ClassMirror;
-  ClassMirror bMirror = reflector.reflectType(B) as ClassMirror;
+  var aMirror = reflector.reflectType(A) as ClassMirror;
+  var bMirror = reflector.reflectType(B) as ClassMirror;
   Map<String, DeclarationMirror> declarationsA = aMirror.declarations;
   Map<String, DeclarationMirror> declarationsB = bMirror.declarations;
 
@@ -78,7 +78,7 @@ void main() {
   });
 
   test('MethodMirror properties', () {
-    MethodMirror foo = declarationsA['foo'] as MethodMirror;
+    var foo = declarationsA['foo'] as MethodMirror;
     expect(foo.isRegularMethod, isTrue);
     expect(foo.isStatic, isFalse);
     expect(foo.isGetter, isFalse);
@@ -93,7 +93,7 @@ void main() {
     expect(foo.isOperator, isFalse);
     expect(foo.isSynthetic, isFalse);
     expect(foo.isTopLevel, isFalse);
-    MethodMirror getter2A = declarationsA['getter2'] as MethodMirror;
+    var getter2A = declarationsA['getter2'] as MethodMirror;
     expect(getter2A.isRegularMethod, isFalse);
     expect(getter2A.isStatic, isFalse);
     expect(getter2A.isGetter, isTrue);
@@ -108,7 +108,7 @@ void main() {
     expect(getter2A.isOperator, isFalse);
     expect(getter2A.isSynthetic, isFalse);
     expect(getter2A.isTopLevel, isFalse);
-    MethodMirror setter1 = declarationsA['setter1='] as MethodMirror;
+    var setter1 = declarationsA['setter1='] as MethodMirror;
     expect(setter1.isRegularMethod, isFalse);
     expect(setter1.isStatic, isFalse);
     expect(setter1.isGetter, isFalse);
@@ -117,7 +117,7 @@ void main() {
     expect(setter1.isAbstract, isFalse);
     expect(setter1.isOperator, isFalse);
     expect(setter1.isSynthetic, isFalse);
-    MethodMirror operatorPlus = declarationsA['+'] as MethodMirror;
+    var operatorPlus = declarationsA['+'] as MethodMirror;
     expect(operatorPlus.isRegularMethod, isTrue);
     expect(operatorPlus.isStatic, isFalse);
     expect(operatorPlus.isGetter, isFalse);
@@ -126,7 +126,7 @@ void main() {
     expect(operatorPlus.isAbstract, isFalse);
     expect(operatorPlus.isConstructor, isFalse);
     expect(operatorPlus.isOperator, isTrue);
-    MethodMirror constructorA = declarationsA['A'] as MethodMirror;
+    var constructorA = declarationsA['A'] as MethodMirror;
     expect(constructorA.isRegularMethod, isFalse);
     expect(constructorA.isStatic, isFalse);
     expect(constructorA.isGetter, isFalse);
@@ -141,27 +141,26 @@ void main() {
     expect(constructorA.isOperator, isFalse);
     expect(constructorA.isSynthetic, isFalse);
     expect(constructorA.isTopLevel, isFalse);
-    MethodMirror redirectingConstructorA =
+    var redirectingConstructorA =
         declarationsA['A.redirecting'] as MethodMirror;
     expect(redirectingConstructorA.isConstructor, isTrue);
     expect(redirectingConstructorA.isGenerativeConstructor, isTrue);
     expect(redirectingConstructorA.isFactoryConstructor, isFalse);
     expect(redirectingConstructorA.isConstConstructor, isFalse);
     expect(redirectingConstructorA.isRedirectingConstructor, isTrue);
-    MethodMirror factoryConstructorA =
-        declarationsA['A.factory'] as MethodMirror;
+    var factoryConstructorA = declarationsA['A.factory'] as MethodMirror;
     expect(factoryConstructorA.isConstructor, isTrue);
     expect(factoryConstructorA.isGenerativeConstructor, isFalse);
     expect(factoryConstructorA.isFactoryConstructor, isTrue);
     expect(factoryConstructorA.isConstConstructor, isFalse);
     expect(factoryConstructorA.isRedirectingConstructor, isFalse);
-    MethodMirror constConstructorA = declarationsA['A.c'] as MethodMirror;
+    var constConstructorA = declarationsA['A.c'] as MethodMirror;
     expect(constConstructorA.isConstructor, isTrue);
     expect(constConstructorA.isGenerativeConstructor, isTrue);
     expect(constConstructorA.isFactoryConstructor, isFalse);
     expect(constConstructorA.isConstConstructor, isTrue);
     expect(constConstructorA.isRedirectingConstructor, isFalse);
-    MethodMirror redirectingFactoryConstructorA =
+    var redirectingFactoryConstructorA =
         declarationsA['A.redirectingFactory'] as MethodMirror;
     expect(redirectingFactoryConstructorA.isConstructor, isTrue);
     expect(redirectingFactoryConstructorA.isGenerativeConstructor, isFalse);
@@ -171,7 +170,7 @@ void main() {
   });
 
   test('instanceMethods', () {
-    ClassMirror aMirror = reflector.reflectType(A) as ClassMirror;
+    var aMirror = reflector.reflectType(A) as ClassMirror;
     Map<String, DeclarationMirror> instanceMembersA = aMirror.instanceMembers;
     expect(
         instanceMembersA.values.map((x) => x.simpleName),
@@ -186,7 +185,7 @@ void main() {
           'setter1=',
           '+',
       });
-    ClassMirror bMirror = reflector.reflectType(B) as ClassMirror;
+    var bMirror = reflector.reflectType(B) as ClassMirror;
     Map<String, DeclarationMirror> instanceMembersB = bMirror.instanceMembers;
     expect(
         instanceMembersB.values.map((x) => x.simpleName),

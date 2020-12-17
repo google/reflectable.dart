@@ -43,12 +43,12 @@ void main() {
   initializeReflectable();
 
   test('Type arguments on literal maps and lists', () {
-    ClassMirror cMirror = reflector.reflectType(C) as ClassMirror;
+    var cMirror = reflector.reflectType(C) as ClassMirror;
     Map<String, DeclarationMirror> cDeclarations = cMirror.declarations;
     DeclarationMirror fooMirror = cDeclarations['foo']!;
-    ListMetadata fooMetadata = fooMirror.metadata[0] as ListMetadata;
+    var fooMetadata = fooMirror.metadata[0] as ListMetadata;
     DeclarationMirror barMirror = cDeclarations['bar']!;
-    MapMetadata barMetadata = barMirror.metadata[0] as MapMetadata;
+    var barMetadata = barMirror.metadata[0] as MapMetadata;
 
     // These tests are forgiving, e.g., they ignore type arguments.
     expect(fooMetadata.theList, const <int>[1, 2]);

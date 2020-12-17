@@ -27,8 +27,8 @@ void main() {
   initializeReflectable();
 
   LibraryMirror lib = reflector.findLibrary('dart.core');
-  ClassMirror fooClass = lib.declarations['List'] as ClassMirror;
-  List fooInstance = fooClass.newInstance('', []) as List;
+  var fooClass = lib.declarations['List'] as ClassMirror;
+  var fooInstance = fooClass.newInstance('', []) as List;
   test('Creating instance of native class', () {
       expect(fooInstance.toString(), '[]');
   });

@@ -33,10 +33,10 @@ class A {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = reflector.reflectType(A) as ClassMirror;
+  var classMirror = reflector.reflectType(A) as ClassMirror;
 
   test('implicit getter properties', () {
-    MethodMirror f1GetterMirror = classMirror.instanceMembers['f1'] as MethodMirror;
+    var f1GetterMirror = classMirror.instanceMembers['f1'] as MethodMirror;
     expect(f1GetterMirror.simpleName, 'f1');
     expect(f1GetterMirror.qualifiedName,
         'test_reflectable.test.implicit_getter_setter_test.A.f1');
@@ -59,7 +59,7 @@ void main() {
     expect(f1GetterMirror.parameters.length, 0);
     expect(f1GetterMirror.owner, classMirror);
 
-    MethodMirror f2getterMirror = classMirror.instanceMembers['f2'] as MethodMirror;
+    var f2getterMirror = classMirror.instanceMembers['f2'] as MethodMirror;
     expect(f2getterMirror.simpleName, 'f2');
     expect(f2getterMirror.qualifiedName,
         'test_reflectable.test.implicit_getter_setter_test.A.f2');
@@ -82,7 +82,7 @@ void main() {
     expect(f2getterMirror.parameters.length, 0);
     expect(f2getterMirror.owner, classMirror);
 
-    MethodMirror f3GetterMirror = classMirror.staticMembers['f3'] as MethodMirror;
+    var f3GetterMirror = classMirror.staticMembers['f3'] as MethodMirror;
     expect(f3GetterMirror.simpleName, 'f3');
     expect(f3GetterMirror.qualifiedName,
         'test_reflectable.test.implicit_getter_setter_test.A.f3');
@@ -105,7 +105,7 @@ void main() {
     expect(f3GetterMirror.parameters.length, 0);
     expect(f3GetterMirror.owner, classMirror);
 
-    MethodMirror f4GetterMirror = classMirror.staticMembers['f4'] as MethodMirror;
+    var f4GetterMirror = classMirror.staticMembers['f4'] as MethodMirror;
     expect(f4GetterMirror.simpleName, 'f4');
     expect(f4GetterMirror.qualifiedName,
         'test_reflectable.test.implicit_getter_setter_test.A.f4');
@@ -128,7 +128,7 @@ void main() {
     expect(f4GetterMirror.parameters.length, 0);
     expect(f4GetterMirror.owner, classMirror);
 
-    MethodMirror f5GetterMirror = classMirror.staticMembers['f5'] as MethodMirror;
+    var f5GetterMirror = classMirror.staticMembers['f5'] as MethodMirror;
     expect(f5GetterMirror.simpleName, 'f5');
     expect(f5GetterMirror.qualifiedName,
         'test_reflectable.test.implicit_getter_setter_test.A.f5');
@@ -153,7 +153,7 @@ void main() {
   });
 
   test('implicit setter properties', () {
-    MethodMirror f1SetterMirror = classMirror.instanceMembers['f1='] as MethodMirror;
+    var f1SetterMirror = classMirror.instanceMembers['f1='] as MethodMirror;
     expect(f1SetterMirror.simpleName, 'f1=');
     expect(f1SetterMirror.qualifiedName,
         'test_reflectable.test.implicit_getter_setter_test.A.f1=');
@@ -181,7 +181,7 @@ void main() {
 
     expect(classMirror.instanceMembers['f2='], null);
 
-    MethodMirror f3SetterMirror = classMirror.staticMembers['f3='] as MethodMirror;
+    var f3SetterMirror = classMirror.staticMembers['f3='] as MethodMirror;
     expect(f3SetterMirror.simpleName, 'f3=');
     expect(f3SetterMirror.qualifiedName,
         'test_reflectable.test.implicit_getter_setter_test.A.f3=');

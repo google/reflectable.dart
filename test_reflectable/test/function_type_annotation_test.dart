@@ -67,15 +67,14 @@ void main() {
 
   LibraryMirror libraryMirror = reflector
       .findLibrary('test_reflectable.test.function_type_annotation_test');
-  VariableMirror variableMirror = libraryMirror.declarations['int2int']
-      as VariableMirror;
-  ClassMirror classMirror = reflector.reflectType(C) as ClassMirror;
-  MethodMirror getterMirror = classMirror.declarations['getter'] as MethodMirror;
-  MethodMirror setterMirror = classMirror.declarations['setter='] as MethodMirror;
-  MethodMirror methodMirror = classMirror.declarations['method'] as MethodMirror;
-  ParameterMirror setterArgumentMirror = setterMirror.parameters[0] as ParameterMirror;
-  ParameterMirror methodArgument0Mirror = methodMirror.parameters[0] as ParameterMirror;
-  ParameterMirror methodArgument1Mirror = methodMirror.parameters[1] as ParameterMirror;
+  var variableMirror = libraryMirror.declarations['int2int'] as VariableMirror;
+  var classMirror = reflector.reflectType(C) as ClassMirror;
+  var getterMirror = classMirror.declarations['getter'] as MethodMirror;
+  var setterMirror = classMirror.declarations['setter='] as MethodMirror;
+  var methodMirror = classMirror.declarations['method'] as MethodMirror;
+  var setterArgumentMirror = setterMirror.parameters[0] as ParameterMirror;
+  var methodArgument0Mirror = methodMirror.parameters[0] as ParameterMirror;
+  var methodArgument1Mirror = methodMirror.parameters[1] as ParameterMirror;
   Type int2intType = const TypeValue<int Function(int)>().type;
 
   test('Using a function type as an annotation', () {
@@ -102,7 +101,7 @@ void main() {
     expect(methodArgument1Mirror.dynamicReflectedType, int2intType);
   });
 
-  MethodMirror inlineTypesMirror =
+  var inlineTypesMirror =
       classMirror.declarations['inlineTypes'] as MethodMirror;
   List<ParameterMirror> parameterMirrors = inlineTypesMirror.parameters;
   List<Type> expectedTypes = [

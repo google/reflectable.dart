@@ -55,7 +55,7 @@ class A {
 void performTests(String message, Reflectable reflector) {
   initializeReflectable();
 
-  ClassMirror classMirror = reflector.reflectType(A) as ClassMirror;
+  var classMirror = reflector.reflectType(A) as ClassMirror;
   test('$message: newInstance unnamed constructor, no arguments', () {
     expect((classMirror.newInstance('', []) as A).f, 42);
   });
@@ -98,11 +98,11 @@ void main() {
   performTests('metaReflector', metaReflector);
 
   test('newInstance named constructor, no metadata, none required', () {
-    ClassMirror classMirror = reflector.reflectType(A) as ClassMirror;
+    var classMirror = reflector.reflectType(A) as ClassMirror;
     expect((classMirror.newInstance('noMeta', [0]) as A).f, 42);
   });
   test('newInstance named constructor, no metadata, rejected', () {
-    ClassMirror classMirror = metaReflector.reflectType(A) as ClassMirror;
+    var classMirror = metaReflector.reflectType(A) as ClassMirror;
     expect(() => classMirror.newInstance('noMeta', [0]),
         throwsReflectableNoMethod);
   });

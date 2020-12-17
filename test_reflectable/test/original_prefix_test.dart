@@ -33,8 +33,8 @@ void main() {
   initializeReflectable();
 
   test('Original prefix', () {
-    ClassMirror classMirror = myReflectable.reflectType(C) as ClassMirror;
-    C c = classMirror.newInstance('', []) as C;
+    var classMirror = myReflectable.reflectType(C) as ClassMirror;
+    var c = classMirror.newInstance('', []) as C;
     expect(c.s, '42');
   });
 }

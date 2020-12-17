@@ -64,7 +64,7 @@ final Matcher throwsReflectableNoMethod =
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = myReflectable.reflectType(C) as ClassMirror;
+  var classMirror = myReflectable.reflectType(C) as ClassMirror;
   Map<String, DeclarationMirror> declarations = classMirror.declarations;
   test('Proper subtypes as metadata, declarations', () {
     expect(declarations['foo'], isNotNull);

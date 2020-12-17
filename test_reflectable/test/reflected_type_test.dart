@@ -53,24 +53,25 @@ final throwsNoCapability = throwsA(const TypeMatcher<NoSuchCapabilityError>());
 void main() {
   initializeReflectable();
 
-  ClassMirror aMirror = reflector.reflectType(A) as ClassMirror;
+  var aMirror = reflector.reflectType(A) as ClassMirror;
   Map<String, DeclarationMirror> declarations = aMirror.declarations;
 
-  MethodMirror arg0Mirror = declarations['arg0'] as MethodMirror;
-  MethodMirror arg1Mirror = declarations['arg1'] as MethodMirror;
-  MethodMirror arg2to4Mirror = declarations['arg2to4'] as MethodMirror;
-  MethodMirror argNamedMirror = declarations['argNamed'] as MethodMirror;
-  MethodMirror opPlusMirror = declarations['+'] as MethodMirror;
-  MethodMirror opBracketMirror = declarations['[]'] as MethodMirror;
-  MethodMirror opBracketEqualsMirror = declarations['[]='] as MethodMirror;
-  MethodMirror getsetMirror = declarations['getset'] as MethodMirror;
-  MethodMirror getsetEqualsMirror = declarations['getset='] as MethodMirror;
-  MethodMirror noArgumentsMirror = declarations['noArguments'] as MethodMirror;
-  MethodMirror oneArgumentMirror = declarations['oneArgument'] as MethodMirror;
-  MethodMirror optionalArgumentsMirror = declarations['optionalArguments'] as MethodMirror;
-  MethodMirror namedArgumentsMirror = declarations['namedArguments'] as MethodMirror;
-  MethodMirror staticGetsetMirror = declarations['staticGetset'] as MethodMirror;
-  MethodMirror staticGetsetEqualsMirror = declarations['staticGetset='] as MethodMirror;
+  var arg0Mirror = declarations['arg0'] as MethodMirror;
+  var arg1Mirror = declarations['arg1'] as MethodMirror;
+  var arg2to4Mirror = declarations['arg2to4'] as MethodMirror;
+  var argNamedMirror = declarations['argNamed'] as MethodMirror;
+  var opPlusMirror = declarations['+'] as MethodMirror;
+  var opBracketMirror = declarations['[]'] as MethodMirror;
+  var opBracketEqualsMirror = declarations['[]='] as MethodMirror;
+  var getsetMirror = declarations['getset'] as MethodMirror;
+  var getsetEqualsMirror = declarations['getset='] as MethodMirror;
+  var noArgumentsMirror = declarations['noArguments'] as MethodMirror;
+  var oneArgumentMirror = declarations['oneArgument'] as MethodMirror;
+  var optionalArgumentsMirror = declarations['optionalArguments']
+      as MethodMirror;
+  var namedArgumentsMirror = declarations['namedArguments'] as MethodMirror;
+  var staticGetsetMirror = declarations['staticGetset'] as MethodMirror;
+  var staticGetsetEqualsMirror = declarations['staticGetset='] as MethodMirror;
 
   test('parameter reflected types, instance methods', () {
     expect(arg0Mirror.parameters.length, 0);

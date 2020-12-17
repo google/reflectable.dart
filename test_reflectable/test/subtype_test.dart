@@ -53,16 +53,16 @@ void main() {
   Reflectable reflector = const Reflector();
   Reflectable insufficientReflector = const InsufficientReflector();
 
-  ClassMirror aMirror = reflector.reflectType(A) as ClassMirror;
-  ClassMirror bMirror = reflector.reflectType(B) as ClassMirror;
-  ClassMirror cMirror = reflector.reflectType(C) as ClassMirror;
-  ClassMirror dMirror = reflector.reflectType(D) as ClassMirror;
-  ClassMirror eMirror = reflector.reflectType(E) as ClassMirror;
-  ClassMirror fMirror = reflector.reflectType(F) as ClassMirror;
-  ClassMirror gMirror = reflector.reflectType(G) as ClassMirror;
-  ClassMirror hMirror = reflector.reflectType(H) as ClassMirror;
-  ClassMirror m1Mirror = reflector.reflectType(M1) as ClassMirror;
-  ClassMirror m2Mirror = reflector.reflectType(M2) as ClassMirror;
+  var aMirror = reflector.reflectType(A) as ClassMirror;
+  var bMirror = reflector.reflectType(B) as ClassMirror;
+  var cMirror = reflector.reflectType(C) as ClassMirror;
+  var dMirror = reflector.reflectType(D) as ClassMirror;
+  var eMirror = reflector.reflectType(E) as ClassMirror;
+  var fMirror = reflector.reflectType(F) as ClassMirror;
+  var gMirror = reflector.reflectType(G) as ClassMirror;
+  var hMirror = reflector.reflectType(H) as ClassMirror;
+  var m1Mirror = reflector.reflectType(M1) as ClassMirror;
+  var m2Mirror = reflector.reflectType(M2) as ClassMirror;
 
   test('isSubtypeOf', () {
     // Test reflexivity.

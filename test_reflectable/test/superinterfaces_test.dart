@@ -41,9 +41,9 @@ const reflector = Reflector();
 void main() {
   initializeReflectable();
 
-  ClassMirror bm = reflector.reflectType(B) as ClassMirror;
-  ClassMirror dm = reflector.reflectType(D) as ClassMirror;
-  ClassMirror fm = reflector.reflectType(F) as ClassMirror;
+  var bm = reflector.reflectType(B) as ClassMirror;
+  var dm = reflector.reflectType(D) as ClassMirror;
+  var fm = reflector.reflectType(F) as ClassMirror;
   test('superinterfaces', () {
     // Test that only the supported classes from the superinterface
     // list in the class-declaration are included.

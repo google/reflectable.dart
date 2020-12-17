@@ -25,7 +25,7 @@ class A {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = myReflectable.reflectType(A) as ClassMirror;
+  var classMirror = myReflectable.reflectType(A) as ClassMirror;
   test('Static members', () {
     expect(classMirror.staticMembers.length, 1);
     expect(classMirror.staticMembers['foo'], isNotNull);

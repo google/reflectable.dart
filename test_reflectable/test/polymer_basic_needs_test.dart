@@ -59,7 +59,7 @@ class MyReflectable extends Reflectable {
 const myReflectable = MyReflectable();
 
 List<DeclarationMirror> _query(Type dartType) {
-  ClassMirror mirror = myReflectable.reflectType(dartType) as ClassMirror;
+  var mirror = myReflectable.reflectType(dartType) as ClassMirror;
   return mirror.declarations.values.toList();
 }
 

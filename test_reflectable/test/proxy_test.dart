@@ -43,7 +43,7 @@ class Proxy implements A {
 
 Map<Symbol, Function> createMethodMap(Type T) {
   var methodMapForT = <Symbol, Function>{};
-  ClassMirror classMirror = proxyReflectable.reflectType(T) as ClassMirror;
+  var classMirror = proxyReflectable.reflectType(T) as ClassMirror;
   Map<String, DeclarationMirror> declarations = classMirror.declarations;
 
   for (String name in declarations.keys) {

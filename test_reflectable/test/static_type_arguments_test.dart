@@ -43,21 +43,23 @@ void main() {
   initializeReflectable();
 
   test('get type arguments', () {
-    ClassMirror myServiceMirror = reflector.reflectType(MyService) as ClassMirror;
+    var myServiceMirror = reflector.reflectType(MyService) as ClassMirror;
     Map<String, DeclarationMirror> declarations = myServiceMirror.declarations;
-    VariableMirror securityServiceMirror = declarations['securityService'] as VariableMirror;
-    ClassMirror typeAnnotationMirror = securityServiceMirror.type as ClassMirror;
+    var securityServiceMirror = declarations['securityService']
+        as VariableMirror;
+    var typeAnnotationMirror = securityServiceMirror.type as ClassMirror;
     expect(typeAnnotationMirror.reflectedTypeArguments[0], SecurityService);
     expect(typeAnnotationMirror.typeArguments[0].reflectedType,
         SecurityService);
   });
 
   test('get type arguments in unimplemented case', () {
-    ClassMirror myServiceMirror = reflector.reflectType(MyGenericService) as ClassMirror;
+    var myServiceMirror = reflector.reflectType(MyGenericService)
+        as ClassMirror;
     Map<String, DeclarationMirror> declarations = myServiceMirror.declarations;
-    VariableMirror securityServiceMirror =
+    var securityServiceMirror =
         declarations['genericSecurityService'] as VariableMirror;
-    ClassMirror typeAnnotationMirror = securityServiceMirror.type as ClassMirror;
+    var typeAnnotationMirror = securityServiceMirror.type as ClassMirror;
     expect(() => typeAnnotationMirror.reflectedTypeArguments,
         throwsUnimplemented);
     expect(() => typeAnnotationMirror.typeArguments, throwsUnimplemented);

@@ -39,7 +39,7 @@ void expectCapabilityMessage(Function() f) {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = reflector.reflectType(Bar) as ClassMirror;
+  var classMirror = reflector.reflectType(Bar) as ClassMirror;
   test('Detect missing type relations capability', () {
     expectCapabilityMessage(() => classMirror.superclass);
     expectCapabilityMessage(() => classMirror.typeVariables);

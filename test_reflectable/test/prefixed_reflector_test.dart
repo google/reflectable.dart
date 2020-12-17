@@ -30,7 +30,7 @@ class D {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = C.reflector.reflectType(D) as ClassMirror;
+  var classMirror = C.reflector.reflectType(D) as ClassMirror;
   test('Prefixed reflector type', () {
     expect(classMirror.reflectedType, D);
   });
