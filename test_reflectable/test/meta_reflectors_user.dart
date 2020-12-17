@@ -34,18 +34,18 @@ void testReflector(Reflectable reflector, String desc) {
     expect(m1Mirror.mixin, m1Mirror);
     expect(m2Mirror.mixin, m2Mirror);
     expect(m3Mirror.mixin, m3Mirror);
-    expect(bMirror.superclass.mixin, m1Mirror);
-    expect(cMirror.superclass.superclass.mixin, m2Mirror);
-    expect(cMirror.superclass.mixin, m3Mirror);
-    expect(cMirror.superclass.superclass.superclass, bMirror);
+    expect(bMirror.superclass!.mixin, m1Mirror);
+    expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
+    expect(cMirror.superclass!.mixin, m3Mirror);
+    expect(cMirror.superclass!.superclass!.superclass, bMirror);
     expect(dMirror.mixin, m1Mirror);
-    expect(dMirror.superclass.mixin, aMirror);
-    expect(bMirror.superclass.declarations['foo']!.owner, m1Mirror);
-    expect(bMirror.superclass.declarations['field']!.owner, m1Mirror);
-    expect(bMirror.superclass.declarations['staticBar'], null);
-    expect(bMirror.superclass.hasReflectedType, true);
-    expect(bMirror.superclass.reflectedType, const TypeMatcher<Type>());
-    expect(bMirror.superclass.superclass.reflectedType,
+    expect(dMirror.superclass!.mixin, aMirror);
+    expect(bMirror.superclass!.declarations['foo']!.owner, m1Mirror);
+    expect(bMirror.superclass!.declarations['field']!.owner, m1Mirror);
+    expect(bMirror.superclass!.declarations['staticBar'], null);
+    expect(bMirror.superclass!.hasReflectedType, true);
+    expect(bMirror.superclass!.reflectedType, const TypeMatcher<Type>());
+    expect(bMirror.superclass!.superclass!.reflectedType,
         const TypeMatcher<Type>());
   });
 }
@@ -102,15 +102,15 @@ void runTests() {
     expect(m1Mirror.metadata, contains(const P()));
     expect(m2Mirror.mixin, m2Mirror);
     expect(m3Mirror.mixin, m3Mirror);
-    expect(bMirror.superclass.mixin, m1Mirror);
+    expect(bMirror.superclass!.mixin, m1Mirror);
     // Test that the mixin-application does not inherit the metadata from its
     // mixin.
-    expect(bMirror.superclass.metadata, isEmpty);
+    expect(bMirror.superclass!.metadata, isEmpty);
     expect(
-        () => bMirror.superclass.superclass, throwsANoSuchCapabilityException);
-    expect(cMirror.superclass.superclass.mixin, m2Mirror);
-    expect(cMirror.superclass.mixin, m3Mirror);
-    expect(cMirror.superclass.superclass.superclass, bMirror);
+        () => bMirror.superclass!.superclass, throwsANoSuchCapabilityException);
+    expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
+    expect(cMirror.superclass!.mixin, m3Mirror);
+    expect(cMirror.superclass!.superclass!.superclass, bMirror);
     expect(() => dMirror.superclass, throwsANoSuchCapabilityException);
   });
 
@@ -131,11 +131,11 @@ void runTests() {
     expect(reflector.reflectType(M1), m1Mirror);
     expect(reflector.reflectType(M2), m2Mirror);
     expect(reflector.reflectType(M3), m3Mirror);
-    expect(bMirror.superclass.mixin, m1Mirror);
-    expect(bMirror.superclass.superclass, aMirror);
-    expect(cMirror.superclass.mixin, m3Mirror);
-    expect(cMirror.superclass.superclass.mixin, m2Mirror);
-    expect(cMirror.superclass.superclass.superclass,  bMirror);
+    expect(bMirror.superclass!.mixin, m1Mirror);
+    expect(bMirror.superclass!.superclass, aMirror);
+    expect(cMirror.superclass!.mixin, m3Mirror);
+    expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
+    expect(cMirror.superclass!.superclass!.superclass,  bMirror);
     expect(dMirror.mixin, m1Mirror);
     expect(dMirror.superclass, aMirror);
   });

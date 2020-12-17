@@ -72,9 +72,9 @@ void main() {
   var getterMirror = classMirror.declarations['getter'] as MethodMirror;
   var setterMirror = classMirror.declarations['setter='] as MethodMirror;
   var methodMirror = classMirror.declarations['method'] as MethodMirror;
-  var setterArgumentMirror = setterMirror.parameters[0] as ParameterMirror;
-  var methodArgument0Mirror = methodMirror.parameters[0] as ParameterMirror;
-  var methodArgument1Mirror = methodMirror.parameters[1] as ParameterMirror;
+  var setterArgumentMirror = setterMirror.parameters[0];
+  var methodArgument0Mirror = methodMirror.parameters[0];
+  var methodArgument1Mirror = methodMirror.parameters[1];
   Type int2intType = const TypeValue<int Function(int)>().type;
 
   test('Using a function type as an annotation', () {

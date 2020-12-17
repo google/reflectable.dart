@@ -24,7 +24,7 @@ void main() {
   initializeReflectable();
 
   test('reflect', () {
-    var instanceMirror = myReflectable.reflect(A());
-    expect(instanceMirror == null, isFalse);
+    // Expect that this does not throw.
+    myReflectable.reflect(A());
   });
 }

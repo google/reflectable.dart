@@ -146,7 +146,7 @@ void main() {
   initializeReflectable();
 
   test('Static invocation', () {
-    r.ClassMirror classMirror = staticReflector.reflectType(A) as r.ClassMirror;
+    var classMirror = staticReflector.reflectType(A) as r.ClassMirror;
     expect(classMirror.invoke('foo', []), 42);
     expect(() => classMirror.invoke('bar', []), throwsReflectableNoMethod);
     expect(classMirror.invokeGetter('getFoo'), 44);

@@ -27,7 +27,7 @@ void main() {
   initializeReflectable();
 
   var myClassMirror = myReflectable.reflectType(MyClass) as ClassMirror;
-  ClassMirror classObjectMirror = myClassMirror.superclass;
+  ClassMirror classObjectMirror = myClassMirror.superclass!;
   test('superclass targetting un-annotated class', () {
     expect(classObjectMirror.simpleName, 'Object');
   });

@@ -28,7 +28,7 @@ class AllReflectorsMetaReflector extends Reflectable {
       if (classMirror.isAbstract) return;
       Reflectable reflector =
           Reflectable.getInstance(classMirror.reflectedType);
-      if (reflector != null) result.add(reflector);
+      result.add(reflector);
     });
     return result;
   }

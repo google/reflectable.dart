@@ -46,6 +46,6 @@ void main() {
     TypeMirror typeMirror = const Reflector().reflectType(B);
     expect(typeMirror is ClassMirror, true);
     var classMirror = typeMirror as ClassMirror;
-    expect(classMirror.superclass.declarations['staticFoo'], null);
+    expect(classMirror.superclass!.declarations['staticFoo'], null);
   });
 }

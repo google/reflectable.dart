@@ -69,10 +69,10 @@ void main() {
   });
 
   test('Generic mixin, super of generic class', () {
-    var cMirror = reflector.reflect(C<num>()).type as ClassMirror;
+    ClassMirror cMirror = reflector.reflect(C<num>()).type;
     var ceMirror = cMirror.instanceMembers['e']!;
     expect(ceMirror, TypeMatcher<MethodMirror>());
-    var ceMethodMirror = ceMirror as MethodMirror;
+    MethodMirror ceMethodMirror = ceMirror;
     if (ceMethodMirror.hasReflectedReturnType) {
       expect(ceMethodMirror.reflectedReturnType, num);
     } else {
@@ -81,7 +81,7 @@ void main() {
   });
 
   test('Generic mixin, named super of generic class', () {
-    var dMirror = reflector.reflect(D<num>()).type as ClassMirror;
+    ClassMirror dMirror = reflector.reflect(D<num>()).type;
     DeclarationMirror deMirror = dMirror.instanceMembers['e']!;
     expect(deMirror, TypeMatcher<MethodMirror>());
     var deMethodMirror = deMirror as MethodMirror;

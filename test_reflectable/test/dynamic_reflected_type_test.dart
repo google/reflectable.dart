@@ -43,7 +43,7 @@ void main() {
 
   var aMirror = reflector.reflectType(A) as ClassMirror;
   var bMirror = reflector.reflectType(B) as ClassMirror;
-  var bInstantiationMirror = reflector.reflect(B<int>()).type as ClassMirror;
+  ClassMirror bInstantiationMirror = reflector.reflect(B<int>()).type;
   testDynamicReflectedType('non-generic class', aMirror, A);
   testDynamicReflectedType('generic class', bMirror, B);
   testDynamicReflectedType('generic instantiation', bInstantiationMirror, B);

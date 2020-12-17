@@ -19,11 +19,11 @@ void main() {
   initializeReflectable();
 
   test('reflect local', () {
-    var instanceMirror = myReflectable.reflect(A());
-    expect(instanceMirror == null, isFalse);
+    // Expecting that this does not throw.
+    myReflectable.reflect(A());
   });
   test('reflect imported', () {
-    var instanceMirror = myReflectable.reflect(B());
-    expect(instanceMirror == null, isFalse);
+    // Expecting that this does not throw.
+    myReflectable.reflect(B());
   });
 }
