@@ -67,17 +67,17 @@ List<ThinDeclarationMirror> buildMirrors(Type dartType) {
   return _query(dartType).map(makeThin).toList();
 }
 
-Object read(Object instance, String name) {
+Object? read(Object instance, String name) {
   var mirror = myReflectable.reflect(instance);
   return mirror.invokeGetter(name);
 }
 
-void write(Object instance, String name, Object value) {
+void write(Object instance, String name, Object? value) {
   var mirror = myReflectable.reflect(instance);
   mirror.invokeSetter(name, value);
 }
 
-Object invoke(Object instance, String name, List<Object> newArgs) {
+Object? invoke(Object instance, String name, List<Object?> newArgs) {
   var mirror = myReflectable.reflect(instance);
   // TODO(eernst) future: fix up the `newArgs` to emulate `adjust: true`.
   return mirror.invoke(name, newArgs);
