@@ -200,7 +200,7 @@ abstract class DeclarationMirror implements Mirror {
   /// Required capabilities: [owner] on a [ClassMirror] requires a
   /// [LibraryCapability]; on other declarations it does not require any
   /// capabilities.
-  DeclarationMirror get owner;
+  DeclarationMirror? get owner;
 
   /// Whether this declaration is library private.
   ///
@@ -337,8 +337,8 @@ abstract class ObjectMirror implements Mirror {
   /// [StaticInvokeMetaCapability]; and [invoke] on a top-level function
   /// requires a matching [TopLevelInvokeCapability] or
   /// [TopLevelInvokeMetaCapability].
-  Object invoke(String memberName, List positionalArguments,
-      [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
+  Object? invoke(String memberName, List positionalArguments,
+      [Map<Symbol, dynamic>? namedArguments]); // RET: InstanceMirror
 
   /// Invokes a getter and returns the result. The getter can be the
   /// implicit getter for a field, or a user-defined getter method.
@@ -384,7 +384,7 @@ abstract class ObjectMirror implements Mirror {
   /// matching [StaticInvokeCapability] or [StaticInvokeMetaCapability], and
   /// [invokeGetter] on a top-level function requires a matching
   /// [TopLevelInvokeCapability] or [TopLevelInvokeMetaCapability].
-  Object invokeGetter(String getterName);
+  Object? invokeGetter(String getterName);
 
   /// Invokes a setter and returns the result. The setter may be either
   /// the implicit setter for a non-final field, or a user-defined setter
@@ -419,7 +419,7 @@ abstract class ObjectMirror implements Mirror {
   /// [StaticInvokeCapability] or [StaticInvokeMetaCapability]; and
   /// [invokeSetter] on a top-level function requires a matching
   /// [TopLevelInvokeCapability] or [TopLevelInvokeMetaCapability].
-  Object invokeSetter(String setterName, Object value);
+  Object? invokeSetter(String setterName, Object? value);
 }
 
 /// An [InstanceMirror] reflects an instance of a Dart language object.
@@ -455,7 +455,7 @@ abstract class InstanceMirror implements ObjectMirror {
   /// exception is thrown.
   ///
   /// Required capabilities: [reflectee] does not require any capabilities.
-  Object get reflectee;
+  Object? get reflectee;
 
   /// Whether this mirror is equal to [other].
   ///
@@ -489,7 +489,7 @@ abstract class InstanceMirror implements ObjectMirror {
   ///     }
   ///
   /// Required capabilities: [delegate] requires the [delegateCapability].
-  dynamic delegate(Invocation invocation);
+  Object? delegate(Invocation invocation);
 }
 
 /// A [ClosureMirror] reflects a closure.
@@ -540,8 +540,8 @@ abstract class ClosureMirror implements InstanceMirror {
   /// Required capabilities: [apply] requires a matching
   /// [InstanceInvokeCapability] or [InstanceInvokeMetaCapability], targeting
   /// the relevant `call` method.
-  Object apply(List positionalArguments,
-      [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
+  Object? apply(List positionalArguments,
+      [Map<Symbol, dynamic>? namedArguments]); // RET: InstanceMirror
 }
 
 /// A [LibraryMirror] reflects a Dart language library, providing
@@ -590,6 +590,9 @@ abstract class LibraryMirror implements DeclarationMirror, ObjectMirror {
   /// Required capabilities: [libraryDependencies] requires a
   /// [LibraryCapability].
   List<LibraryDependencyMirror> get libraryDependencies;
+
+  @override
+  Null get owner;
 }
 
 /// A mirror on an import or export declaration.
@@ -643,7 +646,7 @@ abstract class LibraryDependencyMirror implements Mirror {
   /// dart:mirrors is List<InstanceMirror>.
   ///
   /// Required capabilities: [metadata] requires a [MetadataCapability].
-  List<Object> get metadata; // TYARG: InstanceMirror
+  List<Object?> get metadata; // TYARG: InstanceMirror
 }
 
 /// A mirror on a show/hide combinator declared on a library dependency.
@@ -805,7 +808,7 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// If this type is [:Object:], the superclass will be null.
   ///
   /// Required capabilities: [superclass] requires a [TypeRelationsCapability].
-  ClassMirror get superclass;
+  ClassMirror? get superclass;
 
   /// A list of mirrors on the superinterfaces of the reflectee.
   ///
@@ -913,17 +916,6 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// true, by having a [reflectedTypeCapability] in the reflector for this
   /// [ClassMirror].
   Type get dynamicReflectedType;
-
-  /// Returns `hasReflectedType || hasDynamicReflectedType`.
-  @deprecated
-  bool get hasBestEffortReflectedType;
-
-  /// If hasBestEffortReflectedType returns true, returns [reflectedType] if
-  /// it is available, otherwise returns [hasDynamicReflectedType]. If
-  /// hasBestEffortReflectedType returns false it throws an
-  /// [UnsupportedError].
-  @deprecated
-  Type get bestEffortReflectedType;
 
   /// Invokes the named constructor and returns the result.
   ///
@@ -1039,6 +1031,9 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   /// for a top-level function requires a matching [TopLevelInvokeCapability]
   /// or [TopLevelInvokeMetaCapability].
   Function invoker(String memberName);
+
+  @override
+  DeclarationMirror get owner;
 }
 
 /// A [FunctionTypeMirror] represents the type of a function in the
@@ -1153,7 +1148,7 @@ abstract class MethodMirror implements DeclarationMirror {
   /// The source code for the reflectee, if available. Otherwise null.
   ///
   /// Required capabilities: [source] does not require any capabilities.
-  String get source;
+  String? get source;
 
   /// A list of mirrors on the parameters for the reflectee.
   ///
@@ -1262,6 +1257,9 @@ abstract class MethodMirror implements DeclarationMirror {
   /// Override requested by linter.
   @override
   int get hashCode;
+
+  @override
+  DeclarationMirror get owner;
 }
 
 /// A [VariableMirror] reflects a Dart language variable declaration.
@@ -1343,6 +1341,9 @@ abstract class VariableMirror implements DeclarationMirror {
   /// Override requested by linter.
   @override
   int get hashCode;
+
+  @override
+  DeclarationMirror get owner;
 }
 
 /// A [ParameterMirror] reflects a Dart formal parameter declaration.
@@ -1382,7 +1383,7 @@ abstract class ParameterMirror implements VariableMirror {
   /// Returns `null` for a required parameter.
   ///
   /// Required capabilities: [defaultValue] requires a [DeclarationsCapability].
-  Object get defaultValue; // RET: InstanceMirror
+  Object? get defaultValue; // RET: InstanceMirror
 }
 
 /// A [SourceLocation] describes the span of an entity in Dart source code.

@@ -67,7 +67,7 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
           buildOptions, environment, builders, const {},
           isReleaseBuild: false);
       var result = await build.run(const {});
-      await build?.beforeExit();
+      await build.beforeExit();
       return result;
     } finally {
       await buildOptions.logListener.cancel();
