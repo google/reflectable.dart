@@ -82,7 +82,7 @@ void main() {
   initializeReflectable();
 
   test('metadata on class', () {
-    expect(myReflectable.reflectType(Foo).metadata, const [
+    expect(myReflectable.reflectType(Foo)!.metadata, const [
       MyReflectable(),
       Bar({
         b: deprecated,
@@ -110,7 +110,7 @@ void main() {
     expect(fooMirror.instanceMembers['x=']!.metadata, []);
 
     // Test metadata on libraries
-    expect(myReflectable.reflectType(Foo).owner.metadata, [c]);
+    expect(myReflectable.reflectType(Foo)!.owner!.metadata, [c]);
   });
   test('metadata without capability', () {
     var foo2Mirror = myReflectable2.reflectType(Foo2) as ClassMirror;

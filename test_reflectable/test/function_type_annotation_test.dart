@@ -66,7 +66,7 @@ void main() {
   initializeReflectable();
 
   LibraryMirror libraryMirror = reflector
-      .findLibrary('test_reflectable.test.function_type_annotation_test');
+      .findLibrary('test_reflectable.test.function_type_annotation_test')!;
   var variableMirror = libraryMirror.declarations['int2int'] as VariableMirror;
   var classMirror = reflector.reflectType(C) as ClassMirror;
   var getterMirror = classMirror.declarations['getter'] as MethodMirror;

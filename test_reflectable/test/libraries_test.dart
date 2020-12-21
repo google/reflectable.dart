@@ -69,7 +69,7 @@ void main() {
 
   test('invoke function, getter', () {
     var libraryMirror =
-        reflector.findLibrary('test_reflectable.test.libraries_test');
+        reflector.findLibrary('test_reflectable.test.libraries_test')!;
     expect(libraryMirror.simpleName, 'test_reflectable.test.libraries_test');
     expect(libraryMirror.invoke('myFunction', []), 'hello');
     expect(
@@ -81,7 +81,7 @@ void main() {
     expect(myFunctionMirror.owner, libraryMirror);
   });
   test('owner, setter, TopLevelMetaInvokeCapability', () {
-    var libraryMirror = reflector2.reflectType(C).owner as LibraryMirror;
+    var libraryMirror = reflector2.reflectType(C)!.owner as LibraryMirror;
     expect(libraryMirror.qualifiedName, 'test_reflectable.test.libraries_test');
     expect(libraryMirror.simpleName, 'test_reflectable.test.libraries_test');
     expect(libraryMirror.invokeSetter('setter=', 11), 11);
@@ -107,10 +107,10 @@ void main() {
     expect(setterMirror.owner, libraryMirror);
   });
   test('No libraryCapability', () {
-    expect(() => reflector3.reflectType(D).owner, throwsNoCapability);
+    expect(() => reflector3.reflectType(D)!.owner, throwsNoCapability);
     expect(
         () => reflector3
-            .findLibrary('test_reflectable.test.libraries_test')
+            .findLibrary('test_reflectable.test.libraries_test')!
             .owner,
         throwsNoCapability);
   });

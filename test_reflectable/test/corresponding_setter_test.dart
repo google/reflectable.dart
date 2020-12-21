@@ -200,7 +200,7 @@ void testStatic(Reflectable mirrorSystem, Type reflectee, void Function() classR
 void testTopLevel(Reflectable mirrorSystem) {
   test('Top level invocation: ${description[mirrorSystem.runtimeType]}', () {
     var libraryMirror = mirrorSystem
-        .findLibrary('test_reflectable.test.corresponding_setter_test');
+        .findLibrary('test_reflectable.test.corresponding_setter_test')!;
     expect(libraryMirror.invokeGetter('fooBar'), 14);
     int oldValue = fooBarVariable;
     libraryMirror.invokeSetter('fooBar=', oldValue + 1);

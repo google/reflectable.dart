@@ -40,7 +40,7 @@ void main() {
   initializeReflectable();
 
   LibraryMirror libraryMirror =
-      reflector.findLibrary('test_reflectable.test.class_property_test');
+      reflector.findLibrary('test_reflectable.test.class_property_test')!;
   var aMirror = libraryMirror.declarations['A'] as ClassMirror;
   var bMirror = libraryMirror.declarations['_B'] as ClassMirror;
   var cMirror = libraryMirror.declarations['C'] as ClassMirror;

@@ -39,7 +39,7 @@ void main() {
   initializeReflectable();
 
   var libraryMirror = reflector
-      .findLibrary('test_reflectable.test.library_declarations_test');
+      .findLibrary('test_reflectable.test.library_declarations_test')!;
   var declarations = libraryMirror.declarations;
 
   // Commented out below: Cf. reflectable issue #165.
