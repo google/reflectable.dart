@@ -37,10 +37,10 @@ abstract class ReflectableInterface {
   /// it can be obtained from `originalDeclaration`. That mirror will
   /// have no actual type arguments, but it will have declared type
   /// variables. Other types than classes are not (yet) supported.
-  TypeMirror reflectType(Type type);
+  TypeMirror? reflectType(Type type);
 
   /// Returns a mirror of the given library [library].
-  LibraryMirror findLibrary(String library);
+  LibraryMirror? findLibrary(String library);
 
   /// Returns a map of all libraries in the current isolate.
   Map<Uri, LibraryMirror> get libraries;

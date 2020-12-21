@@ -125,7 +125,7 @@ class ReflectorData {
   /// Returns a class-mirror for the given [type].
   ///
   /// Returns `null` if the given class is not marked for reflection.
-  ClassMirror classMirrorForType(Type type) {
+  ClassMirror? classMirrorForType(Type type) {
     var typeToClassMirrorCache = _typeToClassMirrorCache;
     if (typeToClassMirrorCache == null) {
       if (typeMirrors.isEmpty) {
@@ -150,11 +150,11 @@ class ReflectorData {
                 types.sublist(0, supportedClassCount), classMirrors());
       }
     }
-    return typeToClassMirrorCache[type]!;
+    return typeToClassMirrorCache[type];
   }
 
   ClassMirror? classMirrorForInstance(Object? instance) {
-    ClassMirror result = classMirrorForType(instance.runtimeType);
+    ClassMirror? result = classMirrorForType(instance.runtimeType);
     if (result != null) return result;
     // Check if we have a generic class that matches.
     for (ClassMirror classMirror in _typeToClassMirrorCache!.values) {
@@ -1196,7 +1196,7 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
           'without `typeRelationsCapability`');
     }
     return reflectedTypeArguments
-        .map((Type type) => _reflector.reflectType(type))
+        .map((Type type) => _reflector.reflectType(type)!)
         .toList();
   }
 
@@ -2567,8 +2567,8 @@ abstract class ReflectableImpl extends ReflectableBase
   }
 
   @override
-  TypeMirror reflectType(Type type) {
-    ClassMirror result = data[this]!.classMirrorForType(type);
+  TypeMirror? reflectType(Type type) {
+    ClassMirror? result = data[this]!.classMirrorForType(type);
     if (result == null || !_hasTypeCapability) {
       throw NoSuchCapabilityError(
           'Reflecting on type `$type` without capability');
@@ -2577,7 +2577,7 @@ abstract class ReflectableImpl extends ReflectableBase
   }
 
   @override
-  LibraryMirror findLibrary(String libraryName) {
+  LibraryMirror? findLibrary(String libraryName) {
     ReflectorData reflectorData = data[this]!;
     if (reflectorData.libraryMirrors == null) {
       throw NoSuchCapabilityError('Using `findLibrary` without capability. '
@@ -2597,7 +2597,7 @@ abstract class ReflectableImpl extends ReflectableBase
       case 0:
         throw ArgumentError('No such library: $libraryName');
       case 1:
-        return matchingLibrary!;
+        return matchingLibrary;
       default:
         throw ArgumentError('Ambiguous library name: $libraryName');
     }
