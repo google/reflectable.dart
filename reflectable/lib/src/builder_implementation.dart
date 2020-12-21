@@ -1140,7 +1140,7 @@ class _ReflectorDomain {
       if (isDynamic || isVoid) {
         // The mirror will report 'dynamic' or 'void' as its `returnType`
         // and it will never use the index.
-        return null;
+        return constants.NO_CAPABILITY_INDEX;
       }
       if (isClassType && (await classes).contains(typeElement)) {
         // Normal encoding of a class type which has been added to `classes`.
@@ -1709,6 +1709,7 @@ class _ReflectorDomain {
       // it is a `List<Object>`, which has no other natural encoding.
       metadataCode = null;
     }
+    if (ownerIndex == null) throw "$element, ${element.enclosingElement}"; // DEBUG
     return "r.VariableMirrorImpl(r'${element.name}', $descriptor, "
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
@@ -1724,7 +1725,8 @@ class _ReflectorDomain {
       Map<FunctionType, int> typedefs,
       bool reflectedTypeRequested) async {
     int descriptor = _fieldDescriptor(element);
-    int ownerIndex = (await classes).indexOf(element.enclosingElement);
+    int ownerIndex = (await classes).indexOf(element.enclosingElement) ??
+        constants.NO_CAPABILITY_INDEX;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
@@ -1752,6 +1754,7 @@ class _ReflectorDomain {
       // it is a `List<Object>`, which has no other natural encoding.
       metadataCode = null;
     }
+    if (ownerIndex == null) throw "$element, ${element.enclosingElement}"; // DEBUG
     return "r.VariableMirrorImpl(r'${element.name}', $descriptor, "
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
@@ -1774,7 +1777,7 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
     // The type `dynamic` is handled via the `dynamicAttribute` bit.
-    if (dartType.isDynamic) return null;
+    if (dartType.isDynamic) return constants.NO_CAPABILITY_INDEX;
     if (dartType is InterfaceType) {
       if (dartType.typeArguments.isEmpty) {
         // A plain, non-generic class, may be handled already.
@@ -1828,7 +1831,7 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
     // The type `dynamic` is handled via the `dynamicAttribute` bit.
-    if (dartType.isDynamic) return null;
+    if (dartType.isDynamic) return constants.NO_CAPABILITY_INDEX;
     if (dartType is InterfaceType) {
       ClassElement classElement = dartType.element;
       if (classes.contains(classElement)) {
@@ -2226,12 +2229,11 @@ class _ReflectorDomain {
       bool reflectedTypeRequested) async {
     int descriptor = _parameterDescriptor(element);
     int ownerIndex = members.indexOf(element.enclosingElement) + fields.length;
-    int classMirrorIndex;
+    int classMirrorIndex = constants.NO_CAPABILITY_INDEX;
     if (_capabilities._impliesTypes) {
       if (descriptor & constants.dynamicAttribute != 0) {
         // This parameter will report its type as [dynamic], and it
-        // will never use `classMirrorIndex`.
-        classMirrorIndex = null;
+        // will never use `classMirrorIndex`. Keep NO_CAPABILITY_INDEX.
       } else if (descriptor & constants.classTypeAttribute != 0) {
         // Normal encoding of a class type. If that class has been added
         // to `classes` we use its `indexOf`; otherwise (if we do not have an
@@ -2241,8 +2243,6 @@ class _ReflectorDomain {
             ? (await classes).indexOf(element.type.element)
             : constants.NO_CAPABILITY_INDEX;
       }
-    } else {
-      classMirrorIndex = constants.NO_CAPABILITY_INDEX;
     }
     int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
