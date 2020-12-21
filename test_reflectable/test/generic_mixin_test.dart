@@ -26,7 +26,7 @@ const reflector = Reflector();
 
 @reflector
 class M<E> {
-  late E e;
+  E? e;
 }
 
 @reflector
