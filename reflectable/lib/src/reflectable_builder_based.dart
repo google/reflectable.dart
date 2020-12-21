@@ -253,7 +253,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
     }
 
     // Obtain the tear-off closure for the method that we will invoke.
-    Function methodTearer = _data.getters[methodName]!;
+    Function? methodTearer = _data.getters[methodName];
     // If not found then we definitely have a no-such-method event.
     if (methodTearer == null) fail();
     // The tear-off exists, but we may still call it incorrectly, so we need
@@ -353,7 +353,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   Object? invokeSetter(String name, Object? value) {
     String setterName =
         _isSetterName(name) ? name : _getterNameToSetterName(name);
-    Object? Function(Object?, Object?) setter = _data.setters[setterName]!;
+    Object? Function(Object?, Object?)? setter = _data.setters[setterName];
     if (setter != null) {
       return setter(reflectee, value);
     }
@@ -365,7 +365,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   }
 }
 
-typedef MethodMirrorProvider = MethodMirror Function(String methodName);
+typedef MethodMirrorProvider = MethodMirror? Function(String methodName);
 
 abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   /// The reflector which represents the mirror system that this
@@ -616,7 +616,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     } else {
       // Without ready-to-use parameter list shape information we must compute
       // the shape from declaration mirrors.
-      MethodMirror methodMirror = methodMirrorProvider(methodName);
+      MethodMirror? methodMirror = methodMirrorProvider(methodName);
       // If [methodName] is unknown to the [methodProvider] then there exists
       // such a method in the program, but not in the receiver class/instance;
       // hence, the check has failed.
@@ -640,13 +640,13 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   bool _checkInstanceParameterListShape(String methodName,
       int numberOfPositionalArguments, Iterable<Symbol>? namedArgumentNames) {
     return _checkParameterListShape(methodName, numberOfPositionalArguments,
-        namedArgumentNames, (String name) => instanceMembers[name]!);
+        namedArgumentNames, (String name) => instanceMembers[name]);
   }
 
   bool _checkStaticParameterListShape(String methodName,
       int numberOfPositionalArguments, Iterable<Symbol>? namedArgumentNames) {
     return _checkParameterListShape(methodName, numberOfPositionalArguments,
-        namedArgumentNames, (String name) => staticMembers[name]!);
+        namedArgumentNames, (String name) => staticMembers[name]);
   }
 
   @override
@@ -1851,12 +1851,12 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
 
   @override
   TypeMirror get returnType {
+    if (_hasDynamicReturnType) return DynamicMirrorImpl();
+    if (_hasVoidReturnType) return VoidMirrorImpl();
     if (_returnTypeIndex == NO_CAPABILITY_INDEX) {
       throw NoSuchCapabilityError(
           'Requesting returnType of method `$simpleName` without capability');
     }
-    if (_hasDynamicReturnType) return DynamicMirrorImpl();
-    if (_hasVoidReturnType) return VoidMirrorImpl();
     if (_hasClassReturnType) {
       return _hasGenericReturnType
           ? _createInstantiatedGenericClass(_data.typeMirrors[_returnTypeIndex] as GenericClassMirrorImpl,
@@ -2208,6 +2208,7 @@ abstract class VariableMirrorBase extends _DataCaching
 
   @override
   TypeMirror get type {
+    if (_isDynamic) return DynamicMirrorImpl();
     if (_classMirrorIndex == NO_CAPABILITY_INDEX) {
       if (!_supportsType(_reflector)) {
         throw NoSuchCapabilityError(
@@ -2216,7 +2217,6 @@ abstract class VariableMirrorBase extends _DataCaching
       throw NoSuchCapabilityError(
           'Attempt to get class mirror for un-marked class (type of `$_name`)');
     }
-    if (_isDynamic) return DynamicMirrorImpl();
     if (_isClassType) {
       return _isGenericType
           ? _createInstantiatedGenericClass(
@@ -2234,6 +2234,7 @@ abstract class VariableMirrorBase extends _DataCaching
 
   @override
   Type get reflectedType {
+    if (_isDynamic) return dynamic;
     if (_reflectedTypeIndex == NO_CAPABILITY_INDEX) {
       if (!_supportsReflectedType(_reflector)) {
         throw NoSuchCapabilityError(
@@ -2242,7 +2243,6 @@ abstract class VariableMirrorBase extends _DataCaching
       throw UnsupportedError(
           'Attempt to get reflectedType without capability (of `$_name`)');
     }
-    if (_isDynamic) return dynamic;
     return _data.types[_reflectedTypeIndex];
   }
 
