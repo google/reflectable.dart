@@ -1709,7 +1709,6 @@ class _ReflectorDomain {
       // it is a `List<Object>`, which has no other natural encoding.
       metadataCode = null;
     }
-    if (ownerIndex == null) throw "$element, ${element.enclosingElement}"; // DEBUG
     return "r.VariableMirrorImpl(r'${element.name}', $descriptor, "
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
@@ -1754,7 +1753,6 @@ class _ReflectorDomain {
       // it is a `List<Object>`, which has no other natural encoding.
       metadataCode = null;
     }
-    if (ownerIndex == null) throw "$element, ${element.enclosingElement}"; // DEBUG
     return "r.VariableMirrorImpl(r'${element.name}', $descriptor, "
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
@@ -4514,7 +4512,6 @@ Future<String> _extractConstantCode(
         }
       } else {
         unreachableError('SetOrMapLiteral is neither a set nor a map');
-        return '';
       }
     } else if (expression is InstanceCreationExpression) {
       String constructor = expression.constructorName.toSource();
