@@ -181,7 +181,7 @@ Map<Reflectable, ReflectorData> data =
 
 /// This mapping translates symbols to strings for the covered members.
 /// It will be initialized in the generated code.
-Map<Symbol, String> memberSymbolMap = throw StateError(pleaseInitializeMessage);
+Map<Symbol, String>? memberSymbolMap = throw StateError(pleaseInitializeMessage);
 
 abstract class _DataCaching {
   // TODO(eernst) clarify: When we have some substantial pieces of code using
@@ -310,7 +310,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
       throw NoSuchCapabilityError(
           'Attempt to `delegate` without `delegateCapability`');
     }
-    String? memberName = memberSymbolMap[invocation.memberName];
+    String? memberName = memberSymbolMap![invocation.memberName];
     if (memberName == null) {
       // No such `memberName`. It could be a method that exists but the given
       // capabilities rejected it, or it could be a method that does not exist
@@ -578,7 +578,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       assert(parameterListShape.length == 3);
       int numberOfPositionalParameters = parameterListShape[0];
       int numberOfOptionalPositionalParameters = parameterListShape[1];
-      List namesOfNamedParameters = parameterListShape[2];
+      List? namesOfNamedParameters = parameterListShape[2];
       // The length of the positional part of the argument list must be
       // within bounds.
       if (numberOfPositionalArguments <
@@ -602,7 +602,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       // for that first because it is preferred over the slower computation
       // based on declaration mirror traversal. Check whether [methodName]
       // is known.
-      int shapeIndex = parameterListShapes[methodName]!;
+      int? shapeIndex = parameterListShapes[methodName];
       // If [methodName] is unknown then there exists such a method in the
       // program, but not in the receiver class/instance; hence, the check has
       // failed.
@@ -867,16 +867,6 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     if (_superclassIndex == null) return null; // Superclass of [Object].
     return _data.typeMirrors[_superclassIndex!] as ClassMirrorBase?;
   }
-
-  @deprecated
-  @override
-  bool get hasBestEffortReflectedType =>
-      hasReflectedType || hasDynamicReflectedType;
-
-  @deprecated
-  @override
-  Type get bestEffortReflectedType =>
-      hasReflectedType ? reflectedType : dynamicReflectedType;
 }
 
 class NonGenericClassMirrorImpl extends ClassMirrorBase {
@@ -1348,7 +1338,7 @@ class TypeVariableMirrorImpl extends _DataCaching
 
   /// The index into [typeMirrors] of the upper bound of this type variable.
   /// The value [null] encodes that the upper bound is [dynamic].
-  final int _upperBoundIndex;
+  final int? _upperBoundIndex;
 
   /// The index into [typeMirrors] of the class that declares this type
   /// variable.
@@ -1366,12 +1356,13 @@ class TypeVariableMirrorImpl extends _DataCaching
 
   @override
   TypeMirror get upperBound {
-    if (_upperBoundIndex == null) return DynamicMirrorImpl();
-    if (_upperBoundIndex == NO_CAPABILITY_INDEX) {
+    var upperBoundIndex = _upperBoundIndex;
+    if (upperBoundIndex == null) return DynamicMirrorImpl();
+    if (upperBoundIndex == NO_CAPABILITY_INDEX) {
       throw NoSuchCapabilityError('Attempt to get `upperBound` from type '
           'variable mirror without capability.');
     }
-    return _data.typeMirrors[_upperBoundIndex];
+    return _data.typeMirrors[upperBoundIndex];
   }
 
   @override
@@ -1569,7 +1560,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
       // for that first because it is preferred over the slower computation
       // based on declaration mirror traversal. Check whether [methodName]
       // is known.
-      int shapeIndex = parameterListShapes[memberName]!;
+      int? shapeIndex = parameterListShapes[memberName];
       // If [methodName] is unknown then there exists such a method in the
       // program, but not in the receiver class/instance; hence, the check has
       // failed.
@@ -1583,7 +1574,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
     } else {
       // Without ready-to-use parameter list shape information we must compute
       // the shape from declaration mirrors.
-      DeclarationMirror declarationMirror = declarations[memberName]!;
+      DeclarationMirror? declarationMirror = declarations[memberName];
       // If [memberName] is unknown then there exists such a member in the
       // program, but it is not in this library; the member may also be a
       // non-method; in these cases the the check has failed.
@@ -1902,11 +1893,11 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   void _setupParameterListInfo() {
     var numberOfPositionalParameters = 0;
     var numberOfOptionalPositionalParameters = 0;
-    _namesOfNamedParameters = <Symbol>{};
+    var namesOfNamedParameters = <Symbol>{};
     for (var parameterMirror in parameters) {
       parameterMirror as ParameterMirrorImpl;
       if (parameterMirror.isNamed) {
-        _namesOfNamedParameters.add(parameterMirror._nameSymbol!);
+        namesOfNamedParameters.add(parameterMirror._nameSymbol!);
       } else {
         numberOfPositionalParameters++;
         if (parameterMirror.isOptional) {
@@ -1917,6 +1908,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
     _numberOfPositionalParameters = numberOfPositionalParameters;
     _numberOfOptionalPositionalParameters =
         numberOfOptionalPositionalParameters;
+    _namesOfNamedParameters = namesOfNamedParameters;
   }
 
   /// Returns the number of positional parameters of this method; computed
@@ -1947,12 +1939,12 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   /// computed based on the given parameter mirrors, then cached.
   Set<Symbol> get namesOfNamedParameters {
     if (_namesOfNamedParameters == null) _setupParameterListInfo();
-    return _namesOfNamedParameters;
+    return _namesOfNamedParameters!;
   }
 
   /// Cache for the set of symbols used for named parameters for this method;
   /// `null` means not yet cached.
-  late Set<Symbol> _namesOfNamedParameters;
+  Set<Symbol>? _namesOfNamedParameters;
 
   bool _isArgumentListShapeAppropriate(
       int numberOfPositionalArguments, Iterable<Symbol>? namedArgumentNames) {
