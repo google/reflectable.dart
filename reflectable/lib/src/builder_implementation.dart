@@ -3794,7 +3794,6 @@ class BuilderImplementation {
 
       for (CompilationUnitElement unit in library.units) {
         for (ClassElement type in unit.types) {
-          print(type); // DEBUG
           for (ClassElement reflector
               in await getReflectors(_qualifiedName(type), type.metadata)) {
             await addClassDomain(type, reflector);
