@@ -1627,8 +1627,9 @@ class _ReflectorDomain {
       // [element] is a method, a function, or an explicitly declared
       // getter or setter.
       int descriptor = _declarationDescriptor(element);
-      int returnTypeIndex = await _computeReturnTypeIndex(element, descriptor)
-          ?? constants.NO_CAPABILITY_INDEX;
+      int returnTypeIndex =
+          await _computeReturnTypeIndex(element, descriptor) ??
+              constants.NO_CAPABILITY_INDEX;
       int ownerIndex = (await _computeOwnerIndex(element, descriptor)) ??
           constants.NO_CAPABILITY_INDEX;
       String reflectedTypeArgumentsOfReturnType = 'null';
@@ -1647,18 +1648,23 @@ class _ReflectorDomain {
       }));
       int reflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
       if (reflectedTypeRequested) {
-        reflectedReturnTypeIndex = _typeCodeIndex(element.returnType,
-            await classes, reflectedTypes, reflectedTypesOffset, typedefs)
-            ?? constants.NO_CAPABILITY_INDEX;
+        reflectedReturnTypeIndex = _typeCodeIndex(
+                element.returnType,
+                await classes,
+                reflectedTypes,
+                reflectedTypesOffset,
+                typedefs) ??
+            constants.NO_CAPABILITY_INDEX;
       }
       int dynamicReflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
       if (reflectedTypeRequested) {
         dynamicReflectedReturnTypeIndex = _dynamicTypeCodeIndex(
-            element.returnType,
-            await classes,
-            reflectedTypes,
-            reflectedTypesOffset,
-            typedefs) ?? constants.NO_CAPABILITY_INDEX;
+                element.returnType,
+                await classes,
+                reflectedTypes,
+                reflectedTypesOffset,
+                typedefs) ??
+            constants.NO_CAPABILITY_INDEX;
       }
       String metadataCode = _capabilities._supportsMetadata
           ? await _extractMetadataCode(
@@ -3469,14 +3475,15 @@ class BuilderImplementation {
       for (ImportElement import in library.imports) {
         if (import.importedLibrary?.id != reflectableLibrary.id) continue;
         for (ElementAnnotation metadatum in import.metadata) {
-          if (metadatum.element == globalQuantifyCapabilityConstructor) {
+          var metadatumElement = metadatum.element.declaration;
+          if (metadatumElement == globalQuantifyCapabilityConstructor) {
             DartObject value = _getEvaluatedMetadatum(metadatum);
             if (value != null) {
               String pattern =
                   value.getField('classNamePattern').toStringValue();
               if (pattern == null) {
                 await _warn(WarningKind.badNamePattern,
-                    'The classNamePattern must be a string', metadatum.element);
+                    'The classNamePattern must be a string', metadatumElement);
                 continue;
               }
               ClassElement reflector =
@@ -3489,14 +3496,14 @@ class BuilderImplementation {
                     WarningKind.badSuperclass,
                     'The reflector must be a direct subclass of Reflectable.' +
                         found,
-                    metadatum.element);
+                    metadatumElement);
                 continue;
               }
               globalPatterns
                   .putIfAbsent(RegExp(pattern), () => <ClassElement>[])
                   .add(reflector);
             }
-          } else if (metadatum.element ==
+          } else if (metadatumElement ==
               globalQuantifyMetaCapabilityConstructor) {
             DartObject constantValue = metadatum.computeConstantValue();
             if (constantValue != null) {
@@ -3509,7 +3516,7 @@ class BuilderImplementation {
                     WarningKind.badMetadata,
                     'The metadata must be a Type. '
                     'Found ${constantValue.getField('metadataType').type.element.name}',
-                    metadatum.element);
+                    metadatumElement);
                 continue;
               }
               ClassElement reflector = constantValue
@@ -3525,7 +3532,7 @@ class BuilderImplementation {
                     WarningKind.badSuperclass,
                     'The reflector must be a direct subclass of Reflectable.' +
                         found,
-                    metadatum.element);
+                    metadatumElement);
                 continue;
               }
               if (metadataFieldValue is ClassElement) {
@@ -3543,7 +3550,7 @@ class BuilderImplementation {
                     WarningKind.badMetadata,
                     'The metadata must be a class type. '
                     'Found $typeName',
-                    metadatum.element);
+                    metadatumElement);
                 continue;
               }
             }
@@ -3787,6 +3794,7 @@ class BuilderImplementation {
 
       for (CompilationUnitElement unit in library.units) {
         for (ClassElement type in unit.types) {
+          print(type); // DEBUG
           for (ClassElement reflector
               in await getReflectors(_qualifiedName(type), type.metadata)) {
             await addClassDomain(type, reflector);
@@ -4112,7 +4120,9 @@ class BuilderImplementation {
     imports.sort();
 
     String languageVersionComment =
-      world.entryPointLibrary.isNonNullableByDefault ? '' : '// @dart = 2.9\n';
+        world.entryPointLibrary.isNonNullableByDefault
+            ? ''
+            : '// @dart = 2.9\n';
     String result = '''
 // This file has been generated by the reflectable package.
 // https://github.com/dart-lang/reflectable.
@@ -5448,7 +5458,7 @@ Future<ResolvedLibraryResult> _getResolvedLibrary(
       ++attempts;
       if (attempts == 10) {
         log.severe('Internal error: Analysis session '
-          'did not stabilize after ten attempts!');
+            'did not stabilize after ten attempts!');
         return null;
       }
     }
