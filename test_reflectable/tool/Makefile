@@ -40,7 +40,7 @@ build:
 	( cd ..; pub run build_runner build )
 
 test:
-	( cd ..; pub run build_runner test )
+	( cd ..; pub run --no-sound-null-safety test )
 
 clean:
 	( rm -rf ../.dart_tool )
