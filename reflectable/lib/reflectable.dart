@@ -2,8 +2,6 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-// This is the main library in package reflectable.
-
 library reflectable.reflectable;
 
 import 'capability.dart';

@@ -480,7 +480,7 @@ abstract class InstanceMirror implements ObjectMirror {
   ///     } else if (invocation.isSetter) {
   ///       return this.invokeGetter(
   ///           invocation.memberName,
-  ///           invocation.positionArguments[0]);
+  ///           invocation.positionalArguments[0]);
   ///     } else {
   ///       return this.invoke(
   ///           invocation.memberName,

@@ -132,8 +132,8 @@ class ReflectorData {
         // This is the case when the capabilities do not include a
         // `TypeCapability`; it is also the case when there are no
         // supported classes. In both cases the empty map is correct.
-        _typeToClassMirrorCache = typeToClassMirrorCache =
-            <Type, ClassMirror>{};
+        _typeToClassMirrorCache =
+            typeToClassMirrorCache = <Type, ClassMirror>{};
       } else {
         // Note that [types] corresponds to the prefix of [typeMirrors] which
         // are class mirrors; [typeMirrors] continues with type variable
@@ -181,7 +181,8 @@ Map<Reflectable, ReflectorData> data =
 
 /// This mapping translates symbols to strings for the covered members.
 /// It will be initialized in the generated code.
-Map<Symbol, String>? memberSymbolMap = throw StateError(pleaseInitializeMessage);
+Map<Symbol, String>? memberSymbolMap =
+    throw StateError(pleaseInitializeMessage);
 
 abstract class _DataCaching {
   // TODO(eernst) clarify: When we have some substantial pieces of code using
@@ -499,8 +500,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
             _data.memberMirrors![declarationIndex];
         result[declarationMirror.simpleName] = declarationMirror;
       }
-      _declarations = declarations =
-          UnmodifiableMapView<String, DeclarationMirror>(result);
+      _declarations =
+          declarations = UnmodifiableMapView<String, DeclarationMirror>(result);
     }
     return declarations;
   }
@@ -520,11 +521,11 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       for (int instanceMemberIndex in instanceMemberIndices) {
         DeclarationMirror declarationMirror =
             _data.memberMirrors![instanceMemberIndex];
-            result[declarationMirror.simpleName] =
-                declarationMirror as MethodMirror;
+        result[declarationMirror.simpleName] =
+            declarationMirror as MethodMirror;
       }
-      _instanceMembers = instanceMembers =
-          UnmodifiableMapView<String, MethodMirror>(result);
+      _instanceMembers =
+          instanceMembers = UnmodifiableMapView<String, MethodMirror>(result);
     }
     return instanceMembers;
   }
@@ -548,8 +549,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
         result[declarationMirror.simpleName] =
             declarationMirror as MethodMirror;
       }
-      staticMembers = _staticMembers =
-          UnmodifiableMapView<String, MethodMirror>(result);
+      staticMembers =
+          _staticMembers = UnmodifiableMapView<String, MethodMirror>(result);
     }
     return staticMembers;
   }
@@ -658,7 +659,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
           type, constructorName, positionalArguments, namedArguments);
     }
 
-    Function? constructor = _constructors['$constructorName'];
+    Function? constructor = _constructors[constructorName];
     if (constructor == null) fail();
     try {
       Function.apply(constructor(false), positionalArguments, namedArguments);
@@ -674,7 +675,10 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       [Map<Symbol, dynamic>? namedArguments]) {
     Never fail() {
       throw reflectableNoSuchMethodError(
-          reflectedType, memberName, positionalArguments, namedArguments);
+          hasReflectedType ? reflectedType : null,
+          memberName,
+          positionalArguments,
+          namedArguments);
     }
 
     _StaticGetter? getter = _getters[memberName];
@@ -1529,8 +1533,8 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
           result[typeMirror.simpleName] = typeMirror;
         }
       });
-      _declarations = declarations =
-          UnmodifiableMapView<String, DeclarationMirror>(result);
+      _declarations =
+          declarations = UnmodifiableMapView<String, DeclarationMirror>(result);
     }
     return declarations;
   }
@@ -1850,8 +1854,10 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
     }
     if (_hasClassReturnType) {
       return _hasGenericReturnType
-          ? _createInstantiatedGenericClass(_data.typeMirrors[_returnTypeIndex] as GenericClassMirrorImpl,
-              null, _reflectedTypeArgumentsOfReturnType)
+          ? _createInstantiatedGenericClass(
+              _data.typeMirrors[_returnTypeIndex] as GenericClassMirrorImpl,
+              null,
+              _reflectedTypeArgumentsOfReturnType)
           : _data.typeMirrors[_returnTypeIndex];
     }
     throw unreachableError('Unexpected kind of returnType');
