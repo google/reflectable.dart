@@ -28,8 +28,8 @@ void main() {
   initializeReflectable();
 
   test('Metadata with name-clash', () {
-    expect(reflector.reflectType(C)!.metadata, [reflector, const Bar()]);
+    expect(reflector.reflectType(C).metadata, [reflector, const Bar()]);
     expect(
-        o.reflector2.reflectType(o.D)!.metadata, [o.reflector2, const o.Bar()]);
+        o.reflector2.reflectType(o.D).metadata, [o.reflector2, const o.Bar()]);
   });
 }

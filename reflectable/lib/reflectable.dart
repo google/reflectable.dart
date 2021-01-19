@@ -2,6 +2,26 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
+///
+/// Basic, code generation based reflection in Dart,
+/// with support for introspection and dynamic invocation.
+///
+/// *Introspection* is that subset of reflection by which a running
+/// program can examine its own structure. For example, a function
+/// that prints out the names of all the members of an arbitrary object.
+///
+/// *Dynamic invocation* refers the ability to evaluate code that has not
+/// been literally specified at compile time, such as calling a method
+/// whose name is provided as an argument (because it is looked up in a
+/// database, or provided interactively by the user).
+///
+/// Reflectable uses capabilities to specify the level of support, as
+/// specified
+/// [here](https://github.com/google/reflectable.dart/blob/master/reflectable/doc/TheDesignOfReflectableCapabilities.md).
+/// The rationale is that unlimited support for reflection tends to be too
+/// expensive in terms of program size, but if only few features are needed
+/// then a small set of capabilities it is likely to be much smaller.
+///
 library reflectable.reflectable;
 
 import 'capability.dart';
@@ -35,10 +55,10 @@ abstract class ReflectableInterface {
   /// it can be obtained from `originalDeclaration`. That mirror will
   /// have no actual type arguments, but it will have declared type
   /// variables. Other types than classes are not (yet) supported.
-  TypeMirror? reflectType(Type type);
+  TypeMirror reflectType(Type type);
 
   /// Returns a mirror of the given library [library].
-  LibraryMirror? findLibrary(String library);
+  LibraryMirror findLibrary(String library);
 
   /// Returns a map of all libraries in the current isolate.
   Map<Uri, LibraryMirror> get libraries;

@@ -117,13 +117,14 @@ void main() {
   });
 
   var noBoundsLibraryMirror =
-      noBoundsReflector.findLibrary('test_reflectable.test.type_variable_test')!;
-  runTestNoBounds('generic class', noBoundsLibraryMirror.declarations['B'] as ClassMirror);
+      noBoundsReflector.findLibrary('test_reflectable.test.type_variable_test');
+  runTestNoBounds(
+      'generic class', noBoundsLibraryMirror.declarations['B'] as ClassMirror);
   runTestNoBounds(
       'instantiated generic class', noBoundsReflector.reflect(b).type);
 
   var libraryMirror =
-      reflector.findLibrary('test_reflectable.test.type_variable_test')!;
+      reflector.findLibrary('test_reflectable.test.type_variable_test');
   runTest(
       'static',
       libraryMirror.declarations['B'] as ClassMirror,

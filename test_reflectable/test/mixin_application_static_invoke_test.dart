@@ -38,14 +38,14 @@ void main() {
   initializeReflectable();
 
   test('Mixin-application invoke', () {
-    TypeMirror typeMirror = const Reflector().reflectType(B)!;
+    TypeMirror typeMirror = const Reflector().reflectType(B);
     expect(typeMirror is ClassMirror, true);
     var classMirror = typeMirror as ClassMirror;
     expect(() => classMirror.superclass!.invoke('staticFoo', [10]),
         throwsReflectableNoMethod);
   });
   test('Mixin-application static member', () {
-    TypeMirror typeMirror = const Reflector().reflectType(B)!;
+    TypeMirror typeMirror = const Reflector().reflectType(B);
     expect(typeMirror is ClassMirror, true);
     var classMirror = typeMirror as ClassMirror;
     expect(classMirror.superclass!.declarations['staticFoo'], null);

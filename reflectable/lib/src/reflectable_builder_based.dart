@@ -1190,7 +1190,7 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
           'without `typeRelationsCapability`');
     }
     return reflectedTypeArguments
-        .map((Type type) => _reflector.reflectType(type)!)
+        .map((Type type) => _reflector.reflectType(type))
         .toList();
   }
 
@@ -2565,7 +2565,7 @@ abstract class ReflectableImpl extends ReflectableBase
   }
 
   @override
-  TypeMirror? reflectType(Type type) {
+  TypeMirror reflectType(Type type) {
     ClassMirror? result = data[this]!.classMirrorForType(type);
     if (result == null || !_hasTypeCapability) {
       throw NoSuchCapabilityError(
@@ -2575,7 +2575,7 @@ abstract class ReflectableImpl extends ReflectableBase
   }
 
   @override
-  LibraryMirror? findLibrary(String libraryName) {
+  LibraryMirror findLibrary(String libraryName) {
     ReflectorData reflectorData = data[this]!;
     if (reflectorData.libraryMirrors == null) {
       throw NoSuchCapabilityError('Using `findLibrary` without capability. '
@@ -2595,7 +2595,7 @@ abstract class ReflectableImpl extends ReflectableBase
       case 0:
         throw ArgumentError('No such library: $libraryName');
       case 1:
-        return matchingLibrary;
+        return matchingLibrary!;
       default:
         throw ArgumentError('Ambiguous library name: $libraryName');
     }

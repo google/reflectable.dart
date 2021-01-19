@@ -41,7 +41,7 @@ void main() {
 
   var aMirror = reflector.reflect(A());
   var libraryMirror =
-      reflector.findLibrary('test_reflectable.test.no_such_method_test')!;
+      reflector.findLibrary('test_reflectable.test.no_such_method_test');
 
   // Check that reflectable invocations of non-existing methods causes
   // a `ReflectableNoSuchMethodError`.
