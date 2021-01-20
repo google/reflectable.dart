@@ -6,7 +6,6 @@
 * Prevent unnecessary code generation for inputs named `*.vm_test.*`, 
   `*.node_test.*`, or `*.browser_test.*`, to reduce code generation time.
 
-
 ## 3.0.0-nullsafety.0
 
 * Migrate the generated code and its dependencies to null safety.
