@@ -502,13 +502,13 @@ class _StringInvocation extends StringInvocation {
   final Map<Symbol, dynamic> namedArguments;
 
   @override
-  bool isMethod;
+  bool get isMethod => kind == StringInvocationKind.method;
 
   @override
-  bool isGetter;
+  bool get isGetter => kind == StringInvocationKind.getter;
 
   @override
-  bool isSetter;
+  bool get isSetter => kind == StringInvocationKind.setter;
 
   _StringInvocation(this.memberName, this.positionalArguments,
       this.namedArguments, this.kind);
@@ -518,11 +518,20 @@ class _StringInvocation extends StringInvocation {
 /// doesn't have the capabilities to invoke it.
 class ReflectableNoSuchMethodError extends Error
     implements NoSuchCapabilityError {
-  final Object receiver;
+  /// [receiver] is nullable because (1) we can reflect on the null object and
+  /// hence it can be the receiver, (2) a static method invocation uses the
+  /// reflected type as the receiver, but null is used when no capability
+  /// was requested for the reflected type, and (3) a top-level function uses
+  /// null as the receiver.
+  final Object? receiver;
   final String memberName;
   final List positionalArguments;
-  final Map<Symbol, dynamic> namedArguments;
-  final List<Symbol> existingArgumentNames;
+
+  /// [namedArguments] is nullable because `invoke` and similar methods on
+  /// mirrors allow their `namedArguments` parameter to be null. It specifies
+  /// that there are no named arguments.
+  final Map<Symbol, dynamic>? namedArguments;
+
   final StringInvocationKind kind;
 
   ReflectableNoSuchMethodError(
@@ -530,11 +539,10 @@ class ReflectableNoSuchMethodError extends Error
       this.memberName,
       this.positionalArguments,
       this.namedArguments,
-      this.kind,
-      this.existingArgumentNames);
+      this.kind);
 
-  StringInvocation get invocation =>
-      _StringInvocation(memberName, positionalArguments, namedArguments, kind);
+  StringInvocation get invocation => _StringInvocation(
+      memberName, positionalArguments, namedArguments ?? const {}, kind);
 
   @override
   String toString() {
@@ -566,56 +574,47 @@ class ReflectableNoSuchMethodError extends Error
     if (namedArguments != null) {
       description += 'Named arguments: $namedArguments\n';
     }
-    if (existingArgumentNames != null) {
-      description += 'Existing argument names: $existingArgumentNames\n';
-    }
     return description;
   }
 }
 
 dynamic reflectableNoSuchInvokableError(
-    Object receiver,
+    Object? receiver,
     String memberName,
     List positionalArguments,
-    Map<Symbol, dynamic> namedArguments,
-    StringInvocationKind kind,
-    [List<Symbol> existingArgumentNames]) {
+    Map<Symbol, dynamic>? namedArguments,
+    StringInvocationKind kind) {
   throw ReflectableNoSuchMethodError(receiver, memberName, positionalArguments,
-      namedArguments, kind, existingArgumentNames);
+      namedArguments, kind);
 }
 
-dynamic reflectableNoSuchMethodError(Object receiver, String memberName,
-    List positionalArguments, Map<Symbol, dynamic> namedArguments,
-    [List<Symbol> existingArgumentNames]) {
+dynamic reflectableNoSuchMethodError(Object? receiver, String memberName,
+    List positionalArguments, Map<Symbol, dynamic>? namedArguments) {
   throw ReflectableNoSuchMethodError(receiver, memberName, positionalArguments,
-      namedArguments, StringInvocationKind.method, existingArgumentNames);
+      namedArguments, StringInvocationKind.method);
 }
 
-dynamic reflectableNoSuchGetterError(Object receiver, String memberName,
-    List positionalArguments, Map<Symbol, dynamic> namedArguments,
-    [List<Symbol> existingArgumentNames]) {
+dynamic reflectableNoSuchGetterError(Object? receiver, String memberName,
+    List positionalArguments, Map<Symbol, dynamic>? namedArguments) {
   throw ReflectableNoSuchMethodError(receiver, memberName, positionalArguments,
-      namedArguments, StringInvocationKind.getter, existingArgumentNames);
+      namedArguments, StringInvocationKind.getter);
 }
 
-dynamic reflectableNoSuchSetterError(Object receiver, String memberName,
-    List positionalArguments, Map<Symbol, dynamic> namedArguments,
-    [List<Symbol> existingArgumentNames]) {
+dynamic reflectableNoSuchSetterError(Object? receiver, String memberName,
+    List positionalArguments, Map<Symbol, dynamic>? namedArguments) {
   throw ReflectableNoSuchMethodError(receiver, memberName, positionalArguments,
-      namedArguments, StringInvocationKind.setter, existingArgumentNames);
+      namedArguments, StringInvocationKind.setter);
 }
 
 dynamic reflectableNoSuchConstructorError(
-    Object receiver,
+    Object? receiver,
     String constructorName,
     List positionalArguments,
-    Map<Symbol, dynamic> namedArguments,
-    [List<Symbol> existingArgumentNames]) {
+    Map<Symbol, dynamic>? namedArguments) {
   throw ReflectableNoSuchMethodError(
       receiver,
       constructorName,
       positionalArguments,
       namedArguments,
-      StringInvocationKind.constructor,
-      existingArgumentNames);
+      StringInvocationKind.constructor);
 }

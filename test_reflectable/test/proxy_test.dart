@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Implements a very simple kind of proxy object.
@@ -37,14 +36,14 @@ class Proxy implements A {
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
-    return Function.apply(methodMap[invocation.memberName](forwardee),
+    return Function.apply(methodMap[invocation.memberName]!(forwardee),
         invocation.positionalArguments, invocation.namedArguments);
   }
 }
 
 Map<Symbol, Function> createMethodMap(Type T) {
   var methodMapForT = <Symbol, Function>{};
-  ClassMirror classMirror = proxyReflectable.reflectType(T);
+  var classMirror = proxyReflectable.reflectType(T) as ClassMirror;
   Map<String, DeclarationMirror> declarations = classMirror.declarations;
 
   for (String name in declarations.keys) {

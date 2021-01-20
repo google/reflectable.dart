@@ -1,7 +1,6 @@
 // Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 /// Tests that type arguments given to literal lists and maps are preserved
 /// when such objects are delivered as `metadata`.
@@ -44,12 +43,12 @@ void main() {
   initializeReflectable();
 
   test('Type arguments on literal maps and lists', () {
-    ClassMirror cMirror = reflector.reflectType(C);
+    var cMirror = reflector.reflectType(C) as ClassMirror;
     Map<String, DeclarationMirror> cDeclarations = cMirror.declarations;
-    DeclarationMirror fooMirror = cDeclarations['foo'];
-    ListMetadata fooMetadata = fooMirror.metadata[0];
-    DeclarationMirror barMirror = cDeclarations['bar'];
-    MapMetadata barMetadata = barMirror.metadata[0];
+    DeclarationMirror fooMirror = cDeclarations['foo']!;
+    var fooMetadata = fooMirror.metadata[0] as ListMetadata;
+    DeclarationMirror barMirror = cDeclarations['bar']!;
+    var barMetadata = barMirror.metadata[0] as MapMetadata;
 
     // These tests are forgiving, e.g., they ignore type arguments.
     expect(fooMetadata.theList, const <int>[1, 2]);

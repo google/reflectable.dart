@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses `invoker` on operators.
@@ -24,8 +23,8 @@ const myReflectable = MyReflectable();
 class A {
   int f;
   A(this.f);
-  int operator +(x) => 42 + x + f;
-  int operator [](x) => 42 + x + f;
+  int operator +(x) => (42 + x + f).toInt();
+  int operator [](x) => 42 + (x as int) + f;
   void operator []=(x, v) { f = x + v + f; }
 }
 
@@ -34,7 +33,7 @@ void main() {
 
   var instance1 = A(0);
   var instance2 = A(1);
-  ClassMirror classMirror = myReflectable.reflectType(A);
+  var classMirror = myReflectable.reflectType(A) as ClassMirror;
   test('invoker of operator +', () {
     Function plusInvoker = classMirror.invoker('+');
     expect(plusInvoker(instance1)(42), 84);

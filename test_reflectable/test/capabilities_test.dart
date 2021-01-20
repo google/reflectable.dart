@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-// @dart=2.9
 
 // Tests that reflection is constrained according to capabilities.
 // TODO(sigurdm) implement: Write tests that covers all capabilities.
@@ -147,7 +146,7 @@ void main() {
   initializeReflectable();
 
   test('Static invocation', () {
-    r.ClassMirror classMirror = staticReflector.reflectType(A);
+    var classMirror = staticReflector.reflectType(A) as r.ClassMirror;
     expect(classMirror.invoke('foo', []), 42);
     expect(() => classMirror.invoke('bar', []), throwsReflectableNoMethod);
     expect(classMirror.invokeGetter('getFoo'), 44);

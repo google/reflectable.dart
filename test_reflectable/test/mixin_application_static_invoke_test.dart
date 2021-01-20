@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 library test_reflectable.test.mixin_application_static_invoke_test;
 
@@ -41,14 +40,14 @@ void main() {
   test('Mixin-application invoke', () {
     TypeMirror typeMirror = const Reflector().reflectType(B);
     expect(typeMirror is ClassMirror, true);
-    ClassMirror classMirror = typeMirror;
-    expect(() => classMirror.superclass.invoke('staticFoo', [10]),
+    var classMirror = typeMirror as ClassMirror;
+    expect(() => classMirror.superclass!.invoke('staticFoo', [10]),
         throwsReflectableNoMethod);
   });
   test('Mixin-application static member', () {
     TypeMirror typeMirror = const Reflector().reflectType(B);
     expect(typeMirror is ClassMirror, true);
-    ClassMirror classMirror = typeMirror;
-    expect(classMirror.superclass.declarations['staticFoo'], null);
+    var classMirror = typeMirror as ClassMirror;
+    expect(classMirror.superclass!.declarations['staticFoo'], null);
   });
 }

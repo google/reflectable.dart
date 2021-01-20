@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 /// File used to test reflectable code generation.
 /// Uses `correspondingSetterCapability` to get support for setters.
@@ -173,7 +172,8 @@ void testStatic(Reflectable mirrorSystem, Type reflectee, void Function() classR
     {bool broad = false}) {
   test('Static invocation: ${description[mirrorSystem.runtimeType]}', () {
     classResetter();
-    ClassMirror classMirror = mirrorSystem.reflectType(reflectee);
+    ClassMirror classMirror =
+        mirrorSystem.reflectType(reflectee) as ClassMirror;
     if (broad) {
       expect(classMirror.invokeGetter('foo'), 44);
     } else {

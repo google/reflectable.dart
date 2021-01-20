@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses `typeRelations` capability.
@@ -27,8 +26,8 @@ class MyClass {}
 void main() {
   initializeReflectable();
 
-  ClassMirror myClassMirror = myReflectable.reflectType(MyClass);
-  ClassMirror classObjectMirror = myClassMirror.superclass;
+  var myClassMirror = myReflectable.reflectType(MyClass) as ClassMirror;
+  ClassMirror classObjectMirror = myClassMirror.superclass!;
   test('superclass targetting un-annotated class', () {
     expect(classObjectMirror.simpleName, 'Object');
   });

@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-// @dart=2.9
 
 // Testing the basic set of features that are needed for polymer.
 
@@ -44,7 +43,7 @@ ThinDeclarationMirror makeThin(DeclarationMirror declaration) {
   bool isFinal() => (declaration is VariableMirror && declaration.isFinal) ||
       (declaration is MethodMirror &&
           declaration.isGetter &&
-          !_hasSetter(declaration.owner, declaration));
+          !_hasSetter(declaration.owner as ClassMirror, declaration));
 
   bool isMethod() => !isField() && !isProperty();
 
@@ -60,7 +59,7 @@ class MyReflectable extends Reflectable {
 const myReflectable = MyReflectable();
 
 List<DeclarationMirror> _query(Type dartType) {
-  ClassMirror mirror = myReflectable.reflectType(dartType);
+  var mirror = myReflectable.reflectType(dartType) as ClassMirror;
   return mirror.declarations.values.toList();
 }
 
@@ -68,17 +67,17 @@ List<ThinDeclarationMirror> buildMirrors(Type dartType) {
   return _query(dartType).map(makeThin).toList();
 }
 
-Object read(Object instance, String name) {
+Object? read(Object instance, String name) {
   var mirror = myReflectable.reflect(instance);
   return mirror.invokeGetter(name);
 }
 
-void write(Object instance, String name, Object value) {
+void write(Object instance, String name, Object? value) {
   var mirror = myReflectable.reflect(instance);
   mirror.invokeSetter(name, value);
 }
 
-Object invoke(Object instance, String name, List<Object> newArgs) {
+Object? invoke(Object instance, String name, List<Object?> newArgs) {
   var mirror = myReflectable.reflect(instance);
   // TODO(eernst) future: fix up the `newArgs` to emulate `adjust: true`.
   return mirror.invoke(name, newArgs);

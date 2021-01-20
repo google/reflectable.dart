@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses default values on optional arguments.
@@ -38,42 +37,42 @@ class A {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = myReflectable.reflectType(A);
+  var classMirror = myReflectable.reflectType(A) as ClassMirror;
   A a;
 
   test('positional argument default, local constant', () {
-    a = classMirror.newInstance('optional', [], {});
+    a = classMirror.newInstance('optional', [], {}) as A;
     expect(a.f, 10);
   });
   test('positional argument default, global constant', () {
-    a = classMirror.newInstance('optional', [], {});
+    a = classMirror.newInstance('optional', [], {}) as A;
     expect(a.g, '20');
   });
 
   test('named argument default, local constant', () {
-    a = classMirror.newInstance('namedOptional', [], {});
+    a = classMirror.newInstance('namedOptional', [], {}) as A;
     expect(a.f, 10);
   });
   test('named argument default, global constant', () {
-    a = classMirror.newInstance('namedOptional', [], {});
+    a = classMirror.newInstance('namedOptional', [], {}) as A;
     expect(a.g, '20');
   });
 
   test('initializing formal default, local constant', () {
-    a = classMirror.newInstance('initializingFormal', [], {});
+    a = classMirror.newInstance('initializingFormal', [], {}) as A;
     expect(a.f, 10);
   });
   test('initializing formal default, global constant', () {
-    a = classMirror.newInstance('initializingFormal', [], {});
+    a = classMirror.newInstance('initializingFormal', [], {}) as A;
     expect(a.g, '20');
   });
 
   test('named initializing formal default, local constant', () {
-    a = classMirror.newInstance('namedInitializingFormal', [], {});
+    a = classMirror.newInstance('namedInitializingFormal', [], {}) as A;
     expect(a.f, 10);
   });
   test('named initializing formal default, global constant', () {
-    a = classMirror.newInstance('namedInitializingFormal', [], {});
+    a = classMirror.newInstance('namedInitializingFormal', [], {}) as A;
     expect(a.g, '20');
   });
 }

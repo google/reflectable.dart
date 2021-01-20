@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 library test_reflectable.test.no_such_capability_test;
 
@@ -32,7 +31,7 @@ void main() {
     r.InstanceMirror instanceMirror = myReflectable.reflect(A());
     expect(() => instanceMirror.invoke('foo', []),
         throwsA(const TypeMatcher<r.ReflectableNoSuchMethodError>()));
-    r.ClassMirror classMirror = myReflectable.reflectType(A);
+    r.ClassMirror classMirror = myReflectable.reflectType(A) as r.ClassMirror;
     expect(() => classMirror.invoke('foo', []),
         throwsA(const TypeMatcher<r.ReflectableNoSuchMethodError>()));
     // When we have the capability we get the NoSuchMethodError, not

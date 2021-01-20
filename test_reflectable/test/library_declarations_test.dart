@@ -1,7 +1,6 @@
 // Copyright (c) 2019, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Looks up the top-level declarations in a library.
@@ -46,13 +45,13 @@ void main() {
   // Commented out below: Cf. reflectable issue #165.
 
   test('library declarations', () {
-    expect(declarations['reflector'].simpleName, 'reflector');
-    expect(declarations['A'].simpleName, 'A');
-    expect(declarations['B'].simpleName, 'B');
-    // expect(declarations['F'].simpleName, 'F');
-    // expect(declarations['G'].simpleName, 'G');
-    // expect(declarations['H'].simpleName, 'H');
-    expect(declarations['main'].simpleName, 'main');
+    expect(declarations['reflector']!.simpleName, 'reflector');
+    expect(declarations['A']!.simpleName, 'A');
+    expect(declarations['B']!.simpleName, 'B');
+    // expect(declarations['F']!.simpleName, 'F');
+    // expect(declarations['G']!.simpleName, 'G');
+    // expect(declarations['H']!.simpleName, 'H');
+    expect(declarations['main']!.simpleName, 'main');
 
     expect(declarations['reflector'] is VariableMirror, isTrue);
     expect(declarations['A'] is ClassMirror, isTrue);
@@ -62,8 +61,8 @@ void main() {
     // expect(declarations['H'] is TypedefMirror, isTrue);
     expect(declarations['main'] is MethodMirror, isTrue);
 
-    ClassMirror aMirror = declarations['A'];
-    ClassMirror bMirror = declarations['B'];
+    var aMirror = declarations['A'] as ClassMirror;
+    var bMirror = declarations['B'] as ClassMirror;
     // TypedefMirror fMirror = declarations['F'];
     // TypedefMirror gMirror = declarations['G'];
     // TypedefMirror hMirror = declarations['H'];

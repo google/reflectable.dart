@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 /// File used to test reflectable code generation.
 /// Uses public features of an instance of a private class in a different
@@ -53,7 +52,7 @@ void testPrivacyViolation(PublicClass object, String description,
       classMirror.declarations.values.forEach((DeclarationMirror declaration) {
         expect(declaration is MethodMirror, true);
         MethodMirror method =
-            declaration; // Declaration needed, no type propagation.
+            declaration as MethodMirror; // Variable needed, no promotion.
         expect(method.reflectedReturnType, int);
         expect(method.parameters.length, 0);
         expect(
@@ -80,7 +79,7 @@ void main() {
     Map<Uri, LibraryMirror> libraries = privacyReflectable.libraries;
     Uri libraryUri = libraries.keys.firstWhere(
         (Uri uri) => uri.toString().contains('private_class_library'));
-    LibraryMirror library = libraries[libraryUri];
+    LibraryMirror library = libraries[libraryUri]!;
     expect(library.declarations.keys, libraryClassNames);
   });
 

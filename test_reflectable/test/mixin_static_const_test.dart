@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 library test_reflectable.test.mixin_static_const_test;
 
@@ -28,9 +27,9 @@ void main() {
   initializeReflectable();
 
   test('Static const not present in mixin application', () {
-    ClassMirror mMirror = reflector.reflectType(M);
+    var mMirror = reflector.reflectType(M) as ClassMirror;
     expect(mMirror.declarations['s'] != null, true);
-    ClassMirror classMirror = reflector.reflectType(B);
+    var classMirror = reflector.reflectType(B) as ClassMirror;
     expect(classMirror.declarations['s'], null);
   });
 }

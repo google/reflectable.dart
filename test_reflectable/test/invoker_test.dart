@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses `invoker` on methods with various argument list shapes.
@@ -35,7 +34,7 @@ void main() {
 
   var instance1 = A(0);
   var instance2 = A(1);
-  ClassMirror classMirror = myReflectable.reflectType(A);
+  var classMirror = myReflectable.reflectType(A) as ClassMirror;
   test('invoker with no arguments', () {
     Function arg0Invoker = classMirror.invoker('arg0');
     expect(arg0Invoker(instance1)(), 42);

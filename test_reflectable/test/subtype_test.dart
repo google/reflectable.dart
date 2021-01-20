@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses `isSubtypeOf` and `isAssignableTo`.
@@ -54,16 +53,16 @@ void main() {
   Reflectable reflector = const Reflector();
   Reflectable insufficientReflector = const InsufficientReflector();
 
-  ClassMirror aMirror = reflector.reflectType(A);
-  ClassMirror bMirror = reflector.reflectType(B);
-  ClassMirror cMirror = reflector.reflectType(C);
-  ClassMirror dMirror = reflector.reflectType(D);
-  ClassMirror eMirror = reflector.reflectType(E);
-  ClassMirror fMirror = reflector.reflectType(F);
-  ClassMirror gMirror = reflector.reflectType(G);
-  ClassMirror hMirror = reflector.reflectType(H);
-  ClassMirror m1Mirror = reflector.reflectType(M1);
-  ClassMirror m2Mirror = reflector.reflectType(M2);
+  var aMirror = reflector.reflectType(A) as ClassMirror;
+  var bMirror = reflector.reflectType(B) as ClassMirror;
+  var cMirror = reflector.reflectType(C) as ClassMirror;
+  var dMirror = reflector.reflectType(D) as ClassMirror;
+  var eMirror = reflector.reflectType(E) as ClassMirror;
+  var fMirror = reflector.reflectType(F) as ClassMirror;
+  var gMirror = reflector.reflectType(G) as ClassMirror;
+  var hMirror = reflector.reflectType(H) as ClassMirror;
+  var m1Mirror = reflector.reflectType(M1) as ClassMirror;
+  var m2Mirror = reflector.reflectType(M2) as ClassMirror;
 
   test('isSubtypeOf', () {
     // Test reflexivity.

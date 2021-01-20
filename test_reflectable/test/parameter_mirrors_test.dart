@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 library test_reflectable.test.parameter_mirrors_test;
 
@@ -24,8 +23,8 @@ class C {
 class A {
   void f1() {}
   void f2(int a) {}
-  void f3(int a, [String b, @C() String c = 'ten']) {}
-  void f4(int a, {@lib.D(3) A b, C c = const C()}) {}
+  void f3(int a, [String? b, @C() String c = 'ten']) {}
+  void f4(int a, {@lib.D(3) A? b, C c = const C()}) {}
 
   var x;
   A({this.x = 42});
@@ -35,16 +34,16 @@ void main() {
   initializeReflectable();
 
   test('Parameter mirrors', () {
-    ClassMirror cm = const Reflector().reflectType(A);
-    MethodMirror f1 = cm.declarations['f1'];
+    var cm = const Reflector().reflectType(A) as ClassMirror;
+    var f1 = cm.declarations['f1'] as MethodMirror;
     var f1Parameters = f1.parameters;
-    MethodMirror f2 = cm.declarations['f2'];
+    var f2 = cm.declarations['f2'] as MethodMirror;
     var f2Parameters = f2.parameters;
-    MethodMirror f3 = cm.declarations['f3'];
+    var f3 = cm.declarations['f3'] as MethodMirror;
     var f3Parameters = f3.parameters;
-    MethodMirror f4 = cm.declarations['f4'];
+    var f4 = cm.declarations['f4'] as MethodMirror;
     var f4Parameters = f4.parameters;
-    MethodMirror constructor = cm.declarations['A'];
+    var constructor = cm.declarations['A'] as MethodMirror;
     var constructorParameters = constructor.parameters;
 
     expect(f1Parameters, []);

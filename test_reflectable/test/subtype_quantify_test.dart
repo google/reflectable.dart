@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 library test_reflectable.test.subtype_quantify_test;
 
@@ -85,7 +84,7 @@ void main() {
   });
 
   test('Subtype quantification supports mixin applications', () {
-    ClassMirror eMirror = reflector.reflectType(E);
+    var eMirror = reflector.reflectType(E) as ClassMirror;
     expect(eMirror.superclass, isClassMirror);
     // TODO(eernst) implement: Cover the different kinds of mixin applications.
   });

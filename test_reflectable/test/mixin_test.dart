@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 library test_reflectable.test.mixin_test;
 
@@ -112,31 +111,31 @@ class BB extends AA with M4, M5, M6 {}
 
 void testReflector(Reflectable reflector, String desc) {
   test('Mixin, $desc', () {
-    ClassMirror aMirror = reflector.reflectType(A);
-    ClassMirror bMirror = reflector.reflectType(B);
-    ClassMirror cMirror = reflector.reflectType(C);
-    ClassMirror dMirror = reflector.reflectType(D);
-    ClassMirror m1Mirror = reflector.reflectType(M1);
-    ClassMirror m2Mirror = reflector.reflectType(M2);
-    ClassMirror m3Mirror = reflector.reflectType(M3);
+    var aMirror = reflector.reflectType(A) as ClassMirror;
+    var bMirror = reflector.reflectType(B) as ClassMirror;
+    var cMirror = reflector.reflectType(C) as ClassMirror;
+    var dMirror = reflector.reflectType(D) as ClassMirror;
+    var m1Mirror = reflector.reflectType(M1) as ClassMirror;
+    var m2Mirror = reflector.reflectType(M2) as ClassMirror;
+    var m3Mirror = reflector.reflectType(M3) as ClassMirror;
     expect(aMirror.mixin, aMirror);
     expect(bMirror.mixin, bMirror);
     expect(cMirror.mixin, cMirror);
     expect(m1Mirror.mixin, m1Mirror);
     expect(m2Mirror.mixin, m2Mirror);
     expect(m3Mirror.mixin, m3Mirror);
-    expect(bMirror.superclass.mixin, m1Mirror);
-    expect(cMirror.superclass.superclass.mixin, m2Mirror);
-    expect(cMirror.superclass.mixin, m3Mirror);
-    expect(cMirror.superclass.superclass.superclass, bMirror);
+    expect(bMirror.superclass!.mixin, m1Mirror);
+    expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
+    expect(cMirror.superclass!.mixin, m3Mirror);
+    expect(cMirror.superclass!.superclass!.superclass, bMirror);
     expect(dMirror.mixin, m1Mirror);
-    expect(dMirror.superclass.mixin, aMirror);
-    expect(bMirror.superclass.declarations['foo'].owner, m1Mirror);
-    expect(bMirror.superclass.declarations['field'].owner, m1Mirror);
-    expect(bMirror.superclass.declarations['staticBar'], null);
-    expect(bMirror.superclass.hasReflectedType, true);
-    expect(bMirror.superclass.reflectedType, const TypeMatcher<Type>());
-    expect(bMirror.superclass.superclass.reflectedType,
+    expect(dMirror.superclass!.mixin, aMirror);
+    expect(bMirror.superclass!.declarations['foo']!.owner, m1Mirror);
+    expect(bMirror.superclass!.declarations['field']!.owner, m1Mirror);
+    expect(bMirror.superclass!.declarations['staticBar'], null);
+    expect(bMirror.superclass!.hasReflectedType, true);
+    expect(bMirror.superclass!.reflectedType, const TypeMatcher<Type>());
+    expect(bMirror.superclass!.superclass!.reflectedType,
         const TypeMatcher<Type>());
   });
 }
@@ -151,12 +150,12 @@ void main() {
   testReflector(const ReflectorUpwardsClosed(), 'upwards closed');
   test('Mixin, superclasses not included', () {
     var reflector2 = const Reflector2();
-    ClassMirror bMirror = reflector2.reflectType(B);
-    ClassMirror cMirror = reflector2.reflectType(C);
-    ClassMirror dMirror = reflector2.reflectType(D);
-    ClassMirror m1Mirror = reflector2.reflectType(M1);
-    ClassMirror m2Mirror = reflector2.reflectType(M2);
-    ClassMirror m3Mirror = reflector2.reflectType(M3);
+    var bMirror = reflector2.reflectType(B) as ClassMirror;
+    var cMirror = reflector2.reflectType(C) as ClassMirror;
+    var dMirror = reflector2.reflectType(D) as ClassMirror;
+    var m1Mirror = reflector2.reflectType(M1) as ClassMirror;
+    var m2Mirror = reflector2.reflectType(M2) as ClassMirror;
+    var m3Mirror = reflector2.reflectType(M3) as ClassMirror;
     expect(bMirror.mixin, bMirror);
     expect(cMirror.mixin, cMirror);
     expect(dMirror.mixin, m1Mirror);
@@ -165,66 +164,66 @@ void main() {
     expect(m1Mirror.metadata, contains(const P()));
     expect(m2Mirror.mixin, m2Mirror);
     expect(m3Mirror.mixin, m3Mirror);
-    expect(bMirror.superclass.mixin, m1Mirror);
+    expect(bMirror.superclass!.mixin, m1Mirror);
     // Test that the mixin-application does not inherit the metadata from its
     // mixin.
-    expect(bMirror.superclass.metadata, isEmpty);
+    expect(bMirror.superclass!.metadata, isEmpty);
     expect(
-        () => bMirror.superclass.superclass, throwsANoSuchCapabilityException);
-    expect(cMirror.superclass.superclass.mixin, m2Mirror);
-    expect(cMirror.superclass.mixin, m3Mirror);
-    expect(cMirror.superclass.superclass.superclass, bMirror);
+        () => bMirror.superclass!.superclass, throwsANoSuchCapabilityException);
+    expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
+    expect(cMirror.superclass!.mixin, m3Mirror);
+    expect(cMirror.superclass!.superclass!.superclass, bMirror);
     expect(() => dMirror.superclass, throwsANoSuchCapabilityException);
   });
   test('Mixin, superclasses included up to bound', () {
     var reflector = const ReflectorUpwardsClosedToA();
-    ClassMirror aMirror = reflector.reflectType(A);
-    ClassMirror bMirror = reflector.reflectType(B);
-    ClassMirror cMirror = reflector.reflectType(C);
-    ClassMirror dMirror = reflector.reflectType(D);
-    ClassMirror m1Mirror = reflector.reflectType(M1);
-    ClassMirror m2Mirror = reflector.reflectType(M2);
-    ClassMirror m3Mirror = reflector.reflectType(M3);
+    var aMirror = reflector.reflectType(A) as ClassMirror;
+    var bMirror = reflector.reflectType(B) as ClassMirror;
+    var cMirror = reflector.reflectType(C) as ClassMirror;
+    var dMirror = reflector.reflectType(D) as ClassMirror;
+    var m1Mirror = reflector.reflectType(M1) as ClassMirror;
+    var m2Mirror = reflector.reflectType(M2) as ClassMirror;
+    var m3Mirror = reflector.reflectType(M3) as ClassMirror;
     expect(reflector.reflectType(M1), m1Mirror);
     expect(reflector.reflectType(M2), m2Mirror);
     expect(reflector.reflectType(M3), m3Mirror);
-    expect(bMirror.superclass.mixin, m1Mirror);
-    expect(bMirror.superclass.superclass, aMirror);
-    expect(cMirror.superclass.mixin, m3Mirror);
-    expect(cMirror.superclass.superclass.mixin, m2Mirror);
-    expect(cMirror.superclass.superclass.superclass, bMirror);
+    expect(bMirror.superclass!.mixin, m1Mirror);
+    expect(bMirror.superclass!.superclass, aMirror);
+    expect(cMirror.superclass!.mixin, m3Mirror);
+    expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
+    expect(cMirror.superclass!.superclass!.superclass, bMirror);
     expect(dMirror.mixin, m1Mirror);
     expect(dMirror.superclass, aMirror);
   });
   test('Mixin, superclasses included up to but not including bound', () {
     var reflector = const ReflectorUpwardsClosedUntilA();
-    ClassMirror bMirror = reflector.reflectType(B);
-    ClassMirror cMirror = reflector.reflectType(C);
-    ClassMirror dMirror = reflector.reflectType(D);
-    ClassMirror m1Mirror = reflector.reflectType(M1);
-    ClassMirror m2Mirror = reflector.reflectType(M2);
-    ClassMirror m3Mirror = reflector.reflectType(M3);
+    var bMirror = reflector.reflectType(B) as ClassMirror;
+    var cMirror = reflector.reflectType(C) as ClassMirror;
+    var dMirror = reflector.reflectType(D) as ClassMirror;
+    var m1Mirror = reflector.reflectType(M1) as ClassMirror;
+    var m2Mirror = reflector.reflectType(M2) as ClassMirror;
+    var m3Mirror = reflector.reflectType(M3) as ClassMirror;
     expect(() => reflector.reflectType(A), throwsANoSuchCapabilityException);
     expect(reflector.reflectType(M1), m1Mirror);
     expect(reflector.reflectType(M2), m2Mirror);
     expect(reflector.reflectType(M3), m3Mirror);
-    expect(cMirror.superclass.mixin, m3Mirror);
-    expect(cMirror.superclass.superclass.mixin, m2Mirror);
-    expect(cMirror.superclass.superclass.superclass, bMirror);
-    expect(cMirror.superclass.superclass.superclass.superclass != null, true);
-    expect(() => cMirror.superclass.superclass.superclass.superclass.superclass,
+    expect(cMirror.superclass!.mixin, m3Mirror);
+    expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
+    expect(cMirror.superclass!.superclass!.superclass, bMirror);
+    expect(cMirror.superclass!.superclass!.superclass!.superclass != null, true);
+    expect(() => cMirror.superclass!.superclass!.superclass!.superclass!.superclass,
         throwsANoSuchCapabilityException);
     expect(dMirror.mixin, m1Mirror);
     expect(() => dMirror.superclass, throwsANoSuchCapabilityException);
   });
   test('Mixin, naming', () {
     var reflector2 = const Reflector2();
-    ClassMirror bMirror = reflector2.reflectType(B);
-    ClassMirror cMirror = reflector2.reflectType(C);
-    ClassMirror dMirror = reflector2.reflectType(D);
-    ClassMirror aWithM1Mirror = bMirror.superclass;
-    ClassMirror bWithM2Mirror = cMirror.superclass.superclass;
-    ClassMirror bWithM2WithM3Mirror = cMirror.superclass;
+    var bMirror = reflector2.reflectType(B) as ClassMirror;
+    var cMirror = reflector2.reflectType(C) as ClassMirror;
+    var dMirror = reflector2.reflectType(D) as ClassMirror;
+    ClassMirror aWithM1Mirror = bMirror.superclass!;
+    ClassMirror bWithM2Mirror = cMirror.superclass!.superclass!;
+    ClassMirror bWithM2WithM3Mirror = cMirror.superclass!;
     expect(bMirror.simpleName, 'B');
     expect(cMirror.simpleName, 'C');
     expect(dMirror.simpleName, 'D');

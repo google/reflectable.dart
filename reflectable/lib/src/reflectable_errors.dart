@@ -56,6 +56,6 @@ String applyTemplate(String template, Map<String, String> replacements) {
     if (replacement == null) {
       throw ArgumentError('Missing template replacement for $index');
     }
-    return replacements[index];
+    return replacement;
   });
 }

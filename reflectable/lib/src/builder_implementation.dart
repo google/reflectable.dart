@@ -1,6 +1,7 @@
 // Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
+// @dart = 2.9
 
 library reflectable.src.builder_implementation;
 
@@ -1139,7 +1140,7 @@ class _ReflectorDomain {
       if (isDynamic || isVoid) {
         // The mirror will report 'dynamic' or 'void' as its `returnType`
         // and it will never use the index.
-        return null;
+        return constants.NO_CAPABILITY_INDEX;
       }
       if (isClassType && (await classes).contains(typeElement)) {
         // Normal encoding of a class type which has been added to `classes`.
@@ -1626,8 +1627,11 @@ class _ReflectorDomain {
       // [element] is a method, a function, or an explicitly declared
       // getter or setter.
       int descriptor = _declarationDescriptor(element);
-      int returnTypeIndex = await _computeReturnTypeIndex(element, descriptor);
-      int ownerIndex = await _computeOwnerIndex(element, descriptor);
+      int returnTypeIndex =
+          await _computeReturnTypeIndex(element, descriptor) ??
+              constants.NO_CAPABILITY_INDEX;
+      int ownerIndex = (await _computeOwnerIndex(element, descriptor)) ??
+          constants.NO_CAPABILITY_INDEX;
       String reflectedTypeArgumentsOfReturnType = 'null';
       if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
         reflectedTypeArgumentsOfReturnType =
@@ -1644,17 +1648,23 @@ class _ReflectorDomain {
       }));
       int reflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
       if (reflectedTypeRequested) {
-        reflectedReturnTypeIndex = _typeCodeIndex(element.returnType,
-            await classes, reflectedTypes, reflectedTypesOffset, typedefs);
+        reflectedReturnTypeIndex = _typeCodeIndex(
+                element.returnType,
+                await classes,
+                reflectedTypes,
+                reflectedTypesOffset,
+                typedefs) ??
+            constants.NO_CAPABILITY_INDEX;
       }
       int dynamicReflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
       if (reflectedTypeRequested) {
         dynamicReflectedReturnTypeIndex = _dynamicTypeCodeIndex(
-            element.returnType,
-            await classes,
-            reflectedTypes,
-            reflectedTypesOffset,
-            typedefs);
+                element.returnType,
+                await classes,
+                reflectedTypes,
+                reflectedTypesOffset,
+                typedefs) ??
+            constants.NO_CAPABILITY_INDEX;
       }
       String metadataCode = _capabilities._supportsMetadata
           ? await _extractMetadataCode(
@@ -1720,7 +1730,8 @@ class _ReflectorDomain {
       Map<FunctionType, int> typedefs,
       bool reflectedTypeRequested) async {
     int descriptor = _fieldDescriptor(element);
-    int ownerIndex = (await classes).indexOf(element.enclosingElement);
+    int ownerIndex = (await classes).indexOf(element.enclosingElement) ??
+        constants.NO_CAPABILITY_INDEX;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
@@ -1770,7 +1781,7 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
     // The type `dynamic` is handled via the `dynamicAttribute` bit.
-    if (dartType.isDynamic) return null;
+    if (dartType.isDynamic) return constants.NO_CAPABILITY_INDEX;
     if (dartType is InterfaceType) {
       if (dartType.typeArguments.isEmpty) {
         // A plain, non-generic class, may be handled already.
@@ -1824,7 +1835,7 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
     // The type `dynamic` is handled via the `dynamicAttribute` bit.
-    if (dartType.isDynamic) return null;
+    if (dartType.isDynamic) return constants.NO_CAPABILITY_INDEX;
     if (dartType is InterfaceType) {
       ClassElement classElement = dartType.element;
       if (classes.contains(classElement)) {
@@ -2222,12 +2233,11 @@ class _ReflectorDomain {
       bool reflectedTypeRequested) async {
     int descriptor = _parameterDescriptor(element);
     int ownerIndex = members.indexOf(element.enclosingElement) + fields.length;
-    int classMirrorIndex;
+    int classMirrorIndex = constants.NO_CAPABILITY_INDEX;
     if (_capabilities._impliesTypes) {
       if (descriptor & constants.dynamicAttribute != 0) {
         // This parameter will report its type as [dynamic], and it
-        // will never use `classMirrorIndex`.
-        classMirrorIndex = null;
+        // will never use `classMirrorIndex`. Keep NO_CAPABILITY_INDEX.
       } else if (descriptor & constants.classTypeAttribute != 0) {
         // Normal encoding of a class type. If that class has been added
         // to `classes` we use its `indexOf`; otherwise (if we do not have an
@@ -2237,8 +2247,6 @@ class _ReflectorDomain {
             ? (await classes).indexOf(element.type.element)
             : constants.NO_CAPABILITY_INDEX;
       }
-    } else {
-      classMirrorIndex = constants.NO_CAPABILITY_INDEX;
     }
     int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
@@ -3467,14 +3475,15 @@ class BuilderImplementation {
       for (ImportElement import in library.imports) {
         if (import.importedLibrary?.id != reflectableLibrary.id) continue;
         for (ElementAnnotation metadatum in import.metadata) {
-          if (metadatum.element == globalQuantifyCapabilityConstructor) {
+          var metadatumElement = metadatum.element.declaration;
+          if (metadatumElement == globalQuantifyCapabilityConstructor) {
             DartObject value = _getEvaluatedMetadatum(metadatum);
             if (value != null) {
               String pattern =
                   value.getField('classNamePattern').toStringValue();
               if (pattern == null) {
                 await _warn(WarningKind.badNamePattern,
-                    'The classNamePattern must be a string', metadatum.element);
+                    'The classNamePattern must be a string', metadatumElement);
                 continue;
               }
               ClassElement reflector =
@@ -3487,14 +3496,14 @@ class BuilderImplementation {
                     WarningKind.badSuperclass,
                     'The reflector must be a direct subclass of Reflectable.' +
                         found,
-                    metadatum.element);
+                    metadatumElement);
                 continue;
               }
               globalPatterns
                   .putIfAbsent(RegExp(pattern), () => <ClassElement>[])
                   .add(reflector);
             }
-          } else if (metadatum.element ==
+          } else if (metadatumElement ==
               globalQuantifyMetaCapabilityConstructor) {
             DartObject constantValue = metadatum.computeConstantValue();
             if (constantValue != null) {
@@ -3507,7 +3516,7 @@ class BuilderImplementation {
                     WarningKind.badMetadata,
                     'The metadata must be a Type. '
                     'Found ${constantValue.getField('metadataType').type.element.name}',
-                    metadatum.element);
+                    metadatumElement);
                 continue;
               }
               ClassElement reflector = constantValue
@@ -3523,7 +3532,7 @@ class BuilderImplementation {
                     WarningKind.badSuperclass,
                     'The reflector must be a direct subclass of Reflectable.' +
                         found,
-                    metadatum.element);
+                    metadatumElement);
                 continue;
               }
               if (metadataFieldValue is ClassElement) {
@@ -3541,7 +3550,7 @@ class BuilderImplementation {
                     WarningKind.badMetadata,
                     'The metadata must be a class type. '
                     'Found $typeName',
-                    metadatum.element);
+                    metadatumElement);
                 continue;
               }
             }
@@ -4109,10 +4118,14 @@ class BuilderImplementation {
     }
     imports.sort();
 
+    String languageVersionComment =
+        '// @dart = 2.${
+        world.entryPointLibrary.isNonNullableByDefault ? '12' : '9'
+        }\n';
     String result = '''
 // This file has been generated by the reflectable package.
 // https://github.com/dart-lang/reflectable.
-
+${languageVersionComment}
 import 'dart:core';
 ${imports.join('\n')}
 
@@ -4508,7 +4521,6 @@ Future<String> _extractConstantCode(
         }
       } else {
         unreachableError('SetOrMapLiteral is neither a set nor a map');
-        return '';
       }
     } else if (expression is InstanceCreationExpression) {
       String constructor = expression.constructorName.toSource();
@@ -5445,7 +5457,7 @@ Future<ResolvedLibraryResult> _getResolvedLibrary(
       ++attempts;
       if (attempts == 10) {
         log.severe('Internal error: Analysis session '
-          'did not stabilize after ten attempts!');
+            'did not stabilize after ten attempts!');
         return null;
       }
     }

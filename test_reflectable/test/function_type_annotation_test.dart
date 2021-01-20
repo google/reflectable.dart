@@ -1,7 +1,6 @@
 // Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses a function type in type annotations.
@@ -31,7 +30,7 @@ Int2IntFunc int2int = (int x) => x;
 class C {
   Int2IntFunc get getter => int2int;
   set setter(Int2IntFunc int2int) {}
-  void method(int Function(int) noNameType, {Int2IntFunc int2int}) {}
+  void method(int Function(int) noNameType, {required Int2IntFunc int2int}) {}
 
   void inlineTypes(
     int Function() f1,
@@ -68,14 +67,14 @@ void main() {
 
   LibraryMirror libraryMirror = reflector
       .findLibrary('test_reflectable.test.function_type_annotation_test');
-  VariableMirror variableMirror = libraryMirror.declarations['int2int'];
-  ClassMirror classMirror = reflector.reflectType(C);
-  MethodMirror getterMirror = classMirror.declarations['getter'];
-  MethodMirror setterMirror = classMirror.declarations['setter='];
-  MethodMirror methodMirror = classMirror.declarations['method'];
-  ParameterMirror setterArgumentMirror = setterMirror.parameters[0];
-  ParameterMirror methodArgument0Mirror = methodMirror.parameters[0];
-  ParameterMirror methodArgument1Mirror = methodMirror.parameters[1];
+  var variableMirror = libraryMirror.declarations['int2int'] as VariableMirror;
+  var classMirror = reflector.reflectType(C) as ClassMirror;
+  var getterMirror = classMirror.declarations['getter'] as MethodMirror;
+  var setterMirror = classMirror.declarations['setter='] as MethodMirror;
+  var methodMirror = classMirror.declarations['method'] as MethodMirror;
+  var setterArgumentMirror = setterMirror.parameters[0];
+  var methodArgument0Mirror = methodMirror.parameters[0];
+  var methodArgument1Mirror = methodMirror.parameters[1];
   Type int2intType = const TypeValue<int Function(int)>().type;
 
   test('Using a function type as an annotation', () {
@@ -102,8 +101,8 @@ void main() {
     expect(methodArgument1Mirror.dynamicReflectedType, int2intType);
   });
 
-  MethodMirror inlineTypesMirror =
-      classMirror.declarations['inlineTypes'];
+  var inlineTypesMirror =
+      classMirror.declarations['inlineTypes'] as MethodMirror;
   List<ParameterMirror> parameterMirrors = inlineTypesMirror.parameters;
   List<Type> expectedTypes = [
     TypeValue<int Function()>().type,

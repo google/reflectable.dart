@@ -2,10 +2,26 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-// This is the main library in package reflectable.
-
-// TODO(eernst) doc: Write "library dartdoc" for this library.
-
+///
+/// Basic, code generation based reflection in Dart,
+/// with support for introspection and dynamic invocation.
+///
+/// *Introspection* is that subset of reflection by which a running
+/// program can examine its own structure. For example, a function
+/// that prints out the names of all the members of an arbitrary object.
+///
+/// *Dynamic invocation* refers the ability to evaluate code that has not
+/// been literally specified at compile time, such as calling a method
+/// whose name is provided as an argument (because it is looked up in a
+/// database, or provided interactively by the user).
+///
+/// Reflectable uses capabilities to specify the level of support, as
+/// specified
+/// [here](https://github.com/google/reflectable.dart/blob/master/reflectable/doc/TheDesignOfReflectableCapabilities.md).
+/// The rationale is that unlimited support for reflection tends to be too
+/// expensive in terms of program size, but if only few features are needed
+/// then a small set of capabilities it is likely to be much smaller.
+///
 library reflectable.reflectable;
 
 import 'capability.dart';
@@ -99,16 +115,16 @@ abstract class Reflectable extends implementation.ReflectableImpl
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
   const Reflectable(
-      [ReflectCapability cap0,
-      ReflectCapability cap1,
-      ReflectCapability cap2,
-      ReflectCapability cap3,
-      ReflectCapability cap4,
-      ReflectCapability cap5,
-      ReflectCapability cap6,
-      ReflectCapability cap7,
-      ReflectCapability cap8,
-      ReflectCapability cap9])
+      [ReflectCapability? cap0,
+      ReflectCapability? cap1,
+      ReflectCapability? cap2,
+      ReflectCapability? cap3,
+      ReflectCapability? cap4,
+      ReflectCapability? cap5,
+      ReflectCapability? cap6,
+      ReflectCapability? cap7,
+      ReflectCapability? cap8,
+      ReflectCapability? cap9])
       : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
 
   const Reflectable.fromList(List<ReflectCapability> capabilities)
@@ -119,7 +135,7 @@ abstract class Reflectable extends implementation.ReflectableImpl
   /// If [type] is not a subclass of [Reflectable], or if it is such a class
   /// but no entities are covered (that is, it is unused, so we don't have
   /// any reflection data for it) then [null] is returned.
-  static Reflectable getInstance(Type type) {
+  static Reflectable? getInstance(Type type) {
     for (var reflector in implementation.reflectors) {
       if (reflector.runtimeType == type) return reflector;
     }

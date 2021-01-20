@@ -1,7 +1,6 @@
 // Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses type relations without a `typeRelations` capability.
@@ -40,7 +39,7 @@ void expectCapabilityMessage(Function() f) {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = reflector.reflectType(Bar);
+  var classMirror = reflector.reflectType(Bar) as ClassMirror;
   test('Detect missing type relations capability', () {
     expectCapabilityMessage(() => classMirror.superclass);
     expectCapabilityMessage(() => classMirror.typeVariables);

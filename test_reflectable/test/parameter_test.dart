@@ -1,7 +1,6 @@
 // Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Accesses method parameters and their properties, such as
@@ -58,26 +57,26 @@ class C {}
 @reflector
 @deepReflector
 class MyClass {
-  int arg0() => null;
-  int arg1(int x) => null;
-  int arg2to4(MyClass x, int y, [Reflector z, w = 41.99999999]) => null;
-  int argNamed(int x, y, {num z}) => null;
+  int? arg0() => null;
+  int arg1(int x) => 0;
+  int? arg2to4(MyClass x, int y, [Reflector? z, w = 41.99999999]) => null;
+  int argNamed(int x, y, {num? z}) => 0;
 
-  int operator +(int x) => null;
-  int operator [](int x) => null;
+  int? operator +(int x) => null;
+  int operator [](int x) => 0;
   void operator []=(int x, v) {}
 
   String get getset => '42';
   set getset(String string) {}
 
-  static int noArguments() => null;
-  static int oneArgument(String x) => null;
-  static int optionalArguments(MyClass x, double y,
-          [Reflector z, dynamic w = 42]) =>
+  static int? noArguments() => null;
+  static int oneArgument(String x) => 0;
+  static int? optionalArguments(MyClass x, double y,
+          [Reflector? z, dynamic w = 42]) =>
       null;
 
   // ignore: prefer_adjacent_string_concatenation
-  static int namedArguments(String x, List y, {String z = '4' + '2'}) => null;
+  static int namedArguments(String x, List y, {String z = '4' + '2'}) => 0;
 
   static List<List<List<C>>> get staticGetset => [];
   static set staticGetset(List<List<List<C>>> list) {}
@@ -88,24 +87,25 @@ class UnrelatedClass {}
 final throwsNoCapability = throwsA(const TypeMatcher<NoSuchCapabilityError>());
 
 void performTests(String message, Reflectable reflector) {
-  ClassMirror myClassMirror = reflector.reflectType(MyClass);
+  var myClassMirror = reflector.reflectType(MyClass) as ClassMirror;
   Map<String, DeclarationMirror> declarations = myClassMirror.declarations;
 
-  MethodMirror arg0Mirror = declarations['arg0'];
-  MethodMirror arg1Mirror = declarations['arg1'];
-  MethodMirror arg2to4Mirror = declarations['arg2to4'];
-  MethodMirror argNamedMirror = declarations['argNamed'];
-  MethodMirror opPlusMirror = declarations['+'];
-  MethodMirror opBracketMirror = declarations['[]'];
-  MethodMirror opBracketEqualsMirror = declarations['[]='];
-  MethodMirror getsetMirror = declarations['getset'];
-  MethodMirror getsetEqualsMirror = declarations['getset='];
-  MethodMirror noArgumentsMirror = declarations['noArguments'];
-  MethodMirror oneArgumentMirror = declarations['oneArgument'];
-  MethodMirror optionalArgumentsMirror = declarations['optionalArguments'];
-  MethodMirror namedArgumentsMirror = declarations['namedArguments'];
-  MethodMirror staticGetsetMirror = declarations['staticGetset'];
-  MethodMirror staticGetsetEqualsMirror = declarations['staticGetset='];
+  var arg0Mirror = declarations['arg0'] as MethodMirror;
+  var arg1Mirror = declarations['arg1'] as MethodMirror;
+  var arg2to4Mirror = declarations['arg2to4'] as MethodMirror;
+  var argNamedMirror = declarations['argNamed'] as MethodMirror;
+  var opPlusMirror = declarations['+'] as MethodMirror;
+  var opBracketMirror = declarations['[]'] as MethodMirror;
+  var opBracketEqualsMirror = declarations['[]='] as MethodMirror;
+  var getsetMirror = declarations['getset'] as MethodMirror;
+  var getsetEqualsMirror = declarations['getset='] as MethodMirror;
+  var noArgumentsMirror = declarations['noArguments'] as MethodMirror;
+  var oneArgumentMirror = declarations['oneArgument'] as MethodMirror;
+  var optionalArgumentsMirror = declarations['optionalArguments']
+      as MethodMirror;
+  var namedArgumentsMirror = declarations['namedArguments'] as MethodMirror;
+  var staticGetsetMirror = declarations['staticGetset'] as MethodMirror;
+  var staticGetsetEqualsMirror = declarations['staticGetset='] as MethodMirror;
 
   test('$message reflector: parameter list properties, instance methods', () {
     expect(arg0Mirror.parameters.length, 0);

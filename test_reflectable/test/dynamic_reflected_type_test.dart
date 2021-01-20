@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses `dynamicReflectedType`.
@@ -42,8 +41,8 @@ void testDynamicReflectedType(
 void main() {
   initializeReflectable();
 
-  ClassMirror aMirror = reflector.reflectType(A);
-  ClassMirror bMirror = reflector.reflectType(B);
+  var aMirror = reflector.reflectType(A) as ClassMirror;
+  var bMirror = reflector.reflectType(B) as ClassMirror;
   ClassMirror bInstantiationMirror = reflector.reflect(B<int>()).type;
   testDynamicReflectedType('non-generic class', aMirror, A);
   testDynamicReflectedType('generic class', bMirror, B);

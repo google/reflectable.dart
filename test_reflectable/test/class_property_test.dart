@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses class properties such as `isEnum`, `isOriginalDeclaration`, etc.
@@ -42,10 +41,10 @@ void main() {
 
   LibraryMirror libraryMirror =
       reflector.findLibrary('test_reflectable.test.class_property_test');
-  ClassMirror aMirror = libraryMirror.declarations['A'];
-  ClassMirror bMirror = libraryMirror.declarations['_B'];
-  ClassMirror cMirror = libraryMirror.declarations['C'];
-  ClassMirror dMirror = libraryMirror.declarations['D'];
+  var aMirror = libraryMirror.declarations['A'] as ClassMirror;
+  var bMirror = libraryMirror.declarations['_B'] as ClassMirror;
+  var cMirror = libraryMirror.declarations['C'] as ClassMirror;
+  var dMirror = libraryMirror.declarations['D'] as ClassMirror;
   D<int> dOfInt = D<int>();
   InstanceMirror dOfIntInstanceMirror = reflector.reflect(dOfInt);
   ClassMirror dOfIntMirror = dOfIntInstanceMirror.type;

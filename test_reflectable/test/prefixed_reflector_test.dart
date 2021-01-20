@@ -1,7 +1,6 @@
 // Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses a reflector which is accessed via a prefixed identifier.
@@ -31,7 +30,7 @@ class D {
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = C.reflector.reflectType(D);
+  var classMirror = C.reflector.reflectType(D) as ClassMirror;
   test('Prefixed reflector type', () {
     expect(classMirror.reflectedType, D);
   });

@@ -23,7 +23,7 @@ class UnreachableError extends Error {
 /// `throw unreachableError(..)`, which will indicate to the compiler that this
 /// expression throws (even though it actually happens here). This way we avoid
 /// warnings about a missing return problem, and the code may be more readable.
-Null unreachableError(String message) {
+Never unreachableError(String message) {
   var extendedMessage =
       '*** Unexpected situation encountered!\nPlease report a bug on '
       'github.com/dart-lang/reflectable: $message.';
@@ -35,7 +35,7 @@ Null unreachableError(String message) {
 /// this expression throws (even though it actually happens here). This way we
 /// avoid warnings about a missing return problem, and the code may be more
 /// readable.
-Null unimplementedError(String message) {
+Never unimplementedError(String message) {
   var extendedMessage = '*** Unfortunately, this feature has not yet been '
       'implemented: $message.\n'
       'If you wish to ensure that it is prioritized, please report it '

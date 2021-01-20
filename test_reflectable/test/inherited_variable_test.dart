@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses a getter/setter for a variable which is inherited
@@ -21,7 +20,7 @@ class Reflector extends Reflectable {
 const reflector = Reflector();
 
 class A {
-  int x;
+  late int x;
 }
 
 class B extends A {}
@@ -34,6 +33,6 @@ void main() {
 
   test('Variable inherited from non-covered class', () {
     expect(
-        reflector.reflect(C()).type.instanceMembers['x'].simpleName, 'x');
+        reflector.reflect(C()).type.instanceMembers['x']!.simpleName, 'x');
   });
 }

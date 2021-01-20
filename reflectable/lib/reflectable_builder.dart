@@ -1,6 +1,7 @@
 // Copyright (c) 2017, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
+// @dart = 2.9
 
 library reflectable.reflectable_builder;
 
@@ -67,7 +68,7 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
           buildOptions, environment, builders, const {},
           isReleaseBuild: false);
       var result = await build.run(const {});
-      await build?.beforeExit();
+      await build.beforeExit();
       return result;
     } finally {
       await buildOptions.logListener.cancel();

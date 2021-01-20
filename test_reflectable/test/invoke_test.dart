@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses `invoke`.
@@ -24,8 +23,8 @@ class A {
   int arg1(int x) => x - 42;
   int arg1to3(int x, int y, [int z = 0, w]) => x + y + z * 42;
   int argNamed(int x, int y, {int z = 42}) => x + y - z;
-  int operator +(x) => 42 + x;
-  int operator [](x) => 42 + x;
+  int operator +(x) => (42 + x).toInt();
+  int operator [](x) => 42 + (x as int);
   void operator []=(x, v) { f = x + v; }
   int operator -() => -f;
   int operator ~() => f + 2;
@@ -81,7 +80,7 @@ void main() {
     expect(instanceMirror.invoke('~', []), 5);
   });
 
-  ClassMirror classMirror = myReflectable.reflectType(A);
+  var classMirror = myReflectable.reflectType(A) as ClassMirror;
   test('static invoke with no arguments', () {
     expect(classMirror.invoke('noArguments', []), 42);
   });

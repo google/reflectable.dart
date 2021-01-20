@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 /// File used to test reflectable code generation.
 /// Creates an `AllReflectorsMetaReflector` which may be used to reflect on
@@ -27,9 +26,9 @@ class AllReflectorsMetaReflector extends Reflectable {
     var result = <Reflectable>{};
     annotatedClasses.forEach((ClassMirror classMirror) {
       if (classMirror.isAbstract) return;
-      Reflectable reflector =
-          Reflectable.getInstance(classMirror.reflectedType);
-      if (reflector != null) result.add(reflector);
+      var reflector = Reflectable.getInstance(classMirror.reflectedType)
+          as Reflectable;
+      result.add(reflector);
     });
     return result;
   }

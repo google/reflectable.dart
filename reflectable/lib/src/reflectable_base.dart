@@ -26,16 +26,16 @@ class ReflectableBase {
 
   final bool _capabilitiesGivenAsList;
 
-  final ReflectCapability _cap0, _cap1, _cap2, _cap3, _cap4;
-  final ReflectCapability _cap5, _cap6, _cap7, _cap8, _cap9;
-  final List<ReflectCapability> _capabilities;
+  final ReflectCapability? _cap0, _cap1, _cap2, _cap3, _cap4;
+  final ReflectCapability? _cap5, _cap6, _cap7, _cap8, _cap9;
+  final List<ReflectCapability>? _capabilities;
 
   /// Specifies limits on the support for reflective operations on instances
   /// of classes having an instance of this ReflectableBase as metadata.
   List<ReflectCapability> get capabilities {
-    if (_capabilitiesGivenAsList) return _capabilities;
+    if (_capabilitiesGivenAsList) return _capabilities!;
     var result = <ReflectCapability>[];
-    void add(ReflectCapability cap) {
+    void add(ReflectCapability? cap) {
       if (cap != null) result.add(cap);
     }
 

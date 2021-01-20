@@ -1,7 +1,6 @@
 // Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses 'reflect' across file boundaries.  Main file of program.
@@ -20,11 +19,11 @@ void main() {
   initializeReflectable();
 
   test('reflect local', () {
-    var instanceMirror = myReflectable.reflect(A());
-    expect(instanceMirror == null, isFalse);
+    // Expecting that this does not throw.
+    myReflectable.reflect(A());
   });
   test('reflect imported', () {
-    var instanceMirror = myReflectable.reflect(B());
-    expect(instanceMirror == null, isFalse);
+    // Expecting that this does not throw.
+    myReflectable.reflect(B());
   });
 }

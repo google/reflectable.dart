@@ -1,7 +1,6 @@
 // Copyright (c) 2018, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-// @dart=2.9
 
 // Test `reflectedTypeArguments` and `typeArguments` on statically known
 // type annotations.
@@ -29,12 +28,12 @@ class Provider<X> {}
 
 @reflector
 class MyService {
-  Provider<SecurityService> securityService;
+  late Provider<SecurityService> securityService;
 }
 
 @reflector
 class MyGenericService<X extends SecurityService> {
-  Provider<X> genericSecurityService;
+  late Provider<X> genericSecurityService;
 }
 
 Matcher throwsUnimplemented = throwsA(isUnimplementedError);
@@ -44,21 +43,23 @@ void main() {
   initializeReflectable();
 
   test('get type arguments', () {
-    ClassMirror myServiceMirror = reflector.reflectType(MyService);
+    var myServiceMirror = reflector.reflectType(MyService) as ClassMirror;
     Map<String, DeclarationMirror> declarations = myServiceMirror.declarations;
-    VariableMirror securityServiceMirror = declarations['securityService'];
-    ClassMirror typeAnnotationMirror = securityServiceMirror.type;
+    var securityServiceMirror = declarations['securityService']
+        as VariableMirror;
+    var typeAnnotationMirror = securityServiceMirror.type as ClassMirror;
     expect(typeAnnotationMirror.reflectedTypeArguments[0], SecurityService);
     expect(typeAnnotationMirror.typeArguments[0].reflectedType,
         SecurityService);
   });
 
   test('get type arguments in unimplemented case', () {
-    ClassMirror myServiceMirror = reflector.reflectType(MyGenericService);
+    var myServiceMirror = reflector.reflectType(MyGenericService)
+        as ClassMirror;
     Map<String, DeclarationMirror> declarations = myServiceMirror.declarations;
-    VariableMirror securityServiceMirror =
-        declarations['genericSecurityService'];
-    ClassMirror typeAnnotationMirror = securityServiceMirror.type;
+    var securityServiceMirror =
+        declarations['genericSecurityService'] as VariableMirror;
+    var typeAnnotationMirror = securityServiceMirror.type as ClassMirror;
     expect(() => typeAnnotationMirror.reflectedTypeArguments,
         throwsUnimplemented);
     expect(() => typeAnnotationMirror.typeArguments, throwsUnimplemented);

@@ -1,7 +1,6 @@
 // Copyright (c) 2016, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses a generic mixin.
@@ -27,7 +26,7 @@ const reflector = Reflector();
 
 @reflector
 class M<E> {
-  E e;
+  E? e;
 }
 
 @reflector
@@ -58,10 +57,10 @@ void main() {
   });
 
   test('Generic mixin, super of plain class', () {
-    ClassMirror bMirror = reflector.reflectType(B);
-    DeclarationMirror eMirror = bMirror.instanceMembers['e'];
+    var bMirror = reflector.reflectType(B) as ClassMirror;
+    DeclarationMirror eMirror = bMirror.instanceMembers['e']!;
     expect(eMirror, TypeMatcher<MethodMirror>());
-    MethodMirror eMethodMirror = eMirror;
+    var eMethodMirror = eMirror as MethodMirror;
     if (eMethodMirror.hasReflectedReturnType) {
       expect(eMethodMirror.reflectedReturnType, int);
     } else {
@@ -71,7 +70,7 @@ void main() {
 
   test('Generic mixin, super of generic class', () {
     ClassMirror cMirror = reflector.reflect(C<num>()).type;
-    DeclarationMirror ceMirror = cMirror.instanceMembers['e'];
+    var ceMirror = cMirror.instanceMembers['e']!;
     expect(ceMirror, TypeMatcher<MethodMirror>());
     MethodMirror ceMethodMirror = ceMirror;
     if (ceMethodMirror.hasReflectedReturnType) {
@@ -83,9 +82,9 @@ void main() {
 
   test('Generic mixin, named super of generic class', () {
     ClassMirror dMirror = reflector.reflect(D<num>()).type;
-    DeclarationMirror deMirror = dMirror.instanceMembers['e'];
+    DeclarationMirror deMirror = dMirror.instanceMembers['e']!;
     expect(deMirror, TypeMatcher<MethodMirror>());
-    MethodMirror deMethodMirror = deMirror;
+    var deMethodMirror = deMirror as MethodMirror;
     if (deMethodMirror.hasReflectedReturnType) {
       expect(deMethodMirror.reflectedReturnType, num);
     } else {

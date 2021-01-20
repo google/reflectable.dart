@@ -1,3 +1,11 @@
+## 3.0.0-nullsafety.0
+
+* Migrate the generated code and its dependencies to null safety.
+* Remove `bestEffortReflectedType`, `hasBestEffortReflectedType`,
+  deprecated since version 0.5.0.
+* Change the return type of `ObjectMirror.delegate` from `dynamic` to
+  `Object?`, for consistency with several methods named `invoke...`.
+
 ## 2.2.9
 
 * Change `build.yaml` to ensure that 'lib/main.dart' will again be considered

@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 library test_reflectable.test.superinterfaces_test;
 
@@ -42,9 +41,9 @@ const reflector = Reflector();
 void main() {
   initializeReflectable();
 
-  ClassMirror bm = reflector.reflectType(B);
-  ClassMirror dm = reflector.reflectType(D);
-  ClassMirror fm = reflector.reflectType(F);
+  var bm = reflector.reflectType(B) as ClassMirror;
+  var dm = reflector.reflectType(D) as ClassMirror;
+  var fm = reflector.reflectType(F) as ClassMirror;
   test('superinterfaces', () {
     // Test that only the supported classes from the superinterface
     // list in the class-declaration are included.

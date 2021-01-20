@@ -1,7 +1,6 @@
 // Copyright (c) 2016, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-// @dart=2.9
 
 // Dealing with sdk issue #19635, 'Mirrors: newInstance on constructor with
 // optional parameters result in crash when running as JavaScript'.
@@ -44,8 +43,8 @@ void main() {
   // test and ported to make it work with reflectable.
 
   test('Issue as reported', () {
-    ClassMirror classMirror = reflector.reflectType(ClazzA);
-    ClazzA clazzA = classMirror.newInstance('', []);
+    var classMirror = reflector.reflectType(ClazzA) as ClassMirror;
+    var clazzA = classMirror.newInstance('', []) as ClazzA;
     expect(clazzA, isNotNull);
   });
 
@@ -55,7 +54,7 @@ void main() {
   // `reflector.reflectType` rather than a plain `reflectClass`; otherwise
   // unchanged.
 
-  ClassMirror cm = reflector.reflectType(A);
+  var cm = reflector.reflectType(A) as ClassMirror;
   var o;
 
   test('No arguments given', () {

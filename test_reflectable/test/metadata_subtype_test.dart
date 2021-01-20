@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 /// Tests that metadata used to select members is recognized when it is a
 /// proper subtype of the metadata type specified in a [..MetaCapability].
@@ -65,7 +64,7 @@ final Matcher throwsReflectableNoMethod =
 void main() {
   initializeReflectable();
 
-  ClassMirror classMirror = myReflectable.reflectType(C);
+  var classMirror = myReflectable.reflectType(C) as ClassMirror;
   Map<String, DeclarationMirror> declarations = classMirror.declarations;
   test('Proper subtypes as metadata, declarations', () {
     expect(declarations['foo'], isNotNull);

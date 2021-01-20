@@ -51,7 +51,7 @@ class Serializer {
         .toList();
   }
 
-  Map<String, dynamic> serialize(Object o) {
+  Map<String, dynamic> serialize(Object? o) {
     if (o is num) {
       return {'type': 'num', 'val': o};
     }
@@ -62,7 +62,7 @@ class Serializer {
       return {'type': 'String', 'val': o};
     }
     Map<String, dynamic> result = {};
-    InstanceMirror im = serializable.reflect(o);
+    InstanceMirror im = serializable.reflect(o!);
     ClassMirror classMirror = im.type;
     result['type'] = classMirror.qualifiedName;
     result['fields'] = {};
@@ -83,10 +83,10 @@ class Serializer {
       return m['val'].map(deserialize).toList();
     }
 
-    ClassMirror classMirror = classes[m['type']];
+    ClassMirror classMirror = classes[m['type']!]!;
     Object instance = classMirror.newInstance('', []);
     InstanceMirror im = serializable.reflect(instance);
-    m['fields'].forEach((name, value) {
+    m['fields']!.forEach((name, value) {
       im.invokeSetter(name, deserialize(value));
     });
     return instance;

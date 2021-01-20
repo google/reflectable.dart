@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart=2.9
 
 // File used to test reflectable code generation.
 // Uses type variables.
@@ -119,7 +118,8 @@ void main() {
 
   var noBoundsLibraryMirror =
       noBoundsReflector.findLibrary('test_reflectable.test.type_variable_test');
-  runTestNoBounds('generic class', noBoundsLibraryMirror.declarations['B']);
+  runTestNoBounds(
+      'generic class', noBoundsLibraryMirror.declarations['B'] as ClassMirror);
   runTestNoBounds(
       'instantiated generic class', noBoundsReflector.reflect(b).type);
 
@@ -127,10 +127,10 @@ void main() {
       reflector.findLibrary('test_reflectable.test.type_variable_test');
   runTest(
       'static',
-      libraryMirror.declarations['B'],
-      libraryMirror.declarations['C'],
-      libraryMirror.declarations['D'],
-      libraryMirror.declarations['E']);
+      libraryMirror.declarations['B'] as ClassMirror,
+      libraryMirror.declarations['C'] as ClassMirror,
+      libraryMirror.declarations['D'] as ClassMirror,
+      libraryMirror.declarations['E'] as ClassMirror);
 
   runTest(
       'dynamic',

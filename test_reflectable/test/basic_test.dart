@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-// @dart=2.9
 
 // Tests some basic functionality of instance mirrors and class mirrors.
 
@@ -76,7 +75,7 @@ List<X> filteredDeclarationsOf<X extends r.DeclarationMirror>(r.ClassMirror cm, 
   var result = <X>[];
   cm.declarations.forEach((k, v) {
     if (predicate(v)) {
-      result.add(v);
+      result.add(v as X);
     }
   });
   return result;
@@ -126,9 +125,9 @@ void main() {
 
   var reflectable = const MyReflectable();
 
-  r.ClassMirror aClass = reflectable.reflectType(A);
-  r.ClassMirror bClass = reflectable.reflectType(B);
-  r.ClassMirror cClass = reflectable.reflectType(C);
+  r.ClassMirror aClass = reflectable.reflectType(A) as r.ClassMirror;
+  r.ClassMirror bClass = reflectable.reflectType(B) as r.ClassMirror;
+  r.ClassMirror cClass = reflectable.reflectType(C) as r.ClassMirror;
 
   r.InstanceMirror aM = reflectable.reflect(aClass.newInstance(unnamed, []));
   r.InstanceMirror bM = reflectable.reflect(bClass.newInstance(unnamed, []));
