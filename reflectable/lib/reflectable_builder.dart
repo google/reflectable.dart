@@ -18,6 +18,10 @@ class ReflectableBuilder implements Builder {
 
   @override
   Future<void> build(BuildStep buildStep) async {
+    var targetId = buildStep.inputId.toString();
+    if (targetId.contains('.vm_test.') ||
+        targetId.contains('.node_test.') ||
+        targetId.contains('.browser_test.')) return;
     var inputLibrary = await buildStep.inputLibrary;
     var resolver = buildStep.resolver;
     var inputId = buildStep.inputId;
