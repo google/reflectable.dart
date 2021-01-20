@@ -167,8 +167,8 @@ void main() {
   test('isAssignableTo, without capability', () {
     expect(
         () => insufficientReflector
-        .reflectType(B)
-        .isAssignableTo(insufficientReflector.reflectType(A)),
+            .reflectType(B)
+            .isAssignableTo(insufficientReflector.reflectType(A)),
         throwsNoCapability);
   });
 }

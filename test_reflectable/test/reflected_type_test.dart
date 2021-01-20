@@ -67,8 +67,8 @@ void main() {
   var getsetEqualsMirror = declarations['getset='] as MethodMirror;
   var noArgumentsMirror = declarations['noArguments'] as MethodMirror;
   var oneArgumentMirror = declarations['oneArgument'] as MethodMirror;
-  var optionalArgumentsMirror = declarations['optionalArguments']
-      as MethodMirror;
+  var optionalArgumentsMirror =
+      declarations['optionalArguments'] as MethodMirror;
   var namedArgumentsMirror = declarations['namedArguments'] as MethodMirror;
   var staticGetsetMirror = declarations['staticGetset'] as MethodMirror;
   var staticGetsetEqualsMirror = declarations['staticGetset='] as MethodMirror;
@@ -160,12 +160,12 @@ void main() {
     expect(opBracketMirror.reflectedReturnType, int);
     expect(opBracketEqualsMirror.hasReflectedReturnType, true);
     expect(opBracketEqualsMirror.reflectedReturnType,
-      const TypeValue<void>().type);
+        const TypeValue<void>().type);
     expect(getsetMirror.hasReflectedReturnType, true);
     expect(getsetMirror.reflectedReturnType, String);
     expect(getsetEqualsMirror.hasReflectedReturnType, true);
-    expect(getsetEqualsMirror.reflectedReturnType,
-      const TypeValue<void>().type);
+    expect(
+        getsetEqualsMirror.reflectedReturnType, const TypeValue<void>().type);
     expect(noArgumentsMirror.hasReflectedReturnType, true);
     expect(noArgumentsMirror.reflectedReturnType, int);
     expect(oneArgumentMirror.hasReflectedReturnType, true);
@@ -179,6 +179,6 @@ void main() {
         const TypeValue<List<String>>().type);
     expect(staticGetsetEqualsMirror.hasReflectedReturnType, true);
     expect(staticGetsetEqualsMirror.reflectedReturnType,
-      const TypeValue<void>().type);
+        const TypeValue<void>().type);
   });
 }

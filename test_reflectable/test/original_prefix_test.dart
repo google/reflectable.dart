@@ -25,8 +25,8 @@ const int _defaultY = defaultX;
 @myReflectable
 class C {
   final String s;
-  C([int x = defaultX, int y = _defaultY]) : s =
-    '${x.toString().length+2}${y ~/ 15}';
+  C([int x = defaultX, int y = _defaultY])
+      : s = '${x.toString().length + 2}${y ~/ 15}';
 }
 
 void main() {

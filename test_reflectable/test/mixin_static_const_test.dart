@@ -11,6 +11,7 @@ import 'mixin_static_const_test.reflectable.dart';
 class Reflector extends Reflectable {
   const Reflector() : super(invokingCapability, declarationsCapability);
 }
+
 const reflector = Reflector();
 
 class A {}

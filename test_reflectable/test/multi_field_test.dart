@@ -43,9 +43,11 @@ class A {
 
 @metaReflector
 class B {
-  @c int i = 7, j = 7;
+  @c
+  int i = 7, j = 7;
   late int notI, notJ;
-  @C() static int k = 294, l = 343;
+  @C()
+  static int k = 294, l = 343;
   static late int notK, notL;
 }
 
@@ -59,8 +61,7 @@ void main() {
   var theB = B();
   var aInstanceMirror = reflector.reflect(theA),
       bInstanceMirror = metaReflector.reflect(theB);
-  var aClassMirror = aInstanceMirror.type,
-      bClassMirror = bInstanceMirror.type;
+  var aClassMirror = aInstanceMirror.type, bClassMirror = bInstanceMirror.type;
 
   test('multiple declarations with one type annotation, read', () {
     expect(aInstanceMirror.invokeGetter('i'), 1 + 42 / theA.i);

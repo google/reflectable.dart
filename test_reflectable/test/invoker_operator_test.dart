@@ -25,7 +25,9 @@ class A {
   A(this.f);
   int operator +(x) => (42 + x + f).toInt();
   int operator [](x) => 42 + (x as int) + f;
-  void operator []=(x, v) { f = x + v + f; }
+  void operator []=(x, v) {
+    f = x + v + f;
+  }
 }
 
 void main() {

@@ -117,8 +117,7 @@ class BImplementer implements B {
   int includedByInvokeInBBase() => 48;
 }
 
-Matcher throwsNoCapability =
-    throwsA(TypeMatcher<c.NoSuchCapabilityError>());
+Matcher throwsNoCapability = throwsA(TypeMatcher<c.NoSuchCapabilityError>());
 Matcher throwsReflectableNoMethod =
     throwsA(TypeMatcher<c.ReflectableNoSuchMethodError>());
 
@@ -156,29 +155,26 @@ void main() {
     expect(A.field, 100);
     expect(() => classMirror.invokeSetter('setBar=', 100),
         throwsReflectableNoMethod);
-    expect(classMirror.declarations.keys,
-      {'foo', 'setFoo=', 'getFoo', 'boo'});
+    expect(classMirror.declarations.keys, {'foo', 'setFoo=', 'getFoo', 'boo'});
     expect(classMirror.invoke('boo', []), 47);
   });
   testDynamic(B(), 'Annotated');
 
   test('Declarations', () {
     expect(instanceReflector.reflect(B()).type.declarations.keys,
-      {'foo', 'setFoo=', 'getFoo', 'boo'});
+        {'foo', 'setFoo=', 'getFoo', 'boo'});
   });
 
   test("Can't reflect subclass of annotated", () {
     expect(instanceReflector.canReflect(BSubclass()), false);
     expect(instanceReflector.canReflectType(BSubclass), false);
-    expect(
-        () => instanceReflector.reflect(BSubclass()), throwsNoCapability);
+    expect(() => instanceReflector.reflect(BSubclass()), throwsNoCapability);
   });
 
   test("Can't reflect subtype of annotated", () {
     expect(instanceReflector.canReflect(BImplementer()), false);
     expect(instanceReflector.canReflectType(BImplementer), false);
-    expect(() => instanceReflector.reflect(BImplementer()),
-        throwsNoCapability);
+    expect(() => instanceReflector.reflect(BImplementer()), throwsNoCapability);
   });
 
   test("Can't reflect unnanotated", () {

@@ -73,8 +73,7 @@ void main() {
 
   final serializer = Serializer();
   test('Round trip test', () {
-    var input = A.fromValues(
-        'one', A.fromValues(2, [3, A.fromValues(4, 5)]));
+    var input = A.fromValues('one', A.fromValues(2, [3, A.fromValues(4, 5)]));
     var out = serializer.serialize(input);
     // Assert that the output of the serialization is equals to
     // the expected map:

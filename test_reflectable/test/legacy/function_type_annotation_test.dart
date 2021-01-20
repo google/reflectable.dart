@@ -102,8 +102,7 @@ void main() {
     expect(methodArgument1Mirror.dynamicReflectedType, int2intType);
   });
 
-  MethodMirror inlineTypesMirror =
-      classMirror.declarations['inlineTypes'];
+  MethodMirror inlineTypesMirror = classMirror.declarations['inlineTypes'];
   List<ParameterMirror> parameterMirrors = inlineTypesMirror.parameters;
   List<Type> expectedTypes = [
     TypeValue<int Function()>().type,

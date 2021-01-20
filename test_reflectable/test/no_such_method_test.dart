@@ -118,7 +118,7 @@ void main() {
   // `NoSuchMethodError` thrown by a normal, non-reflectable invocation.
   test('No such method, natively', () {
     expect(() => A().deepThrow(Object()), throwsNoSuchMethodError);
-    expect(() => aMirror.invoke('deepThrow', [Object()]),
-        throwsNoSuchMethodError);
+    expect(
+        () => aMirror.invoke('deepThrow', [Object()]), throwsNoSuchMethodError);
   });
 }

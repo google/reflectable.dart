@@ -46,8 +46,8 @@ void testReflector(Reflectable reflector, String desc) {
     expect(bMirror.superclass.declarations['staticBar'], null);
     expect(bMirror.superclass.hasReflectedType, true);
     expect(bMirror.superclass.reflectedType, const TypeMatcher<Type>());
-    expect(bMirror.superclass.superclass.reflectedType,
-        const TypeMatcher<Type>());
+    expect(
+        bMirror.superclass.superclass.reflectedType, const TypeMatcher<Type>());
   });
 }
 
@@ -66,21 +66,19 @@ void runTests() {
       const AllReflectorsMetaReflector().reflectors.toList();
 
   test('MetaReflector, set of reflectors', () {
-      expect(
-        getNames(reflectors).toSet(),
-        {
-          'Reflector',
-          'Reflector2',
-          'ReflectorUpwardsClosed',
-          'ReflectorUpwardsClosedToA',
-          'ReflectorUpwardsClosedUntilA',
-          'ScopeMetaReflector',
-          'AllReflectorsMetaReflector',
-      });
+    expect(getNames(reflectors).toSet(), {
+      'Reflector',
+      'Reflector2',
+      'ReflectorUpwardsClosed',
+      'ReflectorUpwardsClosedToA',
+      'ReflectorUpwardsClosedUntilA',
+      'ScopeMetaReflector',
+      'AllReflectorsMetaReflector',
+    });
     expect(getNames(const ScopeMetaReflector().reflectablesOfScope('polymer')),
-      {'Reflector', 'ReflectorUpwardsClosed'});
+        {'Reflector', 'ReflectorUpwardsClosed'});
     expect(getNames(const ScopeMetaReflector().reflectablesOfScope('observe')),
-      {'Reflector2', 'ReflectorUpwardsClosed'});
+        {'Reflector2', 'ReflectorUpwardsClosed'});
   });
 
   const ScopeMetaReflector().reflectablesOfScope('polymer').forEach(
@@ -119,8 +117,8 @@ void runTests() {
     var reflector = reflectors.firstWhere((Reflectable reflector) {
       return (reflector.capabilities.any((ReflectCapability capability) =>
           capability is SuperclassQuantifyCapability &&
-              capability.upperBound == A &&
-              !capability.excludeUpperBound));
+          capability.upperBound == A &&
+          !capability.excludeUpperBound));
     });
     ClassMirror aMirror = reflector.reflectType(A);
     ClassMirror bMirror = reflector.reflectType(B);
@@ -136,7 +134,7 @@ void runTests() {
     expect(bMirror.superclass.superclass, aMirror);
     expect(cMirror.superclass.mixin, m3Mirror);
     expect(cMirror.superclass.superclass.mixin, m2Mirror);
-    expect(cMirror.superclass.superclass.superclass,  bMirror);
+    expect(cMirror.superclass.superclass.superclass, bMirror);
     expect(dMirror.mixin, m1Mirror);
     expect(dMirror.superclass, aMirror);
   });

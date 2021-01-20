@@ -16,7 +16,7 @@ library test_reflectable.test.meta_reflectors_test;
 
 @GlobalQuantifyCapability(r'\.(M1|M2|M3|A|B|C|D)$', Reflector())
 @GlobalQuantifyCapability(r'\.(M1|M2|M3|B|C|D)$', Reflector2())
-@GlobalQuantifyCapability(r'\.(C|D)$',ReflectorUpwardsClosed())
+@GlobalQuantifyCapability(r'\.(C|D)$', ReflectorUpwardsClosed())
 @GlobalQuantifyCapability(r'\.(C|D)$', ReflectorUpwardsClosedToA())
 @GlobalQuantifyCapability(r'\.(C|D)$', ReflectorUpwardsClosedUntilA())
 import 'package:reflectable/reflectable.dart';

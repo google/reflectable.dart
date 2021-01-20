@@ -35,13 +35,11 @@ void main() {
 
   test('Reflecting types involving `void`', () {
     expect(mMirror.parameters[0].hasReflectedType, true);
-    expect(mMirror.parameters[0].reflectedType,
-        const TypeValue<void>().type);
+    expect(mMirror.parameters[0].reflectedType, const TypeValue<void>().type);
     expect(mMirror.parameters[1].hasReflectedType, true);
     expect(mMirror.parameters[1].reflectedType,
         const TypeValue<List<void>>().type);
     expect(mMirror.hasReflectedReturnType, true);
-    expect(mMirror.reflectedReturnType,
-        const TypeValue<void>().type);
+    expect(mMirror.reflectedReturnType, const TypeValue<void>().type);
   });
 }

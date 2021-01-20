@@ -132,8 +132,7 @@ class BImplementer implements A {
   }
 }
 
-Matcher throwsNoCapability =
-    throwsA(TypeMatcher<c.NoSuchCapabilityError>());
+Matcher throwsNoCapability = throwsA(TypeMatcher<c.NoSuchCapabilityError>());
 
 Matcher throwsReflectableNoMethod =
     throwsA(TypeMatcher<c.ReflectableNoSuchMethodError>());
@@ -177,7 +176,7 @@ void testInstance(r.Reflectable mirrorSystem, A reflectee,
 }
 
 void testStatic(r.Reflectable mirrorSystem, Type reflectee,
-  void Function() classResetter, int Function() classGetter,
+    void Function() classResetter, int Function() classGetter,
     {bool broad = false}) {
   test('Static invocation: ${description[mirrorSystem.runtimeType]}', () {
     classResetter();

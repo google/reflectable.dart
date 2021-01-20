@@ -73,11 +73,13 @@ void main() {
     expect(libraryMirror.simpleName, 'test_reflectable.test.libraries_test');
     expect(libraryMirror.invoke('myFunction', []), 'hello');
     expect(
-        Function.apply(libraryMirror.invokeGetter('myFunction') as Function, []), 'hello');
+        Function.apply(
+            libraryMirror.invokeGetter('myFunction') as Function, []),
+        'hello');
     expect(
         () => libraryMirror.invokeGetter('getter'), throwsReflectableNoMethod);
-    var myFunctionMirror = libraryMirror.declarations['myFunction']
-        as MethodMirror;
+    var myFunctionMirror =
+        libraryMirror.declarations['myFunction'] as MethodMirror;
     expect(myFunctionMirror.owner, libraryMirror);
   });
   test('owner, setter, TopLevelMetaInvokeCapability', () {

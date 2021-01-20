@@ -17,8 +17,8 @@ import 'new_instance_native_test.reflectable.dart';
 // ignore_for_file: omit_local_variable_types
 
 class Reflector extends Reflectable {
-  const Reflector(): super(newInstanceCapability, declarationsCapability,
-      libraryCapability);
+  const Reflector()
+      : super(newInstanceCapability, declarationsCapability, libraryCapability);
 }
 
 const Reflector reflector = Reflector();
@@ -30,6 +30,6 @@ void main() {
   var fooClass = lib.declarations['List'] as ClassMirror;
   var fooInstance = fooClass.newInstance('', []) as List;
   test('Creating instance of native class', () {
-      expect(fooInstance.toString(), '[]');
+    expect(fooInstance.toString(), '[]');
   });
 }

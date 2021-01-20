@@ -15,8 +15,9 @@ import 'static_type_arguments_test.reflectable.dart';
 // ignore_for_file: omit_local_variable_types
 
 class Reflector extends Reflectable {
-  const Reflector() : super(instanceInvokeCapability, declarationsCapability,
-      typeCapability, typeRelationsCapability, reflectedTypeCapability);
+  const Reflector()
+      : super(instanceInvokeCapability, declarationsCapability, typeCapability,
+            typeRelationsCapability, reflectedTypeCapability);
 }
 
 const Reflector reflector = Reflector();
@@ -49,8 +50,8 @@ void main() {
     VariableMirror securityServiceMirror = declarations['securityService'];
     ClassMirror typeAnnotationMirror = securityServiceMirror.type;
     expect(typeAnnotationMirror.reflectedTypeArguments[0], SecurityService);
-    expect(typeAnnotationMirror.typeArguments[0].reflectedType,
-        SecurityService);
+    expect(
+        typeAnnotationMirror.typeArguments[0].reflectedType, SecurityService);
   });
 
   test('get type arguments in unimplemented case', () {
@@ -59,8 +60,8 @@ void main() {
     VariableMirror securityServiceMirror =
         declarations['genericSecurityService'];
     ClassMirror typeAnnotationMirror = securityServiceMirror.type;
-    expect(() => typeAnnotationMirror.reflectedTypeArguments,
-        throwsUnimplemented);
+    expect(
+        () => typeAnnotationMirror.reflectedTypeArguments, throwsUnimplemented);
     expect(() => typeAnnotationMirror.typeArguments, throwsUnimplemented);
   });
 }

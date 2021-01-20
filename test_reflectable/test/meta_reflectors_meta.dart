@@ -11,8 +11,8 @@
 /// depending on reflectable.
 library test_reflectable.test.meta_reflectors_meta;
 
-@GlobalQuantifyCapability(r'^reflectable.reflectable.Reflectable$',
-    AllReflectorsMetaReflector())
+@GlobalQuantifyCapability(
+    r'^reflectable.reflectable.Reflectable$', AllReflectorsMetaReflector())
 import 'package:reflectable/reflectable.dart';
 
 // ignore_for_file: omit_local_variable_types
@@ -32,7 +32,8 @@ class ScopeMetaReflector extends Reflectable {
     for (LibraryMirror library in libraries.values) {
       for (DeclarationMirror declaration in library.declarations.values) {
         if (declaration is MethodMirror) {
-          result.addAll(library.invoke(declaration.simpleName, [scope]) as Iterable<Reflectable>);
+          result.addAll(library.invoke(declaration.simpleName, [scope])
+              as Iterable<Reflectable>);
         }
       }
     }
@@ -49,8 +50,8 @@ class AllReflectorsMetaReflector extends Reflectable {
     var result = <Reflectable>{};
     annotatedClasses.forEach((ClassMirror classMirror) {
       if (classMirror.isAbstract) return;
-      var reflector = Reflectable.getInstance(classMirror.reflectedType)
-          as Reflectable;
+      var reflector =
+          Reflectable.getInstance(classMirror.reflectedType) as Reflectable;
       result.add(reflector);
     });
     return result;

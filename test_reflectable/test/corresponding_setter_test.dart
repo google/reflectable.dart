@@ -94,8 +94,10 @@ class P {
 @invokingFrReflector
 @instanceInvokeFrReflector
 class A {
-  @P() int get foo => 44;
-  @P() int get foobar => 45;
+  @P()
+  int get foo => 44;
+  @P()
+  int get foobar => 45;
   set foo(int x) => field = x;
   set foobar(int x) => field = x;
   int field = 46;
@@ -110,8 +112,10 @@ class A {
 @invokingFrReflector
 @staticInvokeFrReflector
 class B {
-  @P() static int get foo => 44;
-  @P() static int get foobar => 45;
+  @P()
+  static int get foo => 44;
+  @P()
+  static int get foobar => 45;
 
   static set foo(int x) {
     field = x;
@@ -167,8 +171,8 @@ void testInstance(Reflectable mirrorSystem, A reflectee, {bool broad = false}) {
   });
 }
 
-void testStatic(Reflectable mirrorSystem, Type reflectee, void Function() classResetter,
-  int Function() classGetter,
+void testStatic(Reflectable mirrorSystem, Type reflectee,
+    void Function() classResetter, int Function() classGetter,
     {bool broad = false}) {
   test('Static invocation: ${description[mirrorSystem.runtimeType]}', () {
     classResetter();

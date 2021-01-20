@@ -32,7 +32,6 @@ void main() {
   initializeReflectable();
 
   test('Variable inherited from non-covered class', () {
-    expect(
-        reflector.reflect(C()).type.instanceMembers['x']!.simpleName, 'x');
+    expect(reflector.reflect(C()).type.instanceMembers['x']!.simpleName, 'x');
   });
 }

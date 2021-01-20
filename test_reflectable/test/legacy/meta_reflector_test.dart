@@ -181,8 +181,8 @@ void testReflector(Reflectable reflector, String desc) {
     expect(bMirror.superclass.declarations['staticBar'], null);
     expect(bMirror.superclass.hasReflectedType, true);
     expect(bMirror.superclass.reflectedType, const TypeMatcher<Type>());
-    expect(bMirror.superclass.superclass.reflectedType,
-        const TypeMatcher<Type>());
+    expect(
+        bMirror.superclass.superclass.reflectedType, const TypeMatcher<Type>());
   });
 }
 
@@ -195,25 +195,23 @@ void main() {
   Set<Reflectable> allReflectors = const MetaReflector().allReflectors;
 
   test('MetaReflector, set of reflectors', () {
-    expect(
-        allReflectors,
-        {
-          const Reflector(),
-          const Reflector2(),
-          const ReflectorUpwardsClosed(),
-          const ReflectorUpwardsClosedToA(),
-          const ReflectorUpwardsClosedUntilA(),
-      });
+    expect(allReflectors, {
+      const Reflector(),
+      const Reflector2(),
+      const ReflectorUpwardsClosed(),
+      const ReflectorUpwardsClosedToA(),
+      const ReflectorUpwardsClosedUntilA(),
+    });
     expect(
         allReflectors.where((Reflectable reflector) =>
             reflector is AllReflectorsCapable &&
             reflector.scopes.contains('polymer')),
-          {const Reflector(), const ReflectorUpwardsClosed()});
+        {const Reflector(), const ReflectorUpwardsClosed()});
     expect(
         allReflectors.where((Reflectable reflector) =>
             reflector is AllReflectorsCapable &&
             reflector.scopes.contains('observe')),
-          {const Reflector2(), const ReflectorUpwardsClosed()});
+        {const Reflector2(), const ReflectorUpwardsClosed()});
   });
 
   allReflectors
@@ -255,9 +253,9 @@ void main() {
   test('MetaReflector, select by capability', () {
     var reflector = allReflectors.firstWhere((Reflectable reflector) {
       return (reflector.capabilities.any((ReflectCapability capability) =>
-              capability is SuperclassQuantifyCapability &&
-              capability.upperBound == A &&
-              !capability.excludeUpperBound));
+          capability is SuperclassQuantifyCapability &&
+          capability.upperBound == A &&
+          !capability.excludeUpperBound));
     });
     ClassMirror aMirror = reflector.reflectType(A);
     ClassMirror bMirror = reflector.reflectType(B);

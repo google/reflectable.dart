@@ -160,12 +160,12 @@ void main() {
     expect(opBracketMirror.reflectedReturnType, int);
     expect(opBracketEqualsMirror.hasReflectedReturnType, true);
     expect(opBracketEqualsMirror.reflectedReturnType,
-      const TypeValue<void>().type);
+        const TypeValue<void>().type);
     expect(getsetMirror.hasReflectedReturnType, true);
     expect(getsetMirror.reflectedReturnType, String);
     expect(getsetEqualsMirror.hasReflectedReturnType, true);
-    expect(getsetEqualsMirror.reflectedReturnType,
-      const TypeValue<void>().type);
+    expect(
+        getsetEqualsMirror.reflectedReturnType, const TypeValue<void>().type);
     expect(noArgumentsMirror.hasReflectedReturnType, true);
     expect(noArgumentsMirror.reflectedReturnType, int);
     expect(oneArgumentMirror.hasReflectedReturnType, true);
@@ -179,6 +179,6 @@ void main() {
         const TypeValue<List<String>>().type);
     expect(staticGetsetEqualsMirror.hasReflectedReturnType, true);
     expect(staticGetsetEqualsMirror.reflectedReturnType,
-      const TypeValue<void>().type);
+        const TypeValue<void>().type);
   });
 }
