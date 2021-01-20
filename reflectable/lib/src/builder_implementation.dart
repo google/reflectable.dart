@@ -5416,10 +5416,8 @@ Future<void> _emitMessage(String message,
 }
 
 /// Return [AstNode] of declaration of [element], null if synthetic.
-Future<AstNode> _getDeclarationAst(Element element, Resolver resolver) async {
-  final resolvedLibrary = await _getResolvedLibrary(element.library, resolver);
-  return resolvedLibrary.getElementDeclaration(element)?.node;
-}
+Future<AstNode> _getDeclarationAst(Element element, Resolver resolver) =>
+    resolver.astNodeFor(element, resolve: true);
 
 /// Return the [ResolvedLibraryResult] of the given [library].
 ///
