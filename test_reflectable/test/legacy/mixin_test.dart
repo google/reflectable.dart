@@ -136,8 +136,8 @@ void testReflector(Reflectable reflector, String desc) {
     expect(bMirror.superclass.declarations['staticBar'], null);
     expect(bMirror.superclass.hasReflectedType, true);
     expect(bMirror.superclass.reflectedType, const TypeMatcher<Type>());
-    expect(bMirror.superclass.superclass.reflectedType,
-        const TypeMatcher<Type>());
+    expect(
+        bMirror.superclass.superclass.reflectedType, const TypeMatcher<Type>());
   });
 }
 
@@ -267,7 +267,6 @@ void main() {
     expect(dMirror.qualifiedName, 'test_reflectable.test.mixin_test.D');
   });
   test('Mixins, some covered and some uncovered', () {
-    expect(
-        const Reflector().reflectType(BB), const TypeMatcher<ClassMirror>());
+    expect(const Reflector().reflectType(BB), const TypeMatcher<ClassMirror>());
   });
 }

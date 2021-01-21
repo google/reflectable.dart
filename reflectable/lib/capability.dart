@@ -534,12 +534,8 @@ class ReflectableNoSuchMethodError extends Error
 
   final StringInvocationKind kind;
 
-  ReflectableNoSuchMethodError(
-      this.receiver,
-      this.memberName,
-      this.positionalArguments,
-      this.namedArguments,
-      this.kind);
+  ReflectableNoSuchMethodError(this.receiver, this.memberName,
+      this.positionalArguments, this.namedArguments, this.kind);
 
   StringInvocation get invocation => _StringInvocation(
       memberName, positionalArguments, namedArguments ?? const {}, kind);
@@ -584,8 +580,8 @@ dynamic reflectableNoSuchInvokableError(
     List positionalArguments,
     Map<Symbol, dynamic>? namedArguments,
     StringInvocationKind kind) {
-  throw ReflectableNoSuchMethodError(receiver, memberName, positionalArguments,
-      namedArguments, kind);
+  throw ReflectableNoSuchMethodError(
+      receiver, memberName, positionalArguments, namedArguments, kind);
 }
 
 dynamic reflectableNoSuchMethodError(Object? receiver, String memberName,
@@ -611,10 +607,6 @@ dynamic reflectableNoSuchConstructorError(
     String constructorName,
     List positionalArguments,
     Map<Symbol, dynamic>? namedArguments) {
-  throw ReflectableNoSuchMethodError(
-      receiver,
-      constructorName,
-      positionalArguments,
-      namedArguments,
-      StringInvocationKind.constructor);
+  throw ReflectableNoSuchMethodError(receiver, constructorName,
+      positionalArguments, namedArguments, StringInvocationKind.constructor);
 }

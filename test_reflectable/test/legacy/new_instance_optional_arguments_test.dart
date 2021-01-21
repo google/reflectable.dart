@@ -13,7 +13,7 @@ import 'package:test/test.dart';
 import 'new_instance_optional_arguments_test.reflectable.dart';
 
 class Reflector extends Reflectable {
-  const Reflector(): super(newInstanceCapability);
+  const Reflector() : super(newInstanceCapability);
 }
 
 const Reflector reflector = Reflector();
@@ -21,19 +21,32 @@ const Reflector reflector = Reflector();
 @reflector
 class A {
   var req1, opt1, opt2;
-  A.a0([opt1]): opt1 = opt1;
-  A.b0([opt1, opt2]): opt1 = opt1, opt2 = opt2;
-  A.c0([opt1 = 499]): opt1 = opt1;
-  A.d0([opt1 = 499, opt2 = 42]): opt1 = opt1, opt2 = opt2;
-  A.a1(req1, [opt1]): req1 = req1, opt1 = opt1;
-  A.b1(req1, [opt1, opt2]): req1 = req1, opt1 = opt1, opt2 = opt2;
-  A.c1(req1, [opt1 = 499]): req1 = req1, opt1 = opt1;
-  A.d1(req1, [opt1 = 499, opt2 = 42]): req1 = req1, opt1 = opt1, opt2 = opt2;
+  A.a0([opt1]) : opt1 = opt1;
+  A.b0([opt1, opt2])
+      : opt1 = opt1,
+        opt2 = opt2;
+  A.c0([opt1 = 499]) : opt1 = opt1;
+  A.d0([opt1 = 499, opt2 = 42])
+      : opt1 = opt1,
+        opt2 = opt2;
+  A.a1(req1, [opt1])
+      : req1 = req1,
+        opt1 = opt1;
+  A.b1(req1, [opt1, opt2])
+      : req1 = req1,
+        opt1 = opt1,
+        opt2 = opt2;
+  A.c1(req1, [opt1 = 499])
+      : req1 = req1,
+        opt1 = opt1;
+  A.d1(req1, [opt1 = 499, opt2 = 42])
+      : req1 = req1,
+        opt1 = opt1,
+        opt2 = opt2;
 }
 
 @reflector
-class ClazzA
-{
+class ClazzA {
   ClazzA([dynamic property]);
 }
 

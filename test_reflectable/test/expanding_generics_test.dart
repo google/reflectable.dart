@@ -24,7 +24,10 @@ class C<X> {
   C<C<X>>? get boom => null;
 }
 
-class Typer<X> { Type get type => X; }
+class Typer<X> {
+  Type get type => X;
+}
+
 final Type COfInt = Typer<C<int>>().type;
 
 void runTest(String message, ClassMirror classMirror) {

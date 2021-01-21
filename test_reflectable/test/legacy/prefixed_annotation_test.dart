@@ -19,7 +19,7 @@ class C {
 
 void main() {
   initializeReflectable();
-  
+
   test('Using an import prefix with a reflector', () {
     var instanceMirror = prefix.reflector.reflect(C());
     var result = instanceMirror.invoke('m', []);

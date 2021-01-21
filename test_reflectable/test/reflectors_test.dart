@@ -9,8 +9,8 @@ library test_reflectable.test.reflectors_test;
 
 @GlobalQuantifyCapability(r'.(A|B)$', Reflector3())
 @GlobalQuantifyMetaCapability(P, Reflector4())
-@GlobalQuantifyCapability(r'^reflectable.reflectable.Reflectable$',
-    AllReflectorsMetaReflector())
+@GlobalQuantifyCapability(
+    r'^reflectable.reflectable.Reflectable$', AllReflectorsMetaReflector())
 import 'package:reflectable/reflectable.dart';
 import 'package:test/test.dart';
 import 'reflectors_test.reflectable.dart';
@@ -26,8 +26,8 @@ class AllReflectorsMetaReflector extends Reflectable {
     var result = <Reflectable>{};
     annotatedClasses.forEach((ClassMirror classMirror) {
       if (classMirror.isAbstract) return;
-      var reflector = Reflectable.getInstance(classMirror.reflectedType)
-          as Reflectable;
+      var reflector =
+          Reflectable.getInstance(classMirror.reflectedType) as Reflectable;
       result.add(reflector);
     });
     return result;
@@ -122,17 +122,15 @@ void main() {
       const AllReflectorsMetaReflector().reflectors.toList();
 
   test('Mixin, superclasses not included', () {
-      expect(
-        reflectors,
-        const {
-          Reflector(),
-          Reflector2(),
-          Reflector3(),
-          Reflector4(),
-          ReflectorUpwardsClosed(),
-          ReflectorUpwardsClosedToA(),
-          ReflectorUpwardsClosedUntilA(),
-          AllReflectorsMetaReflector(),
-      });
+    expect(reflectors, const {
+      Reflector(),
+      Reflector2(),
+      Reflector3(),
+      Reflector4(),
+      ReflectorUpwardsClosed(),
+      ReflectorUpwardsClosedToA(),
+      ReflectorUpwardsClosedUntilA(),
+      AllReflectorsMetaReflector(),
+    });
   });
 }

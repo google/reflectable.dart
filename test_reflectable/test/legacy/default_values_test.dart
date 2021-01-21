@@ -34,7 +34,13 @@ class A {
       [int x = prefix.A.localConstant + 31,
       bool y = identical(globalConstant, globalConstant),
       z = prefix.globalConstant + prefix.globalConstant,
-      w = const [String, null, myReflectable, B(named: 24), <int, Type>{1: A}]])
+      w = const [
+        String,
+        null,
+        myReflectable,
+        B(named: 24),
+        <int, Type>{1: A}
+      ]])
       : f = x,
         g = y,
         h = z,

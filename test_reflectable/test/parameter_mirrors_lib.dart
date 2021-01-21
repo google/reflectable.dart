@@ -8,4 +8,3 @@ class D {
   final int d;
   const D(this.d);
 }
-

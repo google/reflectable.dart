@@ -44,7 +44,7 @@ class B extends A {
   int get getter1 => 11;
   @override
   int get getter2 => 12;
-  const B.c(): super.c();
+  const B.c() : super.c();
   B();
 }
 
@@ -58,23 +58,21 @@ void main() {
   Map<String, DeclarationMirror> declarationsB = bMirror.declarations;
 
   test('declarations', () {
-    expect(
-        declarationsA.values.map((x) => x.simpleName),
-        {
-          'foo',
-          'getter1',
-          'getter2',
-          'setter1=',
-          '+',
-          'A',
-          'A.redirecting',
-          'A.factory',
-          'A.redirectingFactory',
-          'A.c',
-      });
+    expect(declarationsA.values.map((x) => x.simpleName), {
+      'foo',
+      'getter1',
+      'getter2',
+      'setter1=',
+      '+',
+      'A',
+      'A.redirecting',
+      'A.factory',
+      'A.redirectingFactory',
+      'A.c',
+    });
 
     expect(declarationsB.values.map((x) => x.simpleName),
-      {'bar', 'getter1', 'getter2', 'setter2=', 'B.c', 'B'});
+        {'bar', 'getter1', 'getter2', 'setter2=', 'B.c', 'B'});
   });
 
   test('MethodMirror properties', () {
@@ -172,36 +170,32 @@ void main() {
   test('instanceMethods', () {
     var aMirror = reflector.reflectType(A) as ClassMirror;
     Map<String, DeclarationMirror> instanceMembersA = aMirror.instanceMembers;
-    expect(
-        instanceMembersA.values.map((x) => x.simpleName),
-        {
-          'toString',
-          'hashCode',
-          '==',
-          'noSuchMethod',
-          'runtimeType',
-          'foo',
-          'getter1',
-          'setter1=',
-          '+',
-      });
+    expect(instanceMembersA.values.map((x) => x.simpleName), {
+      'toString',
+      'hashCode',
+      '==',
+      'noSuchMethod',
+      'runtimeType',
+      'foo',
+      'getter1',
+      'setter1=',
+      '+',
+    });
     var bMirror = reflector.reflectType(B) as ClassMirror;
     Map<String, DeclarationMirror> instanceMembersB = bMirror.instanceMembers;
-    expect(
-        instanceMembersB.values.map((x) => x.simpleName),
-        {
-          'toString',
-          'hashCode',
-          '==',
-          'noSuchMethod',
-          'runtimeType',
-          'foo',
-          'bar',
-          'getter1',
-          'getter2',
-          'setter1=',
-          'setter2=',
-          '+',
-      });
+    expect(instanceMembersB.values.map((x) => x.simpleName), {
+      'toString',
+      'hashCode',
+      '==',
+      'noSuchMethod',
+      'runtimeType',
+      'foo',
+      'bar',
+      'getter1',
+      'getter2',
+      'setter1=',
+      'setter2=',
+      '+',
+    });
   });
 }

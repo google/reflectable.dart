@@ -26,7 +26,10 @@ class A {
   int argNamed(int x, int y, {int z = 42}) => x + y - z;
   int operator +(x) => 42 + x;
   int operator [](x) => 42 + x;
-  void operator []=(x, v) { f = x + v; }
+  void operator []=(x, v) {
+    f = x + v;
+  }
+
   int operator -() => -f;
   int operator ~() => f + 2;
 

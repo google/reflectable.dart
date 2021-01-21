@@ -210,8 +210,11 @@ void main() {
     expect(cMirror.superclass!.mixin, m3Mirror);
     expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
     expect(cMirror.superclass!.superclass!.superclass, bMirror);
-    expect(cMirror.superclass!.superclass!.superclass!.superclass != null, true);
-    expect(() => cMirror.superclass!.superclass!.superclass!.superclass!.superclass,
+    expect(
+        cMirror.superclass!.superclass!.superclass!.superclass != null, true);
+    expect(
+        () =>
+            cMirror.superclass!.superclass!.superclass!.superclass!.superclass,
         throwsANoSuchCapabilityException);
     expect(dMirror.mixin, m1Mirror);
     expect(() => dMirror.superclass, throwsANoSuchCapabilityException);
@@ -266,7 +269,6 @@ void main() {
     expect(dMirror.qualifiedName, 'test_reflectable.test.mixin_test.D');
   });
   test('Mixins, some covered and some uncovered', () {
-    expect(
-        const Reflector().reflectType(BB), const TypeMatcher<ClassMirror>());
+    expect(const Reflector().reflectType(BB), const TypeMatcher<ClassMirror>());
   });
 }

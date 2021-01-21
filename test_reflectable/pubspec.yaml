@@ -17,4 +17,4 @@ dev_dependencies:
   analyzer: any
   build_test: any
   pedantic: any
-  test: any
+  test: ^1.16.0-nullsafety # any

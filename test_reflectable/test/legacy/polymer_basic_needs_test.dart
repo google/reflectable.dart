@@ -41,7 +41,8 @@ ThinDeclarationMirror makeThin(DeclarationMirror declaration) {
   bool isProperty() =>
       declaration is MethodMirror && !declaration.isRegularMethod;
 
-  bool isFinal() => (declaration is VariableMirror && declaration.isFinal) ||
+  bool isFinal() =>
+      (declaration is VariableMirror && declaration.isFinal) ||
       (declaration is MethodMirror &&
           declaration.isGetter &&
           !_hasSetter(declaration.owner, declaration));

@@ -38,8 +38,8 @@ typedef H = String Function<X>(X);
 void main() {
   initializeReflectable();
 
-  var libraryMirror = reflector
-      .findLibrary('test_reflectable.test.library_declarations_test');
+  var libraryMirror =
+      reflector.findLibrary('test_reflectable.test.library_declarations_test');
   var declarations = libraryMirror.declarations;
 
   // Commented out below: Cf. reflectable issue #165.
@@ -66,7 +66,7 @@ void main() {
     // TypedefMirror fMirror = declarations['F'];
     // TypedefMirror gMirror = declarations['G'];
     // TypedefMirror hMirror = declarations['H'];
-    
+
     expect(aMirror.hasReflectedType, isTrue);
     expect(bMirror.hasReflectedType, isTrue);
     // expect(fMirror.hasReflectedType, isTrue);

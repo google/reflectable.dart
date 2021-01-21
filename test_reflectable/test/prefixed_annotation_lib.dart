@@ -5,6 +5,7 @@
 library test_reflectable.test.prefixed_annotation_lib;
 
 import 'package:reflectable/reflectable.dart';
+
 class Reflector extends Reflectable {
   const Reflector() : super(instanceInvokeCapability, metadataCapability);
 }

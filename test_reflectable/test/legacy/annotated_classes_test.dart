@@ -10,11 +10,11 @@ import 'package:test/test.dart';
 import 'annotated_classes_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
-  const MyReflectable(): super(typeCapability);
+  const MyReflectable() : super(typeCapability);
 }
 
 class MyReflectable2 extends Reflectable {
-  const MyReflectable2(): super(typeCapability);
+  const MyReflectable2() : super(typeCapability);
 }
 
 @MyReflectable()
@@ -41,11 +41,15 @@ void main() {
   initializeReflectable();
 
   test('Annotated classes', () {
-    expect(const MyReflectable().annotatedClasses
+    expect(
+        const MyReflectable()
+            .annotatedClasses
             .map((ClassMirror classMirror) => classMirror.simpleName),
-            {'A', 'B', 'G'});
-    expect(const MyReflectable2().annotatedClasses
+        {'A', 'B', 'G'});
+    expect(
+        const MyReflectable2()
+            .annotatedClasses
             .map((ClassMirror classMirror) => classMirror.simpleName),
-            {'E', 'F', 'G'});
+        {'E', 'F', 'G'});
   });
 }

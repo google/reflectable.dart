@@ -101,8 +101,8 @@ void performTests(String message, Reflectable reflector) {
   var getsetEqualsMirror = declarations['getset='] as MethodMirror;
   var noArgumentsMirror = declarations['noArguments'] as MethodMirror;
   var oneArgumentMirror = declarations['oneArgument'] as MethodMirror;
-  var optionalArgumentsMirror = declarations['optionalArguments']
-      as MethodMirror;
+  var optionalArgumentsMirror =
+      declarations['optionalArguments'] as MethodMirror;
   var namedArgumentsMirror = declarations['namedArguments'] as MethodMirror;
   var staticGetsetMirror = declarations['staticGetset'] as MethodMirror;
   var staticGetsetEqualsMirror = declarations['staticGetset='] as MethodMirror;

@@ -39,8 +39,8 @@ void main() {
     TypeMirror typeMirror = const Reflector().reflectType(B);
     expect(typeMirror is ClassMirror, true);
     var classMirror = typeMirror as ClassMirror;
-    expect(() => classMirror.invoke('staticFoo', [10]),
-        throwsReflectableNoMethod);
+    expect(
+        () => classMirror.invoke('staticFoo', [10]), throwsReflectableNoMethod);
   });
   test('Mixin-application static member', () {
     TypeMirror typeMirror = const Reflector().reflectType(B);

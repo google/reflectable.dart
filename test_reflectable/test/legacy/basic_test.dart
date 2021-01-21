@@ -72,7 +72,8 @@ class C extends B {
   String cMethod() => 'cMethod';
 }
 
-List<X> filteredDeclarationsOf<X extends r.DeclarationMirror>(r.ClassMirror cm, predicate) {
+List<X> filteredDeclarationsOf<X extends r.DeclarationMirror>(
+    r.ClassMirror cm, predicate) {
   var result = <X>[];
   cm.declarations.forEach((k, v) {
     if (predicate(v)) {
@@ -198,18 +199,16 @@ void main() {
 
   test('getters and setters', () {
     expect(gettersOf(aClass).map((x) => x.simpleName), ['accessor']);
-    expect(gettersOf(bClass).map((x) => x.simpleName),
-      {'accessor', 'foo'});
+    expect(gettersOf(bClass).map((x) => x.simpleName), {'accessor', 'foo'});
     expect(gettersOf(cClass).map((x) => x.simpleName), ['accessor']);
     expect(settersOf(aClass).map((x) => x.simpleName), ['accessor=']);
     expect(settersOf(bClass).map((x) => x.simpleName), {'accessor='});
-    expect(settersOf(cClass).map((x) => x.simpleName),
-      {'accessor=', 'foo='});
+    expect(settersOf(cClass).map((x) => x.simpleName), {'accessor=', 'foo='});
     expect(methodsOf(aClass).map((x) => x.simpleName),
-      {'instanceMethod', 'aMethod'});
+        {'instanceMethod', 'aMethod'});
     expect(methodsOf(bClass).map((x) => x.simpleName),
-      {'instanceMethod', 'bMethod'});
+        {'instanceMethod', 'bMethod'});
     expect(methodsOf(cClass).map((x) => x.simpleName),
-      {'instanceMethod', 'cMethod'});
+        {'instanceMethod', 'cMethod'});
   });
 }
