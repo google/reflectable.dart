@@ -21,7 +21,7 @@ reflectable **capability**. For a more detailed discussion about
 capabilities, please consult the [reflectable capability design
 document][1]. On this page we just use a couple of simple special cases.
 
-[1]: https://github.com/dart-lang/reflectable/blob/master/doc/TheDesignOfReflectableCapabilities.md
+[1]: https://github.com/google/reflectable.dart/blob/master/reflectable/doc/TheDesignOfReflectableCapabilities.md
 
 This package uses code generation to provide support for reflection at the
 level which is specified using capabilities. The [`build` package][2] is
