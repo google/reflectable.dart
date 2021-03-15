@@ -1952,10 +1952,10 @@ class _ReflectorDomain {
     } else if (dartType is VoidType) {
       return 'void';
     } else if (dartType is FunctionType) {
-      if (dartType is FunctionTypeAliasElement) {
-        FunctionTypeAliasElement element = dartType.element;
-        String prefix = importCollector._getPrefix(element.library);
-        return '$prefix${element.name}';
+      final dartTypeElement = dartType.element as Element;
+      if (dartTypeElement is FunctionTypeAliasElement) {
+        String prefix = importCollector._getPrefix(dartTypeElement.library);
+        return '$prefix${dartTypeElement.name}';
       } else {
         // Generic function types need separate `typedef`s.
         if (dartType.typeFormals.isNotEmpty) {
@@ -2076,10 +2076,10 @@ class _ReflectorDomain {
       // A function type is inherently not private, so we ignore privacy.
       // Note that some function types are _claimed_ to be private in analyzer
       // 0.36.4, so it is a bug to test for it.
-      if (dartType.element is FunctionTypeAliasElement) {
-        FunctionTypeAliasElement element = dartType.element;
-        String prefix = importCollector._getPrefix(element.library);
-        return '$prefix${element.name}';
+      var dartTypeElement = dartType.element as Element;
+      if (dartTypeElement is FunctionTypeAliasElement) {
+        String prefix = importCollector._getPrefix(dartTypeElement.library);
+        return '$prefix${dartTypeElement.name}';
       } else {
         if (dartType.typeFormals.isNotEmpty) {
           // `dartType` is a generic function type, so we must use a
