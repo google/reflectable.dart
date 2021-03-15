@@ -3355,7 +3355,7 @@ class BuilderImplementation {
   /// Returns true iff [possibleSubtype] is a subclass of [type], including the
   /// reflexive and transitive cases.
   bool _isSubclassOf(ParameterizedType possibleSubtype, InterfaceType type) {
-    if (possibleSubtype == type) return true;
+    if (possibleSubtype.element == type.element) return true;
     if (possibleSubtype is InterfaceType) {
       InterfaceType superclass = possibleSubtype.superclass;
       if (superclass == null) return false;
