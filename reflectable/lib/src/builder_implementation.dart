@@ -3346,7 +3346,7 @@ class BuilderImplementation {
       InterfaceType superclass = possibleSubtype.superclass;
       // Even if `superclass == null` (superclass of Object), the equality
       // test will produce the correct result.
-      return type == superclass;
+      return type.element == superclass.element;
     } else {
       return false;
     }
