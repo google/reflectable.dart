@@ -1,3 +1,11 @@
+## 3.0.0
+
+* Support null safety in a stable version of reflectable.
+* Change minimum SDK constraint to 2.12.0.
+* Use analyzer ^1.1.0; build ^2.0.0; build_resolvers ^2.0.0; glob ^2.0.0;
+  logging ^1.0.0; package_config ^2.0.0.
+* Bug fix: Handle types of the form `T*` in some extra cases.
+
 ## 3.0.0-nullsafety.1
 
 * Enable analyzer version 0.41.2.
