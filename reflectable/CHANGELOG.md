@@ -1,9 +1,13 @@
+## 3.0.1
+
+* Use `dart_style` ^2.0.0.
+
 ## 3.0.0
 
 * Support null safety in a stable version of reflectable.
 * Change minimum SDK constraint to 2.12.0.
-* Use analyzer ^1.1.0; build ^2.0.0; build_resolvers ^2.0.0; glob ^2.0.0;
-  logging ^1.0.0; package_config ^2.0.0.
+* Use `analyzer` ^1.1.0; `build` ^2.0.0; `build_resolvers` ^2.0.0; `glob` ^2.0.0;
+  `logging` ^1.0.0; `package_config` ^2.0.0.
 * Bug fix: Handle types of the form `T*` in some extra cases.
 
 ## 3.0.0-nullsafety.1
@@ -11,7 +15,7 @@
 * Enable analyzer version 0.41.2.
 * Change code generation to use new `Resolver.astNodeFor` method, eliminating
   the `InconsistentAnalysisException` workaround in most cases.
-* Prevent unnecessary code generation for inputs named `*.vm_test.*`, 
+* Prevent unnecessary code generation for inputs named `*.vm_test.*`,
   `*.node_test.*`, or `*.browser_test.*`, to reduce code generation time.
 
 ## 3.0.0-nullsafety.0
