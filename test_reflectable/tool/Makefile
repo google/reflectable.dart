@@ -25,10 +25,10 @@ t: test
 cb: clean get build
 
 get:
-	( cd ..; pub get )
+	( cd ..; dart pub get )
 
 upgrade:
-	( cd ..; pub upgrade )
+	( cd ..; dart pub upgrade )
 
 check:
 	( cd ..; dartanalyzer $(OPTIONS) {lib,test{,/legacy}}/*.dart )
@@ -37,10 +37,10 @@ measure_output: build
 	@./measure_output --include-js --include-source-tree --include-unminified
 
 build:
-	( cd ..; pub run build_runner build )
+	( cd ..; dart run build_runner build )
 
 test:
-	( cd ..; pub run test )
+	( cd ..; dart run test )
 
 clean:
 	( rm -rf ../.dart_tool )
