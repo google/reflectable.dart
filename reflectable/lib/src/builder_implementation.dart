@@ -1259,12 +1259,12 @@ class _ReflectorDomain {
     return result;
   }
 
-  Future<int> _computeOwnerIndex(
+  Future<int?> _computeOwnerIndex(
       ExecutableElement element, int descriptor) async {
     if (element.enclosingElement is ClassElement) {
-      return (await classes).indexOf(element.enclosingElement)!;
+      return (await classes).indexOf(element.enclosingElement);
     } else if (element.enclosingElement is CompilationUnitElement) {
-      return _libraries.indexOf(element.enclosingElement.enclosingElement!)!;
+      return _libraries.indexOf(element.enclosingElement.enclosingElement!);
     }
     await _severe('Unexpected kind of request for owner');
     return 0;
@@ -1628,7 +1628,8 @@ class _ReflectorDomain {
       // getter or setter.
       int descriptor = _declarationDescriptor(element);
       int returnTypeIndex = await _computeReturnTypeIndex(element, descriptor);
-      int ownerIndex = (await _computeOwnerIndex(element, descriptor));
+      int ownerIndex = (await _computeOwnerIndex(element, descriptor)) ??
+          constants.NO_CAPABILITY_INDEX;
       String reflectedTypeArgumentsOfReturnType = 'null';
       if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
         reflectedTypeArgumentsOfReturnType =
@@ -2507,23 +2508,23 @@ class _AnnotationClassFixedPoint extends FixedPoint<ClassElement> {
     // abstract the many redundant elements below, because `yield` cannot
     // occur in a local function.
     for (FieldElement fieldElement in classDomain._declaredFields) {
-      Element fieldType = fieldElement.type.element!;
+      Element? fieldType = fieldElement.type.element;
       if (fieldType is ClassElement) result.add(fieldType);
     }
     for (ParameterElement parameterElement in classDomain._declaredParameters) {
-      Element parameterType = parameterElement.type.element!;
+      Element? parameterType = parameterElement.type.element;
       if (parameterType is ClassElement) result.add(parameterType);
     }
     for (ParameterElement parameterElement in classDomain._instanceParameters) {
-      Element parameterType = parameterElement.type.element!;
+      Element? parameterType = parameterElement.type.element;
       if (parameterType is ClassElement) result.add(parameterType);
     }
     for (ExecutableElement executableElement in classDomain._declaredMethods) {
-      Element returnType = executableElement.returnType.element!;
+      Element? returnType = executableElement.returnType.element;
       if (returnType is ClassElement) result.add(returnType);
     }
     for (ExecutableElement executableElement in classDomain._instanceMembers) {
-      Element returnType = executableElement.returnType.element!;
+      Element? returnType = executableElement.returnType.element;
       if (returnType is ClassElement) result.add(returnType);
     }
     return result;
@@ -5227,8 +5228,7 @@ Future<Uri> _getImportUri(
   }
   // Should not encounter any other source types.
   await _severe('Unable to resolve URI for ${source.runtimeType}');
-  return Uri.parse(
-      'package:${from.package}/${from.path}');
+  return Uri.parse('package:${from.package}/${from.path}');
 }
 
 /// Modelling a mixin application as a [ClassElement].
