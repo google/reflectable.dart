@@ -40,7 +40,7 @@ build:
 	( cd ..; dart run build_runner build )
 
 test:
-	( cd ..; dart run test )
+	( cd ..; dart test )
 
 clean:
 	( rm -rf ../.dart_tool )
