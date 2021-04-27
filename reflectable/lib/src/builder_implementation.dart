@@ -390,7 +390,7 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
           // of a class which is a regular class (not a mixin application). This
           // means that we must store it in `mixinApplicationSupers` such that
           // we can look it up during invocations of [superclassOf].
-          assert(mixinApplicationSupers.containsKey(valueSubclass));
+          assert(!mixinApplicationSupers.containsKey(valueSubclass));
           mixinApplicationSupers[valueSubclass] = value;
         }
       }
@@ -590,7 +590,7 @@ int typedefNumber = 1;
 /// Information about the program parts that can be reflected by a given
 /// Reflector.
 class _ReflectorDomain {
-  late final ReflectionWorld _world; // Non-final due to cycle, do not modify.
+  late final ReflectionWorld _world;
   final Resolver _resolver;
   final AssetId _generatedLibraryId;
   final ClassElement _reflector;
@@ -1646,23 +1646,17 @@ class _ReflectorDomain {
       }));
       int reflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
       if (reflectedTypeRequested) {
-        reflectedReturnTypeIndex = _typeCodeIndex(
-                element.returnType,
-                await classes,
-                reflectedTypes,
-                reflectedTypesOffset,
-                typedefs) ??
-            constants.NO_CAPABILITY_INDEX;
+        reflectedReturnTypeIndex = _typeCodeIndex(element.returnType,
+            await classes, reflectedTypes, reflectedTypesOffset, typedefs);
       }
       int dynamicReflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
       if (reflectedTypeRequested) {
         dynamicReflectedReturnTypeIndex = _dynamicTypeCodeIndex(
-                element.returnType,
-                await classes,
-                reflectedTypes,
-                reflectedTypesOffset,
-                typedefs) ??
-            constants.NO_CAPABILITY_INDEX;
+            element.returnType,
+            await classes,
+            reflectedTypes,
+            reflectedTypesOffset,
+            typedefs);
       }
       String? metadataCode = _capabilities._supportsMetadata
           ? await _extractMetadataCode(
@@ -1731,11 +1725,11 @@ class _ReflectorDomain {
     int ownerIndex = (await classes).indexOf(element.enclosingElement) ??
         constants.NO_CAPABILITY_INDEX;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
-    int? reflectedTypeIndex = reflectedTypeRequested
+    int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
-    int? dynamicReflectedTypeIndex = reflectedTypeRequested
+    int dynamicReflectedTypeIndex = reflectedTypeRequested
         ? _dynamicTypeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
@@ -1772,7 +1766,7 @@ class _ReflectorDomain {
   /// as computed by [reflectedTypes], because the elements in there will be
   /// added to `ReflectorData.types` after the elements of [classes] have been
   /// added.
-  int? _typeCodeIndex(
+  int _typeCodeIndex(
       DartType dartType,
       ClassElementEnhancedSet classes,
       Enumerator<ErasableDartType> reflectedTypes,
@@ -1826,7 +1820,7 @@ class _ReflectorDomain {
   /// [reflectedTypesOffset] is used to adjust the index as computed by
   /// [reflectedTypes], because the elements in there will be added to
   /// `ReflectorData.types` after the elements of [classes] have been added.
-  int? _dynamicTypeCodeIndex(
+  int _dynamicTypeCodeIndex(
       DartType dartType,
       ClassElementEnhancedSet classes,
       Enumerator<ErasableDartType> reflectedTypes,
@@ -2247,11 +2241,11 @@ class _ReflectorDomain {
             : constants.NO_CAPABILITY_INDEX;
       }
     }
-    int? reflectedTypeIndex = reflectedTypeRequested
+    int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
-    int? dynamicReflectedTypeIndex = reflectedTypeRequested
+    int dynamicReflectedTypeIndex = reflectedTypeRequested
         ? _dynamicTypeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
         : constants.NO_CAPABILITY_INDEX;
@@ -3406,9 +3400,10 @@ class BuilderImplementation {
     Element? element = elementAnnotation.element;
     if (element is ConstructorElement) {
       var enclosingType = _typeForReflectable(element.enclosingElement);
+      var focusClassType = _typeForReflectable(focusClass);
       bool isOk = enclosingType is ParameterizedType &&
-          await checkInheritance(
-              enclosingType, _typeForReflectable(focusClass) as InterfaceType);
+          focusClassType is InterfaceType &&
+          await checkInheritance(enclosingType, focusClassType);
       return isOk ? enclosingType.element as ClassElement : null;
     } else if (element is PropertyAccessorElement) {
       PropertyInducingElement variable = element.variable;
@@ -3423,9 +3418,10 @@ class BuilderImplementation {
         // reject as irrelevant.
         if (constantValue == null) return null;
         var constantValueType = constantValue.type;
+        var focusClassType = _typeForReflectable(focusClass);
         bool isOk = constantValueType is ParameterizedType &&
-            await checkInheritance(constantValueType,
-                _typeForReflectable(focusClass) as InterfaceType);
+            focusClassType is InterfaceType &&
+            await checkInheritance(constantValueType, focusClassType);
         // When `isOK` is true, result.value.type.element is a ClassElement.
         return isOk ? constantValueType.element as ClassElement : null;
       } else {
@@ -3523,7 +3519,7 @@ class BuilderImplementation {
                   metadataType?.type?.element != typeClass) {
                 var typeName = metadataType?.type?.element?.name;
                 var message = 'The metadata must be a Type.'
-                    '${typeName != null ? '' : ' Found $typeName'}';
+                    '${typeName != null ? ' Found $typeName' : ''}';
                 await _warn(WarningKind.badMetadata, message, metadatumElement);
                 continue;
               }
@@ -3895,27 +3891,26 @@ class BuilderImplementation {
       return ec.invokingCapability; // Error default.
     }
 
-    ParameterizedType? dartType = constant.type;
+    ParameterizedType dartType = constant.type!;
     // We insist that the type must be a class, and we insist that it must
     // be in the given `capabilityLibrary` (because we could never know
     // how to interpret the meaning of a user-written capability class, so
     // users cannot write their own capability classes).
-    var dartTypeElement = dartType?.element;
+    var dartTypeElement = dartType.element;
     if (dartTypeElement is! ClassElement) {
-      var typeString = dartType?.getDisplayString(withNullability: false) ??
-          '<unknown-type>';
+      var typeString = dartType.getDisplayString(withNullability: false);
       await _severe(
           errors.applyTemplate(
               errors.SUPER_ARGUMENT_NON_CLASS, {'type': typeString}),
           dartTypeElement);
-      return ec.invokingCapability; // Error default.
+      return null; // Error default.
     }
     if (dartTypeElement.library != capabilityLibrary) {
       await _severe(
           errors.applyTemplate(errors.SUPER_ARGUMENT_WRONG_LIBRARY,
               {'library': '$capabilityLibrary', 'element': '$dartTypeElement'}),
           dartTypeElement);
-      return ec.invokingCapability; // Error default.
+      return null; // Error default.
     }
 
     /// Extracts the namePattern String from an instance of a subclass of
@@ -4051,7 +4046,7 @@ class BuilderImplementation {
         // for all classes in that library which can provide a const value,
         // so we should not reach this point.
         await _severe('Unexpected capability $dartTypeElement');
-        return null;
+        return null; // Error default.
     }
   }
 
@@ -4099,7 +4094,11 @@ class BuilderImplementation {
 
     // Main case: the initializer is exactly one element. We must
     // handle two cases: `super(..)` and `super.fromList(<_>[..])`.
-    var superInvocation = initializers[0] as SuperConstructorInvocation;
+    var superInvocation = initializers[0];
+
+    if (superInvocation is! SuperConstructorInvocation) {
+      return _Capabilities(<ec.ReflectCapability>[]);
+    }
 
     Future<ec.ReflectCapability?> capabilityOfExpression(
         Expression expression) async {
@@ -4125,7 +4124,8 @@ class BuilderImplementation {
       // k that we need not worry about here.
       List<ec.ReflectCapability> capabilities = [];
       for (var argument in superInvocation.argumentList.arguments) {
-        capabilities.add((await capabilityOfCollectionElement(argument))!);
+        var currentCapability = await capabilityOfCollectionElement(argument);
+        if (currentCapability != null) capabilities.add(currentCapability);
       }
       return _Capabilities(capabilities);
     }
@@ -4142,8 +4142,9 @@ class BuilderImplementation {
           'which is not supported');
     } else {
       for (var collectionElement in listLiteral.elements) {
-        capabilities
-            .add((await capabilityOfCollectionElement(collectionElement))!);
+        var currentCapability =
+            await capabilityOfCollectionElement(collectionElement);
+        if (currentCapability != null) capabilities.add(currentCapability);
       }
     }
     return _Capabilities(capabilities);
