@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
-// @dart = 2.9
 
 library reflectable.src.element_capability;
 
@@ -200,7 +199,7 @@ abstract class ReflecteeQuantifyCapability implements ReflectCapability {
 const subtypeQuantifyCapability = _SubtypeQuantifyCapability();
 
 class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
-  final Element upperBound;
+  final Element? upperBound;
   final bool excludeUpperBound;
   const SuperclassQuantifyCapability(this.upperBound,
       {bool excludeUpperBound = false})

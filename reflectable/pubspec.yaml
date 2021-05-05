@@ -1,5 +1,5 @@
 name: reflectable
-version: 3.0.1
+version: 3.0.2
 description: >
   Reflection support based on code generation, using 'capabilities' to
   specify which operations to support, on which objects.
@@ -10,9 +10,9 @@ dependencies:
   analyzer: '^1.1.0'
   build: ^2.0.0
   build_resolvers: ^2.0.0
-  build_config: ^0.4.0
-  build_runner: ^1.10.0
-  build_runner_core: ^6.0.0
+  build_config: ^1.0.0
+  build_runner: ^2.0.1
+  build_runner_core: ^7.0.0
   dart_style: ^2.0.0
   glob: ^2.0.0
   logging: ^1.0.0
