@@ -1,3 +1,10 @@
+## 3.0.2
+
+* Migrate the code generator. The reflectable package is hereby fully migrated
+  to null safety.
+* Update the following dependencies: `build_config` ^1.0.0,
+  `build_runner`: ^2.0.1, `build_runner_core`: ^7.0.0.
+
 ## 3.0.1
 
 * Use `dart_style` ^2.0.0.
