@@ -1,3 +1,8 @@
+## 3.0.3
+
+* Update dependencies: analyzer: ^2.0.0
+* Fix issue #253.
+
 ## 3.0.2
 
 * Migrate the code generator. The reflectable package is hereby fully migrated
