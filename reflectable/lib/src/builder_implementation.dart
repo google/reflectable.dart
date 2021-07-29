@@ -123,7 +123,7 @@ class ReflectionWorld {
       }
 
       for (CompilationUnitElement unit in library.units) {
-        unit.types.forEach(addClassElement);
+        unit.classes.forEach(addClassElement);
         unit.enums.forEach(addClassElement);
       }
     }
@@ -3325,7 +3325,7 @@ class BuilderImplementation {
   Future<ClassElement?> _findReflectableClassElement(
       LibraryElement reflectableLibrary) async {
     for (CompilationUnitElement unit in reflectableLibrary.units) {
-      for (ClassElement type in unit.types) {
+      for (ClassElement type in unit.classes) {
         if (type.name == reflectable_class_constants.name &&
             _equalsClassReflectable(type)) {
           return type;
@@ -3806,7 +3806,7 @@ class BuilderImplementation {
       }
 
       for (CompilationUnitElement unit in library.units) {
-        for (ClassElement type in unit.types) {
+        for (ClassElement type in unit.classes) {
           for (ClassElement reflector
               in await getReflectors(_qualifiedName(type), type.metadata)) {
             await addClassDomain(type, reflector);
@@ -3891,7 +3891,7 @@ class BuilderImplementation {
       return ec.invokingCapability; // Error default.
     }
 
-    ParameterizedType dartType = constant.type!;
+    DartType dartType = constant.type!;
     // We insist that the type must be a class, and we insist that it must
     // be in the given `capabilityLibrary` (because we could never know
     // how to interpret the meaning of a user-written capability class, so
@@ -4228,8 +4228,7 @@ void initializeReflectable() {
     _libraries = visibleLibraries;
 
     for (LibraryElement library in _libraries) {
-      var libraryName = library.name;
-      if (libraryName != null) _librariesByName[libraryName] = library;
+      _librariesByName[library.name] = library;
     }
     LibraryElement? reflectableLibrary =
         _librariesByName['reflectable.reflectable'];
@@ -4789,7 +4788,7 @@ NodeList<Annotation>? _getOtherMetadata(AstNode? node, Element element) {
 
 /// Returns a String with the code used to build the metadata of [element].
 ///
-/// Also adds any neccessary imports to [importCollector].
+/// Also adds any necessary imports to [importCollector].
 Future<String> _extractMetadataCode(Element element, Resolver resolver,
     _ImportCollector importCollector, AssetId dataId) async {
   // Synthetic accessors do not have metadata. Only their associated fields.
@@ -5474,8 +5473,8 @@ Future<String> _formatDiagnosticMessage(
       !_isPlatformLibrary(targetLibrary)) {
     final resolvedLibrary = await _getResolvedLibrary(targetLibrary, resolver);
     if (resolvedLibrary != null) {
-      final targetDeclaration = resolvedLibrary.getElementDeclaration(target!)!;
-      final unit = targetDeclaration.resolvedUnit?.unit;
+      final targetDeclaration = resolvedLibrary.getElementDeclaration(target!);
+      final unit = targetDeclaration?.resolvedUnit?.unit;
       final location = unit?.lineInfo?.getLocation(nameOffset);
       if (location != null) {
         locationString = '${location.lineNumber}:${location.columnNumber}';
