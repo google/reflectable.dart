@@ -1684,7 +1684,7 @@ class _ReflectorDomain {
         'Encountered a top-level variable ${element.name} '
         'which has no enclosing library', element);
     }
-    var ownerIndex = _libraries.indexOf(owner);
+    var ownerIndex = owner != null ? _libraries.indexOf(owner) : null;
     if (ownerIndex == null) {
       await _severe(
         'Encountered a top-level variable ${element.name} whose enclosing '
