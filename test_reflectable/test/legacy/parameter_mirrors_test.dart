@@ -129,7 +129,7 @@ void main() {
     expect(constructorParameters[0].hasDefaultValue, true);
     expect(constructorParameters[0].defaultValue, 42);
     expect(constructorParameters[0].isConst, false);
-    expect(constructorParameters[0].isFinal, false);
+    expect(constructorParameters[0].isFinal, true);
     expect(constructorParameters[0].isStatic, false);
     expect(constructorParameters[0].isOptional, true);
     expect(constructorParameters[0].isTopLevel, false);

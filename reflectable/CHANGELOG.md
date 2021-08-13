@@ -1,3 +1,7 @@
+## 3.0.4
+
+* Improve diagnostics for top-level variable, cf. issue 255.
+
 ## 3.0.3
 
 * Update dependencies: analyzer: ^2.0.0
