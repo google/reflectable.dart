@@ -1264,7 +1264,7 @@ class _ReflectorDomain {
     if (element.enclosingElement is ClassElement) {
       return (await classes).indexOf(element.enclosingElement);
     } else if (element.enclosingElement is CompilationUnitElement) {
-      return _libraries.indexOf(element.enclosingElement.enclosingElement!);
+      return _libraries.indexOf(element.library);
     }
     await _severe('Unexpected kind of request for owner');
     return 0;
@@ -1678,18 +1678,9 @@ class _ReflectorDomain {
       Map<FunctionType, int> typedefs,
       bool reflectedTypeRequested) async {
     int descriptor = _topLevelVariableDescriptor(element);
-    var owner = element.enclosingElement?.enclosingElement;
-    if (owner == null) {
-      await _severe(
-        'Encountered a top-level variable ${element.name} '
-        'which has no enclosing library', element);
-    }
+    var owner = element.library;
     var ownerIndex = owner != null ? _libraries.indexOf(owner) : null;
-    if (ownerIndex == null) {
-      await _severe(
-        'Encountered a top-level variable ${element.name} whose enclosing '
-        'library is not available', owner);
-    }
+    if (ownerIndex == null) ownerIndex = constants.NO_CAPABILITY_INDEX;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int? reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
