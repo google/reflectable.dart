@@ -7,7 +7,7 @@
 // corresponding library mirror). This used to cause a null error.
 
 import 'package:reflectable/reflectable.dart';
-import 'scratch_test.reflectable.dart';
+import 'issue_255_test.reflectable.dart';
 
 @c
 class C extends Reflectable {
