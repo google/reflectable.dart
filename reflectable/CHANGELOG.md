@@ -1,6 +1,6 @@
 ## 3.0.4
 
-* Improve diagnostics for top-level variable, cf. issue 255.
+* Fix the bug reported as #255.
 
 ## 3.0.3
 
