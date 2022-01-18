@@ -1945,7 +1945,7 @@ class _ReflectorDomain {
     } else if (dartType is VoidType) {
       return 'void';
     } else if (dartType is FunctionType) {
-      final Element? dartTypeElement = dartType.aliasElement;
+      final Element? dartTypeElement = dartType.alias?.element;
       if (dartTypeElement is TypeAliasElement) {
         String prefix = importCollector._getPrefix(dartTypeElement.library);
         return '$prefix${dartTypeElement.name}';
@@ -2068,7 +2068,7 @@ class _ReflectorDomain {
       // A function type is inherently not private, so we ignore privacy.
       // Note that some function types are _claimed_ to be private in analyzer
       // 0.36.4, so it is a bug to test for it.
-      final Element? dartTypeElement = dartType.aliasElement;
+      final Element? dartTypeElement = dartType.alias?.element;
       if (dartTypeElement is TypeAliasElement) {
         String prefix = importCollector._getPrefix(dartTypeElement.library);
         return '$prefix${dartTypeElement.name}';
@@ -4733,12 +4733,12 @@ const Set<String> sdkLibraryNames = <String>{
 // Helper for _extractMetadataCode.
 CompilationUnit? _definingCompilationUnit(
     ResolvedLibraryResult resolvedLibrary) {
-  var definingUnit = resolvedLibrary.element?.definingCompilationUnit;
+  var definingUnit = resolvedLibrary.element.definingCompilationUnit;
   var units = resolvedLibrary.units;
   if (units != null) {
     for (var unit in units) {
-      if (unit.unit?.declaredElement == definingUnit) {
-        return unit.unit!;
+      if (unit.unit.declaredElement == definingUnit) {
+        return unit.unit;
       }
     }
   }
@@ -5523,7 +5523,7 @@ Future<ResolvedLibraryResult?> _getResolvedLibrary(
           await resolver.libraryFor(await resolver.assetIdForElement(library));
       final freshSession = freshLibrary.session;
       var someResult =
-          await freshSession.getResolvedLibraryByElement2(freshLibrary);
+          await freshSession.getResolvedLibraryByElement(freshLibrary);
       if (someResult is ResolvedLibraryResult) return someResult;
     } catch (_) {
       ++attempts;
