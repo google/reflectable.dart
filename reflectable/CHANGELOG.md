@@ -1,3 +1,8 @@
+## 3.0.5
+
+* Update reflectable to require analyzer ^3.0.0 (currently using 3.1.0),
+  and to replace the package `pedantic` by the package `lints`.
+
 ## 3.0.4
 
 * Fix the bug reported as #255.

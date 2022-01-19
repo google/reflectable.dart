@@ -10,7 +10,6 @@ library test_reflectable.test.corresponding_setter_test;
 
 import 'package:test/test.dart';
 import 'package:reflectable/reflectable.dart';
-import 'package:reflectable/capability.dart';
 import 'corresponding_setter_test.reflectable.dart';
 
 // ignore_for_file: omit_local_variable_types
