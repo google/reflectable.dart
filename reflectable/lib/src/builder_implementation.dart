@@ -8,14 +8,12 @@ import 'dart:developer' as developer;
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
-import 'package:analyzer/src/dart/constant/evaluation.dart';
 import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/source/source_resource.dart';
@@ -1679,8 +1677,7 @@ class _ReflectorDomain {
       bool reflectedTypeRequested) async {
     int descriptor = _topLevelVariableDescriptor(element);
     var owner = element.library;
-    var ownerIndex = owner != null ? _libraries.indexOf(owner) : null;
-    if (ownerIndex == null) ownerIndex = constants.NO_CAPABILITY_INDEX;
+    var ownerIndex = _libraries.indexOf(owner);
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int? reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
@@ -3081,34 +3078,30 @@ class _Capabilities {
         getterMetadata == null ? null : _getEvaluatedMetadata(getterMetadata));
   }
 
-  bool get _supportsMetadata {
-    return _capabilities.any((ec.ReflectCapability capability) =>
-        capability is ec.MetadataCapability);
-  }
+  late final bool _supportsMetadata =
+      _capabilities.any((ec.ReflectCapability capability) =>
+          capability is ec.MetadataCapability);
 
-  bool get _supportsUri {
-    return _capabilities.any(
-        (ec.ReflectCapability capability) => capability is ec.UriCapability);
-  }
+  late final bool _supportsUri =
+      _capabilities.any(
+          (ec.ReflectCapability capability) => capability is ec.UriCapability);
 
   /// Returns [true] iff these [Capabilities] specify reflection support
   /// where the set of classes must be downwards closed, i.e., extra classes
   /// must be added beyond the ones that are directly covered by the given
   /// metadata and global quantifiers, such that coverage on a class `C`
   /// implies coverage of every class `D` such that `D` is a subtype of `C`.
-  bool get _impliesDownwardsClosure {
-    return _capabilities.any((ec.ReflectCapability capability) =>
-        capability == ec.subtypeQuantifyCapability);
-  }
+  late final bool _impliesDownwardsClosure =
+      _capabilities.any((ec.ReflectCapability capability) =>
+          capability == ec.subtypeQuantifyCapability);
 
   /// Returns [true] iff these [Capabilities] specify reflection support where
   /// the set of included classes must be upwards closed, i.e., extra classes
   /// must be added beyond the ones that are directly included as reflectable
   /// because we must support operations like `superclass`.
-  bool get _impliesUpwardsClosure {
-    return _capabilities.any((ec.ReflectCapability capability) =>
-        capability is ec.SuperclassQuantifyCapability);
-  }
+  late final bool _impliesUpwardsClosure =
+      _capabilities.any((ec.ReflectCapability capability) =>
+          capability is ec.SuperclassQuantifyCapability);
 
   /// Returns [true] iff these [Capabilities] specify that classes which have
   /// been used for mixin application for an included class must themselves
@@ -3120,20 +3113,18 @@ class _Capabilities {
   /// been used for mixin application for an included class must themselves
   /// be included (if you have `class B extends A with M ..` then the class `M`
   /// will be included if `_impliesMixins`).
-  bool get _impliesTypeRelations {
-    return _capabilities.any((ec.ReflectCapability capability) =>
-        capability is ec.TypeRelationsCapability);
-  }
+  late final bool _impliesTypeRelations =
+      _capabilities.any((ec.ReflectCapability capability) =>
+          capability is ec.TypeRelationsCapability);
 
   /// Returns [true] iff these [Capabilities] specify that type annotations
   /// modeled by mirrors should also get support for their base level [Type]
   /// values, e.g., they should support `myVariableMirror.reflectedType`.
   /// The relevant kinds of mirrors are variable mirrors, parameter mirrors,
   /// and (for the return type) method mirrors.
-  bool get _impliesReflectedType {
-    return _capabilities.any((ec.ReflectCapability capability) =>
-        capability == ec.reflectedTypeCapability);
-  }
+  late final bool _impliesReflectedType =
+      _capabilities.any((ec.ReflectCapability capability) =>
+          capability == ec.reflectedTypeCapability);
 
   /// Maps each upper bound specified for the upwards closure to whether the
   /// bound itself is excluded, as indicated by `excludeUpperBound` in the
@@ -3158,17 +3149,15 @@ class _Capabilities {
     return result;
   }
 
-  bool get _impliesDeclarations {
-    return _capabilities.any((ec.ReflectCapability capability) {
-      return capability is ec.DeclarationsCapability;
-    });
-  }
+  late final bool _impliesDeclarations =
+      _capabilities.any((ec.ReflectCapability capability) {
+        return capability is ec.DeclarationsCapability;
+      });
 
-  bool get _impliesMemberSymbols {
-    return _capabilities.any((ec.ReflectCapability capability) {
-      return capability == ec.delegateCapability;
-    });
-  }
+  late final bool _impliesMemberSymbols =
+      _capabilities.any((ec.ReflectCapability capability) {
+        return capability == ec.delegateCapability;
+      });
 
   bool get _impliesParameterListShapes {
     // If we have a capability for declarations then we also have it for
@@ -3180,11 +3169,10 @@ class _Capabilities {
     return !_impliesDeclarations;
   }
 
-  bool get _impliesTypes {
-    return _capabilities.any((ec.ReflectCapability capability) {
-      return capability is ec.TypeCapability;
-    });
-  }
+  late final bool _impliesTypes =
+      _capabilities.any((ec.ReflectCapability capability) {
+        return capability is ec.TypeCapability;
+      });
 
   /// Returns true iff `_capabilities` contain any of the types of capability
   /// which are concerned with instance method invocation. The purpose of
@@ -3194,33 +3182,28 @@ class _Capabilities {
   /// they are simply absent if there are no class mirrors (so we cannot call
   /// them and then get a "cannot do this without a class mirror" error in the
   /// implementation).
-  bool get _impliesInstanceInvoke {
-    return _capabilities.any((ec.ReflectCapability capability) {
-      return capability is ec.InstanceInvokeCapability ||
-          capability is ec.InstanceInvokeMetaCapability;
-    });
-  }
+  late final bool _impliesInstanceInvoke =
+      _capabilities.any((ec.ReflectCapability capability) {
+        return capability is ec.InstanceInvokeCapability ||
+            capability is ec.InstanceInvokeMetaCapability;
+      });
 
-  bool get _impliesTypeAnnotations {
-    return _capabilities.any((ec.ReflectCapability capability) =>
-        capability is ec.TypeAnnotationQuantifyCapability);
-  }
+  late final bool _impliesTypeAnnotations =
+      _capabilities.any((ec.ReflectCapability capability) =>
+          capability is ec.TypeAnnotationQuantifyCapability);
 
-  bool get _impliesTypeAnnotationClosure {
-    return _capabilities.any((ec.ReflectCapability capability) =>
-        capability is ec.TypeAnnotationQuantifyCapability &&
-        capability.transitive == true);
-  }
+  late final bool _impliesTypeAnnotationClosure =
+      _capabilities.any((ec.ReflectCapability capability) =>
+          capability is ec.TypeAnnotationQuantifyCapability &&
+          capability.transitive == true);
 
-  bool get _impliesCorrespondingSetters {
-    return _capabilities.any((ec.ReflectCapability capability) =>
-        capability == ec.correspondingSetterQuantifyCapability);
-  }
+  late final bool _impliesCorrespondingSetters =
+      _capabilities.any((ec.ReflectCapability capability) =>
+          capability == ec.correspondingSetterQuantifyCapability);
 
-  bool get _supportsLibraries {
-    return _capabilities.any((ec.ReflectCapability capability) =>
-        capability is ec.LibraryCapability);
-  }
+  late final bool _supportsLibraries =
+      _capabilities.any((ec.ReflectCapability capability) =>
+          capability is ec.LibraryCapability);
 }
 
 /// Collects the libraries that needs to be imported, and gives each library
@@ -3313,12 +3296,8 @@ class BuilderImplementation {
   bool _equalsClassReflectable(ClassElement type) {
     FieldElement? idField = type.getField('thisClassId');
     if (idField == null || !idField.isStatic) return false;
-    if (idField is VariableElement) {
-      DartObject? constantValue = idField.computeConstantValue();
-      return constantValue?.toStringValue() == reflectable_class_constants.id;
-    }
-    // Not a const field, or failed the `id` test: cannot be the right class.
-    return false;
+    DartObject? constantValue = idField.computeConstantValue();
+    return constantValue?.toStringValue() == reflectable_class_constants.id;
   }
 
   /// Returns the ClassElement in the target program which corresponds to class
@@ -3408,27 +3387,22 @@ class BuilderImplementation {
       return isOk ? enclosingType.element as ClassElement : null;
     } else if (element is PropertyAccessorElement) {
       PropertyInducingElement variable = element.variable;
-      if (variable is VariableElement) {
-        DartObject? constantValue = variable.computeConstantValue();
-        // Handle errors during evaluation. In general `constantValue` is
-        // null for (1) non-const variables, (2) variables without an
-        // initializer, and (3) unresolved libraries; (3) should not occur
-        // because of the approach we use to get the resolver; we will not
-        // see (1) because we have checked the type of `variable`; and (2)
-        // would mean that the value is actually null, which we will also
-        // reject as irrelevant.
-        if (constantValue == null) return null;
-        var constantValueType = constantValue.type;
-        var focusClassType = _typeForReflectable(focusClass);
-        bool isOk = constantValueType is ParameterizedType &&
-            focusClassType is InterfaceType &&
-            await checkInheritance(constantValueType, focusClassType);
-        // When `isOK` is true, result.value.type.element is a ClassElement.
-        return isOk ? constantValueType.element as ClassElement : null;
-      } else {
-        await _fine('Ignoring unsupported metadata form $element', element);
-        return null;
-      }
+      DartObject? constantValue = variable.computeConstantValue();
+      // Handle errors during evaluation. In general `constantValue` is
+      // null for (1) non-const variables, (2) variables without an
+      // initializer, and (3) unresolved libraries; (3) should not occur
+      // because of the approach we use to get the resolver; we will not
+      // see (1) because we have checked the type of `variable`; and (2)
+      // would mean that the value is actually null, which we will also
+      // reject as irrelevant.
+      if (constantValue == null) return null;
+      var constantValueType = constantValue.type;
+      var focusClassType = _typeForReflectable(focusClass);
+      bool isOk = constantValueType is ParameterizedType &&
+          focusClassType is InterfaceType &&
+          await checkInheritance(constantValueType, focusClassType);
+      // When `isOK` is true, result.value.type.element is a ClassElement.
+      return isOk ? constantValueType.element as ClassElement : null;
     }
     // Otherwise [element] is some other construct which is not supported.
     await _fine(
@@ -4735,11 +4709,9 @@ CompilationUnit? _definingCompilationUnit(
     ResolvedLibraryResult resolvedLibrary) {
   var definingUnit = resolvedLibrary.element.definingCompilationUnit;
   var units = resolvedLibrary.units;
-  if (units != null) {
-    for (var unit in units) {
-      if (unit.unit.declaredElement == definingUnit) {
-        return unit.unit;
-      }
+  for (var unit in units) {
+    if (unit.unit.declaredElement == definingUnit) {
+      return unit.unit;
     }
   }
   return null;

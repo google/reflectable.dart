@@ -6,8 +6,6 @@ library reflectable.src.reflectable_builder_based;
 
 import 'dart:collection' show UnmodifiableMapView;
 
-import '../capability.dart';
-import '../mirrors.dart';
 import '../reflectable.dart';
 import 'encoding_constants.dart' as constants;
 import 'encoding_constants.dart' show NO_CAPABILITY_INDEX;
@@ -833,7 +831,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     if (other is FunctionTypeMirror) {
       return false;
     }
-    if (other is ClassMirror && this == other) {
+    if (this == other) {
       return true;
     } else if (superclass == null) {
       return false;

@@ -23,10 +23,10 @@ t: test
 pt: pub_test
 
 get:
-	( cd ..; pub get )
+	( cd ..; dart pub get )
 
 upgrade:
-	( cd ..; pub upgrade )
+	( cd ..; dart pub upgrade )
 
 check:
 	( cd ..; dartanalyzer `find lib test -name \*.dart` )
@@ -39,7 +39,7 @@ test:
 	@./run_tests
 
 pub_test:
-	( cd ..; pub run test )
+	( cd ..; dart pub run test )
 
 clean:
 	@echo "[No actions for clean in reflectable]"
