@@ -1,6 +1,8 @@
 ## 3.0.7
 
 * Edit whitespace and rename a local function to keep the linter happy.
+  Change `analysis_options.yaml` such that we get the same linting locally
+  and on pub.dev.
 
 ## 3.0.6
 
