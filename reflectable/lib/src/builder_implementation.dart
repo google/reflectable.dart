@@ -445,8 +445,8 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
 
   @override
   void retainWhere(bool Function(ClassElement) test) {
-    bool inverted_test(ClassElement element) => !test(element);
-    removeWhere(inverted_test);
+    bool invertedTest(ClassElement element) => !test(element);
+    removeWhere(invertedTest);
   }
 
   @override
@@ -3078,29 +3078,27 @@ class _Capabilities {
         getterMetadata == null ? null : _getEvaluatedMetadata(getterMetadata));
   }
 
-  late final bool _supportsMetadata =
-      _capabilities.any((ec.ReflectCapability capability) =>
-          capability is ec.MetadataCapability);
+  late final bool _supportsMetadata = _capabilities.any(
+      (ec.ReflectCapability capability) => capability is ec.MetadataCapability);
 
-  late final bool _supportsUri =
-      _capabilities.any(
-          (ec.ReflectCapability capability) => capability is ec.UriCapability);
+  late final bool _supportsUri = _capabilities
+      .any((ec.ReflectCapability capability) => capability is ec.UriCapability);
 
   /// Returns [true] iff these [Capabilities] specify reflection support
   /// where the set of classes must be downwards closed, i.e., extra classes
   /// must be added beyond the ones that are directly covered by the given
   /// metadata and global quantifiers, such that coverage on a class `C`
   /// implies coverage of every class `D` such that `D` is a subtype of `C`.
-  late final bool _impliesDownwardsClosure =
-      _capabilities.any((ec.ReflectCapability capability) =>
+  late final bool _impliesDownwardsClosure = _capabilities.any(
+      (ec.ReflectCapability capability) =>
           capability == ec.subtypeQuantifyCapability);
 
   /// Returns [true] iff these [Capabilities] specify reflection support where
   /// the set of included classes must be upwards closed, i.e., extra classes
   /// must be added beyond the ones that are directly included as reflectable
   /// because we must support operations like `superclass`.
-  late final bool _impliesUpwardsClosure =
-      _capabilities.any((ec.ReflectCapability capability) =>
+  late final bool _impliesUpwardsClosure = _capabilities.any(
+      (ec.ReflectCapability capability) =>
           capability is ec.SuperclassQuantifyCapability);
 
   /// Returns [true] iff these [Capabilities] specify that classes which have
@@ -3113,8 +3111,8 @@ class _Capabilities {
   /// been used for mixin application for an included class must themselves
   /// be included (if you have `class B extends A with M ..` then the class `M`
   /// will be included if `_impliesMixins`).
-  late final bool _impliesTypeRelations =
-      _capabilities.any((ec.ReflectCapability capability) =>
+  late final bool _impliesTypeRelations = _capabilities.any(
+      (ec.ReflectCapability capability) =>
           capability is ec.TypeRelationsCapability);
 
   /// Returns [true] iff these [Capabilities] specify that type annotations
@@ -3122,8 +3120,8 @@ class _Capabilities {
   /// values, e.g., they should support `myVariableMirror.reflectedType`.
   /// The relevant kinds of mirrors are variable mirrors, parameter mirrors,
   /// and (for the return type) method mirrors.
-  late final bool _impliesReflectedType =
-      _capabilities.any((ec.ReflectCapability capability) =>
+  late final bool _impliesReflectedType = _capabilities.any(
+      (ec.ReflectCapability capability) =>
           capability == ec.reflectedTypeCapability);
 
   /// Maps each upper bound specified for the upwards closure to whether the
@@ -3151,13 +3149,13 @@ class _Capabilities {
 
   late final bool _impliesDeclarations =
       _capabilities.any((ec.ReflectCapability capability) {
-        return capability is ec.DeclarationsCapability;
-      });
+    return capability is ec.DeclarationsCapability;
+  });
 
   late final bool _impliesMemberSymbols =
       _capabilities.any((ec.ReflectCapability capability) {
-        return capability == ec.delegateCapability;
-      });
+    return capability == ec.delegateCapability;
+  });
 
   bool get _impliesParameterListShapes {
     // If we have a capability for declarations then we also have it for
@@ -3171,8 +3169,8 @@ class _Capabilities {
 
   late final bool _impliesTypes =
       _capabilities.any((ec.ReflectCapability capability) {
-        return capability is ec.TypeCapability;
-      });
+    return capability is ec.TypeCapability;
+  });
 
   /// Returns true iff `_capabilities` contain any of the types of capability
   /// which are concerned with instance method invocation. The purpose of
@@ -3184,26 +3182,25 @@ class _Capabilities {
   /// implementation).
   late final bool _impliesInstanceInvoke =
       _capabilities.any((ec.ReflectCapability capability) {
-        return capability is ec.InstanceInvokeCapability ||
-            capability is ec.InstanceInvokeMetaCapability;
-      });
+    return capability is ec.InstanceInvokeCapability ||
+        capability is ec.InstanceInvokeMetaCapability;
+  });
 
-  late final bool _impliesTypeAnnotations =
-      _capabilities.any((ec.ReflectCapability capability) =>
+  late final bool _impliesTypeAnnotations = _capabilities.any(
+      (ec.ReflectCapability capability) =>
           capability is ec.TypeAnnotationQuantifyCapability);
 
-  late final bool _impliesTypeAnnotationClosure =
-      _capabilities.any((ec.ReflectCapability capability) =>
+  late final bool _impliesTypeAnnotationClosure = _capabilities.any(
+      (ec.ReflectCapability capability) =>
           capability is ec.TypeAnnotationQuantifyCapability &&
           capability.transitive == true);
 
-  late final bool _impliesCorrespondingSetters =
-      _capabilities.any((ec.ReflectCapability capability) =>
+  late final bool _impliesCorrespondingSetters = _capabilities.any(
+      (ec.ReflectCapability capability) =>
           capability == ec.correspondingSetterQuantifyCapability);
 
-  late final bool _supportsLibraries =
-      _capabilities.any((ec.ReflectCapability capability) =>
-          capability is ec.LibraryCapability);
+  late final bool _supportsLibraries = _capabilities.any(
+      (ec.ReflectCapability capability) => capability is ec.LibraryCapability);
 }
 
 /// Collects the libraries that needs to be imported, and gives each library
