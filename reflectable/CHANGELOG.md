@@ -1,3 +1,10 @@
+## 3.0.6
+
+* Update reflectable to require analyzer ^3.2.0; adjust several locations
+  in the code where null is handled, but analyzer methods will now return
+  a non-null value. Optimize several capability related getters by caching
+  the result.
+
 ## 3.0.5
 
 * Update reflectable to require analyzer ^3.0.0 (currently using 3.1.0),
