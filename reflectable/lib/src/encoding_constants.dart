@@ -44,4 +44,4 @@ int kindFromEncoding(int encoding) => encoding & ((1 << flagsBit) - 1);
 
 /// Used in place of an index into a list, where a needed capability to provide
 /// the actual value is missing.
-const int NO_CAPABILITY_INDEX = -1;
+const int noCapabilityIndex = -1;

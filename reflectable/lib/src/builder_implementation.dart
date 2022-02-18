@@ -4,6 +4,8 @@
 
 library reflectable.src.builder_implementation;
 
+// ignore_for_file:implementation_imports
+
 import 'dart:developer' as developer;
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/analysis/results.dart';
@@ -169,7 +171,7 @@ class ReflectionWorld {
       // Generate the mapping when requested, even if it is empty.
       String mapping = _formatAsMap(
           memberNames.map((String name) => "const Symbol(r'$name'): r'$name'"));
-      return '$mapping';
+      return mapping;
     } else {
       // The value `null` unambiguously indicates lack of capability.
       return 'null';
@@ -830,14 +832,14 @@ class _ReflectorDomain {
     // Fill in [libraries], [typeParameters], [members], [fields],
     // [parameters], [instanceGetterNames], and [instanceSetterNames].
     _libraries.items.forEach(uncheckedAddLibrary);
-    (await classes).forEach((ClassElement classElement) {
+    for (var classElement in await classes) {
       LibraryElement classLibrary = classElement.library;
       if (!libraries.items.any((_LibraryDomain libraryDomain) =>
           libraryDomain._libraryElement == classLibrary)) {
         addLibrary(classLibrary);
       }
       classElement.typeParameters.forEach(typeParameters.add);
-    });
+    }
     for (_ClassDomain classDomain in (await classes).domains) {
       // Gather the behavioral interface into [members]. Note that
       // this includes implicitly generated getters and setters, but
@@ -887,7 +889,7 @@ class _ReflectorDomain {
       // including both explicitly declared ones, implicitly generated ones
       // for fields, and the implicitly generated ones that correspond to
       // method tear-offs.
-      classDomain._instanceMembers.forEach((ExecutableElement instanceMember) {
+      for (var instanceMember in classDomain._instanceMembers) {
         if (instanceMember is PropertyAccessorElement) {
           // A getter or a setter, synthetic or declared.
           if (instanceMember.isGetter) {
@@ -903,7 +905,7 @@ class _ReflectorDomain {
           // `isStatic`, we do not wish to include them among
           // instanceGetterNames, so we do nothing here.
         }
-      });
+      }
     }
 
     // Add classes used as bounds for type variables, if needed.
@@ -962,13 +964,14 @@ class _ReflectorDomain {
 
     // Record the names of covered members, if requested.
     if (_capabilities._impliesMemberSymbols) {
-      members.items.forEach((ExecutableElement executableElement) =>
-          _world.memberNames.add(executableElement.name));
+      for (var executableElement in members.items) {
+        _world.memberNames.add(executableElement.name);
+      }
     }
 
     // Record the method parameter list shapes, if requested.
     if (_capabilities._impliesParameterListShapes) {
-      members.items.forEach((ExecutableElement element) {
+      for (var element in members.items) {
         int count = 0;
         int optionalCount = 0;
         var names = <String>{};
@@ -981,7 +984,7 @@ class _ReflectorDomain {
             ParameterListShape(count, optionalCount, names);
         parameterListShapes.add(shape);
         parameterListShapeOf[element] = shape;
-      });
+      }
     }
 
     // Find the offsets of fields in members, and of methods and functions
@@ -1142,7 +1145,7 @@ class _ReflectorDomain {
       if (isDynamic || isVoid) {
         // The mirror will report 'dynamic' or 'void' as its `returnType`
         // and it will never use the index.
-        return constants.NO_CAPABILITY_INDEX;
+        return constants.noCapabilityIndex;
       }
       if (isClassType && (await classes).contains(typeElement)) {
         // Normal encoding of a class type which has been added to `classes`.
@@ -1154,12 +1157,12 @@ class _ReflectorDomain {
       // [ec.TypeAnnotationQuantifyCapability]. In both cases we fall through
       // because the relevant capability is absent.
     }
-    return constants.NO_CAPABILITY_INDEX;
+    return constants.noCapabilityIndex;
   }
 
   Future<int> _computeVariableTypeIndex(
       PropertyInducingElement element, int descriptor) async {
-    if (!_capabilities._impliesTypes) return constants.NO_CAPABILITY_INDEX;
+    if (!_capabilities._impliesTypes) return constants.noCapabilityIndex;
     return await _computeTypeIndexBase(
         element.type.element,
         false, // No field has type `void`.
@@ -1248,7 +1251,7 @@ class _ReflectorDomain {
 
   Future<int> _computeReturnTypeIndex(
       ExecutableElement element, int descriptor) async {
-    if (!_capabilities._impliesTypes) return constants.NO_CAPABILITY_INDEX;
+    if (!_capabilities._impliesTypes) return constants.noCapabilityIndex;
     int result = await _computeTypeIndexBase(
         element.returnType.element,
         descriptor & constants.voidReturnTypeAttribute != 0,
@@ -1283,7 +1286,7 @@ class _ReflectorDomain {
       TypeParameterElement typeParameterElement,
       _ImportCollector importCollector,
       ClassElement? objectClassElement) async {
-    int? upperBoundIndex = constants.NO_CAPABILITY_INDEX;
+    int? upperBoundIndex = constants.noCapabilityIndex;
     if (_capabilities._impliesTypeAnnotations) {
       DartType? bound = typeParameterElement.bound;
       if (bound == null) {
@@ -1346,18 +1349,18 @@ class _ReflectorDomain {
       // (the one that ultimately allocates the memory for _every_ new
       // object) has no index, which creates the need to catch a `null`
       // here. Search for "magic" to find other occurrences of the same
-      // issue. For now, we use the index [constants.NO_CAPABILITY_INDEX]
+      // issue. For now, we use the index [constants.noCapabilityIndex]
       // for this declaration, because it is not yet supported.
       // Need to find the correct solution, though!
       int? index = members.indexOf(element);
       return index == null
-          ? constants.NO_CAPABILITY_INDEX
+          ? constants.noCapabilityIndex
           : index + methodsOffset;
     });
 
     String declarationsCode = _capabilities._impliesDeclarations
         ? _formatAsConstList('int', [...fieldsIndices, ...methodsIndices])
-        : 'const <int>[${constants.NO_CAPABILITY_INDEX}]';
+        : 'const <int>[${constants.noCapabilityIndex}]';
 
     // All instance members belong to the behavioral interface, so they
     // also get an offset of `fields.length`.
@@ -1366,11 +1369,11 @@ class _ReflectorDomain {
       instanceMembersCode = _formatAsConstList('int',
           classDomain._instanceMembers.map((ExecutableElement element) {
         // TODO(eernst) implement: The "magic" default constructor has
-        // index: NO_CAPABILITY_INDEX; adjust this when support for it has
+        // index: noCapabilityIndex; adjust this when support for it has
         // been implemented.
         int? index = members.indexOf(element);
         return index == null
-            ? constants.NO_CAPABILITY_INDEX
+            ? constants.noCapabilityIndex
             : index + methodsOffset;
       }));
     }
@@ -1383,7 +1386,7 @@ class _ReflectorDomain {
           classDomain._staticMembers.map((ExecutableElement element) {
         int? index = members.indexOf(element);
         return index == null
-            ? constants.NO_CAPABILITY_INDEX
+            ? constants.noCapabilityIndex
             : index + methodsOffset;
       }));
     }
@@ -1391,19 +1394,19 @@ class _ReflectorDomain {
     ClassElement classElement = classDomain._classElement;
     ClassElement? superclass = (await classes).superclassOf(classElement);
 
-    String superclassIndex = '${constants.NO_CAPABILITY_INDEX}';
+    String superclassIndex = '${constants.noCapabilityIndex}';
     if (_capabilities._impliesTypeRelations) {
       // [Object]'s superclass is reported as `null`: it does not exist and
       // hence we cannot decide whether it's supported or unsupported.; by
       // convention we make it supported and report it in the same way as
-      // 'dart:mirrors'. Other superclasses use `NO_CAPABILITY_INDEX` to
+      // 'dart:mirrors'. Other superclasses use `noCapabilityIndex` to
       // indicate missing support.
       superclassIndex = (classElement is! MixinApplication &&
               _typeForReflectable(classElement).isDartCoreObject)
           ? 'null'
           : ((await classes).contains(superclass))
               ? '${(await classes).indexOf(superclass!)}'
-              : '${constants.NO_CAPABILITY_INDEX}';
+              : '${constants.noCapabilityIndex}';
     }
 
     String constructorsCode;
@@ -1447,7 +1450,7 @@ class _ReflectorDomain {
       staticSettersCode = _formatAsMap(staticSettersCodeList);
     }
 
-    int? mixinIndex = constants.NO_CAPABILITY_INDEX;
+    int? mixinIndex = constants.noCapabilityIndex;
     if (_capabilities._impliesTypeRelations) {
       mixinIndex = classElement.isMixinApplication
           // Named mixin application (using the syntax `class B = A with M;`).
@@ -1459,15 +1462,15 @@ class _ReflectorDomain {
               : (await classes).indexOf(classElement));
       // We may not have support for the given class, in which case we must
       // correct the `null` from `indexOf` to indicate missing capability.
-      mixinIndex ??= constants.NO_CAPABILITY_INDEX;
+      mixinIndex ??= constants.noCapabilityIndex;
     }
 
     int ownerIndex = _capabilities._supportsLibraries
         ? libraries.indexOf(libraryMap[classElement.library]!)!
-        : constants.NO_CAPABILITY_INDEX;
+        : constants.noCapabilityIndex;
 
     String superinterfaceIndices =
-        'const <int>[${constants.NO_CAPABILITY_INDEX}]';
+        'const <int>[${constants.noCapabilityIndex}]';
     if (_capabilities._impliesTypeRelations) {
       superinterfaceIndices = _formatAsConstList(
           'int',
@@ -1627,7 +1630,7 @@ class _ReflectorDomain {
       int descriptor = _declarationDescriptor(element);
       int returnTypeIndex = await _computeReturnTypeIndex(element, descriptor);
       int ownerIndex = (await _computeOwnerIndex(element, descriptor)) ??
-          constants.NO_CAPABILITY_INDEX;
+          constants.noCapabilityIndex;
       String reflectedTypeArgumentsOfReturnType = 'null';
       if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
         reflectedTypeArgumentsOfReturnType =
@@ -1642,12 +1645,12 @@ class _ReflectorDomain {
           element.parameters.map((ParameterElement parameterElement) {
         return parameters.indexOf(parameterElement);
       }));
-      int reflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
+      int reflectedReturnTypeIndex = constants.noCapabilityIndex;
       if (reflectedTypeRequested) {
         reflectedReturnTypeIndex = _typeCodeIndex(element.returnType,
             await classes, reflectedTypes, reflectedTypesOffset, typedefs);
       }
-      int dynamicReflectedReturnTypeIndex = constants.NO_CAPABILITY_INDEX;
+      int dynamicReflectedReturnTypeIndex = constants.noCapabilityIndex;
       if (reflectedTypeRequested) {
         dynamicReflectedReturnTypeIndex = _dynamicTypeCodeIndex(
             element.returnType,
@@ -1682,11 +1685,11 @@ class _ReflectorDomain {
     int? reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
-        : constants.NO_CAPABILITY_INDEX;
+        : constants.noCapabilityIndex;
     int? dynamicReflectedTypeIndex = reflectedTypeRequested
         ? _dynamicTypeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
-        : constants.NO_CAPABILITY_INDEX;
+        : constants.noCapabilityIndex;
     String reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
       reflectedTypeArguments = await _computeReflectedTypeArguments(
@@ -1721,16 +1724,16 @@ class _ReflectorDomain {
       bool reflectedTypeRequested) async {
     int descriptor = _fieldDescriptor(element);
     int ownerIndex = (await classes).indexOf(element.enclosingElement) ??
-        constants.NO_CAPABILITY_INDEX;
+        constants.noCapabilityIndex;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
-        : constants.NO_CAPABILITY_INDEX;
+        : constants.noCapabilityIndex;
     int dynamicReflectedTypeIndex = reflectedTypeRequested
         ? _dynamicTypeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
-        : constants.NO_CAPABILITY_INDEX;
+        : constants.noCapabilityIndex;
     String reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
       reflectedTypeArguments = await _computeReflectedTypeArguments(
@@ -1771,7 +1774,7 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
     // The type `dynamic` is handled via the `dynamicAttribute` bit.
-    if (dartType.isDynamic) return constants.NO_CAPABILITY_INDEX;
+    if (dartType.isDynamic) return constants.noCapabilityIndex;
     if (dartType is InterfaceType) {
       if (dartType.typeArguments.isEmpty) {
         // A plain, non-generic class, may be handled already.
@@ -1804,7 +1807,7 @@ class _ReflectorDomain {
     }
     // We only handle the kinds of types already covered above. In particular,
     // we cannot produce code to return a value for `void`.
-    return constants.NO_CAPABILITY_INDEX;
+    return constants.noCapabilityIndex;
   }
 
   /// Returns the index into `ReflectorData.types` of the [Type] object
@@ -1825,7 +1828,7 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
     // The type `dynamic` is handled via the `dynamicAttribute` bit.
-    if (dartType.isDynamic) return constants.NO_CAPABILITY_INDEX;
+    if (dartType.isDynamic) return constants.noCapabilityIndex;
     if (dartType is InterfaceType) {
       ClassElement classElement = dartType.element;
       if (classes.contains(classElement)) {
@@ -1858,7 +1861,7 @@ class _ReflectorDomain {
       return index;
     }
     // We only handle the kinds of types already covered above.
-    return constants.NO_CAPABILITY_INDEX;
+    return constants.noCapabilityIndex;
   }
 
   /// Returns true iff the given [type] is not and does not contain a free
@@ -2169,7 +2172,7 @@ class _ReflectorDomain {
       return index + methodsOffset;
     });
 
-    String declarationsCode = 'const <int>[${constants.NO_CAPABILITY_INDEX}]';
+    String declarationsCode = 'const <int>[${constants.noCapabilityIndex}]';
     if (_capabilities._impliesDeclarations) {
       Iterable<int> declarationsIndices = [
         ...variableIndices,
@@ -2223,11 +2226,11 @@ class _ReflectorDomain {
     int descriptor = _parameterDescriptor(element);
     int ownerIndex =
         members.indexOf(element.enclosingElement!)! + fields.length;
-    int classMirrorIndex = constants.NO_CAPABILITY_INDEX;
+    int classMirrorIndex = constants.noCapabilityIndex;
     if (_capabilities._impliesTypes) {
       if (descriptor & constants.dynamicAttribute != 0) {
         // This parameter will report its type as [dynamic], and it
-        // will never use `classMirrorIndex`. Keep NO_CAPABILITY_INDEX.
+        // will never use `classMirrorIndex`. Keep noCapabilityIndex.
       } else if (descriptor & constants.classTypeAttribute != 0) {
         // Normal encoding of a class type. If that class has been added
         // to `classes` we use its `indexOf`; otherwise (if we do not have an
@@ -2236,17 +2239,17 @@ class _ReflectorDomain {
         var elementTypeElement = element.type.element;
         classMirrorIndex = (await classes).contains(elementTypeElement)
             ? (await classes).indexOf(elementTypeElement!)!
-            : constants.NO_CAPABILITY_INDEX;
+            : constants.noCapabilityIndex;
       }
     }
     int reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
-        : constants.NO_CAPABILITY_INDEX;
+        : constants.noCapabilityIndex;
     int dynamicReflectedTypeIndex = reflectedTypeRequested
         ? _dynamicTypeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
-        : constants.NO_CAPABILITY_INDEX;
+        : constants.noCapabilityIndex;
     String reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
       reflectedTypeArguments = await _computeReflectedTypeArguments(
@@ -2449,7 +2452,7 @@ Set<ClassElement> _mixinApplicationsOfClasses(Set<ClassElement> classes) {
     // new [MixinApplication] created.  We must provide the immediate subclass
     // of each [MixinApplication] when it is a regular class (not a mixin
     // application), otherwise [null], which is done with [subClass].
-    classElement.mixins.forEach((InterfaceType mixin) {
+    for (var mixin in classElement.mixins) {
       ClassElement mixinClass = mixin.element;
       ClassElement? subClass =
           mixin == classElement.mixins.last ? classElement : null;
@@ -2460,7 +2463,7 @@ Set<ClassElement> _mixinApplicationsOfClasses(Set<ClassElement> classes) {
           name, superclass, mixinClass, classElement.library, subClass);
       mixinApplications.add(mixinApplication);
       superclass = mixinApplication;
-    });
+    }
   }
   return mixinApplications;
 }
@@ -3367,7 +3370,7 @@ class BuilderImplementation {
         // Instance of [classReflectable], or of indirect subclass
         // of [classReflectable]: Not supported, report an error.
         await _severe(
-            errors.METADATA_NOT_DIRECT_SUBCLASS, elementAnnotation.element);
+            errors.metadataNotDirectSubclass, elementAnnotation.element);
         return false;
       }
       // A direct subclass of [classReflectable], all OK.
@@ -3830,7 +3833,9 @@ class BuilderImplementation {
         reflectableLibrary,
         entryPoint,
         importCollector);
-    domains.values.forEach((_ReflectorDomain domain) => domain._world = world);
+    for (var domain in domains.values) {
+      domain._world = world;
+    }
     return world;
   }
 
@@ -3873,13 +3878,13 @@ class BuilderImplementation {
       var typeString = dartType.getDisplayString(withNullability: false);
       await _severe(
           errors.applyTemplate(
-              errors.SUPER_ARGUMENT_NON_CLASS, {'type': typeString}),
+              errors.superArgumentNonClass, {'type': typeString}),
           dartTypeElement);
       return null; // Error default.
     }
     if (dartTypeElement.library != capabilityLibrary) {
       await _severe(
-          errors.applyTemplate(errors.SUPER_ARGUMENT_WRONG_LIBRARY,
+          errors.applyTemplate(errors.superArgumentWrongLibrary,
               {'library': '$capabilityLibrary', 'element': '$dartTypeElement'}),
           dartTypeElement);
       return null; // Error default.
@@ -5321,12 +5326,12 @@ class MixinApplication implements ClassElement {
   ElementLocation? get location => null;
 
   @override
-  bool operator ==(Object object) {
-    return object is MixinApplication &&
-        superclass == object.superclass &&
-        mixin == object.mixin &&
-        library == object.library &&
-        subclass == object.subclass;
+  bool operator ==(Object other) {
+    return other is MixinApplication &&
+        superclass == other.superclass &&
+        mixin == other.mixin &&
+        library == other.library &&
+        subclass == other.subclass;
   }
 
   @override

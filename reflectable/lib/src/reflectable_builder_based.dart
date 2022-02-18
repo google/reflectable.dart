@@ -8,7 +8,7 @@ import 'dart:collection' show UnmodifiableMapView;
 
 import '../reflectable.dart';
 import 'encoding_constants.dart' as constants;
-import 'encoding_constants.dart' show NO_CAPABILITY_INDEX;
+import 'encoding_constants.dart' show noCapabilityIndex;
 import 'incompleteness.dart';
 import 'reflectable_base.dart';
 
@@ -395,15 +395,15 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   @override
   List<ClassMirror> get superinterfaces {
     if (_superinterfaceIndices.length == 1 &&
-        _superinterfaceIndices[0] == NO_CAPABILITY_INDEX) {
+        _superinterfaceIndices[0] == noCapabilityIndex) {
       throw NoSuchCapabilityError(
           'Requesting `superinterfaces` of `$qualifiedName` '
           'without `typeRelationsCapability`');
     }
     return _superinterfaceIndices.map<ClassMirror>((int i) {
-      if (i == NO_CAPABILITY_INDEX) {
+      if (i == noCapabilityIndex) {
         // When we have a list of superinterfaces which is not a list
-        // containing just the single element [NO_CAPABILITY_INDEX] then
+        // containing just the single element [noCapabilityIndex] then
         // we do have the `typeRelationsCapability`, but we may still
         // encounter a single unsupported superinterface.
         throw NoSuchCapabilityError(
@@ -418,10 +418,10 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   /// declarations of the reflected class. This includes method mirrors
   /// and variable mirrors and it directly corresponds to `declarations`.
   /// Exception: When the given `_reflector.capabilities` do not support
-  /// the operation `declarations`, this will be `<int>[NO_CAPABILITY_INDEX]`.
+  /// the operation `declarations`, this will be `<int>[noCapabilityIndex]`.
   /// It is enough to check that the list is non-empty and first element is
-  /// NO_CAPABILITY_INDEX to detect this situation, because
-  /// NO_CAPABILITY_INDEX` will otherwise never occur.
+  /// noCapabilityIndex to detect this situation, because
+  /// noCapabilityIndex` will otherwise never occur.
   final List<int> _declarationIndices;
 
   /// A list of the indices in [ReflectorData.memberMirrors] of the
@@ -485,12 +485,12 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       Map<String, DeclarationMirror> result = <String, DeclarationMirror>{};
       for (int declarationIndex in _declarationIndices) {
         // We encode a missing `declarations` capability as an index with
-        // the value NO_CAPABILITY_INDEX. Note that `_declarations` will not be
+        // the value noCapabilityIndex. Note that `_declarations` will not be
         // initialized and hence we will come here repeatedly if that is the
         // case; however, performing operations for which there is no capability
         // need not have stellar performance, it is almost always a bug to do
         // that.
-        if (declarationIndex == NO_CAPABILITY_INDEX) {
+        if (declarationIndex == noCapabilityIndex) {
           throw NoSuchCapabilityError(
               'Requesting declarations of "$qualifiedName" without capability');
         }
@@ -555,7 +555,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   @override
   ClassMirror get mixin {
-    if (_mixinIndex == NO_CAPABILITY_INDEX) {
+    if (_mixinIndex == noCapabilityIndex) {
       if (!_supportsTypeRelations(_reflector)) {
         throw NoSuchCapabilityError(
             'Attempt to get `mixin` for `$qualifiedName` '
@@ -745,9 +745,9 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   @override
   bool isAssignableTo(TypeMirror other) {
-    if (_superclassIndex == NO_CAPABILITY_INDEX) {
+    if (_superclassIndex == noCapabilityIndex) {
       // There are two possible reasons for this: (1) If we have no type
-      // relations capability then the index will always be NO_CAPABILITY_INDEX.
+      // relations capability then the index will always be noCapabilityIndex.
       // (2) Even if we have the type relations capability then the superclass
       // may be un-covered. So we cannot tell the two apart based on index.
       // Note that the check for superclass access also applies to the access
@@ -768,9 +768,9 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   @override
   bool isSubtypeOf(TypeMirror other) {
-    if (_superclassIndex == NO_CAPABILITY_INDEX) {
+    if (_superclassIndex == noCapabilityIndex) {
       // There are two possible reasons for this: (1) If we have no type
-      // relations capability then the index will always be NO_CAPABILITY_INDEX.
+      // relations capability then the index will always be noCapabilityIndex.
       // (2) Even if we have the type relations capability then the superclass
       // may be un-covered. So we cannot tell the two apart based on index.
       // Note that the check for superclass access also applies to the access
@@ -807,9 +807,9 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   @override
   bool isSubclassOf(ClassMirror other) {
-    if (_superclassIndex == NO_CAPABILITY_INDEX) {
+    if (_superclassIndex == noCapabilityIndex) {
       // There are two possible reasons for this: (1) If we have no type
-      // relations capability then the index will always be NO_CAPABILITY_INDEX.
+      // relations capability then the index will always be noCapabilityIndex.
       // (2) Even if we have the type relations capability then the superclass
       // may be un-covered. So we cannot tell the two apart based on index.
       // Note that the check for superclass access also applies to the access
@@ -842,7 +842,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   @override
   DeclarationMirror get owner {
-    if (_ownerIndex == NO_CAPABILITY_INDEX) {
+    if (_ownerIndex == noCapabilityIndex) {
       if (!_supportsTypeRelations(_reflector)) {
         throw NoSuchCapabilityError(
             'Attempt to get `owner` of `$qualifiedName` '
@@ -857,7 +857,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   @override
   ClassMirrorBase? get superclass {
-    if (_superclassIndex == NO_CAPABILITY_INDEX) {
+    if (_superclassIndex == noCapabilityIndex) {
       if (!_supportsTypeRelations(_reflector)) {
         throw NoSuchCapabilityError(
             'Attempt to get `superclass` of `$qualifiedName` '
@@ -1111,7 +1111,7 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
 
   @override
   Type get dynamicReflectedType {
-    if (_dynamicReflectedTypeIndex == NO_CAPABILITY_INDEX) {
+    if (_dynamicReflectedTypeIndex == noCapabilityIndex) {
       if (!_supportsReflectedType(_reflector)) {
         throw NoSuchCapabilityError(
             'Attempt to evaluate `dynamicReflectedType` for `$qualifiedName` '
@@ -1360,7 +1360,7 @@ class TypeVariableMirrorImpl extends _DataCaching
   TypeMirror get upperBound {
     var upperBoundIndex = _upperBoundIndex;
     if (upperBoundIndex == null) return DynamicMirrorImpl();
-    if (upperBoundIndex == NO_CAPABILITY_INDEX) {
+    if (upperBoundIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError('Attempt to get `upperBound` from type '
           'variable mirror without capability.');
     }
@@ -1460,7 +1460,7 @@ class TypeVariableMirrorImpl extends _DataCaching
 
   @override
   DeclarationMirror get owner {
-    if (_ownerIndex == NO_CAPABILITY_INDEX) {
+    if (_ownerIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError(
           'Trying to get owner of type parameter `$qualifiedName` '
           'without capability');
@@ -1478,9 +1478,9 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   /// top level functions of this library and it directly corresponds to
   /// `declarations`. Exception: When the given `_reflector.capabilities` do
   /// not support the operation `declarations`, this will be
-  /// `<int>[NO_CAPABILITY_INDEX]`. It is enough to check that the list is
-  /// non-empty and first element is NO_CAPABILITY_INDEX to detect this
-  /// situation, because NO_CAPABILITY_INDEX` will otherwise never occur.
+  /// `<int>[noCapabilityIndex]`. It is enough to check that the list is
+  /// non-empty and first element is noCapabilityIndex to detect this
+  /// situation, because noCapabilityIndex` will otherwise never occur.
   final List<int> _declarationIndices;
 
   @override
@@ -1513,12 +1513,12 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
       Map<String, DeclarationMirror> result = <String, DeclarationMirror>{};
       for (int declarationIndex in _declarationIndices) {
         // We encode a missing `declarations` capability as an index with
-        // the value NO_CAPABILITY_INDEX. Note that [declarations] will not be
+        // the value noCapabilityIndex. Note that [declarations] will not be
         // initialized and hence we will come here repeatedly if that is the
         // case; however, performing operations for which there is no capability
         // need not have stellar performance, it is almost always a bug to do
         // that.
-        if (declarationIndex == NO_CAPABILITY_INDEX) {
+        if (declarationIndex == noCapabilityIndex) {
           throw NoSuchCapabilityError(
               'Requesting declarations of `$qualifiedName` without capability');
         }
@@ -1526,11 +1526,11 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
             _data.memberMirrors![declarationIndex];
         result[declarationMirror.simpleName] = declarationMirror;
       }
-      _data.typeMirrors.forEach((TypeMirror typeMirror) {
+      for (var typeMirror in _data.typeMirrors) {
         if (typeMirror is ClassMirror && typeMirror.owner == this) {
           result[typeMirror.simpleName] = typeMirror;
         }
-      });
+      }
       _declarations =
           declarations = UnmodifiableMapView<String, DeclarationMirror>(result);
     }
@@ -1745,7 +1745,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
 
   @override
   DeclarationMirror get owner {
-    if (_ownerIndex == NO_CAPABILITY_INDEX) {
+    if (_ownerIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError(
           'Trying to get owner of method `$qualifiedName` '
           'without `LibraryCapability`');
@@ -1846,7 +1846,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   TypeMirror get returnType {
     if (_hasDynamicReturnType) return DynamicMirrorImpl();
     if (_hasVoidReturnType) return VoidMirrorImpl();
-    if (_returnTypeIndex == NO_CAPABILITY_INDEX) {
+    if (_returnTypeIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError(
           'Requesting returnType of method `$simpleName` without capability');
     }
@@ -1863,11 +1863,11 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
 
   @override
   bool get hasReflectedReturnType =>
-      _reflectedReturnTypeIndex != NO_CAPABILITY_INDEX;
+      _reflectedReturnTypeIndex != noCapabilityIndex;
 
   @override
   Type get reflectedReturnType {
-    if (_reflectedReturnTypeIndex == NO_CAPABILITY_INDEX) {
+    if (_reflectedReturnTypeIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError('Requesting reflectedReturnType of method '
           '`$simpleName` without capability');
     }
@@ -1876,19 +1876,19 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
 
   @override
   bool get hasDynamicReflectedReturnType =>
-      _dynamicReflectedReturnTypeIndex != NO_CAPABILITY_INDEX ||
+      _dynamicReflectedReturnTypeIndex != noCapabilityIndex ||
       hasReflectedReturnType;
 
   @override
   Type get dynamicReflectedReturnType {
-    return _dynamicReflectedReturnTypeIndex != NO_CAPABILITY_INDEX
+    return _dynamicReflectedReturnTypeIndex != noCapabilityIndex
         ? _data.types[_dynamicReflectedReturnTypeIndex]
         : reflectedReturnType;
   }
 
   @override
   String get simpleName => isConstructor
-      ? (_name == '' ? '${owner.simpleName}' : '${owner.simpleName}.$_name')
+      ? (_name == '' ? owner.simpleName : '${owner.simpleName}.$_name')
       : _name;
 
   @override
@@ -2205,7 +2205,7 @@ abstract class VariableMirrorBase extends _DataCaching
   @override
   TypeMirror get type {
     if (_isDynamic) return DynamicMirrorImpl();
-    if (_classMirrorIndex == NO_CAPABILITY_INDEX) {
+    if (_classMirrorIndex == noCapabilityIndex) {
       if (!_supportsType(_reflector)) {
         throw NoSuchCapabilityError(
             'Attempt to get `type` without `TypeCapability`');
@@ -2226,12 +2226,12 @@ abstract class VariableMirrorBase extends _DataCaching
 
   @override
   bool get hasReflectedType =>
-      _isDynamic || _reflectedTypeIndex != NO_CAPABILITY_INDEX;
+      _isDynamic || _reflectedTypeIndex != noCapabilityIndex;
 
   @override
   Type get reflectedType {
     if (_isDynamic) return dynamic;
-    if (_reflectedTypeIndex == NO_CAPABILITY_INDEX) {
+    if (_reflectedTypeIndex == noCapabilityIndex) {
       if (!_supportsReflectedType(_reflector)) {
         throw NoSuchCapabilityError(
             'Attempt to get `reflectedType` without `reflectedTypeCapability`');
@@ -2244,11 +2244,11 @@ abstract class VariableMirrorBase extends _DataCaching
 
   @override
   bool get hasDynamicReflectedType =>
-      _dynamicReflectedTypeIndex != NO_CAPABILITY_INDEX || hasReflectedType;
+      _dynamicReflectedTypeIndex != noCapabilityIndex || hasReflectedType;
 
   @override
   Type get dynamicReflectedType =>
-      _dynamicReflectedTypeIndex != NO_CAPABILITY_INDEX
+      _dynamicReflectedTypeIndex != noCapabilityIndex
           ? _data.types[_dynamicReflectedTypeIndex]
           : reflectedType;
 
@@ -2265,7 +2265,7 @@ abstract class VariableMirrorBase extends _DataCaching
 class VariableMirrorImpl extends VariableMirrorBase {
   @override
   DeclarationMirror get owner {
-    if (_ownerIndex == NO_CAPABILITY_INDEX) {
+    if (_ownerIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError(
           'Trying to get owner of variable `$qualifiedName` '
           'without capability');
