@@ -1,3 +1,7 @@
+## 3.0.7
+
+* Edit whitespace and rename a local function to keep the linter happy.
+
 ## 3.0.6
 
 * Update reflectable to require analyzer ^3.2.0; adjust several locations
