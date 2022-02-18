@@ -6,6 +6,9 @@
 // Dealing with sdk issue #19635, 'Mirrors: newInstance on constructor with
 // optional parameters result in crash when running as JavaScript'.
 
+// Testing different parameter declarations, hence:
+// ignore_for_file:prefer_initializing_formals
+
 library test_reflectable.test.new_instance_optional_arguments_test;
 
 import 'package:reflectable/reflectable.dart';

@@ -53,14 +53,14 @@ class C {
   ) {}
 }
 
-typedef typeF10 = X Function<X>(X);
-typedef typeF11 = X Function<X>(X, X);
-typedef typeF12 = X Function<X>(X, [X]);
-typedef typeF13 = X Function<X>([X, X]);
-typedef typeF14 = X Function<X>(X, [X, X]);
-typedef typeF15 = X Function<X>(X, {X a});
-typedef typeF16 = X Function<X>({X a, X b});
-typedef typeF17 = X Function<X>(X, {X a, X b});
+typedef TypeF10 = X Function<X>(X);
+typedef TypeF11 = X Function<X>(X, X);
+typedef TypeF12 = X Function<X>(X, [X]);
+typedef TypeF13 = X Function<X>([X, X]);
+typedef TypeF14 = X Function<X>(X, [X, X]);
+typedef TypeF15 = X Function<X>(X, {X a});
+typedef TypeF16 = X Function<X>({X a, X b});
+typedef TypeF17 = X Function<X>(X, {X a, X b});
 
 void main() {
   initializeReflectable();
@@ -115,7 +115,7 @@ void main() {
     TypeValue<int Function({int a, int b})>().type,
     TypeValue<int Function(int, {int a, int b})>().type,
     // The following types cannot be recognized (SDK issue #32625):
-    // typeF10, typeF11, typeF12, typeF13, typeF14, typeF15, typeF16, typeF17
+    // TypeF10, TypeF11, TypeF12, TypeF13, TypeF14, TypeF15, TypeF16, TypeF17
   ];
 
   test('Using different kinds of function types', () {
