@@ -25,24 +25,24 @@ class Serializable extends Reflectable {
 
 const serializable = Serializable();
 
-enum Color { BLUE, RED, GREEN }
+enum Color { blue, red, green }
 
 class JsonObjectStub {
   late Color color;
   JsonObjectStub(String jsonStr) {
     if (jsonStr.contains('0')) {
-      color = Color.BLUE;
+      color = Color.blue;
     } else if (jsonStr.contains('1')) {
-      color = Color.RED;
+      color = Color.red;
     } else if (jsonStr.contains('2')) {
-      color = Color.GREEN;
+      color = Color.green;
     }
   }
 }
 
 dynamic fromJson(String jsonStr, Type clazz) {
   if (jsonStr.startsWith('{')) return JsonObjectStub(jsonStr);
-  return Color.BLUE;
+  return Color.blue;
 }
 
 @serializable
@@ -54,11 +54,11 @@ void main() {
   initializeReflectable();
 
   test('deserialize enum', () {
-    expect(fromJson('0', Color), Color.BLUE);
+    expect(fromJson('0', Color), Color.blue);
   });
   test('deserialize object with enum', () {
-    expect(fromJson('{"color":0}', ObjectWithEnum).color, Color.BLUE);
-    expect(fromJson('{"color":1}', ObjectWithEnum).color, Color.RED);
-    expect(fromJson('{"color":2}', ObjectWithEnum).color, Color.GREEN);
+    expect(fromJson('{"color":0}', ObjectWithEnum).color, Color.blue);
+    expect(fromJson('{"color":1}', ObjectWithEnum).color, Color.red);
+    expect(fromJson('{"color":2}', ObjectWithEnum).color, Color.green);
   });
 }

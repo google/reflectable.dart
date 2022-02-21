@@ -29,6 +29,7 @@ class Typer<X> {
   Type get type => X;
 }
 
+// ignore:non_constant_identifier_names
 final Type COfInt = Typer<C<int>>().type;
 
 void runTest(String message, ClassMirror classMirror) {

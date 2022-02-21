@@ -27,6 +27,7 @@ class A {
   void f3(int a, [String b, @C() String c = 'ten']) {}
   void f4(int a, {@lib.D(3) A b, C c = const C()}) {}
 
+  // ignore:prefer_typing_uninitialized_variables
   var x;
   A({this.x = 42});
 }

@@ -24,6 +24,8 @@ const reflector = Reflector();
 
 typedef Int2IntFunc = int Function(int);
 
+// Testing a function typed variable is the point here.
+// ignore:prefer_function_declarations_over_variables
 Int2IntFunc int2int = (int x) => x;
 
 @reflector

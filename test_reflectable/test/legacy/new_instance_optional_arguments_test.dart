@@ -23,7 +23,7 @@ const Reflector reflector = Reflector();
 
 @reflector
 class A {
-  var req1, opt1, opt2;
+  Object req1, opt1, opt2;
   A.a0([opt1]) : opt1 = opt1;
   A.b0([opt1, opt2])
       : opt1 = opt1,
@@ -72,6 +72,7 @@ void main() {
   // unchanged.
 
   ClassMirror cm = reflector.reflectType(A);
+  // ignore:prefer_typing_uninitialized_variables
   var o;
 
   test('No arguments given', () {

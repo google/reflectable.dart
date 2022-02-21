@@ -30,7 +30,7 @@ abstract class A {
   void foo() {}
   int get getter1 => 10;
   int get getter2;
-  set setter1(x) => null;
+  set setter1(x) {}
   A operator +(Object other) {
     return this;
   }
@@ -39,7 +39,7 @@ abstract class A {
 @Reflector()
 class B extends A {
   void bar() {}
-  set setter2(x) => null;
+  set setter2(x) {}
   @override
   int get getter1 => 11;
   @override

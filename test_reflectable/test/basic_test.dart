@@ -21,6 +21,7 @@ class MyReflectable extends r.Reflectable {
 
 @MyReflectable()
 class A {
+  // ignore:prefer_typing_uninitialized_variables
   var foo;
   String instanceMethod(x) => 'A:instanceMethod($x)';
   String get accessor => 'A:get accessor';
@@ -85,10 +86,13 @@ List<X> filteredDeclarationsOf<X extends r.DeclarationMirror>(
 // These fields are used to test that setters work properly.
 // As all instances share the same backing they can only be used for testing
 // one instance.
+
+// ignore:prefer_typing_uninitialized_variables
 var accessorBackingStorageA;
+// ignore:prefer_typing_uninitialized_variables
 var accessorBackingStorageB;
-var accessorBackingStorageC;
-var fooBackingStorageC;
+Object? accessorBackingStorageC;
+dynamic fooBackingStorageC;
 
 List<r.VariableMirror> variablesOf(r.ClassMirror cm) {
   return filteredDeclarationsOf(cm, (v) => v is r.VariableMirror);

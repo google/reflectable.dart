@@ -12,8 +12,9 @@ import 'serialize_test.reflectable.dart';
 // and reconstructed.
 @Serializable()
 class A {
+  // ignore:prefer_typing_uninitialized_variables
   var a;
-  var b;
+  dynamic b;
   // The default constructor will be used for creating instances when
   // deserializing.
   A();
@@ -49,6 +50,7 @@ class A {
 
 @Serializable()
 class B extends A {
+  // ignore:prefer_typing_uninitialized_variables
   var c;
   B();
 

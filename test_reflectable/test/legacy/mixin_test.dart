@@ -56,6 +56,7 @@ class ReflectorUpwardsClosedUntilA extends Reflectable {
 @P()
 class M1 {
   void foo() {}
+  // ignore:prefer_typing_uninitialized_variables
   var field;
   static void staticFoo(x) {}
 }
@@ -75,7 +76,7 @@ class M3 {}
 @Reflector()
 class A {
   void foo() {}
-  var field;
+  Object field;
   static void staticFoo(x) {}
   static void staticBar() {}
 }
