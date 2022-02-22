@@ -26,7 +26,7 @@ class AllReflectorsMetaReflector extends Reflectable {
   Set<Reflectable> get reflectors {
     var result = <Reflectable>{};
     for (var classMirror in annotatedClasses) {
-      if (classMirror.isAbstract) return null;
+      if (classMirror.isAbstract) continue;
       Reflectable reflector =
           Reflectable.getInstance(classMirror.reflectedType);
       if (reflector != null) result.add(reflector);

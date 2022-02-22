@@ -30,7 +30,7 @@ class MetaReflector extends Reflectable {
   Set<Reflectable> get allReflectors {
     var result = <Reflectable>{};
     for (var classMirror in annotatedClasses) {
-      if (classMirror.isAbstract) return const {};
+      if (classMirror.isAbstract) continue;
       Reflectable reflector = classMirror.newInstance('', []);
       if (reflector is AllReflectorsCapable) {
         result.add(reflector.self);
