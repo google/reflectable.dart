@@ -29,7 +29,7 @@ abstract class A {}
 @reflector
 class _B {}
 
-final justToAvoidUnused_B = _B();
+final justToAvoidUnused = _B();
 
 @reflector
 enum C { monday, tuesday, otherDays }

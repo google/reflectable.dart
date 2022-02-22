@@ -337,8 +337,7 @@ class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
   final Type upperBound;
   final bool excludeUpperBound;
   const SuperclassQuantifyCapability(this.upperBound,
-      {bool excludeUpperBound = false})
-      : excludeUpperBound = excludeUpperBound;
+      {this.excludeUpperBound = false});
 }
 
 /// Gives support for reflection on all superclasses of covered classes.
@@ -352,8 +351,7 @@ const superclassQuantifyCapability = SuperclassQuantifyCapability(Object);
 /// etc.
 class TypeAnnotationQuantifyCapability implements ReflecteeQuantifyCapability {
   final bool transitive;
-  const TypeAnnotationQuantifyCapability({bool transitive = false})
-      : transitive = transitive;
+  const TypeAnnotationQuantifyCapability({this.transitive = false});
 }
 
 /// Gives support for reflecting on the classes used as type annotations

@@ -18,6 +18,7 @@ class P {
 @P()
 class M1 {
   void foo() {}
+  // ignore:prefer_typing_uninitialized_variables
   var field;
   static void staticFoo(x) {}
 }
@@ -28,7 +29,7 @@ class M3 {}
 
 class A {
   void foo() {}
-  var field;
+  dynamic field;
   static void staticFoo(x) {}
   static void staticBar() {}
 }

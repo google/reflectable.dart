@@ -1,3 +1,9 @@
+## 3.0.7
+
+* Change `analysis_options.yaml` such that we get the same linting locally
+  and on pub.dev. Update many libraries and tests to conform to the currently
+  recommended lints.
+
 ## 3.0.6
 
 * Update reflectable to require analyzer ^3.2.0; adjust several locations

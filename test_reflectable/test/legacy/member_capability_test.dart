@@ -47,7 +47,7 @@ class Foo2 {
   var b = 2;
   int x() => 42;
   String y(int n) => 'Hello $n';
-  var z;
+  Object z;
 }
 
 class Foo3Base {
@@ -63,6 +63,7 @@ class Foo3 extends Foo3Base {
   int x() => 42;
   @Bar()
   String y(int n) => 'Hello $n';
+  // ignore:prefer_typing_uninitialized_variables
   var z;
 }
 

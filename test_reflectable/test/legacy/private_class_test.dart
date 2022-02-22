@@ -50,7 +50,7 @@ void testPrivacyViolation(PublicClass object, String description,
       expect(libraryClassNames.contains(classMirror.simpleName), true);
 
       // Browse [object] and call a method declared in a private class.
-      classMirror.declarations.values.forEach((DeclarationMirror declaration) {
+      for (var declaration in classMirror.declarations.values) {
         expect(declaration is MethodMirror, true);
         MethodMirror method =
             declaration; // Declaration needed, no type propagation.
@@ -67,7 +67,7 @@ void testPrivacyViolation(PublicClass object, String description,
           expect(instanceMirror.invoke(declaration.simpleName, []),
               -object.publicMethod());
         }
-      });
+      }
     }
   });
 }

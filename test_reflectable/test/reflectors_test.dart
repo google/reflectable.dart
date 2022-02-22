@@ -24,12 +24,12 @@ class AllReflectorsMetaReflector extends Reflectable {
 
   Set<Reflectable> get reflectors {
     var result = <Reflectable>{};
-    annotatedClasses.forEach((ClassMirror classMirror) {
-      if (classMirror.isAbstract) return;
+    for (var classMirror in annotatedClasses) {
+      if (classMirror.isAbstract) continue;
       var reflector =
           Reflectable.getInstance(classMirror.reflectedType) as Reflectable;
       result.add(reflector);
-    });
+    }
     return result;
   }
 }
@@ -75,6 +75,7 @@ class ReflectorUpwardsClosedUntilA extends Reflectable {
 @P()
 class M1 {
   void foo() {}
+  // ignore:prefer_typing_uninitialized_variables
   var field;
   static void staticFoo(x) {}
 }
@@ -94,7 +95,7 @@ class M3 {}
 @Reflector()
 class A {
   void foo() {}
-  var field;
+  Object? field;
   static void staticFoo(x) {}
   static void staticBar() {}
 }

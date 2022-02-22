@@ -31,7 +31,7 @@ class A {
 }
 
 class Proxy implements A {
-  final forwardee;
+  final dynamic forwardee;
   final Map<Symbol, Function> methodMap;
   const Proxy(this.forwardee, this.methodMap);
 
