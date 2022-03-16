@@ -1682,7 +1682,8 @@ class _ReflectorDomain {
       bool reflectedTypeRequested) async {
     int descriptor = _topLevelVariableDescriptor(element);
     var owner = element.library;
-    var ownerIndex = _libraries.indexOf(owner);
+    var ownerIndex = _libraries.indexOf(owner) ??
+        constants.noCapabilityIndex;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int? reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
