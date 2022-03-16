@@ -1,3 +1,8 @@
+## 3.0.9
+
+* Correct bug reported as #267. Correct code generation which is reported
+  as an error now that we have enhanced enums.
+
 ## 3.0.8
 
 * Change code generation such that no invocations of generative constructors
