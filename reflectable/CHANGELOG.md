@@ -1,10 +1,7 @@
-## 3.0.9
-
-* Correct bug reported as #267. Correct code generation which is reported
-  as an error now that we have enhanced enums.
-
 ## 3.0.8
 
+* Correct bug reported as #267 (`null` was generated in a case where the
+  expression had to have type `int`).
 * Change code generation such that no invocations of generative constructors
   of enums are generated (such that it works with 'enhanced-enums').
 
