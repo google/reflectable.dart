@@ -1,3 +1,10 @@
+## 3.0.8
+
+* Correct bug reported as #267 (`null` was generated in a case where the
+  expression had to have type `int`).
+* Change code generation such that no invocations of generative constructors
+  of enums are generated (such that it works with 'enhanced-enums').
+
 ## 3.0.7
 
 * Change `analysis_options.yaml` such that we get the same linting locally

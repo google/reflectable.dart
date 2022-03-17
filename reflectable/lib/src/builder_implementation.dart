@@ -1415,7 +1415,9 @@ class _ReflectorDomain {
     } else {
       List<String> mapEntries = [];
       for (ConstructorElement constructor in classDomain._constructors) {
-        if (constructor.isFactory || !constructor.enclosingElement.isAbstract) {
+        if (constructor.isFactory ||
+            (!constructor.enclosingElement.isAbstract &&
+                !constructor.enclosingElement.isEnum)) {
           String code = await _constructorCode(constructor, importCollector);
           mapEntries.add("r'${constructor.name}': $code");
         }
@@ -1680,7 +1682,8 @@ class _ReflectorDomain {
       bool reflectedTypeRequested) async {
     int descriptor = _topLevelVariableDescriptor(element);
     var owner = element.library;
-    var ownerIndex = _libraries.indexOf(owner);
+    var ownerIndex = _libraries.indexOf(owner) ??
+        constants.noCapabilityIndex;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int? reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
