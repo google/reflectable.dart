@@ -716,6 +716,18 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   @override
   bool get isPrivate => (_descriptor & constants.privateAttribute != 0);
 
+  @override
+  bool get isNullable => (_descriptor & constants.nullableAttribute != 0);
+
+  @override
+  bool get isNonNullable => (_descriptor & constants.nonNullableAttribute != 0);
+
+  @override
+  bool get isPotentiallyNullable => !isNonNullable;
+
+  @override
+  bool get isPotentiallyNonNullable => !isNullable;
+
   // Classes are always toplevel.
   @override
   bool get isTopLevel => true;
@@ -1457,6 +1469,18 @@ class TypeVariableMirrorImpl extends _DataCaching
 
   @override
   bool get isPrivate => false;
+
+  @override
+  bool get isNullable => false;
+
+  @override
+  bool get isNonNullable => upperBound.isNonNullable;
+
+  @override
+  bool get isPotentiallyNullable => !isNonNullable;
+
+  @override
+  bool get isPotentiallyNonNullable => true;
 
   @override
   DeclarationMirror get owner {
@@ -2403,6 +2427,18 @@ class DynamicMirrorImpl implements TypeMirror {
   bool get isOriginalDeclaration => true;
 
   @override
+  bool get isNullable => true;
+
+  @override
+  bool get isNonNullable => false;
+
+  @override
+  bool get isPotentiallyNullable => true;
+
+  @override
+  bool get isPotentiallyNonNullable => false;
+
+  @override
   bool get hasReflectedType => true;
 
   @override
@@ -2465,6 +2501,18 @@ class VoidMirrorImpl implements TypeMirror {
   // TODO(eernst) implement: test what 'dart:mirrors' does, then do the same.
   @override
   bool get isOriginalDeclaration => true;
+
+  @override
+  bool get isNullable => true;
+
+  @override
+  bool get isNonNullable => false;
+
+  @override
+  bool get isPotentiallyNullable => true;
+
+  @override
+  bool get isPotentiallyNonNullable => false;
 
   @override
   bool get hasReflectedType => false;

@@ -39,6 +39,8 @@ const enumAttribute = 1 << (flagsBit + 15);
 const topLevelAttribute = 1 << (flagsBit + 16);
 const genericTypeAttribute = 1 << (flagsBit + 17);
 const genericReturnTypeAttribute = 1 << (flagsBit + 18);
+const nullableAttribute = 1 << (flagsBit + 19);
+const nonNullableAttribute = 1 << (flagsBit + 20);
 
 int kindFromEncoding(int encoding) => encoding & ((1 << flagsBit) - 1);
 

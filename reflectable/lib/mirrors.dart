@@ -799,6 +799,19 @@ abstract class TypeMirror implements DeclarationMirror {
   /// [TypeRelationsCapability], and it requires that all the types visited in
   /// order to determine the result must be covered.
   bool isAssignableTo(TypeMirror other);
+
+  /// Returns true iff this type mirror represents a nullable type.
+  bool get isNullable;
+
+  /// Returns true iff this type mirror represents a non-nullable type.
+  bool get isNonNullable;
+
+  /// Returns true iff this type mirror represents a potentially nullable type.
+  bool get isPotentiallyNullable;
+
+  /// Returns true iff this type mirror represents a potentially non-nullable
+  /// type.
+  bool get isPotentiallyNonNullable;
 }
 
 /// A [ClassMirror] reflects a Dart language class.

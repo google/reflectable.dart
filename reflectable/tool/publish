@@ -68,6 +68,7 @@ echo "Using tag value '$TAG_VALUE'."
 echo -n "Check entry in CHANGELOG.md and version in pubspec.yaml: $VERSION"
 read
 
+echo ">>>>>> Check `dart format`: no effect, `dart analyze`: no issues"
 echo ">>>>>> Ensure that github master is the version to publish"
 read
 

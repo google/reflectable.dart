@@ -1682,8 +1682,7 @@ class _ReflectorDomain {
       bool reflectedTypeRequested) async {
     int descriptor = _topLevelVariableDescriptor(element);
     var owner = element.library;
-    var ownerIndex = _libraries.indexOf(owner) ??
-        constants.noCapabilityIndex;
+    var ownerIndex = _libraries.indexOf(owner) ?? constants.noCapabilityIndex;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int? reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
@@ -4290,6 +4289,42 @@ bool _executableIsntImplicitGetterOrSetter(ExecutableElement executable) {
   }
 }
 
+bool _isNullable(DartType dartType) {
+  if (dartType.nullabilitySuffix == NullabilitySuffix.question) return true;
+  if (dartType.nullabilitySuffix == NullabilitySuffix.none) {
+    if (dartType.isDartCoreNull) return true;
+    if (dartType.isDartAsyncFutureOr) {
+      var futureOrType = dartType as ParameterizedType;
+      return _isNullable(futureOrType.typeArguments[0]);
+    }
+    return false;
+  }
+  // NullabilitySuffix.star.
+  return true;
+}
+
+bool _isNonNullable(DartType dartType) {
+  if (dartType.nullabilitySuffix == NullabilitySuffix.question) return false;
+  if (dartType.nullabilitySuffix == NullabilitySuffix.none) {
+    if (dartType is NeverType ||
+        dartType is FunctionType ||
+        dartType.isDartCoreFunction) {
+      return true;
+    }
+    if (dartType.isDartAsyncFutureOr) {
+      var futureOrType = dartType as ParameterizedType;
+      return _isNonNullable(futureOrType.typeArguments[0]);
+    }
+    if (dartType is TypeParameterType) {
+      return _isNonNullable(dartType.bound);
+    }
+    // TODO(eernst): Handle types of the form `X & S`.
+    return false;
+  }
+  // NullabilitySuffix.star.
+  return true;
+}
+
 /// Returns an integer encoding of the kind and attributes of the given
 /// class.
 int _classDescriptor(ClassElement element) {
@@ -4298,6 +4333,9 @@ int _classDescriptor(ClassElement element) {
   if (element.isSynthetic) result |= constants.syntheticAttribute;
   if (element.isAbstract) result |= constants.abstractAttribute;
   if (element.isEnum) result |= constants.enumAttribute;
+  DartType thisType = element.thisType;
+  if (_isNullable(thisType)) result |= constants.nullableAttribute;
+  if (_isNonNullable(thisType)) result |= constants.nonNullableAttribute;
   return result;
 }
 
@@ -5454,7 +5492,7 @@ Future<String> _formatDiagnosticMessage(
     if (resolvedLibrary != null) {
       final targetDeclaration = resolvedLibrary.getElementDeclaration(target!);
       final unit = targetDeclaration?.resolvedUnit?.unit;
-      final location = unit?.lineInfo?.getLocation(nameOffset);
+      final location = unit?.lineInfo.getLocation(nameOffset);
       if (location != null) {
         locationString = '${location.lineNumber}:${location.columnNumber}';
       }
