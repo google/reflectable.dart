@@ -46,7 +46,7 @@ enum WarningKind {
   unusedReflector
 }
 
-class ReflectionWorld {
+class _ReflectionWorld {
   final Resolver resolver;
   final List<LibraryElement> libraries;
   final AssetId generatedLibraryId;
@@ -60,7 +60,7 @@ class ReflectionWorld {
   /// to the corresponding strings.
   final Set<String> memberNames = <String>{};
 
-  ReflectionWorld(
+  _ReflectionWorld(
       this.resolver,
       this.libraries,
       this.generatedLibraryId,
@@ -233,7 +233,7 @@ class Enumerator<T extends Object> {
 /// Note that this data structure can delegate all read-only operations to
 /// the [classElements], because they will not break consistency, but for every
 /// mutating method we need to maintain the invariants.
-class ClassElementEnhancedSet implements Set<ClassElement> {
+class _ClassElementEnhancedSet implements Set<ClassElement> {
   final _ReflectorDomain reflectorDomain;
   final Enumerator<ClassElement> classElements = Enumerator<ClassElement>();
   final Map<ClassElement, _ClassDomain> elementToDomain =
@@ -242,7 +242,7 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
       <ClassElement, MixinApplication>{};
   bool _unmodifiable = false;
 
-  ClassElementEnhancedSet(this.reflectorDomain);
+  _ClassElementEnhancedSet(this.reflectorDomain);
 
   void makeUnmodifiable() {
     // A very simple implementation, just enough to help spotting cases
@@ -508,14 +508,14 @@ class ClassElementEnhancedSet implements Set<ClassElement> {
   }
 
   /// Returns the _ClassDomain corresponding to the given [classElement],
-  /// which must be a member of this [ClassElementEnhancedSet].
+  /// which must be a member of this [_ClassElementEnhancedSet].
   _ClassDomain domainOf(ClassElement classElement) {
     assert(elementToDomain.containsKey(classElement));
     return elementToDomain[classElement]!;
   }
 
   /// Returns the index of the given [classElement] if it is contained
-  /// in this [ClassElementEnhancedSet], otherwise [null].
+  /// in this [_ClassElementEnhancedSet], otherwise [null].
   int? indexOf(Object classElement) {
     return classElements.indexOf(classElement);
   }
@@ -590,7 +590,7 @@ int typedefNumber = 1;
 /// Information about the program parts that can be reflected by a given
 /// Reflector.
 class _ReflectorDomain {
-  late final ReflectionWorld _world;
+  late final _ReflectionWorld _world;
   final Resolver _resolver;
   final AssetId _generatedLibraryId;
   final ClassElement _reflector;
@@ -601,7 +601,7 @@ class _ReflectorDomain {
   /// covered classes during creation of this [_ReflectorDomain].
   /// NB: [_classes] should be final, but it is not possible because this
   /// would create a cycle of final fields, which cannot be initialized.
-  late final ClassElementEnhancedSet _classes;
+  late final _ClassElementEnhancedSet _classes;
 
   /// Used by [classes], only, to keep track of whether [_classes] has been
   /// properly initialized by means of closure operations.
@@ -611,7 +611,7 @@ class _ReflectorDomain {
   /// which are directly covered by carrying `_reflector` as metadata or being
   /// matched by a global quantifier, and including the ones which are reached
   /// via the closure operations requested in [_capabilities].
-  Future<ClassElementEnhancedSet> get classes async {
+  Future<_ClassElementEnhancedSet> get classes async {
     if (!_classesInitialized) {
       if (_capabilities._impliesDownwardsClosure) {
         await _SubtypesFixedPoint(_world.subtypes).expand(_classes);
@@ -649,7 +649,7 @@ class _ReflectorDomain {
 
   _ReflectorDomain(this._resolver, this._generatedLibraryId, this._reflector,
       this._capabilities) {
-    _classes = ClassElementEnhancedSet(this);
+    _classes = _ClassElementEnhancedSet(this);
   }
 
   final _instanceMemberCache = <ClassElement, Map<String, ExecutableElement>>{};
@@ -752,7 +752,7 @@ class _ReflectorDomain {
 
     String doRunArgument = 'b';
     while (parameterNames.contains(doRunArgument)) {
-      doRunArgument = doRunArgument + 'b';
+      doRunArgument = '${doRunArgument}b';
     }
 
     String prefix = importCollector._getPrefix(constructor.library);
@@ -775,7 +775,7 @@ class _ReflectorDomain {
   /// Generate the code which will create a `ReflectorData` instance
   /// containing the mirrors and other reflection data which is needed for
   /// `_reflector` to behave correctly.
-  Future<String> _generateCode(ReflectionWorld world,
+  Future<String> _generateCode(_ReflectionWorld world,
       _ImportCollector importCollector, Map<FunctionType, int> typedefs) async {
     // Library related collections.
     Enumerator<_LibraryDomain> libraries = Enumerator<_LibraryDomain>();
@@ -1771,7 +1771,7 @@ class _ReflectorDomain {
   /// added.
   int _typeCodeIndex(
       DartType dartType,
-      ClassElementEnhancedSet classes,
+      _ClassElementEnhancedSet classes,
       Enumerator<ErasableDartType> reflectedTypes,
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
@@ -1825,7 +1825,7 @@ class _ReflectorDomain {
   /// `ReflectorData.types` after the elements of [classes] have been added.
   int _dynamicTypeCodeIndex(
       DartType dartType,
-      ClassElementEnhancedSet classes,
+      _ClassElementEnhancedSet classes,
       Enumerator<ErasableDartType> reflectedTypes,
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
@@ -2471,7 +2471,7 @@ Set<ClassElement> _mixinApplicationsOfClasses(Set<ClassElement> classes) {
 }
 
 /// Auxiliary type used by [_AnnotationClassFixedPoint].
-typedef ElementToDomain = _ClassDomain Function(ClassElement);
+typedef _ElementToDomain = _ClassDomain Function(ClassElement);
 
 /// Auxiliary class used by `classes`. Its `expand` method
 /// expands its argument to a fixed point, based on the `successors` method.
@@ -2482,7 +2482,7 @@ typedef ElementToDomain = _ClassDomain Function(ClassElement);
 class _AnnotationClassFixedPoint extends FixedPoint<ClassElement> {
   final Resolver resolver;
   final AssetId generatedLibraryId;
-  final ElementToDomain elementToDomain;
+  final _ElementToDomain elementToDomain;
 
   _AnnotationClassFixedPoint(
       this.resolver, this.generatedLibraryId, this.elementToDomain);
@@ -3473,10 +3473,10 @@ class BuilderImplementation {
                       reflector.supertype?.element != reflectableClass)) {
                 String found =
                     reflector == null ? '' : ' Found ${reflector.name}';
-                await _warn(
+                    await _warn(
                     WarningKind.badSuperclass,
-                    'The reflector must be a direct subclass of Reflectable.' +
-                        found,
+                    'The reflector must be a direct subclass of '
+                    'Reflectable.$found',
                     metadatumElement);
                 continue;
               }
@@ -3512,8 +3512,8 @@ class BuilderImplementation {
                     reflector == null ? '' : ' Found ${reflector.name}';
                 await _warn(
                     WarningKind.badSuperclass,
-                    'The reflector must be a direct subclass of Reflectable.' +
-                        found,
+                    'The reflector must be a direct subclass of '
+                    'Reflectable.$found',
                     metadatumElement);
                 continue;
               }
@@ -3616,7 +3616,7 @@ class BuilderImplementation {
     return true;
   }
 
-  /// Returns a [ReflectionWorld] instantiated with all the reflectors seen by
+  /// Returns a [_ReflectionWorld] instantiated with all the reflectors seen by
   /// [_resolver] and all classes annotated by them. The [reflectableLibrary]
   /// must be the element representing 'package:reflectable/reflectable.dart',
   /// the [entryPoint] must be the element representing the entry point under
@@ -3624,7 +3624,7 @@ class BuilderImplementation {
   /// and it is used to decide whether it is possible to import other libraries
   /// from the entry point. If the transformation is guaranteed to have no
   /// effect the return value is [null].
-  Future<ReflectionWorld?> _computeWorld(LibraryElement reflectableLibrary,
+  Future<_ReflectionWorld?> _computeWorld(LibraryElement reflectableLibrary,
       LibraryElement entryPoint, AssetId dataId) async {
     final ClassElement? classReflectable =
         await _findReflectableClassElement(reflectableLibrary);
@@ -3823,11 +3823,11 @@ class BuilderImplementation {
       await getReflectorDomain(reflector);
     }
 
-    // Create the world and tie the knot: A [ReflectionWorld] refers to all its
+    // Create the world and tie the knot: A [_ReflectionWorld] refers to all its
     // [_ReflectorDomain]s, and each of them refer back. Such a cycle cannot be
     // defined during construction, so `_world` is non-final and left unset by
     // the constructor, and we need to close the cycle here.
-    ReflectionWorld world = ReflectionWorld(
+    _ReflectionWorld world = _ReflectionWorld(
         _resolver,
         _libraries,
         dataId,
@@ -4133,7 +4133,7 @@ class BuilderImplementation {
   /// reflection data according to [world], and invoke the main of
   /// [entrypointLibrary] located at [originalEntryPointFilename]. The code is
   /// generated to be located at [generatedLibraryId].
-  Future<String> _generateNewEntryPoint(ReflectionWorld world,
+  Future<String> _generateNewEntryPoint(_ReflectionWorld world,
       AssetId generatedLibraryId, String originalEntryPointFilename) async {
     // Notice it is important to generate the code before printing the
     // imports because generating the code can add further imports.
@@ -4229,7 +4229,7 @@ void initializeReflectable() {
         print("Starting build for '$inputId'.");
       }
 
-      ReflectionWorld? world =
+      _ReflectionWorld? world =
           await _computeWorld(reflectableLibrary, inputLibrary, inputId);
       if (world == null) {
         // Errors have already been reported during `_computeWorld`.

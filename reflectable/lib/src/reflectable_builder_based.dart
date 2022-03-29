@@ -34,16 +34,16 @@ Set<Reflectable> get reflectors => data.keys.toSet();
 // replicated wherever possible.
 
 /// Invokes a getter on an object.
-typedef _InvokerOfGetter = Object? Function(Object? instance);
+typedef InvokerOfGetter = Object? Function(Object? instance);
 
 /// Invokes a setter on an object.
-typedef _InvokerOfSetter = Object? Function(Object? instance, Object? value);
+typedef InvokerOfSetter = Object? Function(Object? instance, Object? value);
 
 /// Invokes a static getter.
-typedef _StaticGetter = Object? Function();
+typedef StaticGetter = Object? Function();
 
 /// Invokes a setter on an object.
-typedef _StaticSetter = Object? Function(Object? value);
+typedef StaticSetter = Object? Function(Object? value);
 
 /// The data backing a reflector.
 class ReflectorData {
@@ -90,12 +90,12 @@ class ReflectorData {
 
   /// Map from getter names to closures accepting an instance and returning
   /// the result of invoking the getter with that name on that instance.
-  final Map<String, _InvokerOfGetter> getters;
+  final Map<String, InvokerOfGetter> getters;
 
   /// Map from setter names to closures accepting an instance and a new value,
   /// invoking the setter of that name on that instance, and returning its
   /// return value.
-  final Map<String, _InvokerOfSetter> setters;
+  final Map<String, InvokerOfSetter> setters;
 
   /// List of parameter list shapes. Each entry is a list containing data on
   /// one shape of parameter list. The same shape is shared, e.g., by methods
@@ -449,8 +449,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   final String qualifiedName;
 
   final List<Object>? _metadata;
-  final Map<String, _StaticGetter> _getters;
-  final Map<String, _StaticSetter> _setters;
+  final Map<String, StaticGetter> _getters;
+  final Map<String, StaticSetter> _setters;
   final Map<String, Function> _constructors;
   final Map<String, int>? _parameterListShapes;
 
@@ -679,7 +679,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
           namedArguments);
     }
 
-    _StaticGetter? getter = _getters[memberName];
+    StaticGetter? getter = _getters[memberName];
     if (getter == null) fail();
     if (!_checkStaticParameterListShape(
         memberName, positionalArguments.length, namedArguments?.keys)) {
@@ -691,7 +691,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   @override
   Object? invokeGetter(String getterName) {
-    _StaticGetter? getter = _getters[getterName];
+    StaticGetter? getter = _getters[getterName];
     if (getter == null) {
       throw reflectableNoSuchGetterError(reflectedType, getterName, [], {});
     }
@@ -702,7 +702,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   Object? invokeSetter(String name, Object? value) {
     String setterName =
         _isSetterName(name) ? name : _getterNameToSetterName(name);
-    _StaticSetter? setter = _setters[setterName];
+    StaticSetter? setter = _setters[setterName];
     if (setter == null) {
       throw reflectableNoSuchSetterError(
           reflectedType, setterName, [value], {});
@@ -894,8 +894,8 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
       List<int>? instanceMemberIndices,
       List<int>? staticMemberIndices,
       int? superclassIndex,
-      Map<String, _StaticGetter> getters,
-      Map<String, _StaticSetter> setters,
+      Map<String, StaticGetter> getters,
+      Map<String, StaticSetter> setters,
       Map<String, Function> constructors,
       int ownerIndex,
       int mixinIndex,
@@ -1014,8 +1014,8 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
       List<int>? instanceMemberIndices,
       List<int>? staticMemberIndices,
       int superclassIndex,
-      Map<String, _StaticGetter> getters,
-      Map<String, _StaticSetter> setters,
+      Map<String, StaticGetter> getters,
+      Map<String, StaticSetter> setters,
       Map<String, Function> constructors,
       int ownerIndex,
       int mixinIndex,
@@ -1162,8 +1162,8 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
       List<int>? instanceMemberIndices,
       List<int>? staticMemberIndices,
       int? superclassIndex,
-      Map<String, _StaticGetter> getters,
-      Map<String, _StaticSetter> setters,
+      Map<String, StaticGetter> getters,
+      Map<String, StaticSetter> setters,
       Map<String, Function> constructors,
       int ownerIndex,
       int mixinIndex,
@@ -1513,8 +1513,8 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   @override
   final String simpleName;
 
-  final Map<String, _StaticGetter> getters;
-  final Map<String, _StaticSetter> setters;
+  final Map<String, StaticGetter> getters;
+  final Map<String, StaticSetter> setters;
 
   final Map<String, int>? _parameterListShapes;
 
@@ -1632,7 +1632,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
           null, memberName, positionalArguments, namedArguments);
     }
 
-    _StaticGetter? getter = getters[memberName];
+    StaticGetter? getter = getters[memberName];
     if (getter == null) fail();
     if (!_checkParameterListShape(
         memberName, positionalArguments.length, namedArguments?.keys)) {
@@ -1644,7 +1644,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
 
   @override
   Object? invokeGetter(String getterName) {
-    _StaticGetter? getter = getters[getterName];
+    StaticGetter? getter = getters[getterName];
     if (getter == null) {
       throw reflectableNoSuchGetterError(null, getterName, [], {});
     }
@@ -1655,7 +1655,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   Object? invokeSetter(String name, Object? value) {
     String setterName =
         _isSetterName(name) ? name : _getterNameToSetterName(name);
-    _StaticSetter? setter = setters[setterName];
+    StaticSetter? setter = setters[setterName];
     if (setter == null) {
       throw reflectableNoSuchSetterError(null, setterName, [value], {});
     }
@@ -2681,7 +2681,7 @@ class FakeType implements Type {
 
 bool _isSetterName(String name) => name.endsWith('=');
 
-String _getterNameToSetterName(String name) => name + '=';
+String _getterNameToSetterName(String name) => '$name=';
 
 bool _supportsType(ReflectableImpl reflector) {
   return reflector.capabilities
