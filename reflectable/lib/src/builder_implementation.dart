@@ -4289,42 +4289,6 @@ bool _executableIsntImplicitGetterOrSetter(ExecutableElement executable) {
   }
 }
 
-bool _isNullable(DartType dartType) {
-  if (dartType.nullabilitySuffix == NullabilitySuffix.question) return true;
-  if (dartType.nullabilitySuffix == NullabilitySuffix.none) {
-    if (dartType.isDartCoreNull) return true;
-    if (dartType.isDartAsyncFutureOr) {
-      var futureOrType = dartType as ParameterizedType;
-      return _isNullable(futureOrType.typeArguments[0]);
-    }
-    return false;
-  }
-  // NullabilitySuffix.star.
-  return true;
-}
-
-bool _isNonNullable(DartType dartType) {
-  if (dartType.nullabilitySuffix == NullabilitySuffix.question) return false;
-  if (dartType.nullabilitySuffix == NullabilitySuffix.none) {
-    if (dartType is NeverType ||
-        dartType is FunctionType ||
-        dartType.isDartCoreFunction) {
-      return true;
-    }
-    if (dartType.isDartAsyncFutureOr) {
-      var futureOrType = dartType as ParameterizedType;
-      return _isNonNullable(futureOrType.typeArguments[0]);
-    }
-    if (dartType is TypeParameterType) {
-      return _isNonNullable(dartType.bound);
-    }
-    // TODO(eernst): Handle types of the form `X & S`.
-    return false;
-  }
-  // NullabilitySuffix.star.
-  return true;
-}
-
 /// Returns an integer encoding of the kind and attributes of the given
 /// class.
 int _classDescriptor(ClassElement element) {
@@ -4338,8 +4302,13 @@ int _classDescriptor(ClassElement element) {
     return result;
   }
   DartType thisType = element.thisType;
-  if (_isNullable(thisType)) result |= constants.nullableAttribute;
-  if (_isNonNullable(thisType)) result |= constants.nonNullableAttribute;
+  LibraryElement library = element.library;
+  if (library.typeSystem.isNullable(thisType)) {
+    result |= constants.nullableAttribute;
+  }
+  if (library.typeSystem.isNonNullable(thisType)) {
+    result |= constants.nonNullableAttribute;
+  }
   return result;
 }
 
