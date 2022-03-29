@@ -4333,6 +4333,10 @@ int _classDescriptor(ClassElement element) {
   if (element.isSynthetic) result |= constants.syntheticAttribute;
   if (element.isAbstract) result |= constants.abstractAttribute;
   if (element.isEnum) result |= constants.enumAttribute;
+  if (element is MixinApplication) {
+    result |= constants.nonNullableAttribute;
+    return result;
+  }
   DartType thisType = element.thisType;
   if (_isNullable(thisType)) result |= constants.nullableAttribute;
   if (_isNonNullable(thisType)) result |= constants.nonNullableAttribute;
