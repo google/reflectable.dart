@@ -29,7 +29,7 @@ upgrade:
 	( cd ..; dart pub upgrade )
 
 check:
-	( cd ..; dartanalyzer `find lib test -name \*.dart` )
+	( cd ..; dart analyze lib test )
 
 build:
 	@echo "[No actions for build in reflectable]"
@@ -39,7 +39,7 @@ test:
 	@./run_tests
 
 pub_test:
-	( cd ..; dart pub run test )
+	( cd ..; dart run test )
 
 clean:
 	@echo "[No actions for clean in reflectable]"
