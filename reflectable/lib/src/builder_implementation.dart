@@ -3473,7 +3473,7 @@ class BuilderImplementation {
                       reflector.supertype?.element != reflectableClass)) {
                 String found =
                     reflector == null ? '' : ' Found ${reflector.name}';
-                    await _warn(
+                await _warn(
                     WarningKind.badSuperclass,
                     'The reflector must be a direct subclass of '
                     'Reflectable.$found',
