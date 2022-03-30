@@ -39,7 +39,8 @@ test:
 	@./run_tests
 
 pub_test:
-	( cd ..; dart run test )
+	@echo "[No actions: Tests are located in ../test_reflectable]"
+	# ( cd ..; dart run test )
 
 clean:
 	@echo "[No actions for clean in reflectable]"
