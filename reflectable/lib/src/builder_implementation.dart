@@ -1140,10 +1140,10 @@ class _ReflectorDomain {
   }
 
   Future<int> _computeTypeIndexBase(Element? typeElement, bool isVoid,
-      bool isDynamic, bool isClassType) async {
+      bool isDynamic, bool isNever, bool isClassType) async {
     if (_capabilities._impliesTypes) {
-      if (isDynamic || isVoid) {
-        // The mirror will report 'dynamic' or 'void' as its `returnType`
+      if (isDynamic || isVoid || isNever) {
+        // The mirror will report 'dynamic', 'void', 'Never',
         // and it will never use the index.
         return constants.noCapabilityIndex;
       }
@@ -1165,8 +1165,9 @@ class _ReflectorDomain {
     if (!_capabilities._impliesTypes) return constants.noCapabilityIndex;
     return await _computeTypeIndexBase(
         element.type.element,
-        false, // No field has type `void`.
+        descriptor & constants.voidAttribute != 0,
         descriptor & constants.dynamicAttribute != 0,
+        descriptor & constants.neverAttribute != 0,
         descriptor & constants.classTypeAttribute != 0);
   }
 
@@ -1256,6 +1257,7 @@ class _ReflectorDomain {
         element.returnType.element,
         descriptor & constants.voidReturnTypeAttribute != 0,
         descriptor & constants.dynamicReturnTypeAttribute != 0,
+        descriptor & constants.neverReturnTypeAttribute != 0,
         descriptor & constants.classReturnTypeAttribute != 0);
     return result;
   }
@@ -1775,8 +1777,9 @@ class _ReflectorDomain {
       Enumerator<ErasableDartType> reflectedTypes,
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
-    // The type `dynamic` is handled via the `dynamicAttribute` bit.
+    // The types `dynamic` and `void` are handled via `...Attribute` bits.
     if (dartType.isDynamic) return constants.noCapabilityIndex;
+    if (dartType is VoidType) return constants.noCapabilityIndex;
     if (dartType is InterfaceType) {
       if (dartType.typeArguments.isEmpty) {
         // A plain, non-generic class, may be handled already.
@@ -1829,8 +1832,10 @@ class _ReflectorDomain {
       Enumerator<ErasableDartType> reflectedTypes,
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
-    // The type `dynamic` is handled via the `dynamicAttribute` bit.
-    if (dartType.isDynamic) return constants.noCapabilityIndex;
+    // The types `void` and `dynamic` are handled via the `...Attribute` bits.
+    if (dartType is VoidType || dartType.isDynamic) {
+      return constants.noCapabilityIndex;
+    }
     if (dartType is InterfaceType) {
       ClassElement classElement = dartType.element;
       if (classes.contains(classElement)) {
@@ -2230,8 +2235,9 @@ class _ReflectorDomain {
         members.indexOf(element.enclosingElement!)! + fields.length;
     int classMirrorIndex = constants.noCapabilityIndex;
     if (_capabilities._impliesTypes) {
-      if (descriptor & constants.dynamicAttribute != 0) {
-        // This parameter will report its type as [dynamic], and it
+      if (descriptor & constants.dynamicAttribute != 0 ||
+          descriptor & constants.voidAttribute != 0) {
+        // This parameter will report its type as [dynamic]/[void], and it
         // will never use `classMirrorIndex`. Keep noCapabilityIndex.
       } else if (descriptor & constants.classTypeAttribute != 0) {
         // Normal encoding of a class type. If that class has been added
@@ -4328,9 +4334,9 @@ int _topLevelVariableDescriptor(TopLevelVariableElement element) {
     if (element.isFinal) result |= constants.finalAttribute;
   }
   if (element.isStatic) result |= constants.staticAttribute;
-  if (element.type.isDynamic) {
-    result |= constants.dynamicAttribute;
-  }
+  if (element.type is VoidType) result |= constants.voidAttribute;
+  if (element.type.isDynamic) result |= constants.dynamicAttribute;
+  if (element.type is NeverType) result |= constants.neverAttribute;
   Element? elementType = element.type.element;
   if (elementType is ClassElement) {
     result |= constants.classTypeAttribute;
@@ -4355,9 +4361,9 @@ int _fieldDescriptor(FieldElement element) {
     if (element.isFinal) result |= constants.finalAttribute;
   }
   if (element.isStatic) result |= constants.staticAttribute;
-  if (element.type.isDynamic) {
-    result |= constants.dynamicAttribute;
-  }
+  if (element.type is VoidType) result |= constants.voidAttribute;
+  if (element.type.isDynamic) result |= constants.dynamicAttribute;
+  if (element.type is NeverType) result |= constants.neverAttribute;
   Element? elementType = element.type.element;
   if (elementType is ClassElement) {
     result |= constants.classTypeAttribute;
@@ -4379,15 +4385,11 @@ int _parameterDescriptor(ParameterElement element) {
   if (element.defaultValueCode != null) {
     result |= constants.hasDefaultValueAttribute;
   }
-  if (element.isOptional) {
-    result |= constants.optionalAttribute;
-  }
-  if (element.isNamed) {
-    result |= constants.namedAttribute;
-  }
-  if (element.type.isDynamic) {
-    result |= constants.dynamicAttribute;
-  }
+  if (element.isOptional) result |= constants.optionalAttribute;
+  if (element.isNamed) result |= constants.namedAttribute;
+  if (element.type is VoidType) result |= constants.voidAttribute;
+  if (element.type.isDynamic) result |= constants.dynamicAttribute;
+  if (element.type is NeverType) result |= constants.neverAttribute;
   Element? elementType = element.type.element;
   if (elementType is ClassElement) {
     result |= constants.classTypeAttribute;
@@ -4404,11 +4406,14 @@ int _declarationDescriptor(ExecutableElement element) {
   int result = 0;
 
   void handleReturnType(ExecutableElement element) {
+    if (element.returnType.isVoid) {
+      result |= constants.voidReturnTypeAttribute;
+    }
     if (element.returnType.isDynamic) {
       result |= constants.dynamicReturnTypeAttribute;
     }
-    if (element.returnType.isVoid) {
-      result |= constants.voidReturnTypeAttribute;
+    if (element.returnType is VoidType) {
+      result |= constants.neverReturnTypeAttribute;
     }
     Element? elementReturnType = element.returnType.element;
     if (elementReturnType is ClassElement) {
