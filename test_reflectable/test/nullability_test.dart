@@ -30,39 +30,36 @@ const fieldType = {
   'nn02': 'Function',
   'nn03': 'int',
   'nn04': 'List<int>',
-  'nn05': 'X',
-  'nn06': 'FutureOr<Never>',
-  'nn07': 'FutureOr<Function>',
-  'nn08': 'FutureOr<void Function()>',
-  'nn09': 'FutureOr<int>',
-  'nn10': 'FutureOr<List<int>>',
-  'nn11': 'FutureOr<X>',
-  'nn12': 'FutureOr<FutureOr<Never>>',
+  'nn05': 'FutureOr<Never>',
+  'nn06': 'FutureOr<Function>',
+  'nn07': 'FutureOr<void Function()>',
+  'nn08': 'FutureOr<int>',
+  'nn09': 'FutureOr<List<int>>',
+  'nn10': 'FutureOr<X>',
+  'nn11': 'FutureOr<FutureOr<Never>>',
   'n01': 'void',
   'n02': 'dynamic',
   'n03': 'Null',
   'n04': 'Never?',
   'n05': 'Function?',
-  'n06': 'void Function()?',
-  'n07': 'int?',
-  'n08': 'List<int>?',
-  'n09': 'X?',
-  'n10': 'FutureOr<Never>?',
-  'n11': 'FutureOr<Function>?',
-  'n12': 'FutureOr<void Function()>?',
-  'n13': 'FutureOr<int>?',
-  'n14': 'FutureOr<List<int>>?',
-  'n15': 'FutureOr<X>?',
-  'n16': 'FutureOr<void>',
-  'n17': 'FutureOr<dynamic>',
-  'n18': 'FutureOr<Null>',
-  'n19': 'FutureOr<Never?>',
-  'n20': 'FutureOr<Function?>',
-  'n21': 'FutureOr<void Function()?>',
-  'n22': 'FutureOr<int?>',
-  'n23': 'FutureOr<List<int>?>',
-  'n24': 'FutureOr<X?>',
-  'n25': 'FutureOr<FutureOr<void>>',
+  'n06': 'int?',
+  'n07': 'List<int>?',
+  'n08': 'FutureOr<Never>?',
+  'n09': 'FutureOr<Function>?',
+  'n10': 'FutureOr<void Function()>?',
+  'n11': 'FutureOr<int>?',
+  'n12': 'FutureOr<List<int>>?',
+  'n13': 'FutureOr<X>?',
+  'n14': 'FutureOr<void>',
+  'n15': 'FutureOr<dynamic>',
+  'n16': 'FutureOr<Null>',
+  'n17': 'FutureOr<Never?>',
+  'n18': 'FutureOr<Function?>',
+  'n19': 'FutureOr<void Function()?>',
+  'n20': 'FutureOr<int?>',
+  'n21': 'FutureOr<List<int>?>',
+  'n22': 'FutureOr<X?>',
+  'n23': 'FutureOr<FutureOr<void>>',
   'x01': 'Y',
   'x02': 'FutureOr<Y>',
   'x03': 'FutureOr<FutureOr<Y>>',
@@ -91,40 +88,53 @@ class A<X extends Object, Y> {
   late Null n03;
   late Never? n04;
   late Function? n05;
-  late void Function()? n06;
-  late int? n07;
-  late List<int>? n08;
-  late X? n09;
-  late FutureOr<Never>? n10;
-  late FutureOr<Function>? n11;
-  late FutureOr<void Function()>? n12;
-  late FutureOr<int>? n13;
-  late FutureOr<List<int>>? n14;
-  late FutureOr<X>? n15;
-  late FutureOr<void> n16;
-  late FutureOr<dynamic> n17;
-  late FutureOr<Null> n18;
-  late FutureOr<Never?> n19;
-  late FutureOr<Function?> n20;
-  late FutureOr<void Function()?> n21;
-  late FutureOr<int?> n22;
-  late FutureOr<List<int>?> n23;
-  late FutureOr<X?> n24;
-  late FutureOr<FutureOr<void>> n25;
+  // Missing support: omit `late void Function()? n;`.
+  late int? n06;
+  late List<int>? n07;
+  // Missing support: omit `late X? n;`.
+  late FutureOr<Never>? n08;
+  late FutureOr<Function>? n09;
+  late FutureOr<void Function()>? n10;
+  late FutureOr<int>? n11;
+  late FutureOr<List<int>>? n12;
+  late FutureOr<X>? n13;
+  late FutureOr<void> n14;
+  late FutureOr<dynamic> n15;
+  late FutureOr<Null> n16;
+  late FutureOr<Never?> n17;
+  late FutureOr<Function?> n18;
+  late FutureOr<void Function()?> n19;
+  late FutureOr<int?> n20;
+  late FutureOr<List<int>?> n21;
+  late FutureOr<X?> n22;
+  late FutureOr<FutureOr<void>> n23;
 
   // Types which are not nullable and not nonNullable.
-  late Y x01;
-  late FutureOr<Y> x02;
-  late FutureOr<FutureOr<Y>> x03;
+  // Missing support: omit `late Y x;`.
+  late FutureOr<Y> x01;
+  late FutureOr<FutureOr<Y>> x02;
 }
 
 void testNonNullable(String name, TypeMirror typeMirror) {
-  test('${fieldType[name]} isNonNullable', () {});
+  test('${fieldType[name]} isNonNullable', () {
+      expect(typeMirror.isNonNullable, true);
+      expect(typeMirror.isNullable, false);
+  });
 }
 
-void testNullable(String name, TypeMirror typeMirror) {}
+void testNullable(String name, TypeMirror typeMirror) {
+  test('${fieldType[name]} isNullable', () {
+      expect(typeMirror.isNonNullable, false);
+      expect(typeMirror.isNullable, true);
+  });
+}
 
-void testNeither(String name, TypeMirror typeMirror) {}
+void testNeither(String name, TypeMirror typeMirror) {
+  test('${fieldType[name]} both false', () {
+      expect(typeMirror.isNonNullable, false);
+      expect(typeMirror.isNullable, false);
+  });
+}
 
 void main() {
   initializeReflectable();
@@ -141,11 +151,11 @@ void main() {
     var name = 'nn${i < 10 ? '0' : ''}$i';
     testNonNullable(name, type(name));
   }
-  for (var i = 1; i <= 25; ++i) {
+  for (var i = 1; i <= 23; ++i) {
     var name = 'n${i < 10 ? '0' : ''}$i';
     testNullable(name, type(name));
   }
-  for (var i = 1; i <= 3; ++i) {
+  for (var i = 1; i <= 2; ++i) {
     var name = 'x0$i';
     testNeither(name, type(name));
   }
