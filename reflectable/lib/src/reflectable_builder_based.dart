@@ -2263,7 +2263,7 @@ abstract class VariableMirrorBase extends _DataCaching
   @override
   bool get hasReflectedType =>
       _isVoid ||
-      _isDynamic || 
+      _isDynamic ||
       _isNever ||
       _reflectedTypeIndex != noCapabilityIndex;
 
