@@ -267,8 +267,7 @@ class InvokingCapability extends NamePatternCapability
   const InvokingCapability(String namePattern) : super(namePattern);
 }
 
-/// Short hand for `InvokingCapability('')`, meaning the capability to
-/// reflect over all top-level and static members.
+/// Short hand for `InvokingCapability('')`.
 const invokingCapability = InvokingCapability('');
 
 /// Gives the capabilities of all the capabilities requested by
@@ -333,6 +332,8 @@ const subtypeQuantifyCapability = _SubtypeQuantifyCapability();
 ///
 /// The class [upperBound] itself is not included if [excludeUpperBound] is
 /// `true`.
+///
+/// Note that this is applied before any `TypeAnnotationQuantifyCapability`.
 class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
   final Type upperBound;
   final bool excludeUpperBound;
@@ -437,7 +438,7 @@ class GlobalQuantifyCapability extends ImportAttachedCapability {
 /// [reflector].
 ///
 /// Note: It is used by attaching an instance of a subtype of
-/// [GlobalQuantifyCapability] as metadata on an import of
+/// [GlobalQuantifyMetaCapability] as metadata on an import of
 /// 'package:reflectable/reflectable.dart'.
 class GlobalQuantifyMetaCapability extends ImportAttachedCapability {
   final Type metadataType;
