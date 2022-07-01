@@ -60,9 +60,8 @@ const fieldType = {
   'n21': 'FutureOr<List<int>?>',
   'n22': 'FutureOr<X?>',
   'n23': 'FutureOr<FutureOr<void>>',
-  'x01': 'Y',
-  'x02': 'FutureOr<Y>',
-  'x03': 'FutureOr<FutureOr<Y>>',
+  'x01': 'FutureOr<Y>',
+  'x02': 'FutureOr<FutureOr<Y>>',
 };
 
 @reflector
