@@ -4334,14 +4334,22 @@ int _topLevelVariableDescriptor(TopLevelVariableElement element) {
     if (element.isFinal) result |= constants.finalAttribute;
   }
   if (element.isStatic) result |= constants.staticAttribute;
-  if (element.type is VoidType) result |= constants.voidAttribute;
-  if (element.type.isDynamic) result |= constants.dynamicAttribute;
-  if (element.type is NeverType) result |= constants.neverAttribute;
-  Element? elementType = element.type.element;
+  DartType declaredType = element.type;
+  if (declaredType is VoidType) result |= constants.voidAttribute;
+  if (declaredType.isDynamic) result |= constants.dynamicAttribute;
+  if (declaredType is NeverType) result |= constants.neverAttribute;
+  Element? elementType = declaredType.element;
   if (elementType is ClassElement) {
     result |= constants.classTypeAttribute;
   }
   result |= constants.topLevelAttribute;
+  LibraryElement library = element.library;
+  if (library.typeSystem.isNullable(declaredType)) {
+    result |= constants.nullableAttribute;
+  }
+  if (library.typeSystem.isNonNullable(declaredType)) {
+    result |= constants.nonNullableAttribute;
+  }
   return result;
 }
 
@@ -4361,15 +4369,27 @@ int _fieldDescriptor(FieldElement element) {
     if (element.isFinal) result |= constants.finalAttribute;
   }
   if (element.isStatic) result |= constants.staticAttribute;
-  if (element.type is VoidType) result |= constants.voidAttribute;
-  if (element.type.isDynamic) result |= constants.dynamicAttribute;
-  if (element.type is NeverType) result |= constants.neverAttribute;
-  Element? elementType = element.type.element;
+  DartType declaredType = element.type;
+  print('_fieldDescriptor'); // DEBUG
+  print('  $element: $declaredType'); // DEBUG
+  if (declaredType is VoidType) result |= constants.voidAttribute;
+  if (declaredType.isDynamic) result |= constants.dynamicAttribute;
+  if (declaredType is NeverType) result |= constants.neverAttribute;
+  Element? elementType = declaredType.element;
   if (elementType is ClassElement) {
     result |= constants.classTypeAttribute;
     if (elementType.typeParameters.isNotEmpty) {
       result |= constants.genericTypeAttribute;
     }
+  }
+  LibraryElement library = element.library;
+  if (library.typeSystem.isNullable(declaredType)) {
+    result |= constants.nullableAttribute;
+    print('  isNullable'); // DEBUG
+  }
+  if (library.typeSystem.isNonNullable(declaredType)) {
+    result |= constants.nonNullableAttribute;
+    print('  isNonNullable'); // DEBUG
   }
   return result;
 }
@@ -4387,14 +4407,24 @@ int _parameterDescriptor(ParameterElement element) {
   }
   if (element.isOptional) result |= constants.optionalAttribute;
   if (element.isNamed) result |= constants.namedAttribute;
-  if (element.type is VoidType) result |= constants.voidAttribute;
-  if (element.type.isDynamic) result |= constants.dynamicAttribute;
-  if (element.type is NeverType) result |= constants.neverAttribute;
-  Element? elementType = element.type.element;
+  DartType declaredType = element.type;
+  if (declaredType is VoidType) result |= constants.voidAttribute;
+  if (declaredType.isDynamic) result |= constants.dynamicAttribute;
+  if (declaredType is NeverType) result |= constants.neverAttribute;
+  Element? elementType = declaredType.element;
   if (elementType is ClassElement) {
     result |= constants.classTypeAttribute;
     if (elementType.typeParameters.isNotEmpty) {
       result |= constants.genericTypeAttribute;
+    }
+  }
+  LibraryElement? library = element.library;
+  if (library != null) {
+    if (library.typeSystem.isNullable(declaredType)) {
+      result |= constants.nullableAttribute;
+    }
+    if (library.typeSystem.isNonNullable(declaredType)) {
+      result |= constants.nonNullableAttribute;
     }
   }
   return result;
