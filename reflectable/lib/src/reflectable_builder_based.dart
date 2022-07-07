@@ -1875,7 +1875,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
           'Requesting returnType of method `$simpleName` without capability');
     }
     if (_hasClassReturnType) {
-      TypeMirror typeMirror = _data.typeMirrors[_returnTypeIndex]!;
+      TypeMirror typeMirror = _data.typeMirrors[_returnTypeIndex];
       return _hasGenericReturnType
           ? _createInstantiatedGenericClass(
               typeMirror as GenericClassMirrorImpl,
@@ -2247,7 +2247,7 @@ abstract class VariableMirrorBase extends _DataCaching
   TypeMirror get type {
     if (_isVoid) return VoidMirrorImpl();
     if (_isDynamic) return DynamicMirrorImpl();
-    if (_isNever) return NeverMirrorImpl();
+    if (_isNever) return NeverMirrorImpl(hasQuestionMark: _isNullable);
     if (_classMirrorIndex == noCapabilityIndex) {
       if (!_supportsType(_reflector)) {
         throw NoSuchCapabilityError(
@@ -2257,7 +2257,7 @@ abstract class VariableMirrorBase extends _DataCaching
           'Attempt to get class mirror for un-marked class (type of `$_name`)');
     }
     if (_isClassType) {
-      TypeMirror typeMirror = _data.typeMirrors[_classMirrorIndex]!;
+      TypeMirror typeMirror = _data.typeMirrors[_classMirrorIndex];
       if (typeMirror.isNullable != _isNullable ||
           typeMirror.isNonNullable != _isNonNullable) {
         if (_isGenericType) {
@@ -2574,17 +2574,21 @@ class VoidMirrorImpl extends SpecialTypeMirrorImpl {
 }
 
 class NeverMirrorImpl extends SpecialTypeMirrorImpl {
-  @override
-  bool get isNullable => false;
+  final bool hasQuestionMark;
+
+  NeverMirrorImpl({this.hasQuestionMark = false});
 
   @override
-  bool get isNonNullable => true;
+  bool get isNullable => hasQuestionMark ? true : false;
 
   @override
-  bool get isPotentiallyNullable => false;
+  bool get isNonNullable => hasQuestionMark ? false : true;
 
   @override
-  bool get isPotentiallyNonNullable => true;
+  bool get isPotentiallyNullable => !isNonNullable;
+
+  @override
+  bool get isPotentiallyNonNullable => !isNullable;
 
   @override
   Type get reflectedType => Never;
