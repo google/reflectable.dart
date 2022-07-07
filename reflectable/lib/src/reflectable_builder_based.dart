@@ -1302,14 +1302,15 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
 InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
     GenericClassMirrorImpl genericClassMirror,
     Type? reflectedType,
-    List<int>? reflectedTypeArguments) {
+    List<int>? reflectedTypeArguments,
+    [int? descriptor]) {
   // TODO(eernst) implement: Pass a representation of type arguments to this
   // method, and create an instantiated generic class which includes that
   // information.
   return InstantiatedGenericClassMirrorImpl(
       genericClassMirror.simpleName,
       genericClassMirror.qualifiedName,
-      genericClassMirror._descriptor,
+      descriptor ?? genericClassMirror._descriptor,
       genericClassMirror._classIndex,
       genericClassMirror._reflector,
       genericClassMirror._declarationIndices,
@@ -1874,12 +1875,13 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
           'Requesting returnType of method `$simpleName` without capability');
     }
     if (_hasClassReturnType) {
+      TypeMirror typeMirror = _data.typeMirrors[_returnTypeIndex]!;
       return _hasGenericReturnType
           ? _createInstantiatedGenericClass(
-              _data.typeMirrors[_returnTypeIndex] as GenericClassMirrorImpl,
+              typeMirror as GenericClassMirrorImpl,
               null,
               _reflectedTypeArgumentsOfReturnType)
-          : _data.typeMirrors[_returnTypeIndex];
+          : typeMirror;
     }
     throw unreachableError('Unexpected kind of returnType');
   }
@@ -2217,6 +2219,11 @@ abstract class VariableMirrorBase extends _DataCaching
   bool get _isGenericType =>
       (_descriptor & constants.genericTypeAttribute != 0);
 
+  bool get _isNullable => (_descriptor & constants.nullableAttribute != 0);
+
+  bool get _isNonNullable =>
+      (_descriptor & constants.nonNullableAttribute != 0);
+
   @override
   SourceLocation get location => throw UnsupportedError('location');
 
@@ -2250,12 +2257,45 @@ abstract class VariableMirrorBase extends _DataCaching
           'Attempt to get class mirror for un-marked class (type of `$_name`)');
     }
     if (_isClassType) {
-      return _isGenericType
-          ? _createInstantiatedGenericClass(
-              _data.typeMirrors[_classMirrorIndex] as GenericClassMirrorImpl,
+      TypeMirror typeMirror = _data.typeMirrors[_classMirrorIndex]!;
+      if (typeMirror.isNullable != _isNullable ||
+          typeMirror.isNonNullable != _isNonNullable) {
+        if (_isGenericType) {
+          return _createInstantiatedGenericClass(
+              typeMirror as GenericClassMirrorImpl,
               hasReflectedType ? reflectedType : null,
-              _reflectedTypeArguments)
-          : _data.typeMirrors[_classMirrorIndex];
+              _reflectedTypeArguments,
+              _descriptor);
+        } else {
+          var classMirror = typeMirror as NonGenericClassMirrorImpl;
+          return NonGenericClassMirrorImpl(
+            classMirror.simpleName,
+            classMirror.qualifiedName,
+            _descriptor,
+            classMirror._classIndex,
+            classMirror._reflector,
+            classMirror._declarationIndices,
+            classMirror._instanceMemberIndices,
+            classMirror._staticMemberIndices,
+            classMirror._superclassIndex,
+            classMirror._getters,
+            classMirror._setters,
+            classMirror._constructors,
+            classMirror._ownerIndex,
+            classMirror._mixinIndex,
+            classMirror._superinterfaceIndices,
+            classMirror._metadata,
+            classMirror._parameterListShapes,
+          );
+        }
+      } else {
+        return _isGenericType
+            ? _createInstantiatedGenericClass(
+                typeMirror as GenericClassMirrorImpl,
+                hasReflectedType ? reflectedType : null,
+                _reflectedTypeArguments)
+            : typeMirror;
+      }
     }
     throw unreachableError('Unexpected kind of type');
   }

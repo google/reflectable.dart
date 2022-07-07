@@ -4370,8 +4370,6 @@ int _fieldDescriptor(FieldElement element) {
   }
   if (element.isStatic) result |= constants.staticAttribute;
   DartType declaredType = element.type;
-  print('_fieldDescriptor'); // DEBUG
-  print('  $element: $declaredType'); // DEBUG
   if (declaredType is VoidType) result |= constants.voidAttribute;
   if (declaredType.isDynamic) result |= constants.dynamicAttribute;
   if (declaredType is NeverType) result |= constants.neverAttribute;
@@ -4385,11 +4383,9 @@ int _fieldDescriptor(FieldElement element) {
   LibraryElement library = element.library;
   if (library.typeSystem.isNullable(declaredType)) {
     result |= constants.nullableAttribute;
-    print('  isNullable'); // DEBUG
   }
   if (library.typeSystem.isNonNullable(declaredType)) {
     result |= constants.nonNullableAttribute;
-    print('  isNonNullable'); // DEBUG
   }
   return result;
 }
