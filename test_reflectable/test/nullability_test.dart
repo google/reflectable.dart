@@ -116,22 +116,22 @@ class A<X extends Object, Y> {
 
 void testNonNullable(String name, TypeMirror typeMirror) {
   test('${fieldType[name]} isNonNullable', () {
-      expect(typeMirror.isNonNullable, true);
-      expect(typeMirror.isNullable, false);
+    expect(typeMirror.isNonNullable, true);
+    expect(typeMirror.isNullable, false);
   });
 }
 
 void testNullable(String name, TypeMirror typeMirror) {
   test('${fieldType[name]} isNullable', () {
-      expect(typeMirror.isNonNullable, false);
-      expect(typeMirror.isNullable, true);
+    expect(typeMirror.isNonNullable, false);
+    expect(typeMirror.isNullable, true);
   });
 }
 
 void testNeither(String name, TypeMirror typeMirror) {
   test('${fieldType[name]} both false', () {
-      expect(typeMirror.isNonNullable, false);
-      expect(typeMirror.isNullable, false);
+    expect(typeMirror.isNonNullable, false);
+    expect(typeMirror.isNullable, false);
   });
 }
 
