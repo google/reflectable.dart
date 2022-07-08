@@ -2,7 +2,7 @@
 
 * Add support for checking whether a `TypeMirror` is reflecting on a
   nullable or non-nullable type.
-* Update dependencies to use analyzer ^4.2.0.
+* Update dependencies to use analyzer ^4.2.0, lints ^2.0.0.
 
 ## 3.0.8
 
