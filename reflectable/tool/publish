@@ -77,7 +77,7 @@ echo git co master
 echo git fetch origin
 echo git pull
 echo pushd ..
-echo pub publish
+echo dart pub publish
 echo git tag -a -m"$TAG_MESSAGE" "$TAG_VALUE"
 echo git push origin refs/tags/${TAG_VALUE}:refs/tags/$TAG_VALUE
 echo popd
