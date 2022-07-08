@@ -31,7 +31,7 @@ upgrade:
 	( cd ..; dart pub upgrade )
 
 check:
-	( cd ..; dartanalyzer $(OPTIONS) {lib,test{,/legacy}}/*.dart )
+	( cd ..; dart analyze $(OPTIONS) {lib,test{,/legacy}}/*.dart )
 
 measure_output: build
 	@./measure_output --include-js --include-source-tree --include-unminified

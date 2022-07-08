@@ -44,7 +44,7 @@ class Serializer {
           return method.isGetter &&
               method.isSynthetic &&
               // Check that the setter also exists.
-              instanceMembers[method.simpleName + '='] != null &&
+              instanceMembers['${method.simpleName}='] != null &&
               !method.isPrivate;
         })
         .map((MethodMirror method) => method.simpleName)

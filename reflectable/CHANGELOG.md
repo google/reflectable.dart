@@ -1,3 +1,9 @@
+## 3.0.9
+
+* Add support for checking whether a `TypeMirror` is reflecting on a
+  nullable or non-nullable type.
+* Update dependencies to use analyzer ^4.2.0, lints ^2.0.0.
+
 ## 3.0.8
 
 * Correct bug reported as #267 (`null` was generated in a case where the

@@ -34,16 +34,16 @@ Set<Reflectable> get reflectors => data.keys.toSet();
 // replicated wherever possible.
 
 /// Invokes a getter on an object.
-typedef _InvokerOfGetter = Object? Function(Object? instance);
+typedef InvokerOfGetter = Object? Function(Object? instance);
 
 /// Invokes a setter on an object.
-typedef _InvokerOfSetter = Object? Function(Object? instance, Object? value);
+typedef InvokerOfSetter = Object? Function(Object? instance, Object? value);
 
 /// Invokes a static getter.
-typedef _StaticGetter = Object? Function();
+typedef StaticGetter = Object? Function();
 
 /// Invokes a setter on an object.
-typedef _StaticSetter = Object? Function(Object? value);
+typedef StaticSetter = Object? Function(Object? value);
 
 /// The data backing a reflector.
 class ReflectorData {
@@ -90,12 +90,12 @@ class ReflectorData {
 
   /// Map from getter names to closures accepting an instance and returning
   /// the result of invoking the getter with that name on that instance.
-  final Map<String, _InvokerOfGetter> getters;
+  final Map<String, InvokerOfGetter> getters;
 
   /// Map from setter names to closures accepting an instance and a new value,
   /// invoking the setter of that name on that instance, and returning its
   /// return value.
-  final Map<String, _InvokerOfSetter> setters;
+  final Map<String, InvokerOfSetter> setters;
 
   /// List of parameter list shapes. Each entry is a list containing data on
   /// one shape of parameter list. The same shape is shared, e.g., by methods
@@ -107,7 +107,7 @@ class ReflectorData {
   /// `List` containing `Symbol` values for the names of named parameters.
   final List<List>? parameterListShapes;
 
-  Map<Type, ClassMirror>? _typeToClassMirrorCache;
+  Map<Type, TypeMirror>? _typeToTypeMirrorCache;
 
   ReflectorData(
       this.typeMirrors,
@@ -120,46 +120,41 @@ class ReflectorData {
       this.libraryMirrors,
       this.parameterListShapes);
 
-  /// Returns a class-mirror for the given [type].
+  /// Returns a type mirror for the given [type].
   ///
   /// Returns `null` if the given class is not marked for reflection.
-  ClassMirror? classMirrorForType(Type type) {
-    var typeToClassMirrorCache = _typeToClassMirrorCache;
-    if (typeToClassMirrorCache == null) {
+  TypeMirror? typeMirrorForType(Type type) {
+    var typeToTypeMirrorCache = _typeToTypeMirrorCache;
+    if (typeToTypeMirrorCache == null) {
       if (typeMirrors.isEmpty) {
         // This is the case when the capabilities do not include a
         // `TypeCapability`; it is also the case when there are no
         // supported classes. In both cases the empty map is correct.
-        _typeToClassMirrorCache =
-            typeToClassMirrorCache = <Type, ClassMirror>{};
+        _typeToTypeMirrorCache = typeToTypeMirrorCache = <Type, TypeMirror>{};
       } else {
         // Note that [types] corresponds to the prefix of [typeMirrors] which
         // are class mirrors; [typeMirrors] continues with type variable
         // mirrors, and they are irrelevant here.
-        Iterable<ClassMirror> classMirrors() sync* {
-          for (TypeMirror typeMirror
-              in typeMirrors.sublist(0, supportedClassCount)) {
-            yield typeMirror as ClassMirror;
-          }
-        }
-
-        _typeToClassMirrorCache = typeToClassMirrorCache =
-            Map<Type, ClassMirror>.fromIterables(
-                types.sublist(0, supportedClassCount), classMirrors());
+        _typeToTypeMirrorCache = typeToTypeMirrorCache = <Type, TypeMirror>{
+          for (var i = 0; i < supportedClassCount; ++i) types[i]: typeMirrors[i]
+        };
       }
+      typeToTypeMirrorCache[_typeOf<void>()] = VoidMirrorImpl();
+      typeToTypeMirrorCache[dynamic] = DynamicMirrorImpl();
+      typeToTypeMirrorCache[Never] = NeverMirrorImpl();
     }
-    return typeToClassMirrorCache[type];
+    return typeToTypeMirrorCache[type];
   }
 
   ClassMirror? classMirrorForInstance(Object? instance) {
-    ClassMirror? result = classMirrorForType(instance.runtimeType);
-    if (result != null) return result;
+    TypeMirror? result = typeMirrorForType(instance.runtimeType);
+    if (result is ClassMirror) return result;
     // Check if we have a generic class that matches.
-    for (ClassMirror classMirror in _typeToClassMirrorCache!.values) {
-      if (classMirror is GenericClassMirrorImpl) {
-        if (classMirror._isGenericRuntimeTypeOf(instance)) {
+    for (TypeMirror typeMirror in _typeToTypeMirrorCache!.values) {
+      if (typeMirror is GenericClassMirrorImpl) {
+        if (typeMirror._isGenericRuntimeTypeOf(instance)) {
           return _createInstantiatedGenericClass(
-              classMirror, instance.runtimeType, null);
+              typeMirror, instance.runtimeType, null);
         }
       }
     }
@@ -449,8 +444,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   final String qualifiedName;
 
   final List<Object>? _metadata;
-  final Map<String, _StaticGetter> _getters;
-  final Map<String, _StaticSetter> _setters;
+  final Map<String, StaticGetter> _getters;
+  final Map<String, StaticSetter> _setters;
   final Map<String, Function> _constructors;
   final Map<String, int>? _parameterListShapes;
 
@@ -679,7 +674,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
           namedArguments);
     }
 
-    _StaticGetter? getter = _getters[memberName];
+    StaticGetter? getter = _getters[memberName];
     if (getter == null) fail();
     if (!_checkStaticParameterListShape(
         memberName, positionalArguments.length, namedArguments?.keys)) {
@@ -691,7 +686,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   @override
   Object? invokeGetter(String getterName) {
-    _StaticGetter? getter = _getters[getterName];
+    StaticGetter? getter = _getters[getterName];
     if (getter == null) {
       throw reflectableNoSuchGetterError(reflectedType, getterName, [], {});
     }
@@ -702,7 +697,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   Object? invokeSetter(String name, Object? value) {
     String setterName =
         _isSetterName(name) ? name : _getterNameToSetterName(name);
-    _StaticSetter? setter = _setters[setterName];
+    StaticSetter? setter = _setters[setterName];
     if (setter == null) {
       throw reflectableNoSuchSetterError(
           reflectedType, setterName, [value], {});
@@ -715,6 +710,18 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   @override
   bool get isPrivate => (_descriptor & constants.privateAttribute != 0);
+
+  @override
+  bool get isNullable => (_descriptor & constants.nullableAttribute != 0);
+
+  @override
+  bool get isNonNullable => (_descriptor & constants.nonNullableAttribute != 0);
+
+  @override
+  bool get isPotentiallyNullable => !isNonNullable;
+
+  @override
+  bool get isPotentiallyNonNullable => !isNullable;
 
   // Classes are always toplevel.
   @override
@@ -882,8 +889,8 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
       List<int>? instanceMemberIndices,
       List<int>? staticMemberIndices,
       int? superclassIndex,
-      Map<String, _StaticGetter> getters,
-      Map<String, _StaticSetter> setters,
+      Map<String, StaticGetter> getters,
+      Map<String, StaticSetter> setters,
       Map<String, Function> constructors,
       int ownerIndex,
       int mixinIndex,
@@ -1002,8 +1009,8 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
       List<int>? instanceMemberIndices,
       List<int>? staticMemberIndices,
       int superclassIndex,
-      Map<String, _StaticGetter> getters,
-      Map<String, _StaticSetter> setters,
+      Map<String, StaticGetter> getters,
+      Map<String, StaticSetter> setters,
       Map<String, Function> constructors,
       int ownerIndex,
       int mixinIndex,
@@ -1150,8 +1157,8 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
       List<int>? instanceMemberIndices,
       List<int>? staticMemberIndices,
       int? superclassIndex,
-      Map<String, _StaticGetter> getters,
-      Map<String, _StaticSetter> setters,
+      Map<String, StaticGetter> getters,
+      Map<String, StaticSetter> setters,
       Map<String, Function> constructors,
       int ownerIndex,
       int mixinIndex,
@@ -1295,14 +1302,15 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
 InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
     GenericClassMirrorImpl genericClassMirror,
     Type? reflectedType,
-    List<int>? reflectedTypeArguments) {
+    List<int>? reflectedTypeArguments,
+    [int? descriptor]) {
   // TODO(eernst) implement: Pass a representation of type arguments to this
   // method, and create an instantiated generic class which includes that
   // information.
   return InstantiatedGenericClassMirrorImpl(
       genericClassMirror.simpleName,
       genericClassMirror.qualifiedName,
-      genericClassMirror._descriptor,
+      descriptor ?? genericClassMirror._descriptor,
       genericClassMirror._classIndex,
       genericClassMirror._reflector,
       genericClassMirror._declarationIndices,
@@ -1459,6 +1467,18 @@ class TypeVariableMirrorImpl extends _DataCaching
   bool get isPrivate => false;
 
   @override
+  bool get isNullable => false;
+
+  @override
+  bool get isNonNullable => upperBound.isNonNullable;
+
+  @override
+  bool get isPotentiallyNullable => !isNonNullable;
+
+  @override
+  bool get isPotentiallyNonNullable => true;
+
+  @override
   DeclarationMirror get owner {
     if (_ownerIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError(
@@ -1489,8 +1509,8 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   @override
   final String simpleName;
 
-  final Map<String, _StaticGetter> getters;
-  final Map<String, _StaticSetter> setters;
+  final Map<String, StaticGetter> getters;
+  final Map<String, StaticSetter> setters;
 
   final Map<String, int>? _parameterListShapes;
 
@@ -1608,7 +1628,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
           null, memberName, positionalArguments, namedArguments);
     }
 
-    _StaticGetter? getter = getters[memberName];
+    StaticGetter? getter = getters[memberName];
     if (getter == null) fail();
     if (!_checkParameterListShape(
         memberName, positionalArguments.length, namedArguments?.keys)) {
@@ -1620,7 +1640,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
 
   @override
   Object? invokeGetter(String getterName) {
-    _StaticGetter? getter = getters[getterName];
+    StaticGetter? getter = getters[getterName];
     if (getter == null) {
       throw reflectableNoSuchGetterError(null, getterName, [], {});
     }
@@ -1631,7 +1651,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   Object? invokeSetter(String name, Object? value) {
     String setterName =
         _isSetterName(name) ? name : _getterNameToSetterName(name);
-    _StaticSetter? setter = setters[setterName];
+    StaticSetter? setter = setters[setterName];
     if (setter == null) {
       throw reflectableNoSuchSetterError(null, setterName, [value], {});
     }
@@ -1803,14 +1823,17 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   @override
   bool get isTopLevel => (_descriptor & constants.topLevelAttribute != 0);
 
+  bool get _hasVoidReturnType =>
+      (_descriptor & constants.voidReturnTypeAttribute != 0);
+
   bool get _hasDynamicReturnType =>
       (_descriptor & constants.dynamicReturnTypeAttribute != 0);
 
+  bool get _hasNeverReturnType =>
+      (_descriptor & constants.neverReturnTypeAttribute != 0);
+
   bool get _hasClassReturnType =>
       (_descriptor & constants.classReturnTypeAttribute != 0);
-
-  bool get _hasVoidReturnType =>
-      (_descriptor & constants.voidReturnTypeAttribute != 0);
 
   bool get _hasGenericReturnType =>
       (_descriptor & constants.genericReturnTypeAttribute != 0);
@@ -1844,29 +1867,37 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
 
   @override
   TypeMirror get returnType {
-    if (_hasDynamicReturnType) return DynamicMirrorImpl();
     if (_hasVoidReturnType) return VoidMirrorImpl();
+    if (_hasDynamicReturnType) return DynamicMirrorImpl();
+    if (_hasNeverReturnType) return VoidMirrorImpl();
     if (_returnTypeIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError(
           'Requesting returnType of method `$simpleName` without capability');
     }
     if (_hasClassReturnType) {
+      TypeMirror typeMirror = _data.typeMirrors[_returnTypeIndex];
       return _hasGenericReturnType
           ? _createInstantiatedGenericClass(
-              _data.typeMirrors[_returnTypeIndex] as GenericClassMirrorImpl,
+              typeMirror as GenericClassMirrorImpl,
               null,
               _reflectedTypeArgumentsOfReturnType)
-          : _data.typeMirrors[_returnTypeIndex];
+          : typeMirror;
     }
     throw unreachableError('Unexpected kind of returnType');
   }
 
   @override
   bool get hasReflectedReturnType =>
+      _hasVoidReturnType ||
+      _hasDynamicReturnType ||
+      _hasNeverReturnType ||
       _reflectedReturnTypeIndex != noCapabilityIndex;
 
   @override
   Type get reflectedReturnType {
+    if (_hasVoidReturnType) return _typeOf<void>();
+    if (_hasDynamicReturnType) return dynamic;
+    if (_hasNeverReturnType) return Never;
     if (_reflectedReturnTypeIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError('Requesting reflectedReturnType of method '
           '`$simpleName` without capability');
@@ -2100,6 +2131,7 @@ class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
     if (_variableMirror.isPrivate) descriptor |= constants.privateAttribute;
     descriptor |= constants.syntheticAttribute;
     if (_variableMirror._isDynamic) descriptor |= constants.dynamicAttribute;
+    if (_variableMirror._isNever) descriptor |= constants.neverAttribute;
     if (_variableMirror._isClassType) {
       descriptor |= constants.classTypeAttribute;
     }
@@ -2176,12 +2208,21 @@ abstract class VariableMirrorBase extends _DataCaching
   @override
   bool get isFinal => (_descriptor & constants.finalAttribute != 0);
 
+  bool get _isVoid => (_descriptor & constants.voidAttribute != 0);
+
   bool get _isDynamic => (_descriptor & constants.dynamicAttribute != 0);
+
+  bool get _isNever => (_descriptor & constants.neverAttribute != 0);
 
   bool get _isClassType => (_descriptor & constants.classTypeAttribute != 0);
 
   bool get _isGenericType =>
       (_descriptor & constants.genericTypeAttribute != 0);
+
+  bool get _isNullable => (_descriptor & constants.nullableAttribute != 0);
+
+  bool get _isNonNullable =>
+      (_descriptor & constants.nonNullableAttribute != 0);
 
   @override
   SourceLocation get location => throw UnsupportedError('location');
@@ -2204,7 +2245,9 @@ abstract class VariableMirrorBase extends _DataCaching
 
   @override
   TypeMirror get type {
+    if (_isVoid) return VoidMirrorImpl();
     if (_isDynamic) return DynamicMirrorImpl();
+    if (_isNever) return NeverMirrorImpl(hasQuestionMark: _isNullable);
     if (_classMirrorIndex == noCapabilityIndex) {
       if (!_supportsType(_reflector)) {
         throw NoSuchCapabilityError(
@@ -2214,23 +2257,61 @@ abstract class VariableMirrorBase extends _DataCaching
           'Attempt to get class mirror for un-marked class (type of `$_name`)');
     }
     if (_isClassType) {
-      return _isGenericType
-          ? _createInstantiatedGenericClass(
-              _data.typeMirrors[_classMirrorIndex] as GenericClassMirrorImpl,
+      TypeMirror typeMirror = _data.typeMirrors[_classMirrorIndex];
+      if (typeMirror.isNullable != _isNullable ||
+          typeMirror.isNonNullable != _isNonNullable) {
+        if (_isGenericType) {
+          return _createInstantiatedGenericClass(
+              typeMirror as GenericClassMirrorImpl,
               hasReflectedType ? reflectedType : null,
-              _reflectedTypeArguments)
-          : _data.typeMirrors[_classMirrorIndex];
+              _reflectedTypeArguments,
+              _descriptor);
+        } else {
+          var classMirror = typeMirror as NonGenericClassMirrorImpl;
+          return NonGenericClassMirrorImpl(
+            classMirror.simpleName,
+            classMirror.qualifiedName,
+            _descriptor,
+            classMirror._classIndex,
+            classMirror._reflector,
+            classMirror._declarationIndices,
+            classMirror._instanceMemberIndices,
+            classMirror._staticMemberIndices,
+            classMirror._superclassIndex,
+            classMirror._getters,
+            classMirror._setters,
+            classMirror._constructors,
+            classMirror._ownerIndex,
+            classMirror._mixinIndex,
+            classMirror._superinterfaceIndices,
+            classMirror._metadata,
+            classMirror._parameterListShapes,
+          );
+        }
+      } else {
+        return _isGenericType
+            ? _createInstantiatedGenericClass(
+                typeMirror as GenericClassMirrorImpl,
+                hasReflectedType ? reflectedType : null,
+                _reflectedTypeArguments)
+            : typeMirror;
+      }
     }
     throw unreachableError('Unexpected kind of type');
   }
 
   @override
   bool get hasReflectedType =>
-      _isDynamic || _reflectedTypeIndex != noCapabilityIndex;
+      _isVoid ||
+      _isDynamic ||
+      _isNever ||
+      _reflectedTypeIndex != noCapabilityIndex;
 
   @override
   Type get reflectedType {
+    if (_isVoid) return _typeOf<void>();
     if (_isDynamic) return dynamic;
+    if (_isNever) return Never;
     if (_reflectedTypeIndex == noCapabilityIndex) {
       if (!_supportsReflectedType(_reflector)) {
         throw NoSuchCapabilityError(
@@ -2391,27 +2472,19 @@ class ParameterMirrorImpl extends VariableMirrorBase
   int get hashCode;
 }
 
-class DynamicMirrorImpl implements TypeMirror {
+abstract class SpecialTypeMirrorImpl implements TypeMirror {
   @override
   bool get isPrivate => false;
 
   @override
   bool get isTopLevel => true;
 
-  // TODO(eernst) implement: test what 'dart:mirrors' does, then do the same.
   @override
   bool get isOriginalDeclaration => true;
 
   @override
   bool get hasReflectedType => true;
 
-  @override
-  Type get reflectedType => dynamic;
-
-  @override
-  String get simpleName => 'dynamic';
-
-  // TODO(eernst) implement: do as in 'dart:mirrors'.
   @override
   List<TypeVariableMirror> get typeVariables => const <TypeVariableMirror>[];
 
@@ -2421,30 +2494,12 @@ class DynamicMirrorImpl implements TypeMirror {
   @override
   List<Type> get reflectedTypeArguments => const <Type>[];
 
-  // TODO(eernst) implement: do as in 'dart:mirrors'.
   @override
   TypeMirror get originalDeclaration => this;
 
   @override
   SourceLocation get location => throw UnsupportedError('location');
 
-  // TODO(eernst) implement: We ought to check for the capability, which
-  // means that we should have a `_reflector`, and then we should throw a
-  // [NoSuchCapabilityError] if there is no `typeRelationsCapability`.
-  // However, it seems near-benign to omit the check and give the correct
-  // reply in all cases.
-  @override
-  bool isSubtypeOf(TypeMirror other) => true;
-
-  // TODO(eernst) implement: We ought to check for the capability, which
-  // means that we should have a `_reflector`, and then we should throw a
-  // [NoSuchCapabilityError] if there is no `typeRelationsCapability`.
-  // However, it seems near-benign to omit the check and give the correct
-  // reply in all cases.
-  @override
-  bool isAssignableTo(TypeMirror other) => true;
-
-  // TODO(eernst) implement: do as 'dart:mirrors' does.
   @override
   DeclarationMirror? get owner => null;
 
@@ -2455,71 +2510,100 @@ class DynamicMirrorImpl implements TypeMirror {
   List<Object> get metadata => <Object>[];
 }
 
-class VoidMirrorImpl implements TypeMirror {
+Type _typeOf<X>() => X;
+
+class DynamicMirrorImpl extends SpecialTypeMirrorImpl {
   @override
-  bool get isPrivate => false;
+  bool get isNullable => true;
 
   @override
-  bool get isTopLevel => true;
-
-  // TODO(eernst) implement: test what 'dart:mirrors' does, then do the same.
-  @override
-  bool get isOriginalDeclaration => true;
+  bool get isNonNullable => false;
 
   @override
-  bool get hasReflectedType => false;
+  bool get isPotentiallyNullable => true;
 
   @override
-  Type get reflectedType =>
-      throw UnsupportedError('Attempt to get the reflected type of `void`');
+  bool get isPotentiallyNonNullable => false;
+
+  @override
+  Type get reflectedType => dynamic;
+
+  @override
+  String get simpleName => 'dynamic';
+
+  // TODO(eernst): Should be true iff [other] is a top type.
+  @override
+  bool isSubtypeOf(TypeMirror other) =>
+      other is DynamicMirrorImpl || other is VoidMirrorImpl;
+
+  @override
+  bool isAssignableTo(TypeMirror other) => true;
+}
+
+class VoidMirrorImpl extends SpecialTypeMirrorImpl {
+  @override
+  bool get isNullable => true;
+
+  @override
+  bool get isNonNullable => false;
+
+  @override
+  bool get isPotentiallyNullable => true;
+
+  @override
+  bool get isPotentiallyNonNullable => false;
+
+  @override
+  Type get reflectedType => _typeOf<void>();
 
   @override
   String get simpleName => 'void';
 
-  // TODO(eernst) implement: do as in 'dart:mirrors'.
   @override
-  List<TypeVariableMirror> get typeVariables => const <TypeVariableMirror>[];
+  SourceLocation get location => throw UnsupportedError('location');
+
+  // TODO(eernst): Should return true iff [other] is a top type.
+  @override
+  bool isSubtypeOf(TypeMirror other) =>
+      other is DynamicMirrorImpl || other is VoidMirrorImpl;
+
+  // TODO(eernst): Should return true iff [other] is a top type.
+  @override
+  bool isAssignableTo(TypeMirror other) =>
+      other is DynamicMirrorImpl || other is VoidMirrorImpl;
+}
+
+class NeverMirrorImpl extends SpecialTypeMirrorImpl {
+  final bool hasQuestionMark;
+
+  NeverMirrorImpl({this.hasQuestionMark = false});
 
   @override
-  List<TypeMirror> get typeArguments => const <TypeMirror>[];
+  bool get isNullable => hasQuestionMark ? true : false;
 
   @override
-  List<Type> get reflectedTypeArguments => const <Type>[];
+  bool get isNonNullable => hasQuestionMark ? false : true;
 
-  // TODO(eernst) implement: do as in 'dart:mirrors'.
   @override
-  TypeMirror get originalDeclaration => this;
+  bool get isPotentiallyNullable => !isNonNullable;
+
+  @override
+  bool get isPotentiallyNonNullable => !isNullable;
+
+  @override
+  Type get reflectedType => Never;
+
+  @override
+  String get simpleName => 'Never';
 
   @override
   SourceLocation get location => throw UnsupportedError('location');
 
-  // TODO(eernst) implement: We ought to check for the capability, which
-  // means that we should have a `supportsTypeRelations` bool, and then we
-  // should throw a [NoSuchCapabilityError] if it is not true.
-  // However, it seems near-benign to omit the check and give the correct
-  // reply in all cases.
-  // TODO(eernst) clarify: check the spec!
   @override
-  bool isSubtypeOf(TypeMirror other) => other is DynamicMirrorImpl;
-
-  // TODO(eernst) implement: We ought to check for the capability, which
-  // means that we should have a `supportsTypeRelations` bool, and then we
-  // should throw a [NoSuchCapabilityError] if it is not true.
-  // However, it seems near-benign to omit the check and give the correct
-  // reply in all cases.
-  // TODO(eernst) clarify: check the spec!
-  @override
-  bool isAssignableTo(TypeMirror other) => other is DynamicMirrorImpl;
-
-  // TODO(eernst) implement: do as 'dart:mirrors' does.
-  @override
-  DeclarationMirror? get owner => null;
+  bool isSubtypeOf(TypeMirror other) => true;
 
   @override
-  String get qualifiedName => simpleName;
-
-  @override
-  List<Object> get metadata => <Object>[];
+  bool isAssignableTo(TypeMirror other) => true;
 }
 
 abstract class ReflectableImpl extends ReflectableBase
@@ -2559,12 +2643,12 @@ abstract class ReflectableImpl extends ReflectableBase
 
   @override
   bool canReflectType(Type type) {
-    return _hasTypeCapability && data[this]?.classMirrorForType(type) != null;
+    return _hasTypeCapability && data[this]?.typeMirrorForType(type) != null;
   }
 
   @override
   TypeMirror reflectType(Type type) {
-    ClassMirror? result = data[this]!.classMirrorForType(type);
+    TypeMirror? result = data[this]!.typeMirrorForType(type);
     if (result == null || !_hasTypeCapability) {
       throw NoSuchCapabilityError(
           'Reflecting on type `$type` without capability');
@@ -2633,7 +2717,7 @@ class FakeType implements Type {
 
 bool _isSetterName(String name) => name.endsWith('=');
 
-String _getterNameToSetterName(String name) => name + '=';
+String _getterNameToSetterName(String name) => '$name=';
 
 bool _supportsType(ReflectableImpl reflector) {
   return reflector.capabilities

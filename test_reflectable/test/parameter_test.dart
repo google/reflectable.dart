@@ -86,6 +86,8 @@ class UnrelatedClass {}
 
 final throwsNoCapability = throwsA(const TypeMatcher<NoSuchCapabilityError>());
 
+Type typeOf<X>() => X;
+
 void performTests(String message, Reflectable reflector) {
   var myClassMirror = reflector.reflectType(MyClass) as ClassMirror;
   Map<String, DeclarationMirror> declarations = myClassMirror.declarations;
@@ -256,7 +258,8 @@ void performTests(String message, Reflectable reflector) {
     expect(opBracketEqualsMirror.returnType.simpleName, 'void');
     expect(getsetMirror.returnType.reflectedType, String);
     expect(getsetEqualsMirror.returnType.simpleName, 'void');
-    expect(getsetEqualsMirror.returnType.hasReflectedType, false);
+    expect(getsetEqualsMirror.returnType.hasReflectedType, true);
+    expect(getsetEqualsMirror.returnType.reflectedType, typeOf<void>());
     expect(noArgumentsMirror.returnType.reflectedType, int);
     expect(oneArgumentMirror.returnType.reflectedType, int);
     expect(optionalArgumentsMirror.returnType.reflectedType, int);
