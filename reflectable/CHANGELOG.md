@@ -1,3 +1,8 @@
+## 3.0.11
+
+* Update reflectable to use analyzer 4.4.0 (this requires 4.4.0, too, because
+  of a breaking change).
+
 ## 3.0.10
 
 * Perform a minimal migration to use analyzer 4.6.0.
