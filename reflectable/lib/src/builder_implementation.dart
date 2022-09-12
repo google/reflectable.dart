@@ -4445,13 +4445,13 @@ int _topLevelVariableDescriptor(TopLevelVariableElement element) {
       result |= constants.classTypeAttribute;
     }
     result |= constants.topLevelAttribute;
-    LibraryElement library = element.library;
-    if (library.typeSystem.isNullable(declaredType)) {
-      result |= constants.nullableAttribute;
-    }
-    if (library.typeSystem.isNonNullable(declaredType)) {
-      result |= constants.nonNullableAttribute;
-    }
+  }
+  LibraryElement library = element.library;
+  if (library.typeSystem.isNullable(declaredType)) {
+    result |= constants.nullableAttribute;
+  }
+  if (library.typeSystem.isNonNullable(declaredType)) {
+    result |= constants.nonNullableAttribute;
   }
   return result;
 }
@@ -4484,13 +4484,13 @@ int _fieldDescriptor(FieldElement element) {
         result |= constants.genericTypeAttribute;
       }
     }
-    LibraryElement library = element.library;
-    if (library.typeSystem.isNullable(declaredType)) {
-      result |= constants.nullableAttribute;
-    }
-    if (library.typeSystem.isNonNullable(declaredType)) {
-      result |= constants.nonNullableAttribute;
-    }
+  }
+  LibraryElement library = element.library;
+  if (library.typeSystem.isNullable(declaredType)) {
+    result |= constants.nullableAttribute;
+  }
+  if (library.typeSystem.isNonNullable(declaredType)) {
+    result |= constants.nonNullableAttribute;
   }
   return result;
 }
@@ -4520,14 +4520,14 @@ int _parameterDescriptor(ParameterElement element) {
         result |= constants.genericTypeAttribute;
       }
     }
-    LibraryElement? library = element.library;
-    if (library != null) {
-      if (library.typeSystem.isNullable(declaredType)) {
-        result |= constants.nullableAttribute;
-      }
-      if (library.typeSystem.isNonNullable(declaredType)) {
-        result |= constants.nonNullableAttribute;
-      }
+  }
+  LibraryElement? library = element.library;
+  if (library != null) {
+    if (library.typeSystem.isNullable(declaredType)) {
+      result |= constants.nullableAttribute;
+    }
+    if (library.typeSystem.isNonNullable(declaredType)) {
+      result |= constants.nonNullableAttribute;
     }
   }
   return result;
