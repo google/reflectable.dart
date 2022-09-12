@@ -35,7 +35,7 @@ abstract class NamePatternCapability implements ApiReflectCapability {
 }
 
 abstract class MetadataQuantifiedCapability implements ApiReflectCapability {
-  final ClassElement metadataType;
+  final InterfaceElement metadataType;
   const MetadataQuantifiedCapability(this.metadataType);
 }
 
@@ -46,7 +46,7 @@ class InstanceInvokeCapability extends NamePatternCapability {
 const instanceInvokeCapability = InstanceInvokeCapability('');
 
 class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const InstanceInvokeMetaCapability(ClassElement metadataType)
+  const InstanceInvokeMetaCapability(InterfaceElement metadataType)
       : super(metadataType);
 }
 
@@ -59,7 +59,7 @@ const staticInvokeCapability = StaticInvokeCapability('');
 
 class StaticInvokeMetaCapability extends MetadataQuantifiedCapability
     implements TypeCapability {
-  const StaticInvokeMetaCapability(ClassElement metadataType)
+  const StaticInvokeMetaCapability(InterfaceElement metadataType)
       : super(metadataType);
 }
 
@@ -68,7 +68,7 @@ class TopLevelInvokeCapability extends NamePatternCapability {
 }
 
 class TopLevelInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const TopLevelInvokeMetaCapability(ClassElement metadataType)
+  const TopLevelInvokeMetaCapability(InterfaceElement metadataType)
       : super(metadataType);
 }
 
@@ -81,7 +81,7 @@ const newInstanceCapability = NewInstanceCapability('');
 
 class NewInstanceMetaCapability extends MetadataQuantifiedCapability
     implements TypeCapability {
-  const NewInstanceMetaCapability(ClassElement metadataType)
+  const NewInstanceMetaCapability(InterfaceElement metadataType)
       : super(metadataType);
 }
 
@@ -172,7 +172,8 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
         InstanceInvokeMetaCapability,
         StaticInvokeMetaCapability,
         NewInstanceMetaCapability {
-  const InvokingMetaCapability(ClassElement metadataType) : super(metadataType);
+  const InvokingMetaCapability(InterfaceElement metadataType)
+      : super(metadataType);
 }
 
 class TypingCapability
