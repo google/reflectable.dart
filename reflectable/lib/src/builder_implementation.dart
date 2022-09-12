@@ -5478,6 +5478,7 @@ class MixinApplication implements ClassElement {
   @override
   bool get isPrivate => false;
 
+  @deprecated
   @override
   bool get isEnum => false;
 
