@@ -88,27 +88,27 @@ class _ReflectionWorld {
 
     // Fill in [_subtypesCache].
     for (LibraryElement library in libraries) {
-      void addInterfaceElement(InterfaceElement classElement) {
-        InterfaceType? supertype = classElement.supertype;
-        if (classElement.mixins.isEmpty) {
+      void addInterfaceElement(InterfaceElement interfaceElement) {
+        InterfaceType? supertype = interfaceElement.supertype;
+        if (interfaceElement.mixins.isEmpty) {
           var supertypeElement = supertype?.element2;
-          if (supertypeElement is InterfaceElement) {
-            addSubtypeRelation(supertypeElement, classElement);
+          if (supertypeElement != null) {
+            addSubtypeRelation(supertypeElement, interfaceElement);
           }
         } else {
           // Mixins must be applied to a superclass, so it is not null.
           var superclass = supertype!.element2;
           // Iterate over all mixins in most-general-first order (so with
           // `class C extends B with M1, M2..` we visit `M1` then `M2`.
-          for (InterfaceType mixin in classElement.mixins) {
+          for (InterfaceType mixin in interfaceElement.mixins) {
             var mixinElement = mixin.element2;
             InterfaceElement? subClass =
-                mixin == classElement.mixins.last ? classElement : null;
+                mixin == interfaceElement.mixins.last ? interfaceElement : null;
             String? name = subClass == null
                 ? null
-                : (classElement is MixinApplication &&
-                        classElement.isMixinApplication
-                    ? classElement.name
+                : (interfaceElement is MixinApplication &&
+                        interfaceElement.isMixinApplication
+                    ? interfaceElement.name
                     : null);
             MixinApplication mixinApplication = MixinApplication(
                 name, superclass, mixinElement, library, subClass);
@@ -120,14 +120,14 @@ class _ReflectionWorld {
             superclass = mixinApplication;
           }
         }
-        for (InterfaceType type in classElement.interfaces) {
-          addSubtypeRelation(type.element2, classElement);
+        for (InterfaceType type in interfaceElement.interfaces) {
+          addSubtypeRelation(type.element2, interfaceElement);
         }
       }
 
       for (CompilationUnitElement unit in library.units) {
-        for (var classElement in unit.classes) {
-          addInterfaceElement(classElement);
+        for (var interfaceElement in unit.classes) {
+          addInterfaceElement(interfaceElement);
         }
         for (var interfaceElement in unit.enums2) {
           addInterfaceElement(interfaceElement);
@@ -1441,13 +1441,11 @@ class _ReflectorDomain {
     } else {
       List<String> mapEntries = [];
       for (ConstructorElement constructor in classDomain._constructors) {
-        if (constructor.isFactory) {
-          var enclosingElement = constructor.enclosingElement3;
-          if (enclosingElement is MixinElement ||
-              (enclosingElement is ClassElement &&
-                  enclosingElement.isAbstract)) {
-            continue;
-          }
+        var enclosingElement = constructor.enclosingElement3;
+        if (constructor.isFactory ||
+            ((enclosingElement is ClassElement &&
+                    !enclosingElement.isAbstract) &&
+                enclosingElement is! EnumElement)) {
           String code = await _constructorCode(constructor, importCollector);
           mapEntries.add("r'${constructor.name}': $code");
         }
