@@ -5314,7 +5314,7 @@ class MixinApplication implements ClassElement {
     required NullabilitySuffix nullabilitySuffix,
   }) =>
       InterfaceTypeImpl(
-          element: this,
+          element2: this,
           typeArguments: typeArguments,
           nullabilitySuffix: nullabilitySuffix);
 
