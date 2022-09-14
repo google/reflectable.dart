@@ -225,7 +225,7 @@ class Enumerator<T extends Object> {
 /// Hybrid data structure holding [InterfaceElement]s and supporting data.
 /// It holds three different data structures used to describe the set of
 /// classes under transformation. It holds an [Enumerator] named
-/// [classElements] which as a set-like data structure that also enables
+/// [interfaceElements] which as a set-like data structure that also enables
 /// clients to obtain unique indices for each member; it holds a map
 /// [elementToDomain] that maps each [InterfaceElement] to a corresponding
 /// [_ClassDomain]; and it holds a relation [mixinApplicationSupers] that
@@ -238,11 +238,11 @@ class Enumerator<T extends Object> {
 /// together in this class because they must remain consistent and hence all
 /// operations on them should be expressed in one location, namely this class.
 /// Note that this data structure can delegate all read-only operations to
-/// the [classElements], because they will not break consistency, but for every
-/// mutating method we need to maintain the invariants.
+/// the [interfaceElements], because they will not break consistency, but for
+/// every mutating method we need to maintain the invariants.
 class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
   final _ReflectorDomain reflectorDomain;
-  final Enumerator<InterfaceElement> classElements =
+  final Enumerator<InterfaceElement> interfaceElements =
       Enumerator<InterfaceElement>();
   final Map<InterfaceElement, _ClassDomain> elementToDomain =
       <InterfaceElement, _ClassDomain>{};
@@ -262,7 +262,7 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
 
   @override
   Iterable<T> map<T>(T Function(InterfaceElement) f) =>
-      classElements.items.map<T>(f);
+      interfaceElements.items.map<T>(f);
 
   @override
   Set<R> cast<R>() {
@@ -272,7 +272,7 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
 
   @override
   Iterable<InterfaceElement> where(bool Function(InterfaceElement) f) {
-    return classElements.items.where(f);
+    return interfaceElements.items.where(f);
   }
 
   @override
@@ -286,61 +286,65 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
 
   @override
   Iterable<T> expand<T>(Iterable<T> Function(InterfaceElement) f) {
-    return classElements.items.expand<T>(f);
+    return interfaceElements.items.expand<T>(f);
   }
 
   @override
   void forEach(void Function(InterfaceElement) f) =>
-      classElements.items.forEach(f);
+      interfaceElements.items.forEach(f);
 
   @override
   InterfaceElement reduce(
       InterfaceElement Function(InterfaceElement, InterfaceElement) combine) {
-    return classElements.items.reduce(combine);
+    return interfaceElements.items.reduce(combine);
   }
 
   @override
   T fold<T>(T initialValue, T Function(T, InterfaceElement) combine) {
-    return classElements.items.fold<T>(initialValue, combine);
+    return interfaceElements.items.fold<T>(initialValue, combine);
   }
 
   @override
-  bool every(bool Function(InterfaceElement) f) => classElements.items.every(f);
+  bool every(bool Function(InterfaceElement) f) =>
+      interfaceElements.items.every(f);
 
   @override
-  String join([String separator = '']) => classElements.items.join(separator);
+  String join([String separator = '']) =>
+      interfaceElements.items.join(separator);
 
   @override
-  bool any(bool Function(InterfaceElement) f) => classElements.items.any(f);
+  bool any(bool Function(InterfaceElement) f) => interfaceElements.items.any(f);
 
   @override
   List<InterfaceElement> toList({bool growable = true}) {
-    return classElements.items.toList(growable: growable);
+    return interfaceElements.items.toList(growable: growable);
   }
 
   @override
-  int get length => classElements.items.length;
+  int get length => interfaceElements.items.length;
 
   @override
-  bool get isEmpty => classElements.items.isEmpty;
+  bool get isEmpty => interfaceElements.items.isEmpty;
 
   @override
-  bool get isNotEmpty => classElements.items.isNotEmpty;
+  bool get isNotEmpty => interfaceElements.items.isNotEmpty;
 
   @override
-  Iterable<InterfaceElement> take(int count) => classElements.items.take(count);
+  Iterable<InterfaceElement> take(int count) =>
+      interfaceElements.items.take(count);
 
   @override
   Iterable<InterfaceElement> takeWhile(bool Function(InterfaceElement) test) {
-    return classElements.items.takeWhile(test);
+    return interfaceElements.items.takeWhile(test);
   }
 
   @override
-  Iterable<InterfaceElement> skip(int count) => classElements.items.skip(count);
+  Iterable<InterfaceElement> skip(int count) =>
+      interfaceElements.items.skip(count);
 
   @override
   Iterable<InterfaceElement> skipWhile(bool Function(InterfaceElement) test) {
-    return classElements.items.skipWhile(test);
+    return interfaceElements.items.skipWhile(test);
   }
 
   @override
@@ -351,45 +355,46 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
   }
 
   @override
-  InterfaceElement get first => classElements.items.first;
+  InterfaceElement get first => interfaceElements.items.first;
 
   @override
-  InterfaceElement get last => classElements.items.last;
+  InterfaceElement get last => interfaceElements.items.last;
 
   @override
-  InterfaceElement get single => classElements.items.single;
+  InterfaceElement get single => interfaceElements.items.single;
 
   @override
   InterfaceElement firstWhere(bool Function(InterfaceElement) test,
       {InterfaceElement Function()? orElse}) {
-    return classElements.items.firstWhere(test, orElse: orElse);
+    return interfaceElements.items.firstWhere(test, orElse: orElse);
   }
 
   @override
   InterfaceElement lastWhere(bool Function(InterfaceElement) test,
       {InterfaceElement Function()? orElse}) {
-    return classElements.items.lastWhere(test, orElse: orElse);
+    return interfaceElements.items.lastWhere(test, orElse: orElse);
   }
 
   @override
   InterfaceElement singleWhere(bool Function(InterfaceElement) test,
       {InterfaceElement Function()? orElse}) {
-    return classElements.items.singleWhere(test);
+    return interfaceElements.items.singleWhere(test);
   }
 
   @override
-  InterfaceElement elementAt(int index) => classElements.items.elementAt(index);
+  InterfaceElement elementAt(int index) =>
+      interfaceElements.items.elementAt(index);
 
   @override
-  Iterator<InterfaceElement> get iterator => classElements.items.iterator;
+  Iterator<InterfaceElement> get iterator => interfaceElements.items.iterator;
 
   @override
-  bool contains(Object? value) => classElements.items.contains(value);
+  bool contains(Object? value) => interfaceElements.items.contains(value);
 
   @override
   bool add(InterfaceElement value) {
     assert(!_unmodifiable);
-    bool result = classElements.add(value);
+    bool result = interfaceElements.add(value);
     if (result) {
       assert(!elementToDomain.containsKey(value));
       elementToDomain[value] = _createClassDomain(value, reflectorDomain);
@@ -414,8 +419,8 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
   @override
   bool remove(Object? value) {
     assert(!_unmodifiable);
-    bool result = classElements._contains(value);
-    classElements._map.remove(value);
+    bool result = interfaceElements._contains(value);
+    interfaceElements._map.remove(value);
     if (result) {
       assert(elementToDomain.containsKey(value));
       elementToDomain.remove(value);
@@ -431,7 +436,7 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
 
   @override
   InterfaceElement? lookup(Object? object) {
-    for (InterfaceElement classElement in classElements._map.keys) {
+    for (InterfaceElement classElement in interfaceElements._map.keys) {
       if (object == classElement) return classElement;
     }
     return null;
@@ -449,7 +454,7 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
   @override
   void removeWhere(bool Function(InterfaceElement) test) {
     var toRemove = <InterfaceElement>{};
-    for (InterfaceElement classElement in classElements.items) {
+    for (InterfaceElement classElement in interfaceElements.items) {
       if (test(classElement)) toRemove.add(classElement);
     }
     removeAll(toRemove);
@@ -463,28 +468,28 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
 
   @override
   bool containsAll(Iterable<Object?> other) {
-    return classElements.items.toSet().containsAll(other);
+    return interfaceElements.items.toSet().containsAll(other);
   }
 
   @override
   Set<InterfaceElement> intersection(Set<Object?> other) {
-    return classElements.items.toSet().intersection(other);
+    return interfaceElements.items.toSet().intersection(other);
   }
 
   @override
   Set<InterfaceElement> union(Set<InterfaceElement> other) {
-    return classElements.items.toSet().union(other);
+    return interfaceElements.items.toSet().union(other);
   }
 
   @override
   Set<InterfaceElement> difference(Set<Object?> other) {
-    return classElements.items.toSet().difference(other);
+    return interfaceElements.items.toSet().difference(other);
   }
 
   @override
   void clear() {
     assert(!_unmodifiable);
-    classElements.clear();
+    interfaceElements.clear();
     elementToDomain.clear();
   }
 
@@ -529,7 +534,7 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
   /// Returns the index of the given [classElement] if it is contained
   /// in this [_InterfaceElementEnhancedSet], otherwise [null].
   int? indexOf(Object classElement) {
-    return classElements.indexOf(classElement);
+    return interfaceElements.indexOf(classElement);
   }
 
   Iterable<_ClassDomain> get domains => elementToDomain.values;
@@ -1356,7 +1361,7 @@ class _ReflectorDomain {
       Map<LibraryElement, _LibraryDomain> libraryMap,
       _ImportCollector importCollector,
       Map<FunctionType, int> typedefs) async {
-    int descriptor = _classDescriptor(classDomain._classElement);
+    int descriptor = _classDescriptor(classDomain._interfaceElement);
 
     // Fields go first in [memberMirrors], so they will get the
     // same index as in [fields].
@@ -1417,8 +1422,9 @@ class _ReflectorDomain {
       }));
     }
 
-    InterfaceElement classElement = classDomain._classElement;
-    InterfaceElement? superclass = (await classes).superclassOf(classElement);
+    InterfaceElement interfaceElement = classDomain._interfaceElement;
+    InterfaceElement? superclass =
+        (await classes).superclassOf(interfaceElement);
 
     String superclassIndex = '${constants.noCapabilityIndex}';
     if (_capabilities._impliesTypeRelations) {
@@ -1427,8 +1433,8 @@ class _ReflectorDomain {
       // convention we make it supported and report it in the same way as
       // 'dart:mirrors'. Other superclasses use `noCapabilityIndex` to
       // indicate missing support.
-      superclassIndex = (classElement is! MixinApplication &&
-              _typeForReflectable(classElement).isDartCoreObject)
+      superclassIndex = (interfaceElement is! MixinApplication &&
+              _typeForReflectable(interfaceElement).isDartCoreObject)
           ? 'null'
           : ((await classes).contains(superclass))
               ? '${(await classes).indexOf(superclass!)}'
@@ -1436,7 +1442,7 @@ class _ReflectorDomain {
     }
 
     String constructorsCode;
-    if (classElement is MixinApplication) {
+    if (interfaceElement is MixinApplication) {
       constructorsCode = 'const {}';
     } else {
       List<String> mapEntries = [];
@@ -1455,18 +1461,18 @@ class _ReflectorDomain {
 
     String staticGettersCode = 'const {}';
     String staticSettersCode = 'const {}';
-    if (classElement is! MixinApplication) {
+    if (interfaceElement is! MixinApplication) {
       List<String> staticGettersCodeList = [];
       for (MethodElement method in classDomain._declaredMethods) {
         if (method.isStatic) {
           staticGettersCodeList.add(await _staticGettingClosure(
-              importCollector, classElement, method.name));
+              importCollector, interfaceElement, method.name));
         }
       }
       for (PropertyAccessorElement accessor in classDomain._accessors) {
         if (accessor.isStatic && accessor.isGetter) {
           staticGettersCodeList.add(await _staticGettingClosure(
-              importCollector, classElement, accessor.name));
+              importCollector, interfaceElement, accessor.name));
         }
       }
       staticGettersCode = _formatAsMap(staticGettersCodeList);
@@ -1474,7 +1480,7 @@ class _ReflectorDomain {
       for (PropertyAccessorElement accessor in classDomain._accessors) {
         if (accessor.isStatic && accessor.isSetter) {
           staticSettersCodeList.add(await _staticSettingClosure(
-              importCollector, classElement, accessor.name));
+              importCollector, interfaceElement, accessor.name));
         }
       }
       staticSettersCode = _formatAsMap(staticSettersCodeList);
@@ -1483,15 +1489,16 @@ class _ReflectorDomain {
     int? mixinIndex = constants.noCapabilityIndex;
     if (_capabilities._impliesTypeRelations) {
       var theClasses = await classes;
-      if (classElement is MixinApplication && classElement.isMixinApplication) {
+      if (interfaceElement is MixinApplication &&
+          interfaceElement.isMixinApplication) {
         // Named mixin application (using the syntax `class B = A with M;`).
-        mixinIndex = theClasses.indexOf(classElement.mixins.last.element2);
-      } else if (classElement is MixinApplication) {
+        mixinIndex = theClasses.indexOf(interfaceElement.mixins.last.element2);
+      } else if (interfaceElement is MixinApplication) {
         // Anonymous mixin application.
-        mixinIndex = theClasses.indexOf(classElement.mixin);
+        mixinIndex = theClasses.indexOf(interfaceElement.mixin);
       } else {
         // No mixins, by convention we use the class itself.
-        mixinIndex = theClasses.indexOf(classElement);
+        mixinIndex = theClasses.indexOf(interfaceElement);
       }
       // We may not have support for the given class, in which case we must
       // correct the `null` from `indexOf` to indicate missing capability.
@@ -1499,7 +1506,7 @@ class _ReflectorDomain {
     }
 
     int ownerIndex = _capabilities._supportsLibraries
-        ? libraries.indexOf(libraryMap[classElement.library]!)!
+        ? libraries.indexOf(libraryMap[interfaceElement.library]!)!
         : constants.noCapabilityIndex;
 
     String superinterfaceIndices =
@@ -1507,7 +1514,7 @@ class _ReflectorDomain {
     if (_capabilities._impliesTypeRelations) {
       superinterfaceIndices = _formatAsConstList(
           'int',
-          classElement.interfaces
+          interfaceElement.interfaces
               .map((InterfaceType type) => type.element2)
               .where((await classes).contains)
               .map((await classes).indexOf));
@@ -1516,12 +1523,12 @@ class _ReflectorDomain {
     String classMetadataCode;
     if (_capabilities._supportsMetadata) {
       classMetadataCode = await _extractMetadataCode(
-          classElement, _resolver, importCollector, _generatedLibraryId);
+          interfaceElement, _resolver, importCollector, _generatedLibraryId);
     } else {
       classMetadataCode = 'null';
     }
 
-    int classIndex = (await classes).indexOf(classElement)!;
+    int classIndex = (await classes).indexOf(interfaceElement)!;
 
     String parameterListShapesCode = 'null';
     if (_capabilities._impliesParameterListShapes) {
@@ -1539,9 +1546,9 @@ class _ReflectorDomain {
       }));
     }
 
-    if (classElement.typeParameters.isEmpty) {
+    if (interfaceElement.typeParameters.isEmpty) {
       return "r.NonGenericClassMirrorImpl(r'${classDomain._simpleName}', "
-          "r'${_qualifiedName(classElement)}', $descriptor, $classIndex, "
+          "r'${_qualifiedName(interfaceElement)}', $descriptor, $classIndex, "
           '${await _constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
@@ -1555,16 +1562,17 @@ class _ReflectorDomain {
       // `List<dynamic>`), and not an instance of any of its immediate subtypes,
       // if any. [isCheckCode] is a function which will test that its argument
       // (1) `is` an instance of the fully dynamic instance of the generic
-      // class modeled by [classElement], and (2) that it is not an instance
+      // class modeled by [interfaceElement], and (2) that it is not an instance
       // of the fully dynamic instance of any of the classes that `extends` or
-      // `implements` this [classElement].
+      // `implements` this [interfaceElement].
       List<String> isCheckList = [];
-      if (classElement.isPrivate ||
-          classElement is MixinElement ||
-          (classElement is ClassElement && classElement.isAbstract) ||
-          (classElement is MixinApplication &&
-              !classElement.isMixinApplication) ||
-          !await _isImportable(classElement, _generatedLibraryId, _resolver)) {
+      if (interfaceElement.isPrivate ||
+          interfaceElement is MixinElement ||
+          (interfaceElement is ClassElement && interfaceElement.isAbstract) ||
+          (interfaceElement is MixinApplication &&
+              !interfaceElement.isMixinApplication) ||
+          !await _isImportable(
+              interfaceElement, _generatedLibraryId, _resolver)) {
         // Note that this location is dead code until we get support for
         // anonymous mixin applications using type arguments as generic
         // classes (currently, no classes will pass the tests above). See
@@ -1573,14 +1581,14 @@ class _ReflectorDomain {
         // no object can be an instance of an anonymous mixin application.
         isCheckList.add('(o) => false');
       } else {
-        String prefix = importCollector._getPrefix(classElement.library);
-        isCheckList.add('(o) { return o is $prefix${classElement.name}');
+        String prefix = importCollector._getPrefix(interfaceElement.library);
+        isCheckList.add('(o) { return o is $prefix${interfaceElement.name}');
 
-        // Add 'is checks' to [list], based on [classElement].
+        // Add 'is checks' to [list], based on [interfaceElement].
         Future<void> helper(
-            List<String> list, InterfaceElement classElement) async {
+            List<String> list, InterfaceElement interfaceElement) async {
           Iterable<InterfaceElement> subtypes =
-              _world.subtypes[classElement] ?? <InterfaceElement>[];
+              _world.subtypes[interfaceElement] ?? <InterfaceElement>[];
           for (InterfaceElement subtype in subtypes) {
             if (subtype.isPrivate ||
                 subtype is MixinElement ||
@@ -1595,7 +1603,7 @@ class _ReflectorDomain {
           }
         }
 
-        await helper(isCheckList, classElement);
+        await helper(isCheckList, interfaceElement);
         isCheckList.add('; }');
       }
       String isCheckCode = isCheckList.join();
@@ -1606,20 +1614,20 @@ class _ReflectorDomain {
             typeParameters.indexOf(typeParameter)! + typeParametersOffset;
         typeParameterIndices = _formatAsConstList(
             'int',
-            classElement.typeParameters
+            interfaceElement.typeParameters
                 .where(typeParameters.items.contains)
                 .map(indexOf));
       }
 
       int? dynamicReflectedTypeIndex = _dynamicTypeCodeIndex(
-          _typeForReflectable(classElement),
+          _typeForReflectable(interfaceElement),
           await classes,
           reflectedTypes,
           reflectedTypesOffset,
           typedefs);
 
       return "r.GenericClassMirrorImpl(r'${classDomain._simpleName}', "
-          "r'${_qualifiedName(classElement)}', $descriptor, $classIndex, "
+          "r'${_qualifiedName(interfaceElement)}', $descriptor, $classIndex, "
           '${await _constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
           '$superclassIndex, $staticGettersCode, $staticSettersCode, '
@@ -2385,9 +2393,9 @@ class _SubtypesFixedPoint extends FixedPoint<InterfaceElement> {
   /// Returns all the immediate subtypes of the given [classMirror].
   @override
   Future<Iterable<InterfaceElement>> successors(
-      final InterfaceElement classElement) async {
-    Iterable<InterfaceElement>? classElements = subtypes[classElement];
-    return classElements ?? <InterfaceElement>[];
+      final InterfaceElement interfaceElement) async {
+    Iterable<InterfaceElement>? interfaceElements = subtypes[interfaceElement];
+    return interfaceElements ?? <InterfaceElement>[];
   }
 }
 
@@ -2430,7 +2438,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement> {
       result.add(workingSuperclass);
     }
 
-    // Create the chain of mixin applications between [classElement] and the
+    // Create the chain of mixin applications between [interfaceElement] and the
     // next non-mixin-application class that it extends. If [mixinsRequested]
     // then for each mixin application add the class [mixinClass] which was
     // applied as a mixin (it is then considered as yet another superclass).
@@ -2466,24 +2474,24 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement> {
     return result;
   }
 
-  bool _includedByUpwardsClosure(InterfaceElement classElement) {
+  bool _includedByUpwardsClosure(InterfaceElement interfaceElement) {
     bool helper(InterfaceElement interfaceElement, bool direct) {
       bool isSuperclassOfInterfaceElement(InterfaceElement bound) {
         if (interfaceElement == bound) {
           // If `!direct` then the desired subclass relation exists.
-          // If `direct` then the original `classElement` is equal to
+          // If `direct` then the original `interfaceElement` is equal to
           // `bound`, so we must return false if `excludeUpperBound`.
           return !direct || !upwardsClosureBounds[bound]!;
         }
-        var classElementSupertype = interfaceElement.supertype;
-        if (classElementSupertype == null) return false;
-        return helper(classElementSupertype.element2, false);
+        var interfaceElementSupertype = interfaceElement.supertype;
+        if (interfaceElementSupertype == null) return false;
+        return helper(interfaceElementSupertype.element2, false);
       }
 
       return upwardsClosureBounds.keys.any(isSuperclassOfInterfaceElement);
     }
 
-    return upwardsClosureBounds.isEmpty || helper(classElement, true);
+    return upwardsClosureBounds.isEmpty || helper(interfaceElement, true);
   }
 }
 
@@ -2492,10 +2500,10 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement> {
 Set<InterfaceElement> _mixinApplicationsOfClasses(
     Set<InterfaceElement> classes) {
   var mixinApplications = <InterfaceElement>{};
-  for (InterfaceElement classElement in classes) {
+  for (InterfaceElement interfaceElement in classes) {
     // Mixin-applications are handled when they are created.
-    if (classElement is MixinApplication) continue;
-    InterfaceType? supertype = classElement.supertype;
+    if (interfaceElement is MixinApplication) continue;
+    InterfaceType? supertype = interfaceElement.supertype;
     if (supertype == null) continue; // "Superclass of [Object]", ignore.
     var superclass = supertype.element2;
     // Note that we iterate from the most general mixin to more specific ones,
@@ -2504,17 +2512,18 @@ Set<InterfaceElement> _mixinApplicationsOfClasses(
     // new [MixinApplication] created.  We must provide the immediate subclass
     // of each [MixinApplication] when it is a regular class (not a mixin
     // application), otherwise [null], which is done with [subClass].
-    for (var mixin in classElement.mixins) {
+    for (var mixin in interfaceElement.mixins) {
       var mixinClass = mixin.element2;
       InterfaceElement? subClass =
-          mixin == classElement.mixins.last ? classElement : null;
+          mixin == interfaceElement.mixins.last ? interfaceElement : null;
       String? name = subClass == null
           ? null
-          : (classElement is MixinApplication && classElement.isMixinApplication
-              ? classElement.name
+          : (interfaceElement is MixinApplication &&
+                  interfaceElement.isMixinApplication
+              ? interfaceElement.name
               : null);
       InterfaceElement mixinApplication = MixinApplication(
-          name, superclass, mixinClass, classElement.library, subClass);
+          name, superclass, mixinClass, interfaceElement.library, subClass);
       mixinApplications.add(mixinApplication);
       superclass = mixinApplication;
     }
@@ -2543,14 +2552,14 @@ class _AnnotationClassFixedPoint extends FixedPoint<InterfaceElement> {
   /// type annotations of covered variables and parameters of covered methods,
   @override
   Future<Iterable<InterfaceElement>> successors(
-      InterfaceElement classElement) async {
-    if (!await _isImportable(classElement, generatedLibraryId, resolver)) {
+      InterfaceElement interfaceElement) async {
+    if (!await _isImportable(interfaceElement, generatedLibraryId, resolver)) {
       return [];
     }
-    _ClassDomain classDomain = elementToDomain(classElement);
+    _ClassDomain classDomain = elementToDomain(interfaceElement);
 
     // Mixin-applications do not add further methods and fields.
-    if (classDomain._classElement is MixinApplication) return [];
+    if (classDomain._interfaceElement is MixinApplication) return [];
 
     List<InterfaceElement> result = [];
 
@@ -2622,32 +2631,32 @@ String _settingClosure(String setterName) {
 
 // Auxiliary function used by `_generateCode`.
 Future<String> _staticGettingClosure(_ImportCollector importCollector,
-    InterfaceElement classElement, String getterName) async {
-  String className = classElement.name;
-  String prefix = importCollector._getPrefix(classElement.library);
+    InterfaceElement interfaceElement, String getterName) async {
+  String className = interfaceElement.name;
+  String prefix = importCollector._getPrefix(interfaceElement.library);
   // Operators cannot be static.
   if (_isPrivateName(getterName)) {
-    await _severe('Cannot access private name $getterName', classElement);
+    await _severe('Cannot access private name $getterName', interfaceElement);
   }
   if (_isPrivateName(className)) {
-    await _severe('Cannot access private name $className', classElement);
+    await _severe('Cannot access private name $className', interfaceElement);
   }
   return "r'$getterName': () => $prefix$className.$getterName";
 }
 
 // Auxiliary function used by `_generateCode`.
 Future<String> _staticSettingClosure(_ImportCollector importCollector,
-    InterfaceElement classElement, String setterName) async {
+    InterfaceElement interfaceElement, String setterName) async {
   assert(setterName.substring(setterName.length - 1) == '=');
   // The [setterName] includes the '=', remove it.
   String name = setterName.substring(0, setterName.length - 1);
-  String className = classElement.name;
-  String prefix = importCollector._getPrefix(classElement.library);
+  String className = interfaceElement.name;
+  String prefix = importCollector._getPrefix(interfaceElement.library);
   if (_isPrivateName(setterName)) {
-    await _severe('Cannot access private name $setterName', classElement);
+    await _severe('Cannot access private name $setterName', interfaceElement);
   }
   if (_isPrivateName(className)) {
-    await _severe('Cannot access private name $className', classElement);
+    await _severe('Cannot access private name $className', interfaceElement);
   }
   return "r'$setterName': (dynamic value) => $prefix$className.$name = value";
 }
@@ -2717,7 +2726,7 @@ class _LibraryDomain {
       this._reflectorDomain);
 
   /// Returns the declared methods, accessors and constructors in
-  /// [_classElement]. Note that this includes synthetic getters and
+  /// [_interfaceElement]. Note that this includes synthetic getters and
   /// setters, and omits fields; in other words, it provides the
   /// behavioral point of view on the class. Also note that this is not
   /// the same semantics as that of `declarations` in [ClassMirror].
@@ -2748,31 +2757,31 @@ class _LibraryDomain {
 /// Information about reflectability for a given class.
 class _ClassDomain {
   /// Element describing the target class.
-  final InterfaceElement _classElement;
+  final InterfaceElement _interfaceElement;
 
-  /// Fields declared by [_classElement] and included for reflection support,
+  /// Fields declared by [_interfaceElement] and included for reflection support,
   /// according to the reflector described by the [_reflectorDomain];
-  /// obtained by filtering `_classElement.fields`.
+  /// obtained by filtering `_interfaceElement.fields`.
   final Iterable<FieldElement> _declaredFields;
 
-  /// Methods which are declared by [_classElement] and included for
+  /// Methods which are declared by [_interfaceElement] and included for
   /// reflection support, according to the reflector described by
-  /// [reflectorDomain]; obtained by filtering `_classElement.methods`.
+  /// [reflectorDomain]; obtained by filtering `_interfaceElement.methods`.
   final Iterable<MethodElement> _declaredMethods;
 
   /// Formal parameters declared by one of the [_declaredMethods].
   final Iterable<ParameterElement> _declaredParameters;
 
-  /// Getters and setters possessed by [_classElement] and included for
+  /// Getters and setters possessed by [_interfaceElement] and included for
   /// reflection support, according to the reflector described by
-  /// [reflectorDomain]; obtained by filtering `_classElement.accessors`.
+  /// [reflectorDomain]; obtained by filtering `_interfaceElement.accessors`.
   /// Note that it includes declared as well as synthetic accessors,
   /// implicitly created as getters/setters for fields.
   final Iterable<PropertyAccessorElement> _accessors;
 
-  /// Constructors declared by [_classElement] and included for reflection
+  /// Constructors declared by [_interfaceElement] and included for reflection
   /// support, according to the reflector described by [_reflectorDomain];
-  /// obtained by filtering `_classElement.constructors`.
+  /// obtained by filtering `_interfaceElement.constructors`.
   final Iterable<ConstructorElement> _constructors;
 
   /// The reflector domain that holds [this] object as one of its
@@ -2780,7 +2789,7 @@ class _ClassDomain {
   final _ReflectorDomain _reflectorDomain;
 
   _ClassDomain(
-      this._classElement,
+      this._interfaceElement,
       this._declaredFields,
       this._declaredMethods,
       this._declaredParameters,
@@ -2791,17 +2800,18 @@ class _ClassDomain {
   String get _simpleName {
     // TODO(eernst) clarify: Decide whether this should be simplified
     // by adding a method implementation to `MixinApplication`.
-    var classElement = _classElement;
-    if (classElement is MixinApplication && classElement.isMixinApplication) {
+    var interfaceElement = _interfaceElement;
+    if (interfaceElement is MixinApplication &&
+        interfaceElement.isMixinApplication) {
       // This is the case `class B = A with M;`.
-      return classElement.name;
-    } else if (classElement is MixinApplication) {
+      return interfaceElement.name;
+    } else if (interfaceElement is MixinApplication) {
       // This is the case `class B extends A with M1, .. Mk {..}`
-      // where `classElement` denotes one of the mixin applications
+      // where `interfaceElement` denotes one of the mixin applications
       // that constitute the superclass chain between `B` and `A`, both
       // excluded.
-      List<InterfaceType> mixins = classElement.mixins;
-      var superclassType = classElement.supertype as InterfaceType;
+      List<InterfaceType> mixins = interfaceElement.mixins;
+      var superclassType = interfaceElement.supertype as InterfaceType;
       var superclassTypeElement = superclassType.element2;
       String superclassName = _qualifiedName(superclassTypeElement);
       StringBuffer name = StringBuffer(superclassName);
@@ -2814,12 +2824,12 @@ class _ClassDomain {
       return name.toString();
     } else {
       // This is a regular class, i.e., we can use its declared name.
-      return classElement.name;
+      return interfaceElement.name;
     }
   }
 
   /// Returns the declared methods, accessors and constructors in
-  /// [_classElement]. Note that this includes synthetic getters and
+  /// [_interfaceElement]. Note that this includes synthetic getters and
   /// setters, and omits fields; in other words, it provides the
   /// behavioral point of view on the class. Also note that this is not
   /// the same semantics as that of `declarations` in [ClassMirror].
@@ -2888,7 +2898,7 @@ class _ClassDomain {
       return result;
     }
 
-    return helper(_classElement).values;
+    return helper(_interfaceElement).values;
   }
 
   /// Finds all parameters of instance members.
@@ -2905,7 +2915,7 @@ class _ClassDomain {
   /// Finds all static members.
   Iterable<ExecutableElement> get _staticMembers {
     List<ExecutableElement> result = <ExecutableElement>[];
-    if (_classElement is MixinApplication) return result;
+    if (_interfaceElement is MixinApplication) return result;
 
     void possiblyAddMethod(MethodElement method) {
       if (method.isStatic &&
@@ -2939,14 +2949,14 @@ class _ClassDomain {
       }
     }
 
-    _classElement.methods.forEach(possiblyAddMethod);
-    _classElement.accessors.forEach(possiblyAddAccessor);
+    _interfaceElement.methods.forEach(possiblyAddMethod);
+    _interfaceElement.accessors.forEach(possiblyAddAccessor);
     return result;
   }
 
   @override
   String toString() {
-    return 'ClassDomain($_classElement)';
+    return 'ClassDomain($_interfaceElement)';
   }
 }
 
@@ -3617,7 +3627,7 @@ class BuilderImplementation {
                   continue;
                 }
               }
-              if (metadataFieldValue is ClassElement) {
+              if (metadataFieldValue is InterfaceElement) {
                 globalMetadata
                     .putIfAbsent(metadataFieldValue, () => <InterfaceElement>[])
                     .add(reflector);
@@ -4408,8 +4418,8 @@ int _classDescriptor(InterfaceElement element) {
   int result = constants.clazz;
   if (element.isPrivate) result |= constants.privateAttribute;
   if (element.isSynthetic) result |= constants.syntheticAttribute;
-  if (element is MixinElement ||
-      (element is ClassElement && element.isAbstract)) {
+  if (element is MixinElement && element.isAbstract ||
+      element is ClassElement && element.isAbstract) {
     result |= constants.abstractAttribute;
   }
   if (element is EnumElement) result |= constants.enumAttribute;
@@ -5110,26 +5120,26 @@ typedef CapabilityChecker = bool Function(
     Iterable<ElementAnnotation> metadata,
     Iterable<ElementAnnotation>? getterMetadata);
 
-/// Returns the declared fields in the given [classElement], filtered such
+/// Returns the declared fields in the given [interfaceElement], filtered such
 /// that the returned ones are the ones that are supported by [capabilities].
 Iterable<FieldElement> _extractDeclaredFields(Resolver resolver,
-    InterfaceElement classElement, _Capabilities capabilities) {
-  return classElement.fields.where((FieldElement field) {
+    InterfaceElement interfaceElement, _Capabilities capabilities) {
+  return interfaceElement.fields.where((FieldElement field) {
     if (field.isPrivate) return false;
     CapabilityChecker capabilityChecker = field.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
     return !field.isSynthetic &&
-        capabilityChecker(
-            classElement.library.typeSystem, field.name, field.metadata, null);
+        capabilityChecker(interfaceElement.library.typeSystem, field.name,
+            field.metadata, null);
   });
 }
 
-/// Returns the declared methods in the given [classElement], filtered such
+/// Returns the declared methods in the given [interfaceElement], filtered such
 /// that the returned ones are the ones that are supported by [capabilities].
 Iterable<MethodElement> _extractDeclaredMethods(Resolver resolver,
-    InterfaceElement classElement, _Capabilities capabilities) {
-  return classElement.methods.where((MethodElement method) {
+    InterfaceElement interfaceElement, _Capabilities capabilities) {
+  return interfaceElement.methods.where((MethodElement method) {
     if (method.isPrivate) return false;
     CapabilityChecker capabilityChecker = method.isStatic
         ? capabilities.supportsStaticInvoke
@@ -5192,7 +5202,7 @@ Iterable<PropertyAccessorElement> _extractLibraryAccessors(Resolver resolver,
 }
 
 /// Returns the [PropertyAccessorElement]s which are the accessors
-/// of the given [classElement], including both the declared ones
+/// of the given [interfaceElement], including both the declared ones
 /// and the implicitly generated ones corresponding to fields. This
 /// is the set of accessors that corresponds to the behavioral interface
 /// of the corresponding instances, as opposed to the source code oriented
@@ -5200,8 +5210,8 @@ Iterable<PropertyAccessorElement> _extractLibraryAccessors(Resolver resolver,
 /// here, by filtering out the accessors whose `isSynthetic` is true
 /// and adding the fields.
 Iterable<PropertyAccessorElement> _extractAccessors(Resolver resolver,
-    InterfaceElement classElement, _Capabilities capabilities) {
-  return classElement.accessors.where((PropertyAccessorElement accessor) {
+    InterfaceElement interfaceElement, _Capabilities capabilities) {
+  return interfaceElement.accessors.where((PropertyAccessorElement accessor) {
     if (accessor.isPrivate) return false;
     // TODO(eernst) implement: refactor treatment of `getterMetadata`
     // such that we avoid passing in `null` at all call sites except one,
@@ -5225,14 +5235,14 @@ Iterable<PropertyAccessorElement> _extractAccessors(Resolver resolver,
   });
 }
 
-/// Returns the declared constructors from [classElement], filtered such that
+/// Returns the declared constructors from [interfaceElement], filtered such that
 /// the returned ones are the ones that are supported by [capabilities].
 Iterable<ConstructorElement> _extractDeclaredConstructors(
     Resolver resolver,
     LibraryElement libraryElement,
-    InterfaceElement classElement,
+    InterfaceElement interfaceElement,
     _Capabilities capabilities) {
-  return classElement.constructors.where((ConstructorElement constructor) {
+  return interfaceElement.constructors.where((ConstructorElement constructor) {
     if (constructor.isPrivate) return false;
     return capabilities.supportsNewInstance(constructor.library.typeSystem,
         constructor.name, constructor.metadata, libraryElement, resolver);
