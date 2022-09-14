@@ -38,8 +38,9 @@ void testReflector(Reflectable reflector, String desc) {
     expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
     expect(cMirror.superclass!.mixin, m3Mirror);
     expect(cMirror.superclass!.superclass!.superclass, bMirror);
-    expect(dMirror.mixin, m1Mirror);
-    expect(dMirror.superclass!.mixin, aMirror);
+    expect(dMirror.mixin, dMirror);
+    expect(dMirror.superclass!.mixin, m1Mirror);
+    expect(dMirror.superclass!.superclass!.mixin, aMirror);
     expect(bMirror.superclass!.declarations['foo']!.owner, m1Mirror);
     expect(bMirror.superclass!.declarations['field']!.owner, m1Mirror);
     expect(bMirror.superclass!.declarations['staticBar'], null);
@@ -94,7 +95,7 @@ void runTests() {
     var m3Mirror = reflector2.reflectType(M3) as ClassMirror;
     expect(bMirror.mixin, bMirror);
     expect(cMirror.mixin, cMirror);
-    expect(dMirror.mixin, m1Mirror);
+    expect(dMirror.mixin, dMirror);
     expect(m1Mirror.mixin, m1Mirror);
     // Test that metadata is preserved.
     expect(m1Mirror.metadata, contains(const P()));
@@ -109,7 +110,8 @@ void runTests() {
     expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
     expect(cMirror.superclass!.mixin, m3Mirror);
     expect(cMirror.superclass!.superclass!.superclass, bMirror);
-    expect(() => dMirror.superclass, throwsANoSuchCapabilityException);
+    expect(
+        () => dMirror.superclass!.superclass, throwsANoSuchCapabilityException);
   });
 
   test('MetaReflector, select by capability', () {
@@ -134,7 +136,8 @@ void runTests() {
     expect(cMirror.superclass!.mixin, m3Mirror);
     expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
     expect(cMirror.superclass!.superclass!.superclass, bMirror);
-    expect(dMirror.mixin, m1Mirror);
-    expect(dMirror.superclass, aMirror);
+    expect(dMirror.mixin, dMirror);
+    expect(dMirror.superclass!.mixin, m1Mirror);
+    expect(dMirror.superclass!.superclass, aMirror);
   });
 }
