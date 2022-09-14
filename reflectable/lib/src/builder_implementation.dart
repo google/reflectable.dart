@@ -5476,17 +5476,18 @@ class MixinApplication implements ClassElement {
   @override
   int get nameOffset => -1;
 
-  @override
-  bool get isAbstract {
-    if (!isMixinApplication) return true;
-    var mixin = this.mixin;
-    return mixin is MixinElement || (mixin is ClassElement && mixin.isAbstract);
-  }
-
   /// Returns true iff this class was declared using the syntax
   /// `class B = A with M;`, i.e., if it is an explicitly named mixin
   /// application.
   bool get isMixinApplication => declaredName != null;
+
+  @override
+  bool get isAbstract {
+    var mixin = this.mixin;
+    return !isMixinApplication ||
+        mixin is MixinElement && mixin.isAbstract ||
+        mixin is ClassElement && mixin.isAbstract;
+  }
 
   // This seems to be the defined behaviour according to dart:mirrors.
   @override
