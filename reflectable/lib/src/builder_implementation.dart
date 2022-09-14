@@ -3910,7 +3910,6 @@ class BuilderImplementation {
             allReflectors.add(type);
           }
         }
-        /* !!!TODO!!!
         for (EnumElement type in unit.enums2) {
           for (InterfaceElement reflector
               in await getReflectors(_qualifiedName(type), type.metadata)) {
@@ -3918,7 +3917,6 @@ class BuilderImplementation {
           }
           // An enum is never a reflector class, hence no `_isReflectorClass`.
         }
-        */
         for (FunctionElement function in unit.functions) {
           for (InterfaceElement reflector in await getReflectors(
               _qualifiedFunctionName(function), function.metadata)) {
