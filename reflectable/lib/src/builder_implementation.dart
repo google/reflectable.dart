@@ -2880,10 +2880,17 @@ class _ClassDomain {
         }
       }
 
+      Map<String, ExecutableElement> cacheResult(
+          Map<String, ExecutableElement> result) {
+        result = Map.unmodifiable(result);
+        _reflectorDomain._instanceMemberCache[interfaceElement] = result;
+        return result;
+      }
+
       if (interfaceElement is MixinApplication) {
         helper(interfaceElement.superclass).forEach(addIfCapable);
         helper(interfaceElement.mixin).forEach(addIfCapable);
-        return result;
+        return cacheResult(result);
       }
       var superclassType = interfaceElement.supertype;
       if (superclassType is InterfaceType) {
@@ -2893,9 +2900,7 @@ class _ClassDomain {
         interfaceElement.methods.forEach(addIfCapableConcreteInstance);
         interfaceElement.accessors.forEach(addIfCapableConcreteInstance);
       }
-      _reflectorDomain._instanceMemberCache[interfaceElement] =
-          Map.unmodifiable(result);
-      return result;
+      return cacheResult(result);
     }
 
     return helper(_interfaceElement).values;
