@@ -3632,26 +3632,9 @@ class BuilderImplementation {
                   continue;
                 }
               }
-              if (metadataFieldValue is InterfaceElement) {
-                globalMetadata
-                    .putIfAbsent(metadataFieldValue, () => <InterfaceElement>[])
-                    .add(reflector);
-              } else {
-                // TODO(eernst): We don't support non-class `Type` values.
-                // However, it might be (weirdly) useful to allow `dynamic` in
-                // order to cover _everything_ that has an annotation at all,
-                // and maybe other things like function types as metadata.
-                var metadataType = constantValue.getField('metadataType');
-                var metadataTypeType = metadataType?.type;
-                if (metadataTypeType is InterfaceType) {
-                  var typeName = metadataTypeType.element2.name;
-                  var message =
-                      'The metadata must be a class type. Found $typeName.';
-                  await _warn(
-                      WarningKind.badMetadata, message, metadatumElement);
-                }
-                continue;
-              }
+              globalMetadata
+                  .putIfAbsent(metadataFieldValue, () => <InterfaceElement>[])
+                  .add(reflector);
             }
           }
         }
@@ -5492,6 +5475,7 @@ class MixinApplication implements ClassElement {
   /// Returns true iff this class was declared using the syntax
   /// `class B = A with M;`, i.e., if it is an explicitly named mixin
   /// application.
+  @override
   bool get isMixinApplication => declaredName != null;
 
   @override
