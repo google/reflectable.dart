@@ -1,3 +1,7 @@
+## 3.0.10
+
+* Perform a minimal migration to use analyzer 4.6.0.
+
 ## 3.0.9
 
 * Add support for checking whether a `TypeMirror` is reflecting on a
