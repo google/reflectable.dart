@@ -2900,10 +2900,11 @@ class _ClassDomain {
       if (superclassType is InterfaceType) {
         var superclassElement = superclassType.element2;
         helper(superclassElement).forEach(addIfCapable);
-        interfaceElement.mixins.forEach(addTypeIfCapable);
-        interfaceElement.methods.forEach(addIfCapableConcreteInstance);
-        interfaceElement.accessors.forEach(addIfCapableConcreteInstance);
       }
+      interfaceElement.mixins.forEach(addTypeIfCapable);
+      interfaceElement.methods.forEach(addIfCapableConcreteInstance);
+      interfaceElement.accessors.forEach(addIfCapableConcreteInstance);
+
       return cacheResult(result);
     }
 
