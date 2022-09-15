@@ -1443,6 +1443,10 @@ class _ReflectorDomain {
 
     String constructorsCode;
     if (interfaceElement is MixinApplication) {
+      // There may be any number of constructors, but they are implicitly
+      // induced forwarding constructors, so it won't help anybody to be
+      // able to get to them. Also, we can't invoke them because the mixin
+      // application is an abstract class.
       constructorsCode = 'const {}';
     } else {
       List<String> mapEntries = [];
