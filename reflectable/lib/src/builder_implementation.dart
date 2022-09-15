@@ -4409,7 +4409,7 @@ int _classDescriptor(InterfaceElement element) {
   int result = constants.clazz;
   if (element.isPrivate) result |= constants.privateAttribute;
   if (element.isSynthetic) result |= constants.syntheticAttribute;
-  if (element is MixinElement && element.isAbstract ||
+  if (element is MixinElement ||
       element is ClassElement && element.isAbstract) {
     result |= constants.abstractAttribute;
   }
@@ -5487,7 +5487,7 @@ class MixinApplication implements ClassElement {
   bool get isAbstract {
     var mixin = this.mixin;
     return !isMixinApplication ||
-        mixin is MixinElement && mixin.isAbstract ||
+        mixin is MixinElement ||
         mixin is ClassElement && mixin.isAbstract;
   }
 
