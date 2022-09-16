@@ -225,21 +225,22 @@ class Enumerator<T extends Object> {
 /// Hybrid data structure holding [InterfaceElement]s and supporting data.
 /// It holds three different data structures used to describe the set of
 /// classes under transformation. It holds an [Enumerator] named
-/// [interfaceElements] which as a set-like data structure that also enables
+/// [interfaceElements] which is a set-like data structure that also enables
 /// clients to obtain unique indices for each member; it holds a map
 /// [elementToDomain] that maps each [InterfaceElement] to a corresponding
 /// [_ClassDomain]; and it holds a relation [mixinApplicationSupers] that
-/// maps each [InterfaceElement] which is a direct subclass of a mixin application
-/// to its superclass. The latter is needed because the analyzer representation
-/// of mixins and mixin applications makes it difficult to find a superclass
-/// which is a mixin application (`InterfaceElement.supertype` is the _syntactic_
-/// superclass, that is, for `class C extends B with M..` it is `B`, not the
-/// mixin application `B with M`). The three data structures are bundled
-/// together in this class because they must remain consistent and hence all
-/// operations on them should be expressed in one location, namely this class.
-/// Note that this data structure can delegate all read-only operations to
-/// the [interfaceElements], because they will not break consistency, but for
-/// every mutating method we need to maintain the invariants.
+/// maps each [InterfaceElement] which is a direct subclass of a mixin
+/// application to its superclass. The latter is needed because the analyzer
+/// representation of mixins and mixin applications makes it difficult to find
+/// a superclass which is a mixin application (`InterfaceElement.supertype` is
+/// the _syntactic_ superclass, that is, for `class C extends B with M..` it
+/// is `B`, not the mixin application `B with M`). The three data structures
+/// are bundled together in this class because they must remain consistent and
+/// hence all operations on them should be expressed in one location, namely
+/// this class. Note that this data structure can delegate all read-only
+/// operations to the [interfaceElements], because they will not break
+/// consistency, but for every mutating method we need to maintain the
+/// invariants.
 class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
   final _ReflectorDomain reflectorDomain;
   final Enumerator<InterfaceElement> interfaceElements =

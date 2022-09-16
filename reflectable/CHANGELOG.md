@@ -1,4 +1,4 @@
-## 3.1.0
+## 4.0.0
 
 * Update reflectable to use (and require) analyzer 5.0.0. This is a
   substantial update, because several analyzer members in the analyzer
@@ -16,10 +16,10 @@
   `class B extends A with M1, M2 {}`, where `mirror.superclass.mixin` is
   the natural way to obtain a mirror of `M2`). This is a breaking change, 
   but it only affects usages where there is a dependency on the exact 
-  superclass structure, and it seems likely that this is exceedingly rare
-  (we may well traverse all supertypes or all superclasses, but we are not
+  superclass structure, and it seems likely that this only happens rarely:
+  we may well traverse all supertypes or all superclasses, but we are not
   likely to do things like "go to the 5th superclass, find the mixin, and
-  check that it has a `foo` method"). Hence no new major version number.
+  check that it has a `foo` method".
 
 ## 3.0.10
 
