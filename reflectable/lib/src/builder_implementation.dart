@@ -91,17 +91,17 @@ class _ReflectionWorld {
       void addInterfaceElement(InterfaceElement interfaceElement) {
         InterfaceType? supertype = interfaceElement.supertype;
         if (interfaceElement.mixins.isEmpty) {
-          var supertypeElement = supertype?.element2;
+          var supertypeElement = supertype?.element;
           if (supertypeElement != null) {
             addSubtypeRelation(supertypeElement, interfaceElement);
           }
         } else {
           // Mixins must be applied to a superclass, so it is not null.
-          var superclass = supertype!.element2;
+          var superclass = supertype!.element;
           // Iterate over all mixins in most-general-first order (so with
           // `class C extends B with M1, M2..` we visit `M1` then `M2`.
           for (InterfaceType mixin in interfaceElement.mixins) {
-            var mixinElement = mixin.element2;
+            var mixinElement = mixin.element;
             InterfaceElement? subClass =
                 mixin == interfaceElement.mixins.last ? interfaceElement : null;
             String? name = subClass == null
@@ -121,7 +121,7 @@ class _ReflectionWorld {
           }
         }
         for (InterfaceType type in interfaceElement.interfaces) {
-          addSubtypeRelation(type.element2, interfaceElement);
+          addSubtypeRelation(type.element, interfaceElement);
         }
       }
 
@@ -129,7 +129,7 @@ class _ReflectionWorld {
         for (var interfaceElement in unit.classes) {
           addInterfaceElement(interfaceElement);
         }
-        for (var interfaceElement in unit.enums2) {
+        for (var interfaceElement in unit.enums) {
           addInterfaceElement(interfaceElement);
         }
       }
@@ -514,7 +514,7 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
     // returning [null] to indicate that a superclass is not covered, because
     // this method does not check coverage.
     if (classElement.mixins.isEmpty) {
-      return classElement.supertype?.element2;
+      return classElement.supertype?.element;
     }
     // [classElement] is now known to be a regular class whose superclass
     // is a mixin application. For each [MixinApplication] `m` we store, if it
@@ -713,7 +713,7 @@ class _ReflectorDomain {
     // would suppress an error in a very-hard-to-explain case, so that's safer
     // in a sense, but too weird.
     if (constructor.library.isDartCore &&
-        constructor.enclosingElement3.name == 'List' &&
+        constructor.enclosingElement.name == 'List' &&
         constructor.name == '') {
       return '(bool b) => ([length]) => '
           'b ? (length == null ? [] : List.filled(length, null)) : null';
@@ -957,7 +957,7 @@ class _ReflectorDomain {
               anyInterfaceElement = classElement;
             } else {
               if (typeParameterElementBound is InterfaceType) {
-                Element? boundElement = typeParameterElementBound.element2;
+                Element? boundElement = typeParameterElementBound.element;
                 if (boundElement is InterfaceElement) {
                   classesToAdd.add(boundElement);
                 }
@@ -971,7 +971,7 @@ class _ReflectorDomain {
         var someInterfaceElement = anyInterfaceElement!;
         while (!_typeForReflectable(someInterfaceElement).isDartCoreObject) {
           var someInterfaceType = someInterfaceElement.supertype;
-          someInterfaceElement = someInterfaceType!.element2;
+          someInterfaceElement = someInterfaceType!.element;
         }
         objectInterfaceElement = someInterfaceElement;
         await addClass(objectInterfaceElement);
@@ -1123,7 +1123,7 @@ class _ReflectorDomain {
       if (erasableDartType.erased) {
         var interfaceType = erasableDartType.dartType as InterfaceType;
         typesCodeList.add(
-            _dynamicTypeCodeOfClass(interfaceType.element2, importCollector));
+            _dynamicTypeCodeOfClass(interfaceType.element, importCollector));
       } else {
         typesCodeList.add(await _typeCodeOfClass(
             erasableDartType.dartType, importCollector, typedefs));
@@ -1188,7 +1188,7 @@ class _ReflectorDomain {
     var interfaceType = element.type;
     if (interfaceType is! InterfaceType) return constants.noCapabilityIndex;
     return await _computeTypeIndexBase(
-        interfaceType.element2,
+        interfaceType.element,
         descriptor & constants.voidAttribute != 0,
         descriptor & constants.dynamicAttribute != 0,
         descriptor & constants.neverAttribute != 0,
@@ -1222,7 +1222,7 @@ class _ReflectorDomain {
       Map<FunctionType, int> typedefs) async {
     if (dartType is InterfaceType) {
       List<TypeParameterElement> typeParameters =
-          dartType.element2.typeParameters;
+          dartType.element.typeParameters;
       if (typeParameters.isEmpty) {
         // We have no formal type parameters, so there cannot be any actual
         // type arguments.
@@ -1280,7 +1280,7 @@ class _ReflectorDomain {
     var interfaceType = element.returnType;
     if (interfaceType is! InterfaceType) return constants.noCapabilityIndex;
     int result = await _computeTypeIndexBase(
-        interfaceType.element2,
+        interfaceType.element,
         descriptor & constants.voidReturnTypeAttribute != 0,
         descriptor & constants.dynamicReturnTypeAttribute != 0,
         descriptor & constants.neverReturnTypeAttribute != 0,
@@ -1290,9 +1290,9 @@ class _ReflectorDomain {
 
   Future<int?> _computeOwnerIndex(
       ExecutableElement element, int descriptor) async {
-    if (element.enclosingElement3 is InterfaceElement) {
-      return (await classes).indexOf(element.enclosingElement3);
-    } else if (element.enclosingElement3 is CompilationUnitElement) {
+    if (element.enclosingElement is InterfaceElement) {
+      return (await classes).indexOf(element.enclosingElement);
+    } else if (element.enclosingElement is CompilationUnitElement) {
       return _libraries.indexOf(element.library);
     }
     await _severe('Unexpected kind of request for owner');
@@ -1329,14 +1329,14 @@ class _ReflectorDomain {
         upperBoundIndex = null;
       } else {
         if (bound is InterfaceType) {
-          upperBoundIndex = (await classes).indexOf(bound.element2);
+          upperBoundIndex = (await classes).indexOf(bound.element);
         } else {
           upperBoundIndex = constants.noCapabilityIndex;
         }
       }
     }
     int? ownerIndex =
-        (await classes).indexOf(typeParameterElement.enclosingElement3!);
+        (await classes).indexOf(typeParameterElement.enclosingElement!);
     // TODO(eernst) implement: Update when type variables support metadata.
     String metadataCode =
         _capabilities._supportsMetadata ? '<Object>[]' : 'null';
@@ -1452,7 +1452,7 @@ class _ReflectorDomain {
     } else {
       List<String> mapEntries = [];
       for (ConstructorElement constructor in classDomain._constructors) {
-        var enclosingElement = constructor.enclosingElement3;
+        var enclosingElement = constructor.enclosingElement;
         if (constructor.isFactory ||
             ((enclosingElement is ClassElement &&
                     !enclosingElement.isAbstract) &&
@@ -1497,7 +1497,7 @@ class _ReflectorDomain {
       if (interfaceElement is MixinApplication &&
           interfaceElement.isMixinApplication) {
         // Named mixin application (using the syntax `class B = A with M;`).
-        mixinIndex = theClasses.indexOf(interfaceElement.mixins.last.element2);
+        mixinIndex = theClasses.indexOf(interfaceElement.mixins.last.element);
       } else if (interfaceElement is MixinApplication) {
         // Anonymous mixin application.
         mixinIndex = theClasses.indexOf(interfaceElement.mixin);
@@ -1520,7 +1520,7 @@ class _ReflectorDomain {
       superinterfaceIndices = _formatAsConstList(
           'int',
           interfaceElement.interfaces
-              .map((InterfaceType type) => type.element2)
+              .map((InterfaceType type) => type.element)
               .where((await classes).contains)
               .map((await classes).indexOf));
     }
@@ -1771,7 +1771,7 @@ class _ReflectorDomain {
       Map<FunctionType, int> typedefs,
       bool reflectedTypeRequested) async {
     int descriptor = _fieldDescriptor(element);
-    int ownerIndex = (await classes).indexOf(element.enclosingElement3) ??
+    int ownerIndex = (await classes).indexOf(element.enclosingElement) ??
         constants.noCapabilityIndex;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int reflectedTypeIndex = reflectedTypeRequested
@@ -1827,7 +1827,7 @@ class _ReflectorDomain {
     if (dartType is InterfaceType) {
       if (dartType.typeArguments.isEmpty) {
         // A plain, non-generic class, may be handled already.
-        InterfaceElement interfaceElement = dartType.element2;
+        InterfaceElement interfaceElement = dartType.element;
         if (classes.contains(interfaceElement)) {
           return classes.indexOf(interfaceElement)!;
         }
@@ -1881,7 +1881,7 @@ class _ReflectorDomain {
       return constants.noCapabilityIndex;
     }
     if (dartType is InterfaceType) {
-      InterfaceElement interfaceElement = dartType.element2;
+      InterfaceElement interfaceElement = dartType.element;
       if (classes.contains(interfaceElement)) {
         return classes.indexOf(interfaceElement)!;
       }
@@ -1958,7 +1958,7 @@ class _ReflectorDomain {
       Map<FunctionType, int> typedefs,
       {bool useNameOfGenericFunctionType = true}) async {
     Future<String> fail() async {
-      var element = dartType is InterfaceType ? dartType.element2 : null;
+      var element = dartType is InterfaceType ? dartType.element : null;
       log.warning(await _formatDiagnosticMessage(
           'Attempt to generate code for an '
           'unsupported kind of type: $dartType (${dartType.runtimeType}). '
@@ -1970,7 +1970,7 @@ class _ReflectorDomain {
 
     if (dartType.isDynamic) return 'dynamic';
     if (dartType is InterfaceType) {
-      InterfaceElement interfaceElement = dartType.element2;
+      InterfaceElement interfaceElement = dartType.element;
       if ((interfaceElement is MixinApplication &&
               interfaceElement.declaredName == null) ||
           interfaceElement.isPrivate) {
@@ -2081,7 +2081,7 @@ class _ReflectorDomain {
     var typeVariablesInScope = <String>{}; // None at this level.
     if (dartType.isDynamic) return 'dynamic';
     if (dartType is InterfaceType) {
-      InterfaceElement interfaceElement = dartType.element2;
+      InterfaceElement interfaceElement = dartType.element;
       if ((interfaceElement is MixinApplication &&
               interfaceElement.declaredName == null) ||
           interfaceElement.isPrivate) {
@@ -2138,7 +2138,7 @@ class _ReflectorDomain {
         }
       }
     } else {
-      var element = dartType is InterfaceType ? dartType.element2 : null;
+      var element = dartType is InterfaceType ? dartType.element : null;
       log.warning(await _formatDiagnosticMessage(
           'Attempt to generate code for an '
           'unsupported kind of type: $dartType (${dartType.runtimeType}). '
@@ -2163,7 +2163,7 @@ class _ReflectorDomain {
         : null;
     if (type?.isDynamic ?? true) return 'dynamic';
     if (type is InterfaceType) {
-      InterfaceElement interfaceElement = type.element2;
+      InterfaceElement interfaceElement = type.element;
       if ((interfaceElement is MixinApplication &&
               interfaceElement.declaredName == null) ||
           interfaceElement.isPrivate) {
@@ -2278,7 +2278,7 @@ class _ReflectorDomain {
       bool reflectedTypeRequested) async {
     int descriptor = _parameterDescriptor(element);
     int ownerIndex =
-        members.indexOf(element.enclosingElement3!)! + fields.length;
+        members.indexOf(element.enclosingElement!)! + fields.length;
     int classMirrorIndex = constants.noCapabilityIndex;
     if (_capabilities._impliesTypes) {
       if (descriptor & constants.dynamicAttribute != 0 ||
@@ -2292,7 +2292,7 @@ class _ReflectorDomain {
         // capability is absent.
         var elementType = element.type;
         if (elementType is InterfaceType) {
-          var elementTypeElement = elementType.element2;
+          var elementTypeElement = elementType.element;
           classMirrorIndex = (await classes).contains(elementTypeElement)
               ? (await classes).indexOf(elementTypeElement)!
               : constants.noCapabilityIndex;
@@ -2435,7 +2435,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement> {
     if (workingSuperType == null) {
       return []; // "Superclass of [Object]", ignore.
     }
-    var workingSuperclass = workingSuperType.element2;
+    var workingSuperclass = workingSuperType.element;
 
     List<InterfaceElement> result = [];
 
@@ -2455,7 +2455,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement> {
     // is done with [subClass].
     InterfaceElement superclass = workingSuperclass;
     for (InterfaceType mixin in element.mixins) {
-      var mixinClass = mixin.element2;
+      var mixinClass = mixin.element;
       if (mixinsRequested) result.add(mixinClass);
       InterfaceElement? subClass =
           mixin == element.mixins.last ? element : null;
@@ -2490,7 +2490,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement> {
         }
         var interfaceElementSupertype = interfaceElement.supertype;
         if (interfaceElementSupertype == null) return false;
-        return helper(interfaceElementSupertype.element2, false);
+        return helper(interfaceElementSupertype.element, false);
       }
 
       return upwardsClosureBounds.keys.any(isSuperclassOfInterfaceElement);
@@ -2510,7 +2510,7 @@ Set<InterfaceElement> _mixinApplicationsOfClasses(
     if (interfaceElement is MixinApplication) continue;
     InterfaceType? supertype = interfaceElement.supertype;
     if (supertype == null) continue; // "Superclass of [Object]", ignore.
-    var superclass = supertype.element2;
+    var superclass = supertype.element;
     // Note that we iterate from the most general mixin to more specific ones,
     // that is, with `class C extends B with M1, M2..` we visit `M1` before
     // `M2`; this ensures that the right `superclass` is available for each
@@ -2518,7 +2518,7 @@ Set<InterfaceElement> _mixinApplicationsOfClasses(
     // of each [MixinApplication] when it is a regular class (not a mixin
     // application), otherwise [null], which is done with [subClass].
     for (var mixin in interfaceElement.mixins) {
-      var mixinClass = mixin.element2;
+      var mixinClass = mixin.element;
       InterfaceElement? subClass =
           mixin == interfaceElement.mixins.last ? interfaceElement : null;
       String? name = subClass == null
@@ -2574,31 +2574,31 @@ class _AnnotationClassFixedPoint extends FixedPoint<InterfaceElement> {
     for (FieldElement fieldElement in classDomain._declaredFields) {
       var fieldType = fieldElement.type;
       if (fieldType is InterfaceType) {
-        result.add(fieldType.element2);
+        result.add(fieldType.element);
       }
     }
     for (ParameterElement parameterElement in classDomain._declaredParameters) {
       var parameterType = parameterElement.type;
       if (parameterType is InterfaceType) {
-        result.add(parameterType.element2);
+        result.add(parameterType.element);
       }
     }
     for (ParameterElement parameterElement in classDomain._instanceParameters) {
       var parameterType = parameterElement.type;
       if (parameterType is InterfaceType) {
-        result.add(parameterType.element2);
+        result.add(parameterType.element);
       }
     }
     for (ExecutableElement executableElement in classDomain._declaredMethods) {
       var executableReturnType = executableElement.returnType;
       if (executableReturnType is InterfaceType) {
-        result.add(executableReturnType.element2);
+        result.add(executableReturnType.element);
       }
     }
     for (ExecutableElement executableElement in classDomain._instanceMembers) {
       var executableReturnType = executableElement.returnType;
       if (executableReturnType is InterfaceType) {
-        result.add(executableReturnType.element2);
+        result.add(executableReturnType.element);
       }
     }
     return result;
@@ -2817,13 +2817,13 @@ class _ClassDomain {
       // excluded.
       List<InterfaceType> mixins = interfaceElement.mixins;
       var superclassType = interfaceElement.supertype as InterfaceType;
-      var superclassTypeElement = superclassType.element2;
+      var superclassTypeElement = superclassType.element;
       String superclassName = _qualifiedName(superclassTypeElement);
       StringBuffer name = StringBuffer(superclassName);
       bool firstSeparator = true;
       for (InterfaceType mixin in mixins) {
         name.write(firstSeparator ? ' with ' : ', ');
-        name.write(_qualifiedName(mixin.element2));
+        name.write(_qualifiedName(mixin.element));
         firstSeparator = false;
       }
       return name.toString();
@@ -2876,7 +2876,7 @@ class _ClassDomain {
       }
 
       void addTypeIfCapable(InterfaceType type) {
-        helper(type.element2).forEach(addIfCapable);
+        helper(type.element).forEach(addIfCapable);
       }
 
       void addIfCapableConcreteInstance(ExecutableElement member) {
@@ -2899,7 +2899,7 @@ class _ClassDomain {
       }
       var superclassType = interfaceElement.supertype;
       if (superclassType is InterfaceType) {
-        var superclassElement = superclassType.element2;
+        var superclassElement = superclassType.element;
         helper(superclassElement).forEach(addIfCapable);
       }
       interfaceElement.mixins.forEach(addTypeIfCapable);
@@ -3414,7 +3414,7 @@ class BuilderImplementation {
       InterfaceType? superclass = possibleSubtype.superclass;
       // Even if `superclass == null` (superclass of Object), the equality
       // test will produce the correct result.
-      return type.element2 == superclass?.element2;
+      return type.element == superclass?.element;
     } else {
       return false;
     }
@@ -3424,7 +3424,7 @@ class BuilderImplementation {
   /// reflexive and transitive cases.
   bool _isSubclassOf(ParameterizedType possibleSubtype, InterfaceType type) {
     if (possibleSubtype is! InterfaceType) return false;
-    if (possibleSubtype.element2 == type.element2) return true;
+    if (possibleSubtype.element == type.element) return true;
     InterfaceType? superclass = possibleSubtype.superclass;
     if (superclass == null) return false;
     return _isSubclassOf(superclass, type);
@@ -3466,14 +3466,14 @@ class BuilderImplementation {
 
     Element? element = elementAnnotation.element;
     if (element is ConstructorElement) {
-      var enclosingType = _typeForReflectable(element.enclosingElement3);
+      var enclosingType = _typeForReflectable(element.enclosingElement);
       var focusClassType = _typeForReflectable(focusClass);
       bool isOk = enclosingType is ParameterizedType &&
           focusClassType is InterfaceType &&
           await checkInheritance(enclosingType, focusClassType);
       if (isOk) {
         if (enclosingType is InterfaceType) {
-          return enclosingType.element2;
+          return enclosingType.element;
         } else {
           return null;
         }
@@ -3499,7 +3499,7 @@ class BuilderImplementation {
       // When `isOK` is true, result.value.type.element is a InterfaceElement.
       if (isOk) {
         if (constantValueType is InterfaceType) {
-          return constantValueType.element2;
+          return constantValueType.element;
         } else {
           return null;
         }
@@ -3540,7 +3540,7 @@ class BuilderImplementation {
         _librariesByName['reflectable.capability']!;
     var reflectableClass = reflectableLibrary.getClass('Reflectable')!;
     var typeType = reflectableLibrary.typeProvider.typeType;
-    InterfaceElement typeTypeClass = typeType.element2;
+    InterfaceElement typeTypeClass = typeType.element;
 
     ConstructorElement globalQuantifyCapabilityConstructor = capabilityLibrary
         .getClass('GlobalQuantifyCapability')!
@@ -3568,7 +3568,7 @@ class BuilderImplementation {
               var valueType =
                   value.getField('(super)')?.getField('reflector')?.type;
               var reflector =
-                  valueType is InterfaceType ? valueType.element2 : null;
+                  valueType is InterfaceType ? valueType.element : null;
               if (reflector == null) {
                 await _warn(
                     WarningKind.badSuperclass,
@@ -3578,7 +3578,7 @@ class BuilderImplementation {
               } else {
                 var reflectorSupertype = reflector.supertype;
                 if (reflectorSupertype is InterfaceType &&
-                    reflectorSupertype.element2 != reflectableClass) {
+                    reflectorSupertype.element != reflectableClass) {
                   await _warn(
                       WarningKind.badSuperclass,
                       'The reflector must be a direct subclass of '
@@ -3598,7 +3598,7 @@ class BuilderImplementation {
               var metadataType = constantValue.getField('metadataType');
               var metadataFieldType = metadataType?.toTypeValue();
               var metadataFieldValue = metadataFieldType is InterfaceType
-                  ? metadataFieldType.element2
+                  ? metadataFieldType.element
                   : null;
               var metadataTypeType = metadataType?.type;
               if (metadataFieldValue == null) {
@@ -3606,8 +3606,8 @@ class BuilderImplementation {
                 await _warn(WarningKind.badMetadata, message, metadatumElement);
                 continue;
               } else if (metadataTypeType is InterfaceType &&
-                  metadataTypeType.element2 != typeTypeClass) {
-                var typeName = metadataTypeType.element2.name;
+                  metadataTypeType.element != typeTypeClass) {
+                var typeName = metadataTypeType.element.name;
                 var message = 'The metadata must be a Type. Found $typeName.';
                 await _warn(WarningKind.badMetadata, message, metadatumElement);
                 continue;
@@ -3617,7 +3617,7 @@ class BuilderImplementation {
                   ?.getField('reflector')
                   ?.type;
               var reflector = reflectorType is InterfaceType
-                  ? reflectorType.element2
+                  ? reflectorType.element
                   : null;
               if (reflector == null) {
                 await _warn(
@@ -3629,7 +3629,7 @@ class BuilderImplementation {
                 var reflectorSupertype = reflector.supertype;
                 if (reflectorType is InterfaceType &&
                     reflectorSupertype is InterfaceType &&
-                    reflectorSupertype.element2 != reflectableClass) {
+                    reflectorSupertype.element != reflectableClass) {
                   await _warn(
                       WarningKind.badSuperclass,
                       'The reflector must be a direct subclass of '
@@ -3806,9 +3806,9 @@ class BuilderImplementation {
           if (type is MixinApplication && type.isMixinApplication) {
             // Iterate over all mixins in most-general-first order (so with
             // `class C extends B with M1, M2..` we visit `M1` then `M2`.
-            var superclass = type.supertype!.element2;
+            var superclass = type.supertype!.element;
             for (var mixin in type.mixins) {
-              var mixinElement = mixin.element2;
+              var mixinElement = mixin.element;
               var subClass = mixin == type.mixins.last ? type : null;
               String? name = subClass == null ? null : type.name;
               MixinApplication mixinApplication = MixinApplication(
@@ -3851,7 +3851,7 @@ class BuilderImplementation {
           var valueType = value.type;
           if (valueType is InterfaceType) {
             List<InterfaceElement>? reflectors =
-                globalMetadata[valueType.element2];
+                globalMetadata[valueType.element];
             if (reflectors != null) {
               for (InterfaceElement reflector in reflectors) {
                 result.add(reflector);
@@ -3904,7 +3904,7 @@ class BuilderImplementation {
             allReflectors.add(type);
           }
         }
-        for (EnumElement type in unit.enums2) {
+        for (EnumElement type in unit.enums) {
           for (InterfaceElement reflector
               in await getReflectors(_qualifiedName(type), type.metadata)) {
             await addClassDomain(type, reflector);
@@ -3987,7 +3987,7 @@ class BuilderImplementation {
     // be in the given `capabilityLibrary` (because we could never know
     // how to interpret the meaning of a user-written capability class, so
     // users cannot write their own capability classes).
-    var dartTypeElement = (dartType as InterfaceType).element2;
+    var dartTypeElement = (dartType as InterfaceType).element;
     if (dartTypeElement is! ClassElement) {
       var typeString = dartType.getDisplayString(withNullability: false);
       await _severe(
@@ -4034,7 +4034,7 @@ class BuilderImplementation {
       }
       var metadataFieldType = constantSuperMetadataType.toTypeValue();
       Object? metadataFieldValue = metadataFieldType is InterfaceType
-          ? metadataFieldType.element2
+          ? metadataFieldType.element
           : null;
       if (metadataFieldValue is InterfaceElement) return metadataFieldValue;
       await _warn(
@@ -4119,7 +4119,7 @@ class BuilderImplementation {
         }
         var constantUpperBoundType = constantUpperBound.toTypeValue()!;
         if (constantUpperBoundType is! InterfaceType) return null;
-        return ec.SuperclassQuantifyCapability(constantUpperBoundType.element2,
+        return ec.SuperclassQuantifyCapability(constantUpperBoundType.element,
             excludeUpperBound: constantExcludeUpperBound.toBoolValue()!);
       case 'TypeAnnotationQuantifyCapability':
         var constantTransitive = constant.getField('transitive');
@@ -4451,7 +4451,7 @@ int _topLevelVariableDescriptor(TopLevelVariableElement element) {
   if (declaredType.isDynamic) result |= constants.dynamicAttribute;
   if (declaredType is NeverType) result |= constants.neverAttribute;
   if (declaredType is InterfaceType) {
-    Element? elementType = declaredType.element2;
+    Element? elementType = declaredType.element;
     if (elementType is InterfaceElement) {
       result |= constants.classTypeAttribute;
     }
@@ -4488,7 +4488,7 @@ int _fieldDescriptor(FieldElement element) {
   if (declaredType.isDynamic) result |= constants.dynamicAttribute;
   if (declaredType is NeverType) result |= constants.neverAttribute;
   if (declaredType is InterfaceType) {
-    Element? elementType = declaredType.element2;
+    Element? elementType = declaredType.element;
     if (elementType is InterfaceElement) {
       result |= constants.classTypeAttribute;
       if (elementType.typeParameters.isNotEmpty) {
@@ -4524,7 +4524,7 @@ int _parameterDescriptor(ParameterElement element) {
   if (declaredType.isDynamic) result |= constants.dynamicAttribute;
   if (declaredType is NeverType) result |= constants.neverAttribute;
   if (declaredType is InterfaceType) {
-    Element? elementType = declaredType.element2;
+    Element? elementType = declaredType.element;
     if (elementType is InterfaceElement) {
       result |= constants.classTypeAttribute;
       if (elementType.typeParameters.isNotEmpty) {
@@ -4561,7 +4561,7 @@ int _declarationDescriptor(ExecutableElement element) {
       result |= constants.neverReturnTypeAttribute;
     }
     if (returnType is InterfaceType) {
-      Element? elementReturnType = returnType.element2;
+      Element? elementReturnType = returnType.element;
       if (elementReturnType is InterfaceElement) {
         result |= constants.classReturnTypeAttribute;
         if (elementReturnType.typeParameters.isNotEmpty) {
@@ -4600,7 +4600,7 @@ int _declarationDescriptor(ExecutableElement element) {
   if (element is! ConstructorElement) {
     if (element.isAbstract) result |= constants.abstractAttribute;
   }
-  if (element.enclosingElement3 is! InterfaceElement) {
+  if (element.enclosingElement is! InterfaceElement) {
     result |= constants.topLevelAttribute;
   }
   return result;
@@ -4608,8 +4608,8 @@ int _declarationDescriptor(ExecutableElement element) {
 
 Future<String> _nameOfConstructor(ConstructorElement element) async {
   String name = element.name == ''
-      ? element.enclosingElement3.name
-      : '${element.enclosingElement3.name}.${element.name}';
+      ? element.enclosingElement.name
+      : '${element.enclosingElement.name}.${element.name}';
   if (_isPrivateName(name)) {
     await _severe('Cannot access private name $name', element);
   }
@@ -4639,7 +4639,7 @@ Future<String> _extractConstantCode(
   Future<String> typeAnnotationHelper(TypeAnnotation typeName) async {
     var interfaceType = typeName.type;
     if (interfaceType is InterfaceType) {
-      LibraryElement library = interfaceType.element2.library;
+      LibraryElement library = interfaceType.element.library;
       String prefix = importCollector._getPrefix(library);
       return '$prefix$typeName';
     } else {
@@ -4798,7 +4798,7 @@ Future<String> _extractConstantCode(
                   elementLibrary, generatedLibraryId, resolver)) {
             importCollector._addLibrary(elementLibrary);
             String prefix = importCollector._getPrefix(elementLibrary);
-            Element? enclosingElement = element.enclosingElement3;
+            Element? enclosingElement = element.enclosingElement;
             if (enclosingElement is InterfaceElement) {
               prefix += '${enclosingElement.name}.';
             }
@@ -5446,7 +5446,7 @@ class MixinApplication implements ClassElement {
     required NullabilitySuffix nullabilitySuffix,
   }) =>
       InterfaceTypeImpl(
-          element2: this,
+          element: this,
           typeArguments: typeArguments,
           nullabilitySuffix: nullabilitySuffix);
 
@@ -5548,7 +5548,7 @@ String _qualifiedFunctionName(FunctionElement functionElement) {
 
 String _qualifiedTypeParameterName(TypeParameterElement? typeParameterElement) {
   if (typeParameterElement == null) return 'null';
-  return '${_qualifiedName(typeParameterElement.enclosingElement3!)}.'
+  return '${_qualifiedName(typeParameterElement.enclosingElement!)}.'
       '${typeParameterElement.name}';
 }
 
