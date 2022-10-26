@@ -1,3 +1,9 @@
+## 4.0.1
+
+* Update reflectable to use (and require) analyzer 5.2.0. This is a
+  substantial update, because several analyzer members in the analyzer
+  have been deprecated.
+
 ## 4.0.0
 
 * Update reflectable to use (and require) analyzer 5.0.0. This is a
