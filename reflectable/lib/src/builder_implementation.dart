@@ -3616,9 +3616,8 @@ class BuilderImplementation {
                   .getField('(super)')
                   ?.getField('reflector')
                   ?.type;
-              var reflector = reflectorType is InterfaceType
-                  ? reflectorType.element
-                  : null;
+              var reflector =
+                  reflectorType is InterfaceType ? reflectorType.element : null;
               if (reflector == null) {
                 await _warn(
                     WarningKind.badSuperclass,
@@ -4033,9 +4032,8 @@ class BuilderImplementation {
         return null;
       }
       var metadataFieldType = constantSuperMetadataType.toTypeValue();
-      Object? metadataFieldValue = metadataFieldType is InterfaceType
-          ? metadataFieldType.element
-          : null;
+      Object? metadataFieldValue =
+          metadataFieldType is InterfaceType ? metadataFieldType.element : null;
       if (metadataFieldValue is InterfaceElement) return metadataFieldValue;
       await _warn(
           WarningKind.badMetadata,
@@ -4867,7 +4865,6 @@ const Set<String> sdkLibraryNames = <String>{
   'convert',
   'core',
   'developer',
-  'html',
   'indexed_db',
   'io',
   'isolate',
@@ -5662,30 +5659,14 @@ Future<AstNode?> _getDeclarationAst(Element element, Resolver resolver) =>
 /// which will be thrown if we use `library.session` directly.
 Future<ResolvedLibraryResult?> _getResolvedLibrary(
     LibraryElement library, Resolver resolver) async {
-  // This is expensive, but seems to be necessary. It is using the workaround
-  // mentioned in dart-lang/build#2634. If we do not fetch a fresh session
-  // then the code generation stops with an `InconsistentAnalysisException`
-  // if there is more than one entry point. This workaround turned out to be
-  // insufficient with analyzer 0.40.5, and the while loop was proposed as a
-  // workaround to the workaround in
-  //   https://github.com/google/built_value.dart/issues/
-  //   941#issuecomment-731077220.
-  var attempts = 0;
-  while (true) {
-    try {
-      final freshLibrary =
-          await resolver.libraryFor(await resolver.assetIdForElement(library));
-      final freshSession = freshLibrary.session;
-      var someResult =
-          await freshSession.getResolvedLibraryByElement(freshLibrary);
-      if (someResult is ResolvedLibraryResult) return someResult;
-    } catch (_) {
-      ++attempts;
-      if (attempts == 10) {
-        log.severe('Internal error: Analysis session '
-            'did not stabilize after ten attempts!');
-        return null;
-      }
-    }
+  final freshLibrary =
+      await resolver.libraryFor(await resolver.assetIdForElement(library));
+  final freshSession = freshLibrary.session;
+  var someResult = await freshSession.getResolvedLibraryByElement(freshLibrary);
+  if (someResult is ResolvedLibraryResult) {
+    return someResult;
+  } else {
+    log.severe('Internal error: Inconsistent analysis session!');
+    return null;
   }
 }
