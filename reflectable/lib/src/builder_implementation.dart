@@ -5661,6 +5661,15 @@ Future<AstNode?> _getDeclarationAst(Element element, Resolver resolver) =>
 /// which will be thrown if we use `library.session` directly.
 Future<ResolvedLibraryResult?> _getResolvedLibrary(
     LibraryElement library, Resolver resolver) async {
+  final freshLibrary =
+      await resolver.libraryFor(await resolver.assetIdForElement(library));
+  final freshSession = freshLibrary.session;
+  var someResult =
+      await freshSession.getResolvedLibraryByElement(freshLibrary);
+  if (someResult is ResolvedLibraryResult) return someResult;
+  else return null;
+
+/*
   // This is expensive, but seems to be necessary. It is using the workaround
   // mentioned in dart-lang/build#2634. If we do not fetch a fresh session
   // then the code generation stops with an `InconsistentAnalysisException`
@@ -5687,4 +5696,5 @@ Future<ResolvedLibraryResult?> _getResolvedLibrary(
       }
     }
   }
+*/
 }

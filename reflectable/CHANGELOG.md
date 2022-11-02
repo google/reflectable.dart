@@ -1,3 +1,12 @@
+## 4.0.2
+
+* Change handling of 'dart:...' libraries, to handle new behavior by
+  `build_resolvers` 2.1.0: 'dart:html' wasn't reported before by
+  `resolver.libraries`, but is now included. To preserve existing
+  behavior (and avoid generating code that imports 'dart:html'), this
+  update removes 'dart:html' from the set of libraries that are
+  considered "importable" by generated code.
+
 ## 4.0.1
 
 * Update reflectable to use (and require) analyzer 5.2.0. This is a
