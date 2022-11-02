@@ -4867,7 +4867,6 @@ const Set<String> sdkLibraryNames = <String>{
   'convert',
   'core',
   'developer',
-  'html',
   'indexed_db',
   'io',
   'isolate',
