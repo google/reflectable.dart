@@ -1,3 +1,45 @@
+## 4.0.2
+
+* Change handling of 'dart:...' libraries, to handle new behavior by
+  `build_resolvers` 2.1.0: 'dart:html' wasn't reported before by
+  `resolver.libraries`, but is now included. To preserve existing
+  behavior (and avoid generating code that imports 'dart:html'), this
+  update removes 'dart:html' from the set of libraries that are
+  considered "importable" by generated code.
+
+## 4.0.1
+
+* Update reflectable to use (and require) analyzer 5.2.0. This is a
+  substantial update, because several analyzer members in the analyzer
+  have been deprecated.
+
+## 4.0.0
+
+* Update reflectable to use (and require) analyzer 5.0.0. This is a
+  substantial update, because several analyzer members in the analyzer
+  have been deprecated, and some replacements have different return
+  types.
+* **Breaking change**: The analyzer now reports that the 'mixin' of a
+  'mixin application class' (e.g., `class B = A with M1, M2;`) is the class
+  itself (i.e., `B`), and the last mixin (`M2`) is obtained as
+  `mirror.superclass.mixin`. Previously the same mixin would be obtained with
+  `mirror.mixin`. This is actually a more faithful model than the one used
+  previously, so the new behavior is also used by reflectable. (In particular,
+  if we have `class B2 = A with M1, M2;` then `B == B2` is _not_ true, which
+  implies that the mixin application class works like a regular class
+  declaration with an empty body, e.g., `class B = A with M1, M2;` works like
+  `class B extends A with M1, M2 {}`, where `mirror.superclass.mixin` is
+  the natural way to obtain a mirror of `M2`). This is a breaking change, 
+  but it only affects usages where there is a dependency on the exact 
+  superclass structure, and it seems likely that this only happens rarely:
+  we may well traverse all supertypes or all superclasses, but we are not
+  likely to do things like "go to the 5th superclass, find the mixin, and
+  check that it has a `foo` method".
+
+## 3.0.10
+
+* Perform a minimal migration to use analyzer 4.6.0.
+
 ## 3.0.9
 
 * Add support for checking whether a `TypeMirror` is reflecting on a
