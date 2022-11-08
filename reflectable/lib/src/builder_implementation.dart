@@ -5007,7 +5007,7 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
       }
       var typeArguments = annotationNode.typeArguments;
       if (typeArguments != null) {
-        String typeArguments = annotationNode.typeArguments!.arguments
+        String typeArguments = typeArguments.arguments
             .map((TypeAnnotation typeArgument) {
               LibraryElement library = typeArgument.type!.element!.library!;
               String prefix = importCollector._getPrefix(library);
