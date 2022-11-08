@@ -5007,13 +5007,23 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
       }
       var typeArguments = annotationNode.typeArguments;
       if (typeArguments != null) {
-        String typeArgumentsString = typeArguments.arguments
-            .map((TypeAnnotation typeArgument) {
-              LibraryElement library = typeArgument.type!.element!.library!;
-              String prefix = importCollector._getPrefix(library);
-              return '$prefix$typeArgument';
-            })
-            .join(', ');
+        List<String> typeArgumentsStringParts = <String>[];
+        for (TypeAnnotation typeArgument in typeArguments.arguments) {
+          DartType typeArgumentType = typeArgument.type!;
+          if (!await _isImportable(typeArgumentType.element!, dataId, resolver)) {
+            await _fine('Ignoring unresolved metadata $typeArgumentType', element);
+            // fallback to dynamic
+            typeArgumentsStringParts.add('dynamic');
+            continue;
+          }
+
+          LibraryElement annotationTypeArgumentLibrary = typeArgumentType.element!.library!;
+          importCollector._addLibrary(annotationTypeArgumentLibrary);
+          String prefix = importCollector._getPrefix(annotationTypeArgumentLibrary);
+          typeArgumentsStringParts.add('$prefix$typeArgument');
+        }
+
+        String typeArgumentsString = typeArgumentsStringParts.join(', ');
         metadataParts.add('const $prefix$name<$typeArgumentsString>($arguments)');
       } else {
         metadataParts.add('const $prefix$name($arguments)');
