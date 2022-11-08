@@ -5010,7 +5010,7 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
         List<String> typeArgumentsStringParts = <String>[];
         for (TypeAnnotation typeArgument in typeArguments.arguments) {
           DartType typeArgumentType = typeArgument.type!;
-          if (!await _isImportable(typeArgumentType.element!, dataId, resolver)) {
+          if (typeArgumentType.element?.library == null || !await _isImportable(typeArgumentType.element!, dataId, resolver)) {
             await _fine('Ignoring unresolved metadata $typeArgumentType', element);
             // fallback to dynamic
             typeArgumentsStringParts.add('dynamic');
