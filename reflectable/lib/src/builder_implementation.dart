@@ -5005,7 +5005,8 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
       if (_isPrivateName(name)) {
         await _severe('Cannot access private name $name', element);
       }
-      if (annotationNode.typeArguments != null) {
+      var typeArguments = annotationNode.typeArguments;
+      if (typeArguments != null) {
         String typeArguments = annotationNode.typeArguments!.arguments
             .map((TypeAnnotation typeArgument) {
               LibraryElement library = typeArgument.type!.element!.library!;
