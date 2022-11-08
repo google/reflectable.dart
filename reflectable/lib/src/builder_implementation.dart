@@ -5007,14 +5007,14 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
       }
       var typeArguments = annotationNode.typeArguments;
       if (typeArguments != null) {
-        String typeArguments = typeArguments.arguments
+        String typeArgumentsString = typeArguments.arguments
             .map((TypeAnnotation typeArgument) {
               LibraryElement library = typeArgument.type!.element!.library!;
               String prefix = importCollector._getPrefix(library);
               return '$prefix$typeArgument';
             })
             .join(', ');
-        metadataParts.add('const $prefix$name<$typeArguments>($arguments)');
+        metadataParts.add('const $prefix$name<$typeArgumentsString>($arguments)');
       } else {
         metadataParts.add('const $prefix$name($arguments)');
       }
