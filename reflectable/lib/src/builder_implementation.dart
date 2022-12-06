@@ -4653,7 +4653,6 @@ Future<String> _extractConstantCode(
   }
 
   Future<String> helper(Expression expression) async {
-    print('>>> helper: ${expression.toSource()}, ${expression.runtimeType}'); // DEBUG
     if (expression is ListLiteral) {
       List<String> elements = [];
       for (CollectionElement collectionElement in expression.elements) {
