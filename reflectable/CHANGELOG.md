@@ -1,3 +1,10 @@
+## 4.0.4
+
+* Resolve bug #300. Expressions of the form `f<T>` denoting a generic
+  instantiation of a function (that is: the result of passing the type
+  argument `T` to the generic function `f`, yielding a non-generic
+  function) was not supported; this version supports it.
+
 ## 4.0.3
 
 * Change code generation such that null safe programs do not give rise
