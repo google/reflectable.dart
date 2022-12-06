@@ -4653,6 +4653,7 @@ Future<String> _extractConstantCode(
   }
 
   Future<String> helper(Expression expression) async {
+    print('>>> helper: ${expression.toSource()}, ${expression.runtimeType}'); // DEBUG
     if (expression is ListLiteral) {
       List<String> elements = [];
       for (CollectionElement collectionElement in expression.elements) {
@@ -4845,6 +4846,21 @@ Future<String> _extractConstantCode(
       String value = await _extractConstantCode(
           expression.expression, importCollector, generatedLibraryId, resolver);
       return '${expression.name} $value';
+    } else if (expression is FunctionReference) {
+      String function = await _extractConstantCode(
+        expression.function, importCollector, generatedLibraryId, resolver);
+      var expressionTypeArguments = expression.typeArguments;
+      if (expressionTypeArguments == null) {
+        return function;
+      } else {
+        var typeArguments = <String>[];
+        for (var expressionTypeArgument in expressionTypeArguments.arguments) {
+          String typeArgument =
+              await typeAnnotationHelper(expressionTypeArgument);
+          typeArguments.add(typeArgument);
+        }
+        return '$function<${typeArguments.join(', ')}>';
+      }
     } else {
       assert(expression is IntegerLiteral ||
           expression is BooleanLiteral ||
