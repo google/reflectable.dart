@@ -4847,7 +4847,7 @@ Future<String> _extractConstantCode(
       return '${expression.name} $value';
     } else if (expression is FunctionReference) {
       String function = await _extractConstantCode(
-        expression.function, importCollector, generatedLibraryId, resolver);
+          expression.function, importCollector, generatedLibraryId, resolver);
       var expressionTypeArguments = expression.typeArguments;
       if (expressionTypeArguments == null) {
         return function;
