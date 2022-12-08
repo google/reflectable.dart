@@ -32,6 +32,7 @@ class Component {
 }
 
 abstract class Service {}
+
 class ConcreteService implements Service {}
 
 X someFunction<X>() => ConcreteService() as X;
@@ -41,7 +42,7 @@ class A {}
 
 void main() {
   initializeReflectable();
-  
+
   var classMirror = reflector.reflectType(A) as ClassMirror;
   var metadata = classMirror.metadata[0] as Component;
   var function = metadata.value as Service Function();
