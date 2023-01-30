@@ -1,3 +1,19 @@
+## 4.0.4
+
+* Resolve bug #300. Expressions of the form `f<T>` denoting a generic
+  instantiation of a function (that is: the result of passing the type
+  argument `T` to the generic function `f`, yielding a non-generic
+  function) was not supported; this version supports it.
+
+## 4.0.3
+
+* Change code generation such that null safe programs do not give rise
+  to a language version comment in the generated code. Previously, such
+  programs would have `// @dart = 2.12` in the generated library, but
+  this causes newer features to be unavailable in the generated code.
+  As before, programs which are not fully null safe will have a
+  generated library that contains `// @dart = 2.9`.
+
 ## 4.0.2
 
 * Change handling of 'dart:...' libraries, to handle new behavior by
