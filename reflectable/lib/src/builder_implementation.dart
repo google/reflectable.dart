@@ -2245,8 +2245,7 @@ class _ReflectorDomain {
         assetId = null;
       }
       if (assetId != null) {
-        var uri = assetId.uri.replace(scheme: 'package');
-        uriCode = "Uri.parse('$uri')";
+        uriCode = "Uri.parse('${assetId.uri}')";
       } else {
         uriCode = "Uri.parse(r'reflectable://$libraryIndex/$library')";
       }
