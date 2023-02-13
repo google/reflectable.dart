@@ -1,3 +1,17 @@
+## 4.0.5
+
+* Remove legacy tests (they cannot be executed when using a version of Dart
+  which will be released soon).
+* Use an upper bound of 4.0.0 for the SDK constraint, preparing for said
+  release.
+* Change the computation of the Uri of a library mirror such that it is taken
+  from the `AssetId` of the library, when possible. This should be helpful in
+  situations where the Uri is used to find the actual file. This is technically
+  a breaking change, but we do not consider it to be a breaking change in
+  practice, because the Uri's provided in previous versions were essentially
+  meaningless strings. They were just known to be distinct for distinct
+  libraries, and that property also holds with this change.
+
 ## 4.0.4
 
 * Resolve bug #300. Expressions of the form `f<T>` denoting a generic
@@ -45,8 +59,8 @@
   implies that the mixin application class works like a regular class
   declaration with an empty body, e.g., `class B = A with M1, M2;` works like
   `class B extends A with M1, M2 {}`, where `mirror.superclass.mixin` is
-  the natural way to obtain a mirror of `M2`). This is a breaking change, 
-  but it only affects usages where there is a dependency on the exact 
+  the natural way to obtain a mirror of `M2`). This is a breaking change,
+  but it only affects usages where there is a dependency on the exact
   superclass structure, and it seems likely that this only happens rarely:
   we may well traverse all supertypes or all superclasses, but we are not
   likely to do things like "go to the 5th superclass, find the mixin, and
