@@ -2234,12 +2234,22 @@ class _ReflectorDomain {
       declarationsCode = _formatAsConstList('int', declarationsIndices);
     }
 
-    // TODO(sigurdm) clarify: Find out how to get good uri's in a
-    // builder.
-    String uriCode =
-        (_capabilities._supportsUri || _capabilities._supportsLibraries)
-            ? "Uri.parse(r'reflectable://$libraryIndex/$library')"
-            : 'null';
+    // URIs may not work at run time, but we use the `assetId` to get a
+    // plausible URI when possible.
+    String? assetId;
+    try {
+      assetId = (await _resolver.assetIdForElement(library)).toString();
+    } catch (_) {
+      assetId = null;
+    }
+    String uriCode;
+    if (_capabilities._supportsUri || _capabilities._supportsLibraries) {
+      uriCode = (assetId != null)
+          ? "Uri.parse(r'$assetId')"
+          : "Uri.parse(r'reflectable://$libraryIndex/$library')";
+    } else {
+      uriCode = 'null';
+    }
 
     String metadataCode;
     if (_capabilities._supportsMetadata) {
