@@ -12,6 +12,12 @@
   meaningless strings. They were just known to be distinct for distinct
   libraries, and that property also holds with this change.
 
+  For documentation about how these URIs are generated, please see
+  https://pub.dev/documentation/build/latest/build/Resolver/assetIdForElement.html .
+
+  For documentation about package URIs, please see
+  https://api.dart.dev/stable/2.19.2/dart-isolate/Isolate/packageConfig.html .
+
 ## 4.0.4
 
 * Resolve bug #300. Expressions of the form `f<T>` denoting a generic
