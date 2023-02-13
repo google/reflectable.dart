@@ -2236,16 +2236,16 @@ class _ReflectorDomain {
 
     // URIs may not work at run time, but we use the `assetId` to get a
     // plausible URI when possible.
-    String? assetId;
+    AssetId? assetId;
     try {
-      assetId = (await _resolver.assetIdForElement(library)).toString();
+      assetId = await _resolver.assetIdForElement(library);
     } catch (_) {
       assetId = null;
     }
     String uriCode;
     if (_capabilities._supportsUri || _capabilities._supportsLibraries) {
       uriCode = (assetId != null)
-          ? "Uri.parse(r'$assetId')"
+          ? "Uri.parse('${assetId.uri}')"
           : "Uri.parse(r'reflectable://$libraryIndex/$library')";
     } else {
       uriCode = 'null';
