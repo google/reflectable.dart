@@ -13,10 +13,12 @@
   libraries, and that property also holds with this change.
 
   For documentation about how these URIs are generated, please see
-  https://pub.dev/documentation/build/latest/build/Resolver/assetIdForElement.html .
+  https://pub.dev/documentation/build/latest/build/AssetId/uri.html and
+  https://pub.dev/documentation/build/latest/build/AssetId-class.html .
 
   For documentation about package URIs, please see
-  https://api.dart.dev/stable/2.19.2/dart-isolate/Isolate/packageConfig.html .
+  https://api.dart.dev/stable/2.19.2/dart-isolate/Isolate/packageConfig.html 
+  and, for example, https://pub.dev/packages/package_config .
 
 ## 4.0.4
 
