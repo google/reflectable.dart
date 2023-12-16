@@ -5,7 +5,7 @@ description: >
   specify which operations to support, on which objects.
 homepage: https://github.com/google/reflectable.dart
 environment:
-  sdk: '>=2.19.0 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
 dependencies:
   analyzer: ^6.3.0
   build: ^2.4.0
