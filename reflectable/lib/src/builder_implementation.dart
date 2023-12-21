@@ -3572,11 +3572,6 @@ class BuilderImplementation {
             if (value != null) {
               String? pattern =
                   value.getField('classNamePattern')?.toStringValue();
-              if (pattern == null) {
-                await _warn(WarningKind.badNamePattern,
-                    'The classNamePattern must be a string', metadatumElement);
-                continue;
-              }
               var valueType =
                   value.getField('(super)')?.getField('reflector')?.type;
               var reflector =

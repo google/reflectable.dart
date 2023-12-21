@@ -90,7 +90,7 @@ abstract class MetadataQuantifiedCapability implements ApiReflectCapability {
 /// getters, and setters) matching [namePattern] interpreted as a regular
 /// expression.
 class InstanceInvokeCapability extends NamePatternCapability {
-  const InstanceInvokeCapability(String namePattern) : super(namePattern);
+  const InstanceInvokeCapability(super.namePattern);
 }
 
 /// Short hand for `InstanceInvokeCapability('')`, meaning the capability to
@@ -101,7 +101,7 @@ const instanceInvokeCapability = InstanceInvokeCapability('');
 /// getters, and setters) annotated with instances of [metadataType] or a
 /// subtype thereof.
 class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const InstanceInvokeMetaCapability(Type metadataType) : super(metadataType);
+  const InstanceInvokeMetaCapability(super.metadataType);
 }
 
 /// Gives support for reflective invocation of static members (static methods,
@@ -109,7 +109,7 @@ class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
 /// expression.
 class StaticInvokeCapability extends NamePatternCapability
     implements TypeCapability {
-  const StaticInvokeCapability(String namePattern) : super(namePattern);
+  const StaticInvokeCapability(super.namePattern);
 }
 
 /// Short hand for `StaticInvokeCapability('')`, meaning the capability to
@@ -121,14 +121,14 @@ const staticInvokeCapability = StaticInvokeCapability('');
 /// or a subtype thereof.
 class StaticInvokeMetaCapability extends MetadataQuantifiedCapability
     implements TypeCapability {
-  const StaticInvokeMetaCapability(Type metadata) : super(metadata);
+  const StaticInvokeMetaCapability(super.metadata);
 }
 
 /// Gives support for reflective invocation of top-level members (top-level
 /// methods, getters, and setters) matching [namePattern] interpreted as a
 /// regular expression.
 class TopLevelInvokeCapability extends NamePatternCapability {
-  const TopLevelInvokeCapability(String namePattern) : super(namePattern);
+  const TopLevelInvokeCapability(super.namePattern);
 }
 
 /// Short hand for `TopLevelInvokeCapability('')`, meaning the capability to
@@ -139,7 +139,7 @@ const topLevelInvokeCapability = TopLevelInvokeCapability('');
 /// methods, getters, and setters) that are annotated with instances of
 /// [metadataType].
 class TopLevelInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const TopLevelInvokeMetaCapability(Type metadataType) : super(metadataType);
+  const TopLevelInvokeMetaCapability(super.metadataType);
 }
 
 /// Gives support for reflective invocation of constructors (of all kinds)
@@ -151,7 +151,7 @@ class TopLevelInvokeMetaCapability extends MetadataQuantifiedCapability {
 /// to perform a `newInstance` operation without class mirrors.
 class NewInstanceCapability extends NamePatternCapability
     implements TypeCapability {
-  const NewInstanceCapability(String namePattern) : super(namePattern);
+  const NewInstanceCapability(super.namePattern);
 }
 
 /// Short hand for `const NewInstanceCapability('')`, meaning the capability to
@@ -163,7 +163,7 @@ const newInstanceCapability = NewInstanceCapability('');
 /// or a subtype thereof.
 class NewInstanceMetaCapability extends MetadataQuantifiedCapability
     implements TypeCapability {
-  const NewInstanceMetaCapability(Type metadataType) : super(metadataType);
+  const NewInstanceMetaCapability(super.metadataType);
 }
 
 /// Gives support for reflective access to metadata associated with a
@@ -264,7 +264,7 @@ class InvokingCapability extends NamePatternCapability
         InstanceInvokeCapability,
         StaticInvokeCapability,
         NewInstanceCapability {
-  const InvokingCapability(String namePattern) : super(namePattern);
+  const InvokingCapability(super.namePattern);
 }
 
 /// Short hand for `InvokingCapability('')`.
@@ -279,7 +279,7 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
         InstanceInvokeMetaCapability,
         StaticInvokeMetaCapability,
         NewInstanceMetaCapability {
-  const InvokingMetaCapability(Type metadataType) : super(metadataType);
+  const InvokingMetaCapability(super.metadataType);
 }
 
 /// Gives the capabilities of [TypeCapability], [metadataCapability],
