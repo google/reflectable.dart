@@ -126,8 +126,7 @@ abstract class Reflectable extends implementation.ReflectableImpl
       super.cap8,
       super.cap9]);
 
-  const Reflectable.fromList(super.capabilities)
-      : super.fromList();
+  const Reflectable.fromList(super.capabilities) : super.fromList();
 
   /// Returns the canonicalized instance of the given reflector [type].
   ///
