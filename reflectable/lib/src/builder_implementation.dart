@@ -16,7 +16,6 @@ import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
 import 'package:analyzer/src/dart/ast/constant_evaluator.dart';
-import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/generated/source.dart';
@@ -3969,9 +3968,9 @@ class BuilderImplementation {
       Expression expression,
       LibraryElement containingLibrary,
       Element messageTarget) async {
-    Constant evaluated = _evaluateConstant(containingLibrary, expression);
+    Object? evaluated = _evaluateConstant(containingLibrary, expression);
 
-    if (evaluated is InvalidConstant) {
+    if (evaluated is! DartObject) {
       await _severe(
           'Invalid constant `$expression` in capability list.', messageTarget);
       // We do not terminate immediately at `_severe` so we need to
@@ -3980,7 +3979,7 @@ class BuilderImplementation {
       return ec.invokingCapability; // Error default.
     }
 
-    var constant = evaluated as DartObject;
+    var constant = evaluated;
 
     DartType dartType = constant.type!;
     // We insist that the type must be a class, and we insist that it must
@@ -4552,7 +4551,7 @@ int _declarationDescriptor(ExecutableElement element) {
 
   void handleReturnType(ExecutableElement element) {
     var returnType = element.returnType;
-    if (returnType.isVoid) {
+    if (returnType is VoidType) {
       result |= constants.voidReturnTypeAttribute;
     }
     if (returnType is DynamicType) {
@@ -5575,7 +5574,8 @@ bool _isPrivateName(String name) {
 ///
 /// May return `null` or an instance of [bool], [int], [double], [BigInt],
 /// [String], [Symbol], or [DartObject].
-Object _evaluateConstant(LibraryElement library, Expression expression) {
+Future<Object?> _evaluateConstant(
+    LibraryElement library, Expression expression) async {
   var result = expression.accept(ConstantEvaluator());
   switch (result) {
     case null:
@@ -5586,11 +5586,12 @@ Object _evaluateConstant(LibraryElement library, Expression expression) {
     case String():
     case Symbol():
     case DartObject():
+    case _ when result == ConstantEvaluator.NOT_A_CONSTANT:
       return result;
 
-    case ConstantEvaluator.NOT_A_CONSTANT:
     default:
-      _severe('Could not evaluate $expression as a constant');
+      await _severe('Could not evaluate $expression as a constant');
+      return ConstantEvaluator.NOT_A_CONSTANT;
   }
 }
 
