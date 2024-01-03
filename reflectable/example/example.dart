@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 // Try out some reflective invocations.
-// Build with `cd ..; dart pub run build_runner build example`.
+// Build with `cd ..; dart run build_runner build example`.
 
 import 'package:reflectable/reflectable.dart';
 import 'example.reflectable.dart';

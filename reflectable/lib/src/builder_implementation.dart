@@ -3969,6 +3969,7 @@ class BuilderImplementation {
       LibraryElement containingLibrary,
       Element messageTarget) async {
     Object? evaluated = _evaluateConstant(containingLibrary, expression);
+    print(evaluated.runtimeType); // DEBUG
 
     if (evaluated is! DartObject) {
       await _severe(
