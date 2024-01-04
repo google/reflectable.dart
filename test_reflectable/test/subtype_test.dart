@@ -36,9 +36,9 @@ class E extends D implements B {}
 
 class F implements E, D {}
 
-class M1 {}
+mixin class M1 {}
 
-class M2 {}
+mixin class M2 {}
 
 class G extends D with M1, M2 {}
 

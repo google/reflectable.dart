@@ -17,7 +17,7 @@ class Reflector extends Reflectable {
 }
 
 @Reflector()
-class M {
+mixin class M {
   static dynamic staticFoo(x) => x + 1;
 }
 

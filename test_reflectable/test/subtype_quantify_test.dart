@@ -31,7 +31,7 @@ class C implements A {
   int foo() => 44;
 }
 
-class M {
+mixin class M {
   int foo() => 45;
 }
 

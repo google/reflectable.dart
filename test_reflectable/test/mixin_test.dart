@@ -53,7 +53,7 @@ class ReflectorUpwardsClosedUntilA extends Reflectable {
 @Reflector()
 @Reflector2()
 @P()
-class M1 {
+mixin class M1 {
   void foo() {}
   // ignore:prefer_typing_uninitialized_variables
   var field;
@@ -66,11 +66,11 @@ class P {
 
 @Reflector()
 @Reflector2()
-class M2 {}
+mixin class M2 {}
 
 @Reflector()
 @Reflector2()
-class M3 {}
+mixin class M3 {}
 
 @Reflector()
 class A {
@@ -98,12 +98,12 @@ class C extends B with M2, M3 {}
 @ReflectorUpwardsClosedUntilA()
 class D = A with M1;
 
-class M4 {}
+mixin class M4 {}
 
 @Reflector3()
-class M5 {}
+mixin class M5 {}
 
-class M6 {}
+mixin class M6 {}
 
 class AA {}
 

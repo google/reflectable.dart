@@ -54,7 +54,7 @@ class B extends A {
   var c;
   B();
 
-  B.fromValues(a, b, this.c) : super.fromValues(a, b);
+  B.fromValues(super.a, super.b, this.c) : super.fromValues();
 
   // The == operator is defined for testing if the reconstructed object is the
   // same as the original.

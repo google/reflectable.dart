@@ -25,7 +25,7 @@ class Reflector extends Reflectable {
 const reflector = Reflector();
 
 @reflector
-class M<E> {
+mixin class M<E> {
   E? e;
 }
 
