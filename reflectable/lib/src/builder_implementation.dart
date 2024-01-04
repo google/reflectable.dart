@@ -15,7 +15,6 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
-import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/generated/source.dart';
@@ -5526,6 +5525,9 @@ class MixinApplication implements ClassElement {
   ElementKind get kind => ElementKind.CLASS;
 
   @override
+  bool get isAugmentation => false;
+
+  @override
   ElementLocation? get location => null;
 
   @override
@@ -5553,7 +5555,6 @@ class MixinApplication implements ClassElement {
 }
 
 bool _isSetterName(String name) => name.endsWith('=');
-
 String _setterNameToGetterName(String name) {
   assert(_isSetterName(name));
   return name.substring(0, name.length - 1);
@@ -5580,14 +5581,18 @@ bool _isPrivateName(String name) {
 }
 
 DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
-  if (expression is SimpleIdentifier) {
-    var declaration = expression.staticElement?.declaration;
-    if (declaration is PropertyAccessorElement) {
-      Element variable = declaration.variable;
-      if (variable is ConstVariableElement) {
-        return variable.computeConstantValue();
+  switch (expression) {
+    case (SimpleIdentifier() || PrefixedIdentifier()) && Identifier id:
+      var declaration = id.staticElement?.declaration;
+      if (declaration is PropertyAccessorElement) {
+        Element variable = declaration.variable;
+        if (variable is ConstVariableElement) {
+          return variable.computeConstantValue();
+        }
       }
-    }
+    case InstanceCreationExpression(isConst: true):
+      // TODO(eernst): Can't `return expression.computeConstantValue();`
+      return null;
   }
   return null;
 }
