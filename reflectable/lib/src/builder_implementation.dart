@@ -15,7 +15,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
-import 'package:analyzer/src/dart/ast/constant_evaluator.dart';
+import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/generated/source.dart';
@@ -3968,21 +3968,29 @@ class BuilderImplementation {
       Expression expression,
       LibraryElement containingLibrary,
       Element messageTarget) async {
-    Object? evaluated = await _evaluateConstant(containingLibrary, expression);
-    print(evaluated.runtimeType); // DEBUG
+    var constant = _evaluateConstant(containingLibrary, expression);
 
-    if (evaluated is! DartObject) {
+    if (constant is! DartObject) {
       await _severe(
-          'Invalid constant `$expression` in capability list.', messageTarget);
+        'Invalid constant `$expression` in capability list.',
+        messageTarget,
+      );
       // We do not terminate immediately at `_severe` so we need to
       // return something that will not generate too much noise for the
       // receiver.
       return ec.invokingCapability; // Error default.
     }
 
-    var constant = evaluated;
+    DartType? dartType = constant.type;
 
-    DartType dartType = constant.type!;
+    if (dartType == null) {
+      await _severe(
+        'Constant `$expression` in capability list has no type.',
+        messageTarget,
+      );
+      return ec.invokingCapability; // Error default.
+    }
+
     // We insist that the type must be a class, and we insist that it must
     // be in the given `capabilityLibrary` (because we could never know
     // how to interpret the meaning of a user-written capability class, so
@@ -5571,29 +5579,21 @@ bool _isPrivateName(String name) {
   return name.startsWith('_') || name.contains('._');
 }
 
-/// Evaluate the given expression as a constant.
-///
-/// May return `null` or an instance of [bool], [int], [double], [BigInt],
-/// [String], [Symbol], or [DartObject].
-Future<Object?> _evaluateConstant(
-    LibraryElement library, Expression expression) async {
-  var result = expression.accept(ConstantEvaluator());
-  switch (result) {
-    case null:
-    case bool():
-    case int():
-    case double():
-    case BigInt():
-    case String():
-    case Symbol():
-    case DartObject():
-    case _ when result == ConstantEvaluator.NOT_A_CONSTANT:
-      return result;
-
-    default:
-      await _severe('Could not evaluate $expression as a constant');
-      return ConstantEvaluator.NOT_A_CONSTANT;
+DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
+  print('>>> $expression'); // DEBUG
+  if (expression is SimpleIdentifier) {
+    print('>>> is SimpleIdentifier'); // DEBUG
+    var declaration = expression.staticElement?.declaration;
+    print(
+        '>>> staticElement: ${expression.staticElement}, ${expression.staticElement.runtimeType}'); // DEBUG
+    if (declaration is PropertyAccessorElement) {
+      Element variable = declaration.variable;
+      if (variable is ConstVariableElement) {
+        return variable.computeConstantValue();
+      }
+    }
   }
+  return null;
 }
 
 /// Returns the result of evaluating [elementAnnotation].
