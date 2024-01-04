@@ -5580,12 +5580,8 @@ bool _isPrivateName(String name) {
 }
 
 DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
-  print('>>> $expression'); // DEBUG
   if (expression is SimpleIdentifier) {
-    print('>>> is SimpleIdentifier'); // DEBUG
     var declaration = expression.staticElement?.declaration;
-    print(
-        '>>> staticElement: ${expression.staticElement}, ${expression.staticElement.runtimeType}'); // DEBUG
     if (declaration is PropertyAccessorElement) {
       Element variable = declaration.variable;
       if (variable is ConstVariableElement) {
