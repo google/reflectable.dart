@@ -31,7 +31,7 @@ transform, and certain elements in the program itself are used to decide
 how to transform it. As a result, the transformed program will contain
 generated code providing the requested level of support for reflection.
 
-[2]: https://pub.dartlang.org/packages/build
+[2]: https://pub.dev/packages/build
 
 The use of dynamic reflection is supported if and only if the usage is
 covered by the set of *capabilities* specified.
@@ -121,7 +121,7 @@ library of the program and adding `.reflectable`. In the example, this
 amounts to `import 'main.reflectable.dart'`.
 
 Note that it is **not recommended to publish generated code**, i.e.,
-published packages on `pub.dartlang.org` should not include files whose
+published packages on `pub.dev` should not include files whose
 name is of the form `*.reflectable.dart`. The reason for this is that the
 generated code may change because some direct or indirect dependency
 changes (say, your package indirectly imports package `path` and then
