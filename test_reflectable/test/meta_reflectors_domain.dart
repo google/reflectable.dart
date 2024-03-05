@@ -16,16 +16,16 @@ class P {
 }
 
 @P()
-class M1 {
+mixin class M1 {
   void foo() {}
   // ignore:prefer_typing_uninitialized_variables
   var field;
   static void staticFoo(x) {}
 }
 
-class M2 {}
+mixin class M2 {}
 
-class M3 {}
+mixin class M3 {}
 
 class A {
   void foo() {}

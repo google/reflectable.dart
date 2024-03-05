@@ -40,7 +40,8 @@ class A {
   // The == operator is defined for testing if the reconstructed object is the
   // same as the original.
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other_) {
+    dynamic other = other_;
     return _equalsHandlingLists(a, other.a) && _equalsHandlingLists(b, other.b);
   }
 
@@ -60,7 +61,8 @@ class B extends A {
   // same as the original.
   // This is defined for easier testing.
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other_) {
+    dynamic other = other_;
     return _equalsHandlingLists(a, other.a) &&
         _equalsHandlingLists(b, other.b) &&
         _equalsHandlingLists(c, other.c);

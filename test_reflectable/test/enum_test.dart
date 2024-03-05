@@ -4,6 +4,7 @@
 
 /// File used to test reflectable code generation.
 /// Based on https://github.com/dart-lang/reflectable/issues/80.
+library test_reflectable.test.enum_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:test/test.dart';
