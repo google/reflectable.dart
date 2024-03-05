@@ -7,6 +7,7 @@ library reflectable.src.builder_implementation;
 // ignore_for_file:implementation_imports
 
 import 'dart:developer' as developer;
+import 'package:analyzer/dart/analysis/declared_variables.dart';
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
@@ -15,6 +16,11 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
+import 'package:analyzer/error/listener.dart';
+import 'package:analyzer/src/dart/constant/compute.dart';
+import 'package:analyzer/src/dart/constant/evaluation.dart';
+import 'package:analyzer/src/dart/constant/utilities.dart';
+import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/generated/source.dart';
@@ -5581,6 +5587,65 @@ bool _isPrivateName(String name) {
 }
 
 DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
+  // !!!TODO!!! Analyzing without errors until this point.
+  var currentUnit = expression.parent;
+  int levels = 0;
+  while (currentUnit != null && currentUnit is! CompilationUnit && ++levels < 100) {
+    currentUnit = currentUnit.parent;
+  }
+  if (currentUnit is! CompilationUnit) {
+    // TODO(eernst): Change all call sites to async, then report error
+    // using `severe` as usual (but this shouldn't happen anyway).
+    throw StateError(
+      "Expression `$expression` has no enclosing compilation unit!");
+  }  
+  
+  var unitElement = currentUnit.declaredElement!;
+  var source = unitElement.source;
+  var libraryElement = unitElement.library as LibraryElementImpl;
+
+  var errorListener = RecordingErrorListener();
+  var errorReporter = ErrorReporter(
+    errorListener,
+    source,
+    isNonNullableByDefault: true,
+  );
+  var declaredVariables = DeclaredVariables(); // No variables.
+
+  var evaluationEngine = ConstantEvaluationEngine(
+    declaredVariables: declaredVariables,
+    configuration: ConstantEvaluationConfiguration(),
+    isNonNullableByDefault: true,
+  );
+
+  var dependencies = <ConstantEvaluationTarget>[];
+  expression.accept(ReferenceFinder(dependencies.add));
+
+  computeConstants(
+    declaredVariables: declaredVariables,
+    constants: dependencies,
+    featureSet: libraryElement.featureSet,
+    configuration: ConstantEvaluationConfiguration(),
+  );
+
+  var visitor = ConstantVisitor(
+    evaluationEngine,
+    libraryElement,
+    errorReporter,
+  );
+  
+  var constant = visitor.evaluateAndReportInvalidConstant(expression);
+  var dartObject = constant is DartObjectImpl ? constant : null;
+
+  if (errorListener.errors.isNotEmpty) {
+    // TODO(eernst): Handle this error with `severe` as usual.
+    // Requires this method to be `async` and all call sites to be updated.
+    throw ArgumentError("Bad constant: `$expression`.");
+  }
+
+  return dartObject;
+
+  /*
   switch (expression) {
     case (SimpleIdentifier() || PrefixedIdentifier()) && Identifier id:
       var declaration = id.staticElement?.declaration;
@@ -5591,10 +5656,11 @@ DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
         }
       }
     case InstanceCreationExpression(isConst: true):
-      // TODO(eernst): Can't `return expression.computeConstantValue();`
+      // !!!TODO!!!: Can't `return expression.computeConstantValue();`
       return null;
   }
   return null;
+  */
 }
 
 /// Returns the result of evaluating [elementAnnotation].
