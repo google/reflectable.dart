@@ -5590,16 +5590,18 @@ DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
   // !!!TODO!!! Analyzing without errors until this point.
   var currentUnit = expression.parent;
   int levels = 0;
-  while (currentUnit != null && currentUnit is! CompilationUnit && ++levels < 100) {
+  while (currentUnit != null &&
+      currentUnit is! CompilationUnit &&
+      ++levels < 100) {
     currentUnit = currentUnit.parent;
   }
   if (currentUnit is! CompilationUnit) {
     // TODO(eernst): Change all call sites to async, then report error
     // using `severe` as usual (but this shouldn't happen anyway).
     throw StateError(
-      "Expression `$expression` has no enclosing compilation unit!");
-  }  
-  
+        "Expression `$expression` has no enclosing compilation unit!");
+  }
+
   var unitElement = currentUnit.declaredElement!;
   var source = unitElement.source;
   var libraryElement = unitElement.library as LibraryElementImpl;
@@ -5633,7 +5635,7 @@ DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
     libraryElement,
     errorReporter,
   );
-  
+
   var constant = visitor.evaluateAndReportInvalidConstant(expression);
   var dartObject = constant is DartObjectImpl ? constant : null;
 
@@ -5644,23 +5646,6 @@ DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
   }
 
   return dartObject;
-
-  /*
-  switch (expression) {
-    case (SimpleIdentifier() || PrefixedIdentifier()) && Identifier id:
-      var declaration = id.staticElement?.declaration;
-      if (declaration is PropertyAccessorElement) {
-        Element variable = declaration.variable;
-        if (variable is ConstVariableElement) {
-          return variable.computeConstantValue();
-        }
-      }
-    case InstanceCreationExpression(isConst: true):
-      // !!!TODO!!!: Can't `return expression.computeConstantValue();`
-      return null;
-  }
-  return null;
-  */
 }
 
 /// Returns the result of evaluating [elementAnnotation].
