@@ -5584,7 +5584,8 @@ bool _isPrivateName(String name) {
   return name.startsWith('_') || name.contains('._');
 }
 
-Future<DartObject?> _evaluateConstant(LibraryElement library, Expression expression) async {
+Future<DartObject?> _evaluateConstant(
+    LibraryElement library, Expression expression) async {
   var currentUnit = expression.parent;
   int levels = 0;
   while (currentUnit != null &&
@@ -5594,7 +5595,7 @@ Future<DartObject?> _evaluateConstant(LibraryElement library, Expression express
   }
   if (currentUnit is! CompilationUnit) {
     await _severe('Expression `$expression` '
-      'has no enclosing compilation unit.');
+        'has no enclosing compilation unit.');
     return null;
   }
 
