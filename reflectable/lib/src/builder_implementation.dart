@@ -3973,7 +3973,7 @@ class BuilderImplementation {
       Expression expression,
       LibraryElement containingLibrary,
       Element messageTarget) async {
-    var constant = _evaluateConstant(containingLibrary, expression);
+    var constant = await _evaluateConstant(containingLibrary, expression);
 
     if (constant is! DartObject) {
       await _severe(
@@ -5584,8 +5584,7 @@ bool _isPrivateName(String name) {
   return name.startsWith('_') || name.contains('._');
 }
 
-DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
-  // !!!TODO!!! Analyzing without errors until this point.
+Future<DartObject?> _evaluateConstant(LibraryElement library, Expression expression) async {
   var currentUnit = expression.parent;
   int levels = 0;
   while (currentUnit != null &&
@@ -5594,10 +5593,8 @@ DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
     currentUnit = currentUnit.parent;
   }
   if (currentUnit is! CompilationUnit) {
-    // TODO(eernst): Change all call sites to async, then report error
-    // using `severe` as usual (but this shouldn't happen anyway).
-    throw StateError(
-        "Expression `$expression` has no enclosing compilation unit!");
+    await _severe('Expression `$expression` '
+      'has no enclosing compilation unit.');
   }
 
   var unitElement = currentUnit.declaredElement!;
@@ -5638,9 +5635,11 @@ DartObject? _evaluateConstant(LibraryElement library, Expression expression) {
   var dartObject = constant is DartObjectImpl ? constant : null;
 
   if (errorListener.errors.isNotEmpty) {
-    // TODO(eernst): Handle this error with `severe` as usual.
-    // Requires this method to be `async` and all call sites to be updated.
-    throw ArgumentError("Bad constant: `$expression`.");
+    StringBuffer message = 'Constant `$expression` has errors:\n';
+    for (var error in errorListener.errors) {
+      message.writeln(error);
+    }
+    _severe(message);
   }
 
   return dartObject;
