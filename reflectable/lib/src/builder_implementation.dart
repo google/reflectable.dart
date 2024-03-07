@@ -5595,6 +5595,7 @@ Future<DartObject?> _evaluateConstant(LibraryElement library, Expression express
   if (currentUnit is! CompilationUnit) {
     await _severe('Expression `$expression` '
       'has no enclosing compilation unit.');
+    return null;
   }
 
   var unitElement = currentUnit.declaredElement!;
@@ -5635,11 +5636,11 @@ Future<DartObject?> _evaluateConstant(LibraryElement library, Expression express
   var dartObject = constant is DartObjectImpl ? constant : null;
 
   if (errorListener.errors.isNotEmpty) {
-    StringBuffer message = 'Constant `$expression` has errors:\n';
+    var message = StringBuffer('Constant `$expression` has errors:\n');
     for (var error in errorListener.errors) {
       message.writeln(error);
     }
-    _severe(message);
+    _severe(message.toString());
   }
 
   return dartObject;
