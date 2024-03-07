@@ -7,16 +7,22 @@ library reflectable.src.builder_implementation;
 // ignore_for_file:implementation_imports
 
 import 'dart:developer' as developer;
+import 'package:analyzer/dart/analysis/declared_variables.dart';
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
+import 'package:analyzer/error/listener.dart';
+import 'package:analyzer/src/dart/constant/compute.dart';
+import 'package:analyzer/src/dart/constant/evaluation.dart';
+import 'package:analyzer/src/dart/constant/utilities.dart';
+import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
-import 'package:analyzer/src/generated/constant.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/source/source_resource.dart';
 import 'package:analyzer/src/summary/package_bundle_reader.dart';
@@ -1205,7 +1211,7 @@ class _ReflectorDomain {
       return true;
     } else if (dartType is VoidType) {
       return true;
-    } else if (dartType is TypeParameterType || dartType.isDynamic) {
+    } else if (dartType is TypeParameterType || dartType is DynamicType) {
       return false;
     } else {
       await _severe('`reflectedTypeArguments` where an actual type argument '
@@ -1247,7 +1253,7 @@ class _ReflectorDomain {
           for (DartType actualTypeArgument in typeArguments) {
             if (actualTypeArgument is InterfaceType ||
                 actualTypeArgument is VoidType ||
-                actualTypeArgument.isDynamic) {
+                actualTypeArgument is DynamicType) {
               typesIndices.add(_dynamicTypeCodeIndex(
                   actualTypeArgument,
                   await classes,
@@ -1323,7 +1329,7 @@ class _ReflectorDomain {
         // We use an ugly hack to obtain the [InterfaceElement] for `Object`.
         upperBoundIndex = (await classes).indexOf(objectInterfaceElement!);
         assert(upperBoundIndex != null);
-      } else if (bound.isDynamic) {
+      } else if (bound is DynamicType) {
         // We use [null] to indicate that this bound is [dynamic] ([void]
         // cannot be a bound, so the only special case is [dynamic]).
         upperBoundIndex = null;
@@ -1822,7 +1828,7 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
     // The types `dynamic` and `void` are handled via `...Attribute` bits.
-    if (dartType.isDynamic) return constants.noCapabilityIndex;
+    if (dartType is DynamicType) return constants.noCapabilityIndex;
     if (dartType is VoidType) return constants.noCapabilityIndex;
     if (dartType is InterfaceType) {
       if (dartType.typeArguments.isEmpty) {
@@ -1877,7 +1883,7 @@ class _ReflectorDomain {
       int reflectedTypesOffset,
       Map<FunctionType, int> typedefs) {
     // The types `void` and `dynamic` are handled via the `...Attribute` bits.
-    if (dartType is VoidType || dartType.isDynamic) {
+    if (dartType is VoidType || dartType is DynamicType) {
       return constants.noCapabilityIndex;
     }
     if (dartType is InterfaceType) {
@@ -1968,7 +1974,7 @@ class _ReflectorDomain {
       return 'dynamic';
     }
 
-    if (dartType.isDynamic) return 'dynamic';
+    if (dartType is DynamicType) return 'dynamic';
     if (dartType is InterfaceType) {
       InterfaceElement interfaceElement = dartType.element;
       if ((interfaceElement is MixinApplication &&
@@ -2079,7 +2085,7 @@ class _ReflectorDomain {
   Future<String> _typeCodeOfClass(DartType dartType,
       _ImportCollector importCollector, Map<FunctionType, int> typedefs) async {
     var typeVariablesInScope = <String>{}; // None at this level.
-    if (dartType.isDynamic) return 'dynamic';
+    if (dartType is DynamicType) return 'dynamic';
     if (dartType is InterfaceType) {
       InterfaceElement interfaceElement = dartType.element;
       if ((interfaceElement is MixinApplication &&
@@ -2161,7 +2167,7 @@ class _ReflectorDomain {
     DartType? type = typeDefiningElement is InterfaceElement
         ? _typeForReflectable(typeDefiningElement)
         : null;
-    if (type?.isDynamic ?? true) return 'dynamic';
+    if (type is DynamicType) return 'dynamic';
     if (type is InterfaceType) {
       InterfaceElement interfaceElement = type.element;
       if ((interfaceElement is MixinApplication &&
@@ -3572,11 +3578,6 @@ class BuilderImplementation {
             if (value != null) {
               String? pattern =
                   value.getField('classNamePattern')?.toStringValue();
-              if (pattern == null) {
-                await _warn(WarningKind.badNamePattern,
-                    'The classNamePattern must be a string', metadatumElement);
-                continue;
-              }
               var valueType =
                   value.getField('(super)')?.getField('reflector')?.type;
               var reflector =
@@ -3600,7 +3601,8 @@ class BuilderImplementation {
                 }
               }
               globalPatterns
-                  .putIfAbsent(RegExp(pattern), () => <InterfaceElement>[])
+                  .putIfAbsent(
+                      RegExp(pattern ?? ''), () => <InterfaceElement>[])
                   .add(reflector);
             }
           } else if (metadatumElement ==
@@ -3971,29 +3973,29 @@ class BuilderImplementation {
       Expression expression,
       LibraryElement containingLibrary,
       Element messageTarget) async {
-    EvaluationResult evaluated =
-        _evaluateConstant(containingLibrary, expression);
+    var constant = await _evaluateConstant(containingLibrary, expression);
 
-    if (!evaluated.isValid) {
+    if (constant is! DartObject) {
       await _severe(
-          'Invalid constant `$expression` in capability list.', messageTarget);
+        'Invalid constant `$expression` in capability list.',
+        messageTarget,
+      );
       // We do not terminate immediately at `_severe` so we need to
       // return something that will not generate too much noise for the
       // receiver.
       return ec.invokingCapability; // Error default.
     }
 
-    DartObject? constant = evaluated.value;
+    DartType? dartType = constant.type;
 
-    if (constant == null) {
-      // This could be because it is an argument to a `const` constructor,
-      // but we do not support that.
-      await _severe('Unsupported constant `$expression` in capability list.',
-          messageTarget);
+    if (dartType == null) {
+      await _severe(
+        'Constant `$expression` in capability list has no type.',
+        messageTarget,
+      );
       return ec.invokingCapability; // Error default.
     }
 
-    DartType dartType = constant.type!;
     // We insist that the type must be a class, and we insist that it must
     // be in the given `capabilityLibrary` (because we could never know
     // how to interpret the meaning of a user-written capability class, so
@@ -4293,12 +4295,10 @@ ${imports.join('\n')}
 // ignore_for_file: prefer_adjacent_string_concatenation
 // ignore_for_file: prefer_collection_literals
 // ignore_for_file: unnecessary_const
+// ignore_for_file: unused_import
 
-// ignore:unused_import
 import 'package:reflectable/mirrors.dart' as m;
-// ignore:unused_import
 import 'package:reflectable/src/reflectable_builder_based.dart' as r;
-// ignore:unused_import
 import 'package:reflectable/reflectable.dart' as r show Reflectable;
 
 $code
@@ -4460,7 +4460,7 @@ int _topLevelVariableDescriptor(TopLevelVariableElement element) {
   if (element.isStatic) result |= constants.staticAttribute;
   DartType declaredType = element.type;
   if (declaredType is VoidType) result |= constants.voidAttribute;
-  if (declaredType.isDynamic) result |= constants.dynamicAttribute;
+  if (declaredType is DynamicType) result |= constants.dynamicAttribute;
   if (declaredType is NeverType) result |= constants.neverAttribute;
   if (declaredType is InterfaceType) {
     Element? elementType = declaredType.element;
@@ -4497,7 +4497,7 @@ int _fieldDescriptor(FieldElement element) {
   if (element.isStatic) result |= constants.staticAttribute;
   DartType declaredType = element.type;
   if (declaredType is VoidType) result |= constants.voidAttribute;
-  if (declaredType.isDynamic) result |= constants.dynamicAttribute;
+  if (declaredType is DynamicType) result |= constants.dynamicAttribute;
   if (declaredType is NeverType) result |= constants.neverAttribute;
   if (declaredType is InterfaceType) {
     Element? elementType = declaredType.element;
@@ -4533,7 +4533,7 @@ int _parameterDescriptor(ParameterElement element) {
   if (element.isNamed) result |= constants.namedAttribute;
   DartType declaredType = element.type;
   if (declaredType is VoidType) result |= constants.voidAttribute;
-  if (declaredType.isDynamic) result |= constants.dynamicAttribute;
+  if (declaredType is DynamicType) result |= constants.dynamicAttribute;
   if (declaredType is NeverType) result |= constants.neverAttribute;
   if (declaredType is InterfaceType) {
     Element? elementType = declaredType.element;
@@ -4563,10 +4563,10 @@ int _declarationDescriptor(ExecutableElement element) {
 
   void handleReturnType(ExecutableElement element) {
     var returnType = element.returnType;
-    if (returnType.isVoid) {
+    if (returnType is VoidType) {
       result |= constants.voidReturnTypeAttribute;
     }
-    if (returnType.isDynamic) {
+    if (returnType is DynamicType) {
       result |= constants.dynamicReturnTypeAttribute;
     }
     if (returnType is VoidType) {
@@ -5529,6 +5529,9 @@ class MixinApplication implements ClassElement {
   ElementKind get kind => ElementKind.CLASS;
 
   @override
+  bool get isAugmentation => false;
+
+  @override
   ElementLocation? get location => null;
 
   @override
@@ -5556,7 +5559,6 @@ class MixinApplication implements ClassElement {
 }
 
 bool _isSetterName(String name) => name.endsWith('=');
-
 String _setterNameToGetterName(String name) {
   assert(_isSetterName(name));
   return name.substring(0, name.length - 1);
@@ -5582,10 +5584,67 @@ bool _isPrivateName(String name) {
   return name.startsWith('_') || name.contains('._');
 }
 
-EvaluationResult _evaluateConstant(
-    LibraryElement library, Expression expression) {
-  return ConstantEvaluator((library as LibraryElementImpl).source, library)
-      .evaluate(expression);
+Future<DartObject?> _evaluateConstant(
+    LibraryElement library, Expression expression) async {
+  var currentUnit = expression.parent;
+  int levels = 0;
+  while (currentUnit != null &&
+      currentUnit is! CompilationUnit &&
+      ++levels < 100) {
+    currentUnit = currentUnit.parent;
+  }
+  if (currentUnit is! CompilationUnit) {
+    await _severe('Expression `$expression` '
+        'has no enclosing compilation unit.');
+    return null;
+  }
+
+  var unitElement = currentUnit.declaredElement!;
+  var source = unitElement.source;
+  var libraryElement = unitElement.library as LibraryElementImpl;
+
+  var errorListener = RecordingErrorListener();
+  var errorReporter = ErrorReporter(
+    errorListener,
+    source,
+    isNonNullableByDefault: true,
+  );
+  var declaredVariables = DeclaredVariables(); // No variables.
+
+  var evaluationEngine = ConstantEvaluationEngine(
+    declaredVariables: declaredVariables,
+    configuration: ConstantEvaluationConfiguration(),
+    isNonNullableByDefault: true,
+  );
+
+  var dependencies = <ConstantEvaluationTarget>[];
+  expression.accept(ReferenceFinder(dependencies.add));
+
+  computeConstants(
+    declaredVariables: declaredVariables,
+    constants: dependencies,
+    featureSet: libraryElement.featureSet,
+    configuration: ConstantEvaluationConfiguration(),
+  );
+
+  var visitor = ConstantVisitor(
+    evaluationEngine,
+    libraryElement,
+    errorReporter,
+  );
+
+  var constant = visitor.evaluateAndReportInvalidConstant(expression);
+  var dartObject = constant is DartObjectImpl ? constant : null;
+
+  if (errorListener.errors.isNotEmpty) {
+    var message = StringBuffer('Constant `$expression` has errors:\n');
+    for (var error in errorListener.errors) {
+      message.writeln(error);
+    }
+    _severe(message.toString());
+  }
+
+  return dartObject;
 }
 
 /// Returns the result of evaluating [elementAnnotation].

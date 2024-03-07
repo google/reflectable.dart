@@ -1,3 +1,7 @@
+## 4.0.6
+
+* Update dependencies to use analyzer 6.4.0.
+
 ## 4.0.5
 
 * Remove legacy tests (they cannot be executed when using a version of Dart

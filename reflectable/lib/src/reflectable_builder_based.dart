@@ -880,41 +880,23 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
 class NonGenericClassMirrorImpl extends ClassMirrorBase {
   NonGenericClassMirrorImpl(
-      String simpleName,
-      String qualifiedName,
-      int descriptor,
-      int classIndex,
-      ReflectableImpl reflector,
-      List<int> declarationIndices,
-      List<int>? instanceMemberIndices,
-      List<int>? staticMemberIndices,
-      int? superclassIndex,
-      Map<String, StaticGetter> getters,
-      Map<String, StaticSetter> setters,
-      Map<String, Function> constructors,
-      int ownerIndex,
-      int mixinIndex,
-      List<int> superinterfaceIndices,
-      List<Object>? metadata,
-      Map<String, int>? parameterListShapes)
-      : super(
-            simpleName,
-            qualifiedName,
-            descriptor,
-            classIndex,
-            reflector,
-            declarationIndices,
-            instanceMemberIndices,
-            staticMemberIndices,
-            superclassIndex,
-            getters,
-            setters,
-            constructors,
-            ownerIndex,
-            mixinIndex,
-            superinterfaceIndices,
-            metadata,
-            parameterListShapes);
+      super.simpleName,
+      super.qualifiedName,
+      super.descriptor,
+      super.classIndex,
+      super.reflector,
+      super.declarationIndices,
+      super.instanceMemberIndices,
+      super.staticMemberIndices,
+      super.superclassIndex,
+      super.getters,
+      super.setters,
+      super.constructors,
+      super.ownerIndex,
+      super.mixinIndex,
+      super.superinterfaceIndices,
+      super.metadata,
+      super.parameterListShapes);
 
   @override
   List<TypeMirror> get typeArguments {
@@ -1000,44 +982,26 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
   final int _dynamicReflectedTypeIndex;
 
   GenericClassMirrorImpl(
-      String simpleName,
-      String qualifiedName,
-      int descriptor,
-      int classIndex,
-      ReflectableImpl reflector,
-      List<int> declarationIndices,
-      List<int>? instanceMemberIndices,
-      List<int>? staticMemberIndices,
-      int superclassIndex,
-      Map<String, StaticGetter> getters,
-      Map<String, StaticSetter> setters,
-      Map<String, Function> constructors,
-      int ownerIndex,
-      int mixinIndex,
-      List<int> superinterfaceIndices,
-      List<Object>? metadata,
-      Map<String, int>? parameterListShapes,
+      super.simpleName,
+      super.qualifiedName,
+      super.descriptor,
+      super.classIndex,
+      super.reflector,
+      super.declarationIndices,
+      super.instanceMemberIndices,
+      super.staticMemberIndices,
+      int super.superclassIndex,
+      super.getters,
+      super.setters,
+      super.constructors,
+      super.ownerIndex,
+      super.mixinIndex,
+      super.superinterfaceIndices,
+      super.metadata,
+      super.parameterListShapes,
       this._isGenericRuntimeTypeOf,
       this._typeVariableIndices,
-      this._dynamicReflectedTypeIndex)
-      : super(
-            simpleName,
-            qualifiedName,
-            descriptor,
-            classIndex,
-            reflector,
-            declarationIndices,
-            instanceMemberIndices,
-            staticMemberIndices,
-            superclassIndex,
-            getters,
-            setters,
-            constructors,
-            ownerIndex,
-            mixinIndex,
-            superinterfaceIndices,
-            metadata,
-            parameterListShapes);
+      this._dynamicReflectedTypeIndex);
 
   @override
   List<TypeMirror> get typeArguments {
@@ -1148,44 +1112,26 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
   final List<int>? _reflectedTypeArgumentIndices;
 
   InstantiatedGenericClassMirrorImpl(
-      String simpleName,
-      String qualifiedName,
-      int descriptor,
-      int classIndex,
-      ReflectableImpl reflector,
-      List<int> declarationIndices,
-      List<int>? instanceMemberIndices,
-      List<int>? staticMemberIndices,
-      int? superclassIndex,
-      Map<String, StaticGetter> getters,
-      Map<String, StaticSetter> setters,
-      Map<String, Function> constructors,
-      int ownerIndex,
-      int mixinIndex,
-      List<int> superinterfaceIndices,
-      List<Object>? metadata,
-      Map<String, int>? parameterListShapes,
+      super.simpleName,
+      super.qualifiedName,
+      super.descriptor,
+      super.classIndex,
+      super.reflector,
+      super.declarationIndices,
+      super.instanceMemberIndices,
+      super.staticMemberIndices,
+      super.superclassIndex,
+      super.getters,
+      super.setters,
+      super.constructors,
+      super.ownerIndex,
+      super.mixinIndex,
+      super.superinterfaceIndices,
+      super.metadata,
+      super.parameterListShapes,
       this._originalDeclaration,
       this._reflectedType,
-      this._reflectedTypeArgumentIndices)
-      : super(
-            simpleName,
-            qualifiedName,
-            descriptor,
-            classIndex,
-            reflector,
-            declarationIndices,
-            instanceMemberIndices,
-            staticMemberIndices,
-            superclassIndex,
-            getters,
-            setters,
-            constructors,
-            ownerIndex,
-            mixinIndex,
-            superinterfaceIndices,
-            metadata,
-            parameterListShapes);
+      this._reflectedTypeArgumentIndices);
 
   @override
   List<TypeMirror> get typeArguments {
@@ -2086,8 +2032,7 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
 
 class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
   ImplicitGetterMirrorImpl(
-      ReflectableImpl reflector, int variableMirrorIndex, int selfIndex)
-      : super(reflector, variableMirrorIndex, selfIndex);
+      super.reflector, super.variableMirrorIndex, super.selfIndex);
 
   @override
   bool get isGetter => true;
@@ -2116,8 +2061,7 @@ class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
 
 class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
   ImplicitSetterMirrorImpl(
-      ReflectableImpl reflector, int variableMirrorIndex, int selfIndex)
-      : super(reflector, variableMirrorIndex, selfIndex);
+      super.reflector, super.variableMirrorIndex, super.selfIndex);
 
   @override
   bool get isGetter => false;
@@ -2363,25 +2307,15 @@ class VariableMirrorImpl extends VariableMirrorBase {
   bool get isConst => (_descriptor & constants.constAttribute != 0);
 
   VariableMirrorImpl(
-      String name,
-      int descriptor,
-      int ownerIndex,
-      ReflectableImpl reflectable,
-      int classMirrorIndex,
-      int reflectedTypeIndex,
-      int dynamicReflectedTypeIndex,
-      List<int>? reflectedTypeArguments,
-      List<Object>? metadata)
-      : super(
-            name,
-            descriptor,
-            ownerIndex,
-            reflectable,
-            classMirrorIndex,
-            reflectedTypeIndex,
-            dynamicReflectedTypeIndex,
-            reflectedTypeArguments,
-            metadata);
+      super.name,
+      super.descriptor,
+      super.ownerIndex,
+      super.reflectable,
+      super.classMirrorIndex,
+      super.reflectedTypeIndex,
+      super.dynamicReflectedTypeIndex,
+      super.reflectedTypeArguments,
+      super.metadata);
 
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
@@ -2437,27 +2371,17 @@ class ParameterMirrorImpl extends VariableMirrorBase
   MethodMirror get owner => _data.memberMirrors![_ownerIndex] as MethodMirror;
 
   ParameterMirrorImpl(
-      String name,
-      int descriptor,
-      int ownerIndex,
-      ReflectableImpl reflectable,
-      int classMirrorIndex,
-      int reflectedTypeIndex,
-      int dynamicReflectedTypeIndex,
-      List<int>? reflectedTypeArguments,
-      List<Object>? metadata,
+      super.name,
+      super.descriptor,
+      super.ownerIndex,
+      super.reflectable,
+      super.classMirrorIndex,
+      super.reflectedTypeIndex,
+      super.dynamicReflectedTypeIndex,
+      super.reflectedTypeArguments,
+      super.metadata,
       this._defaultValue,
-      this._nameSymbol)
-      : super(
-            name,
-            descriptor,
-            ownerIndex,
-            reflectable,
-            classMirrorIndex,
-            reflectedTypeIndex,
-            dynamicReflectedTypeIndex,
-            reflectedTypeArguments,
-            metadata);
+      this._nameSymbol);
 
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
@@ -2611,20 +2535,19 @@ abstract class ReflectableImpl extends ReflectableBase
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
   const ReflectableImpl(
-      [ReflectCapability? cap0,
-      ReflectCapability? cap1,
-      ReflectCapability? cap2,
-      ReflectCapability? cap3,
-      ReflectCapability? cap4,
-      ReflectCapability? cap5,
-      ReflectCapability? cap6,
-      ReflectCapability? cap7,
-      ReflectCapability? cap8,
-      ReflectCapability? cap9])
-      : super(cap0, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9);
+      [super.cap0,
+      super.cap1,
+      super.cap2,
+      super.cap3,
+      super.cap4,
+      super.cap5,
+      super.cap6,
+      super.cap7,
+      super.cap8,
+      super.cap9]);
 
-  const ReflectableImpl.fromList(List<ReflectCapability> capabilities)
-      : super.fromList(capabilities);
+  const ReflectableImpl.fromList(List<ReflectCapability> super.capabilities)
+      : super.fromList();
 
   @override
   bool canReflect(Object reflectee) {

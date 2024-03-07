@@ -57,7 +57,7 @@ void main() {
         broadReflector.findLibrary('test_reflectable.test.reflect_type_test');
     expect(libraryMirror, isNotNull);
     var uriString = libraryMirror.uri.toString();
-    expect(uriString ==
-        'asset:test_reflectable/test/reflect_type_test.dart', isTrue);
+    expect(uriString == 'asset:test_reflectable/test/reflect_type_test.dart',
+        isTrue);
   });
 }

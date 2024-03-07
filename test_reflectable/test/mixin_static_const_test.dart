@@ -17,7 +17,7 @@ const reflector = Reflector();
 class A {}
 
 @reflector
-class M {
+mixin class M {
   static const String s = 'dart';
 }
 

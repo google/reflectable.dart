@@ -40,49 +40,45 @@ abstract class MetadataQuantifiedCapability implements ApiReflectCapability {
 }
 
 class InstanceInvokeCapability extends NamePatternCapability {
-  const InstanceInvokeCapability(String namePattern) : super(namePattern);
+  const InstanceInvokeCapability(super.namePattern);
 }
 
 const instanceInvokeCapability = InstanceInvokeCapability('');
 
 class InstanceInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const InstanceInvokeMetaCapability(InterfaceElement metadataType)
-      : super(metadataType);
+  const InstanceInvokeMetaCapability(super.metadataType);
 }
 
 class StaticInvokeCapability extends NamePatternCapability
     implements TypeCapability {
-  const StaticInvokeCapability(String namePattern) : super(namePattern);
+  const StaticInvokeCapability(super.namePattern);
 }
 
 const staticInvokeCapability = StaticInvokeCapability('');
 
 class StaticInvokeMetaCapability extends MetadataQuantifiedCapability
     implements TypeCapability {
-  const StaticInvokeMetaCapability(InterfaceElement metadataType)
-      : super(metadataType);
+  const StaticInvokeMetaCapability(super.metadataType);
 }
 
 class TopLevelInvokeCapability extends NamePatternCapability {
-  const TopLevelInvokeCapability(String namePattern) : super(namePattern);
+  const TopLevelInvokeCapability(super.namePattern);
 }
 
 class TopLevelInvokeMetaCapability extends MetadataQuantifiedCapability {
-  const TopLevelInvokeMetaCapability(InterfaceElement metadataType)
-      : super(metadataType);
+  const TopLevelInvokeMetaCapability(super.metadataType);
 }
 
 class NewInstanceCapability extends NamePatternCapability
     implements TypeCapability {
-  const NewInstanceCapability(String namePattern) : super(namePattern);
+  const NewInstanceCapability(super.namePattern);
 }
 
 const newInstanceCapability = NewInstanceCapability('');
 
 class NewInstanceMetaCapability extends MetadataQuantifiedCapability
     implements TypeCapability {
-  const NewInstanceMetaCapability(InterfaceElement metadataType)
-      : super(metadataType);
+  const NewInstanceMetaCapability(super.metadataType);
 }
 
 /// To be eliminated when `NameCapability` in 'capability.dart' is eliminated.
@@ -162,7 +158,7 @@ class InvokingCapability extends NamePatternCapability
         InstanceInvokeCapability,
         StaticInvokeCapability,
         NewInstanceCapability {
-  const InvokingCapability(String namePattern) : super(namePattern);
+  const InvokingCapability(super.namePattern);
 }
 
 const invokingCapability = InvokingCapability('');
@@ -172,8 +168,7 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
         InstanceInvokeMetaCapability,
         StaticInvokeMetaCapability,
         NewInstanceMetaCapability {
-  const InvokingMetaCapability(InterfaceElement metadataType)
-      : super(metadataType);
+  const InvokingMetaCapability(super.metadataType);
 }
 
 class TypingCapability
