@@ -5546,6 +5546,10 @@ class MixinApplication implements ClassElement {
   int get hashCode => superclass.hashCode ^ mixin.hashCode ^ library.hashCode;
 
   @override
+  Null get augmentationTarget => null;
+
+
+  @override
   String toString() => 'MixinApplication($superclass, $mixin)';
 
   // Let the compiler generate forwarders for all remaining methods: Instances
