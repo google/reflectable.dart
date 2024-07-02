@@ -1,4 +1,4 @@
-// Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
+// Copyright (c) 2016, the Dart Team. All rights reserved. Use of thisgg
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
@@ -17,6 +17,8 @@ import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
 import 'package:analyzer/error/listener.dart';
+import 'package:analyzer/source/file_source.dart';
+import 'package:analyzer/source/source.dart';
 import 'package:analyzer/src/dart/constant/compute.dart';
 import 'package:analyzer/src/dart/constant/evaluation.dart';
 import 'package:analyzer/src/dart/constant/utilities.dart';
@@ -24,7 +26,6 @@ import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/generated/source.dart';
-import 'package:analyzer/src/source/source_resource.dart';
 import 'package:analyzer/src/summary/package_bundle_reader.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
@@ -896,7 +897,7 @@ class _ReflectorDomain {
       // accessors that we have included into `members`.
       for (ExecutableElement element in members.items) {
         if (element is PropertyAccessorElement && element.isSynthetic) {
-          PropertyInducingElement variable = element.variable;
+          PropertyInducingElement? variable = element.variable2;
           if (variable is FieldElement) {
             fields.add(variable);
           } else if (variable is TopLevelVariableElement) {
@@ -1663,10 +1664,10 @@ class _ReflectorDomain {
     if (element is PropertyAccessorElement && element.isSynthetic) {
       // There is no type propagation, so we declare an `accessorElement`.
       PropertyAccessorElement accessorElement = element;
-      PropertyInducingElement variable = accessorElement.variable;
+      PropertyInducingElement? variable = accessorElement.variable2;
       int variableMirrorIndex = variable is TopLevelVariableElement
           ? topLevelVariables.indexOf(variable)!
-          : fields.indexOf(variable)!;
+          : fields.indexOf(variable!)!;
       int selfIndex = members.indexOf(accessorElement)! + fields.length;
       if (accessorElement.isGetter) {
         return 'r.ImplicitGetterMirrorImpl('
@@ -1928,8 +1929,7 @@ class _ReflectorDomain {
       [Set<String>? typeVariablesInScope]) {
     if (type is TypeParameterType &&
         (typeVariablesInScope == null ||
-            !typeVariablesInScope
-                .contains(type.getDisplayString(withNullability: false)))) {
+            !typeVariablesInScope.contains(type.getDisplayString()))) {
       return false;
     }
     if (type is InterfaceType) {
@@ -2069,9 +2069,8 @@ class _ReflectorDomain {
         return '$returnType Function$typeArguments($argumentTypes)';
       }
     } else if (dartType is TypeParameterType &&
-        typeVariablesInScope
-            .contains(dartType.getDisplayString(withNullability: false))) {
-      return dartType.getDisplayString(withNullability: false);
+        typeVariablesInScope .contains(dartType.getDisplayString())) {
+      return dartType.getDisplayString();
     } else {
       return fail();
     }
@@ -2876,7 +2875,7 @@ class _ClassDomain {
         // the metadata on the original field.
         List<ElementAnnotation> metadata =
             (member is PropertyAccessorElement && member.isSynthetic)
-                ? member.variable.metadata
+                ? (member.variable2?.metadata ?? <ElementAnnotation>[])
                 : member.metadata;
         List<ElementAnnotation>? getterMetadata;
         if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
@@ -2960,7 +2959,9 @@ class _ClassDomain {
       // If [member] is a synthetic accessor created from a field, search for
       // the metadata on the original field.
       List<ElementAnnotation> metadata =
-          accessor.isSynthetic ? accessor.variable.metadata : accessor.metadata;
+          accessor.isSynthetic
+              ? (accessor.variable2?.metadata ?? <ElementAnnotation>[])
+              : accessor.metadata;
       List<ElementAnnotation>? getterMetadata;
       if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
           accessor.isSetter &&
@@ -3499,8 +3500,8 @@ class BuilderImplementation {
         return null;
       }
     } else if (element is PropertyAccessorElement) {
-      PropertyInducingElement variable = element.variable;
-      DartObject? constantValue = variable.computeConstantValue();
+      PropertyInducingElement? variable = element.variable2;
+      DartObject? constantValue = variable?.computeConstantValue();
       // Handle errors during evaluation. In general `constantValue` is
       // null for (1) non-const variables, (2) variables without an
       // initializer, and (3) unresolved libraries; (3) should not occur
@@ -4002,7 +4003,7 @@ class BuilderImplementation {
     // users cannot write their own capability classes).
     var dartTypeElement = (dartType as InterfaceType).element;
     if (dartTypeElement is! ClassElement) {
-      var typeString = dartType.getDisplayString(withNullability: false);
+      var typeString = dartType.getDisplayString();
       await _severe(
           errors.applyTemplate(
               errors.superArgumentNonClass, {'type': typeString}),
@@ -4279,14 +4280,9 @@ class BuilderImplementation {
     }
     imports.sort();
 
-    String languageVersionComment =
-        world.entryPointLibrary.isNonNullableByDefault
-            ? ''
-            : '// @dart = 2.9\n';
     String result = '''
 // This file has been generated by the reflectable package.
 // https://github.com/dart-lang/reflectable.
-$languageVersionComment
 import 'dart:core';
 ${imports.join('\n')}
 
@@ -4779,9 +4775,10 @@ Future<String> _extractConstantCode(
       if (Identifier.isPrivateName(expression.name)) {
         Element? staticElement = expression.staticElement;
         if (staticElement is PropertyAccessorElement) {
-          VariableElement variable = staticElement.variable;
-          var variableDeclaration =
-              await _getDeclarationAst(variable, resolver);
+          VariableElement? variable = staticElement.variable2;
+          var variableDeclaration = variable != null
+              ? await _getDeclarationAst(variable, resolver)
+              : null;
           if (variableDeclaration == null ||
               variableDeclaration is! VariableDeclaration) {
             await _severe('Cannot handle private identifier $expression');
@@ -5199,7 +5196,7 @@ Iterable<PropertyAccessorElement> _extractLibraryAccessors(Resolver resolver,
       List<ElementAnnotation> metadata;
       List<ElementAnnotation>? getterMetadata;
       if (accessor.isSynthetic) {
-        metadata = accessor.variable.metadata;
+        metadata = accessor.variable2?.metadata ?? <ElementAnnotation>[];
         getterMetadata = metadata;
       } else {
         metadata = accessor.metadata;
@@ -5239,7 +5236,9 @@ Iterable<PropertyAccessorElement> _extractAccessors(Resolver resolver,
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
     List<ElementAnnotation> metadata =
-        accessor.isSynthetic ? accessor.variable.metadata : accessor.metadata;
+        accessor.isSynthetic
+            ? (accessor.variable2?.metadata ?? <ElementAnnotation>[])
+            : accessor.metadata;
     List<ElementAnnotation>? getterMetadata;
     if (capabilities._impliesCorrespondingSetters &&
         accessor.isSetter &&
@@ -5607,14 +5606,12 @@ Future<DartObject?> _evaluateConstant(
   var errorReporter = ErrorReporter(
     errorListener,
     source,
-    isNonNullableByDefault: true,
   );
   var declaredVariables = DeclaredVariables(); // No variables.
 
   var evaluationEngine = ConstantEvaluationEngine(
     declaredVariables: declaredVariables,
     configuration: ConstantEvaluationConfiguration(),
-    isNonNullableByDefault: true,
   );
 
   var dependencies = <ConstantEvaluationTarget>[];
