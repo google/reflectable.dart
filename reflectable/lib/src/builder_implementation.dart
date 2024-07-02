@@ -2069,7 +2069,7 @@ class _ReflectorDomain {
         return '$returnType Function$typeArguments($argumentTypes)';
       }
     } else if (dartType is TypeParameterType &&
-        typeVariablesInScope .contains(dartType.getDisplayString())) {
+        typeVariablesInScope.contains(dartType.getDisplayString())) {
       return dartType.getDisplayString();
     } else {
       return fail();
@@ -2958,10 +2958,9 @@ class _ClassDomain {
       if (!accessor.isStatic || accessor.isPrivate) return;
       // If [member] is a synthetic accessor created from a field, search for
       // the metadata on the original field.
-      List<ElementAnnotation> metadata =
-          accessor.isSynthetic
-              ? (accessor.variable2?.metadata ?? <ElementAnnotation>[])
-              : accessor.metadata;
+      List<ElementAnnotation> metadata = accessor.isSynthetic
+          ? (accessor.variable2?.metadata ?? <ElementAnnotation>[])
+          : accessor.metadata;
       List<ElementAnnotation>? getterMetadata;
       if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
           accessor.isSetter &&
@@ -5235,10 +5234,9 @@ Iterable<PropertyAccessorElement> _extractAccessors(Resolver resolver,
     CapabilityChecker capabilityChecker = accessor.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
-    List<ElementAnnotation> metadata =
-        accessor.isSynthetic
-            ? (accessor.variable2?.metadata ?? <ElementAnnotation>[])
-            : accessor.metadata;
+    List<ElementAnnotation> metadata = accessor.isSynthetic
+        ? (accessor.variable2?.metadata ?? <ElementAnnotation>[])
+        : accessor.metadata;
     List<ElementAnnotation>? getterMetadata;
     if (capabilities._impliesCorrespondingSetters &&
         accessor.isSetter &&
@@ -5547,7 +5545,6 @@ class MixinApplication implements ClassElement {
 
   @override
   Null get augmentationTarget => null;
-
 
   @override
   String toString() => 'MixinApplication($superclass, $mixin)';
