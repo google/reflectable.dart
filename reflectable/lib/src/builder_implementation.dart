@@ -1,4 +1,4 @@
-// Copyright (c) 2016, the Dart Team. All rights reserved. Use of thisgg
+// Copyright (c) 2016, the Dart Team. All rights reserved. Use of this
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
@@ -1667,7 +1667,9 @@ class _ReflectorDomain {
       PropertyInducingElement? variable = accessorElement.variable2;
       int variableMirrorIndex = variable is TopLevelVariableElement
           ? topLevelVariables.indexOf(variable)!
-          : fields.indexOf(variable!)!;
+          : variable is FieldElement
+              ? fields.indexOf(variable)!
+              : constants.noCapabilityIndex;
       int selfIndex = members.indexOf(accessorElement)! + fields.length;
       if (accessorElement.isGetter) {
         return 'r.ImplicitGetterMirrorImpl('
@@ -2875,7 +2877,7 @@ class _ClassDomain {
         // the metadata on the original field.
         List<ElementAnnotation> metadata =
             (member is PropertyAccessorElement && member.isSynthetic)
-                ? (member.variable2?.metadata ?? <ElementAnnotation>[])
+                ? (member.variable2?.metadata ?? const <ElementAnnotation>[])
                 : member.metadata;
         List<ElementAnnotation>? getterMetadata;
         if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
@@ -2959,7 +2961,7 @@ class _ClassDomain {
       // If [member] is a synthetic accessor created from a field, search for
       // the metadata on the original field.
       List<ElementAnnotation> metadata = accessor.isSynthetic
-          ? (accessor.variable2?.metadata ?? <ElementAnnotation>[])
+          ? (accessor.variable2?.metadata ?? const <ElementAnnotation>[])
           : accessor.metadata;
       List<ElementAnnotation>? getterMetadata;
       if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
@@ -5195,7 +5197,7 @@ Iterable<PropertyAccessorElement> _extractLibraryAccessors(Resolver resolver,
       List<ElementAnnotation> metadata;
       List<ElementAnnotation>? getterMetadata;
       if (accessor.isSynthetic) {
-        metadata = accessor.variable2?.metadata ?? <ElementAnnotation>[];
+        metadata = accessor.variable2?.metadata ?? const <ElementAnnotation>[];
         getterMetadata = metadata;
       } else {
         metadata = accessor.metadata;
@@ -5235,7 +5237,7 @@ Iterable<PropertyAccessorElement> _extractAccessors(Resolver resolver,
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
     List<ElementAnnotation> metadata = accessor.isSynthetic
-        ? (accessor.variable2?.metadata ?? <ElementAnnotation>[])
+        ? (accessor.variable2?.metadata ?? const <ElementAnnotation>[])
         : accessor.metadata;
     List<ElementAnnotation>? getterMetadata;
     if (capabilities._impliesCorrespondingSetters &&
@@ -5455,10 +5457,10 @@ class MixinApplication implements ClassElement {
   String get displayName => name;
 
   @override
-  List<InterfaceType> get interfaces => <InterfaceType>[];
+  List<InterfaceType> get interfaces => const <InterfaceType>[];
 
   @override
-  List<ElementAnnotation> get metadata => <ElementAnnotation>[];
+  List<ElementAnnotation> get metadata => const <ElementAnnotation>[];
 
   @override
   bool get isSynthetic => declaredName == null;
