@@ -1,3 +1,7 @@
+## 4.0.7
+
+* Update dependencies to use sdk 3.4.0 and analyzer 6.7.0.
+
 ## 4.0.6
 
 * Update dependencies to use analyzer 6.4.0.
