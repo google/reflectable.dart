@@ -738,7 +738,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       throw NoSuchCapabilityError(
           'Requesting metadata of "$description" without capability');
     }
-    return _metadata!;
+    return _metadata;
   }
 
   @override
@@ -874,7 +874,7 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
           '`superclass` of `$qualifiedName`');
     }
     if (_superclassIndex == null) return null; // Superclass of [Object].
-    return _data.typeMirrors[_superclassIndex!] as ClassMirrorBase?;
+    return _data.typeMirrors[_superclassIndex] as ClassMirrorBase?;
   }
 }
 
