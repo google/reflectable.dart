@@ -1,3 +1,9 @@
+## 4.0.9
+
+* Lower the upper bound for the analyzer to avoid a complaint that we
+  should import a library that doesn't exist with the analyzer when using
+  the lower bound. Import the older library that does exist.
+
 ## 4.0.8
 
 * Downgrade analyzer to 6.5.0, to avoid version conflict involving
