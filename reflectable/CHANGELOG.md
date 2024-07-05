@@ -1,3 +1,8 @@
+## 4.0.8
+
+* Downgrade analyzer to 6.5.0, to avoid version conflict involving
+  `macros` and `_macros` (that we can't do anything about from here).
+
 ## 4.0.7
 
 * Update dependencies to use sdk 3.4.0 and analyzer 6.7.0.
