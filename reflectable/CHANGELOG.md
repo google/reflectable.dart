@@ -1,6 +1,6 @@
 ## 4.0.10
 
-* Reintroduce support for newer versions of the analyzer (6.7.0 and up)
+* Reintroduce support for newer versions of the analyzer (6.7.0 and up).
 
 ## 4.0.9
 
