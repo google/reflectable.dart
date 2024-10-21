@@ -25,7 +25,6 @@ import 'package:analyzer/src/dart/constant/utilities.dart';
 import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/element/type.dart';
-import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/summary/package_bundle_reader.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
@@ -720,7 +719,7 @@ class _ReflectorDomain {
     // would suppress an error in a very-hard-to-explain case, so that's safer
     // in a sense, but too weird.
     if (constructor.library.isDartCore &&
-        constructor.enclosingElement.name == 'List' &&
+        constructor.enclosingElement3.name == 'List' &&
         constructor.name == '') {
       return '(bool b) => ([length]) => '
           'b ? (length == null ? [] : List.filled(length, null)) : null';
@@ -1297,9 +1296,9 @@ class _ReflectorDomain {
 
   Future<int?> _computeOwnerIndex(
       ExecutableElement element, int descriptor) async {
-    if (element.enclosingElement is InterfaceElement) {
-      return (await classes).indexOf(element.enclosingElement);
-    } else if (element.enclosingElement is CompilationUnitElement) {
+    if (element.enclosingElement3 is InterfaceElement) {
+      return (await classes).indexOf(element.enclosingElement3);
+    } else if (element.enclosingElement3 is CompilationUnitElement) {
       return _libraries.indexOf(element.library);
     }
     await _severe('Unexpected kind of request for owner');
@@ -1343,7 +1342,7 @@ class _ReflectorDomain {
       }
     }
     int? ownerIndex =
-        (await classes).indexOf(typeParameterElement.enclosingElement!);
+        (await classes).indexOf(typeParameterElement.enclosingElement3!);
     // TODO(eernst) implement: Update when type variables support metadata.
     String metadataCode =
         _capabilities._supportsMetadata ? '<Object>[]' : 'null';
@@ -1459,7 +1458,7 @@ class _ReflectorDomain {
     } else {
       List<String> mapEntries = [];
       for (ConstructorElement constructor in classDomain._constructors) {
-        var enclosingElement = constructor.enclosingElement;
+        var enclosingElement = constructor.enclosingElement3;
         if (constructor.isFactory ||
             ((enclosingElement is ClassElement &&
                     !enclosingElement.isAbstract) &&
@@ -1780,7 +1779,7 @@ class _ReflectorDomain {
       Map<FunctionType, int> typedefs,
       bool reflectedTypeRequested) async {
     int descriptor = _fieldDescriptor(element);
-    int ownerIndex = (await classes).indexOf(element.enclosingElement) ??
+    int ownerIndex = (await classes).indexOf(element.enclosingElement3) ??
         constants.noCapabilityIndex;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int reflectedTypeIndex = reflectedTypeRequested
@@ -2297,7 +2296,7 @@ class _ReflectorDomain {
       bool reflectedTypeRequested) async {
     int descriptor = _parameterDescriptor(element);
     int ownerIndex =
-        members.indexOf(element.enclosingElement!)! + fields.length;
+        members.indexOf(element.enclosingElement3!)! + fields.length;
     int classMirrorIndex = constants.noCapabilityIndex;
     if (_capabilities._impliesTypes) {
       if (descriptor & constants.dynamicAttribute != 0 ||
@@ -3486,7 +3485,7 @@ class BuilderImplementation {
 
     Element? element = elementAnnotation.element;
     if (element is ConstructorElement) {
-      var enclosingType = _typeForReflectable(element.enclosingElement);
+      var enclosingType = _typeForReflectable(element.enclosingElement3);
       var focusClassType = _typeForReflectable(focusClass);
       bool isOk = enclosingType is ParameterizedType &&
           focusClassType is InterfaceType &&
@@ -3571,7 +3570,8 @@ class BuilderImplementation {
             .getNamedConstructor('')!;
 
     for (LibraryElement library in _libraries) {
-      for (LibraryImportElement import in library.libraryImports) {
+      var imports = library.definingCompilationUnit.libraryImports;
+      for (LibraryImportElement import in imports) {
         if (import.importedLibrary?.id != reflectableLibrary.id) continue;
         for (ElementAnnotation metadatum in import.metadata) {
           var metadatumElement = metadatum.element?.declaration;
@@ -3678,7 +3678,9 @@ class BuilderImplementation {
         _typeForReflectable(potentialReflectorClass);
     DartType reflectableType = _typeForReflectable(reflectableClass);
     if (potentialReflectorType is! ParameterizedType ||
-        reflectableType is! InterfaceType) return false;
+        reflectableType is! InterfaceType) {
+      return false;
+    }
     if (!_isSubclassOf(potentialReflectorType, reflectableType)) {
       // Not a subclass of [classReflectable] at all.
       return false;
@@ -3722,7 +3724,9 @@ class BuilderImplementation {
     var constructorDeclarationNode =
         await _getDeclarationAst(constructor, _resolver);
     if (constructorDeclarationNode == null ||
-        constructorDeclarationNode is! ConstructorDeclaration) return false;
+        constructorDeclarationNode is! ConstructorDeclaration) {
+      return false;
+    }
     NodeList<ConstructorInitializer> initializers =
         constructorDeclarationNode.initializers;
     if (initializers.length > 1) {
@@ -4609,7 +4613,7 @@ int _declarationDescriptor(ExecutableElement element) {
   if (element is! ConstructorElement) {
     if (element.isAbstract) result |= constants.abstractAttribute;
   }
-  if (element.enclosingElement is! InterfaceElement) {
+  if (element.enclosingElement3 is! InterfaceElement) {
     result |= constants.topLevelAttribute;
   }
   return result;
@@ -4617,8 +4621,8 @@ int _declarationDescriptor(ExecutableElement element) {
 
 Future<String> _nameOfConstructor(ConstructorElement element) async {
   String name = element.name == ''
-      ? element.enclosingElement.name
-      : '${element.enclosingElement.name}.${element.name}';
+      ? element.enclosingElement3.name
+      : '${element.enclosingElement3.name}.${element.name}';
   if (_isPrivateName(name)) {
     await _severe('Cannot access private name $name', element);
   }
@@ -4808,7 +4812,7 @@ Future<String> _extractConstantCode(
                   elementLibrary, generatedLibraryId, resolver)) {
             importCollector._addLibrary(elementLibrary);
             String prefix = importCollector._getPrefix(elementLibrary);
-            Element? enclosingElement = element.enclosingElement;
+            Element? enclosingElement = element.enclosingElement3;
             if (enclosingElement is InterfaceElement) {
               prefix += '${enclosingElement.name}.';
             }
@@ -5582,7 +5586,7 @@ String _qualifiedFunctionName(FunctionElement functionElement) {
 
 String _qualifiedTypeParameterName(TypeParameterElement? typeParameterElement) {
   if (typeParameterElement == null) return 'null';
-  return '${_qualifiedName(typeParameterElement.enclosingElement!)}.'
+  return '${_qualifiedName(typeParameterElement.enclosingElement3!)}.'
       '${typeParameterElement.name}';
 }
 
