@@ -4933,10 +4933,14 @@ NodeList<Annotation>? _getLibraryMetadata(CompilationUnit? unit) {
 
 // Helper for _extractMetadataCode.
 NodeList<Annotation>? _getOtherMetadata(AstNode? node, Element element) {
-  if (node == null || node is EnumConstantDeclaration) {
+  if (node == null) {
     // `node` can be null with members of subclasses of `Element` from
-    // 'dart:html', and individual enum values cannot have metadata.
+    // 'dart:html'.
     return null;
+  }
+
+  if (node is EnumConstantDeclaration) {
+    return node.metadata;
   }
 
   // The `element.node` of a field is the [VariableDeclaration] that is nested
