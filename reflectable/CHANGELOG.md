@@ -1,3 +1,8 @@
+## 4.0.11
+
+* Fix bug 291 (such that metadata on enum values can be obtained).
+* Update dependencies
+
 ## 4.0.10
 
 * Reintroduce support for newer versions of the analyzer (6.7.0 and up).
