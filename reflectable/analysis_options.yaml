@@ -1,4 +1,8 @@
 include: package:lints/recommended.yaml
 linter:
   rules:
-    - await_only_futures
+    await_only_futures: true
+    unnecessary_library_names: false
+    omit_local_variable_types: false
+    omit_obvious_local_variable_types: true
+    specify_nonobvious_local_variable_types: true

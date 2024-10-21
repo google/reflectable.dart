@@ -2,6 +2,8 @@
 
 * Fix bug 291 (such that metadata on enum values can be obtained).
 * Update dependencies to use analyzer 6.11.0 and lints 5.1.0.
+* Change the implementation to use `..._obvious_local_variable_types`
+  lints.
 
 ## 4.0.10
 
