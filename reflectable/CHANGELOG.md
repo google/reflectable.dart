@@ -4,6 +4,7 @@
 * Update dependencies to use analyzer 6.11.0 and lints 5.1.0.
 * Change the implementation to use `..._obvious_local_variable_types`
   lints.
+* Update the [capability design document][1] slightly.
 
 ## 4.0.10
 
