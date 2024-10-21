@@ -44,7 +44,7 @@ void main() {
 
   // Get hold of a few mirrors.
   var instance = A();
-  var instanceMirror = myReflectable.reflect(instance);
+  InstanceMirror instanceMirror = myReflectable.reflect(instance);
   var classMirror = myReflectable.reflectType(A) as ClassMirror;
 
   // Invocations of methods accepting positional arguments (printing '42').

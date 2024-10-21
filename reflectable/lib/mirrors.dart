@@ -269,7 +269,7 @@ abstract class DeclarationMirror implements Mirror {
   /// had been encountered.
   ///
   /// Note that the return type of the corresponding method in
-  /// dart:mirrors is List<InstanceMirror>.
+  /// dart:mirrors is `List<InstanceMirror>`.
   //
   // TODO(eernst) doc: Make this comment more user friendly.
   // TODO(eernst) implement: Include comments as `metadata`, remember to
@@ -643,7 +643,7 @@ abstract class LibraryDependencyMirror implements Mirror {
   SourceLocation get location;
 
   /// Note that the return type of the corresponding method in
-  /// dart:mirrors is List<InstanceMirror>.
+  /// dart:mirrors is `List<InstanceMirror>`.
   ///
   /// Required capabilities: [metadata] requires a [MetadataCapability].
   List<Object?> get metadata; // TYARG: InstanceMirror

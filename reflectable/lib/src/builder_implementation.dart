@@ -16,7 +16,9 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
+import 'package:analyzer/error/error.dart';
 import 'package:analyzer/error/listener.dart';
+import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/source/source.dart';
 import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/src/dart/constant/compute.dart';
@@ -97,17 +99,17 @@ class _ReflectionWorld {
       void addInterfaceElement(InterfaceElement interfaceElement) {
         InterfaceType? supertype = interfaceElement.supertype;
         if (interfaceElement.mixins.isEmpty) {
-          var supertypeElement = supertype?.element;
+          InterfaceElement? supertypeElement = supertype?.element;
           if (supertypeElement != null) {
             addSubtypeRelation(supertypeElement, interfaceElement);
           }
         } else {
           // Mixins must be applied to a superclass, so it is not null.
-          var superclass = supertype!.element;
+          InterfaceElement superclass = supertype!.element;
           // Iterate over all mixins in most-general-first order (so with
           // `class C extends B with M1, M2..` we visit `M1` then `M2`.
           for (InterfaceType mixin in interfaceElement.mixins) {
-            var mixinElement = mixin.element;
+            InterfaceElement mixinElement = mixin.element;
             InterfaceElement? subClass =
                 mixin == interfaceElement.mixins.last ? interfaceElement : null;
             String? name = subClass == null
@@ -116,7 +118,7 @@ class _ReflectionWorld {
                         interfaceElement.isMixinApplication
                     ? interfaceElement.name
                     : null);
-            MixinApplication mixinApplication = MixinApplication(
+            var mixinApplication = MixinApplication(
                 name, superclass, mixinElement, library, subClass);
             addSubtypeRelation(superclass, mixinApplication);
             addSubtypeRelation(mixinElement, mixinApplication);
@@ -132,10 +134,10 @@ class _ReflectionWorld {
       }
 
       for (CompilationUnitElement unit in library.units) {
-        for (var interfaceElement in unit.classes) {
+        for (ClassElement interfaceElement in unit.classes) {
           addInterfaceElement(interfaceElement);
         }
-        for (var interfaceElement in unit.enums) {
+        for (EnumElement interfaceElement in unit.enums) {
           addInterfaceElement(interfaceElement);
         }
       }
@@ -151,8 +153,8 @@ class _ReflectionWorld {
   Future<String> generateCode() async {
     var typedefs = <FunctionType, int>{};
     var typeVariablesInScope = <String>{}; // None at top level.
-    String typedefsCode = '\n';
-    List<String> reflectorsCode = [];
+    var typedefsCode = '\n';
+    var reflectorsCode = <String>[];
     for (_ReflectorDomain reflector in reflectors) {
       String reflectorCode =
           await reflector._generateCode(this, importCollector, typedefs);
@@ -406,7 +408,7 @@ class _InterfaceElementEnhancedSet implements Set<InterfaceElement> {
       assert(!elementToDomain.containsKey(value));
       elementToDomain[value] = _createClassDomain(value, reflectorDomain);
       if (value is MixinApplication) {
-        var valueSubclass = value.subclass;
+        InterfaceElement? valueSubclass = value.subclass;
         if (valueSubclass != null) {
           // [value] is a mixin application which is the immediate superclass
           // of a class which is a regular class (not a mixin application). This
@@ -597,7 +599,7 @@ class ParameterListShape {
       numberOfOptionalPositionalParameters.hashCode;
 
   String get code {
-    String names = 'null';
+    var names = 'null';
     if (namesOfNamedParameters.isNotEmpty) {
       Iterable<String> symbols = namesOfNamedParameters.map((name) => '#$name');
       names = 'const ${_formatAsDynamicList(symbols)}';
@@ -654,7 +656,7 @@ class _ReflectorDomain {
       }
       if (_capabilities._impliesTypes &&
           _capabilities._impliesTypeAnnotations) {
-        _AnnotationClassFixedPoint fix = _AnnotationClassFixedPoint(
+        var fix = _AnnotationClassFixedPoint(
             _resolver, _generatedLibraryId, _classes.domainOf);
         if (_capabilities._impliesTypeAnnotationClosure) {
           await fix.expand(_classes);
@@ -729,18 +731,18 @@ class _ReflectorDomain {
         Iterable.generate(requiredPositionalCount, (int i) => parameterNames[i])
             .join(', ');
 
-    List<String> optionalsWithDefaultList = [];
-    for (int i = 0; i < optionalPositionalCount; i++) {
+    var optionalsWithDefaultList = <String>[];
+    for (var i = 0; i < optionalPositionalCount; i++) {
       String code = await _extractDefaultValueCode(
           importCollector, constructor.parameters[requiredPositionalCount + i]);
-      String defaultPart = code.isEmpty ? '' : ' = $code';
+      var defaultPart = code.isEmpty ? '' : ' = $code';
       optionalsWithDefaultList
           .add('${parameterNames[requiredPositionalCount + i]}$defaultPart');
     }
     String optionalsWithDefaults = optionalsWithDefaultList.join(', ');
 
-    List<String> namedWithDefaultList = [];
-    for (int i = 0; i < namedParameterNames.length; i++) {
+    var namedWithDefaultList = <String>[];
+    for (var i = 0; i < namedParameterNames.length; i++) {
       // Note that the use of `requiredPositionalCount + i` below relies
       // on a language design where no parameter list can include
       // both optional positional and named parameters, so if there are
@@ -749,7 +751,7 @@ class _ReflectorDomain {
           constructor.parameters[requiredPositionalCount + i];
       String code =
           await _extractDefaultValueCode(importCollector, parameterElement);
-      String defaultPart = code.isEmpty ? '' : ' = $code';
+      var defaultPart = code.isEmpty ? '' : ' = $code';
       namedWithDefaultList.add('${parameterElement.name}$defaultPart');
     }
     String namedWithDefaults = namedWithDefaultList.join(', ');
@@ -759,8 +761,8 @@ class _ReflectorDomain {
     String namedArguments =
         namedParameterNames.map((String name) => '$name: $name').join(', ');
 
-    List<String> parameterParts = <String>[];
-    List<String> argumentParts = <String>[];
+    var parameterParts = <String>[];
+    var argumentParts = <String>[];
 
     if (requiredPositionalCount != 0) {
       parameterParts.add(positionals);
@@ -775,7 +777,7 @@ class _ReflectorDomain {
       argumentParts.add(namedArguments);
     }
 
-    String doRunArgument = 'b';
+    var doRunArgument = 'b';
     while (parameterNames.contains(doRunArgument)) {
       doRunArgument = '${doRunArgument}b';
     }
@@ -803,29 +805,23 @@ class _ReflectorDomain {
   Future<String> _generateCode(_ReflectionWorld world,
       _ImportCollector importCollector, Map<FunctionType, int> typedefs) async {
     // Library related collections.
-    Enumerator<_LibraryDomain> libraries = Enumerator<_LibraryDomain>();
-    Map<LibraryElement, _LibraryDomain> libraryMap =
-        <LibraryElement, _LibraryDomain>{};
-    Enumerator<TopLevelVariableElement> topLevelVariables =
-        Enumerator<TopLevelVariableElement>();
+    var libraries = Enumerator<_LibraryDomain>();
+    var libraryMap = <LibraryElement, _LibraryDomain>{};
+    var topLevelVariables = Enumerator<TopLevelVariableElement>();
 
     // Class related collections.
-    Enumerator<FieldElement> fields = Enumerator<FieldElement>();
-    Enumerator<TypeParameterElement> typeParameters =
-        Enumerator<TypeParameterElement>();
+    var fields = Enumerator<FieldElement>();
+    var typeParameters = Enumerator<TypeParameterElement>();
     // Reflected types not in `classes`; appended to `ReflectorData.types`.
-    Enumerator<ErasableDartType> reflectedTypes =
-        Enumerator<ErasableDartType>();
+    var reflectedTypes = Enumerator<ErasableDartType>();
     var instanceGetterNames = <String>{};
     var instanceSetterNames = <String>{};
 
     // Library and class related collections.
-    Enumerator<ExecutableElement> members = Enumerator<ExecutableElement>();
-    Enumerator<ParameterElement> parameters = Enumerator<ParameterElement>();
-    Enumerator<ParameterListShape> parameterListShapes =
-        Enumerator<ParameterListShape>();
-    Map<ExecutableElement, ParameterListShape> parameterListShapeOf =
-        <ExecutableElement, ParameterListShape>{};
+    var members = Enumerator<ExecutableElement>();
+    var parameters = Enumerator<ParameterElement>();
+    var parameterListShapes = Enumerator<ParameterListShape>();
+    var parameterListShapeOf = <ExecutableElement, ParameterListShape>{};
 
     // Class element for [Object], needed as implicit upper bound. Initialized
     // if needed.
@@ -857,7 +853,7 @@ class _ReflectorDomain {
     // Fill in [libraries], [typeParameters], [members], [fields],
     // [parameters], [instanceGetterNames], and [instanceSetterNames].
     _libraries.items.forEach(uncheckedAddLibrary);
-    for (var classElement in await classes) {
+    for (InterfaceElement classElement in await classes) {
       LibraryElement classLibrary = classElement.library;
       if (!libraries.items.any((_LibraryDomain libraryDomain) =>
           libraryDomain._libraryElement == classLibrary)) {
@@ -914,7 +910,7 @@ class _ReflectorDomain {
       // including both explicitly declared ones, implicitly generated ones
       // for fields, and the implicitly generated ones that correspond to
       // method tear-offs.
-      for (var instanceMember in classDomain._instanceMembers) {
+      for (ExecutableElement instanceMember in classDomain._instanceMembers) {
         if (instanceMember is PropertyAccessorElement) {
           // A getter or a setter, synthetic or declared.
           if (instanceMember.isGetter) {
@@ -944,8 +940,8 @@ class _ReflectorDomain {
         }
       }
 
-      bool hasObject = false;
-      bool mustHaveObject = false;
+      var hasObject = false;
+      var mustHaveObject = false;
       var classesToAdd = <InterfaceElement>{};
       InterfaceElement? anyInterfaceElement;
       for (InterfaceElement classElement in await classes) {
@@ -957,7 +953,7 @@ class _ReflectorDomain {
         if (classElement.typeParameters.isNotEmpty) {
           for (TypeParameterElement typeParameterElement
               in classElement.typeParameters) {
-            var typeParameterElementBound = typeParameterElement.bound;
+            DartType? typeParameterElementBound = typeParameterElement.bound;
             if (typeParameterElementBound == null) {
               mustHaveObject = true;
               anyInterfaceElement = classElement;
@@ -974,9 +970,9 @@ class _ReflectorDomain {
       }
       if (mustHaveObject && !hasObject) {
         // If `mustHaveObject` is true then `anyInterfaceElement` is non-null.
-        var someInterfaceElement = anyInterfaceElement!;
+        InterfaceElement someInterfaceElement = anyInterfaceElement!;
         while (!_typeForReflectable(someInterfaceElement).isDartCoreObject) {
-          var someInterfaceType = someInterfaceElement.supertype;
+          InterfaceType? someInterfaceType = someInterfaceElement.supertype;
           someInterfaceElement = someInterfaceType!.element;
         }
         objectInterfaceElement = someInterfaceElement;
@@ -992,24 +988,23 @@ class _ReflectorDomain {
 
     // Record the names of covered members, if requested.
     if (_capabilities._impliesMemberSymbols) {
-      for (var executableElement in members.items) {
+      for (ExecutableElement executableElement in members.items) {
         _world.memberNames.add(executableElement.name);
       }
     }
 
     // Record the method parameter list shapes, if requested.
     if (_capabilities._impliesParameterListShapes) {
-      for (var element in members.items) {
-        int count = 0;
-        int optionalCount = 0;
+      for (ExecutableElement element in members.items) {
+        var count = 0;
+        var optionalCount = 0;
         var names = <String>{};
         for (ParameterElement parameter in element.parameters) {
           if (!parameter.isNamed) count++;
           if (parameter.isOptionalPositional) optionalCount++;
           if (parameter.isNamed) names.add(parameter.name);
         }
-        ParameterListShape shape =
-            ParameterListShape(count, optionalCount, names);
+        var shape = ParameterListShape(count, optionalCount, names);
         parameterListShapes.add(shape);
         parameterListShapeOf[element] = shape;
       }
@@ -1021,10 +1016,10 @@ class _ReflectorDomain {
     final int fieldsOffset = topLevelVariables.length;
     final int methodsOffset = fieldsOffset + fields.length;
     final int typeParametersOffset = (await classes).length;
-    final int reflectedTypesOffset = typeParametersOffset;
+    final reflectedTypesOffset = typeParametersOffset;
 
     // Generate code for creation of class mirrors.
-    List<String> typeMirrorsList = [];
+    var typeMirrorsList = <String>[];
     if (_capabilities._impliesTypes || _capabilities._impliesInstanceInvoke) {
       for (_ClassDomain classDomain in (await classes).domains) {
         typeMirrorsList.add(await _classMirrorCode(
@@ -1058,7 +1053,7 @@ class _ReflectorDomain {
     bool reflectedTypeRequested = _capabilities._impliesReflectedType;
 
     // Generate code for creation of member mirrors.
-    List<String> topLevelVariablesList = [];
+    var topLevelVariablesList = <String>[];
     for (TopLevelVariableElement element in topLevelVariables.items) {
       topLevelVariablesList.add(await _topLevelVariableMirrorCode(
           element,
@@ -1068,7 +1063,7 @@ class _ReflectorDomain {
           typedefs,
           reflectedTypeRequested));
     }
-    List<String> fieldsList = [];
+    var fieldsList = <String>[];
     for (FieldElement element in fields.items) {
       fieldsList.add(await _fieldMirrorCode(
           element,
@@ -1078,9 +1073,9 @@ class _ReflectorDomain {
           typedefs,
           reflectedTypeRequested));
     }
-    String membersCode = 'null';
+    var membersCode = 'null';
     if (_capabilities._impliesDeclarations) {
-      List<String> methodsList = [];
+      var methodsList = <String>[];
       for (ExecutableElement executableElement in members.items) {
         methodsList.add(await _methodMirrorCode(
             executableElement,
@@ -1103,9 +1098,9 @@ class _ReflectorDomain {
     }
 
     // Generate code for creation of parameter mirrors.
-    String parameterMirrorsCode = 'null';
+    var parameterMirrorsCode = 'null';
     if (_capabilities._impliesDeclarations) {
-      List<String> parametersList = [];
+      var parametersList = <String>[];
       for (ParameterElement element in parameters.items) {
         parametersList.add(await _parameterMirrorCode(
             element,
@@ -1121,7 +1116,7 @@ class _ReflectorDomain {
     }
 
     // Generate code for listing [Type] instances.
-    List<String> typesCodeList = [];
+    var typesCodeList = <String>[];
     for (InterfaceElement classElement in await classes) {
       typesCodeList.add(_dynamicTypeCodeOfClass(classElement, importCollector));
     }
@@ -1142,7 +1137,7 @@ class _ReflectorDomain {
     if (!_capabilities._supportsLibraries) {
       librariesCode = 'null';
     } else {
-      List<String> librariesCodeList = [];
+      var librariesCodeList = <String>[];
       for (_LibraryDomain library in libraries.items) {
         librariesCodeList.add(await _libraryMirrorCode(
             library,
@@ -1191,7 +1186,7 @@ class _ReflectorDomain {
   Future<int> _computeVariableTypeIndex(
       PropertyInducingElement element, int descriptor) async {
     if (!_capabilities._impliesTypes) return constants.noCapabilityIndex;
-    var interfaceType = element.type;
+    DartType interfaceType = element.type;
     if (interfaceType is! InterfaceType) return constants.noCapabilityIndex;
     return await _computeTypeIndexBase(
         interfaceType.element,
@@ -1241,7 +1236,7 @@ class _ReflectorDomain {
         // rather than "original" generic classes; so they do have actual type
         // arguments when there are formal type parameters.
         assert(typeArguments.length == typeParameters.length);
-        bool allTypeArgumentsSupported = true;
+        var allTypeArgumentsSupported = true;
         for (var typeArgument in typeArguments) {
           if (!await _hasSupportedReflectedTypeArguments(typeArgument)) {
             allTypeArgumentsSupported = false;
@@ -1249,8 +1244,8 @@ class _ReflectorDomain {
           }
         }
         if (allTypeArgumentsSupported) {
-          List<int?> typesIndices = [];
-          for (DartType actualTypeArgument in typeArguments) {
+          var typesIndices = <int?>[];
+          for (var actualTypeArgument in typeArguments) {
             if (actualTypeArgument is InterfaceType ||
                 actualTypeArgument is VoidType ||
                 actualTypeArgument is DynamicType) {
@@ -1283,7 +1278,7 @@ class _ReflectorDomain {
   Future<int> _computeReturnTypeIndex(
       ExecutableElement element, int descriptor) async {
     if (!_capabilities._impliesTypes) return constants.noCapabilityIndex;
-    var interfaceType = element.returnType;
+    DartType interfaceType = element.returnType;
     if (interfaceType is! InterfaceType) return constants.noCapabilityIndex;
     int result = await _computeTypeIndexBase(
         interfaceType.element,
@@ -1344,8 +1339,7 @@ class _ReflectorDomain {
     int? ownerIndex =
         (await classes).indexOf(typeParameterElement.enclosingElement3!);
     // TODO(eernst) implement: Update when type variables support metadata.
-    String metadataCode =
-        _capabilities._supportsMetadata ? '<Object>[]' : 'null';
+    var metadataCode = _capabilities._supportsMetadata ? '<Object>[]' : 'null';
     return "r.TypeVariableMirrorImpl(r'${typeParameterElement.name}', "
         "r'${_qualifiedTypeParameterName(typeParameterElement)}', "
         '${await _constConstructionCode(importCollector)}, '
@@ -1402,7 +1396,7 @@ class _ReflectorDomain {
 
     // All instance members belong to the behavioral interface, so they
     // also get an offset of `fields.length`.
-    String instanceMembersCode = 'null';
+    var instanceMembersCode = 'null';
     if (_capabilities._impliesDeclarations) {
       instanceMembersCode = _formatAsConstList('int',
           classDomain._instanceMembers.map((ExecutableElement element) {
@@ -1418,7 +1412,7 @@ class _ReflectorDomain {
 
     // All static members belong to the behavioral interface, so they
     // also get an offset of `fields.length`.
-    String staticMembersCode = 'null';
+    var staticMembersCode = 'null';
     if (_capabilities._impliesDeclarations) {
       staticMembersCode = _formatAsConstList('int',
           classDomain._staticMembers.map((ExecutableElement element) {
@@ -1433,7 +1427,7 @@ class _ReflectorDomain {
     InterfaceElement? superclass =
         (await classes).superclassOf(interfaceElement);
 
-    String superclassIndex = '${constants.noCapabilityIndex}';
+    var superclassIndex = '${constants.noCapabilityIndex}';
     if (_capabilities._impliesTypeRelations) {
       // [Object]'s superclass is reported as `null`: it does not exist and
       // hence we cannot decide whether it's supported or unsupported.; by
@@ -1456,9 +1450,9 @@ class _ReflectorDomain {
       // application is an abstract class.
       constructorsCode = 'const {}';
     } else {
-      List<String> mapEntries = [];
+      var mapEntries = <String>[];
       for (ConstructorElement constructor in classDomain._constructors) {
-        var enclosingElement = constructor.enclosingElement3;
+        InterfaceElement enclosingElement = constructor.enclosingElement3;
         if (constructor.isFactory ||
             ((enclosingElement is ClassElement &&
                     !enclosingElement.isAbstract) &&
@@ -1470,10 +1464,10 @@ class _ReflectorDomain {
       constructorsCode = _formatAsMap(mapEntries);
     }
 
-    String staticGettersCode = 'const {}';
-    String staticSettersCode = 'const {}';
+    var staticGettersCode = 'const {}';
+    var staticSettersCode = 'const {}';
     if (interfaceElement is! MixinApplication) {
-      List<String> staticGettersCodeList = [];
+      var staticGettersCodeList = <String>[];
       for (MethodElement method in classDomain._declaredMethods) {
         if (method.isStatic) {
           staticGettersCodeList.add(await _staticGettingClosure(
@@ -1487,7 +1481,7 @@ class _ReflectorDomain {
         }
       }
       staticGettersCode = _formatAsMap(staticGettersCodeList);
-      List<String> staticSettersCodeList = [];
+      var staticSettersCodeList = <String>[];
       for (PropertyAccessorElement accessor in classDomain._accessors) {
         if (accessor.isStatic && accessor.isSetter) {
           staticSettersCodeList.add(await _staticSettingClosure(
@@ -1499,7 +1493,7 @@ class _ReflectorDomain {
 
     int? mixinIndex = constants.noCapabilityIndex;
     if (_capabilities._impliesTypeRelations) {
-      var theClasses = await classes;
+      _InterfaceElementEnhancedSet theClasses = await classes;
       if (interfaceElement is MixinApplication &&
           interfaceElement.isMixinApplication) {
         // Named mixin application (using the syntax `class B = A with M;`).
@@ -1520,8 +1514,7 @@ class _ReflectorDomain {
         ? libraries.indexOf(libraryMap[interfaceElement.library]!)!
         : constants.noCapabilityIndex;
 
-    String superinterfaceIndices =
-        'const <int>[${constants.noCapabilityIndex}]';
+    var superinterfaceIndices = 'const <int>[${constants.noCapabilityIndex}]';
     if (_capabilities._impliesTypeRelations) {
       superinterfaceIndices = _formatAsConstList(
           'int',
@@ -1541,7 +1534,7 @@ class _ReflectorDomain {
 
     int classIndex = (await classes).indexOf(interfaceElement)!;
 
-    String parameterListShapesCode = 'null';
+    var parameterListShapesCode = 'null';
     if (_capabilities._impliesParameterListShapes) {
       Iterable<ExecutableElement> membersList = [
         ...classDomain._instanceMembers,
@@ -1576,7 +1569,7 @@ class _ReflectorDomain {
       // class modeled by [interfaceElement], and (2) that it is not an instance
       // of the fully dynamic instance of any of the classes that `extends` or
       // `implements` this [interfaceElement].
-      List<String> isCheckList = [];
+      var isCheckList = <String>[];
       if (interfaceElement.isPrivate ||
           interfaceElement is MixinElement ||
           (interfaceElement is ClassElement && interfaceElement.isAbstract) ||
@@ -1600,7 +1593,7 @@ class _ReflectorDomain {
             List<String> list, InterfaceElement interfaceElement) async {
           Iterable<InterfaceElement> subtypes =
               _world.subtypes[interfaceElement] ?? <InterfaceElement>[];
-          for (InterfaceElement subtype in subtypes) {
+          for (var subtype in subtypes) {
             if (subtype.isPrivate ||
                 subtype is MixinElement ||
                 (subtype is ClassElement && subtype.isAbstract) ||
@@ -1619,7 +1612,7 @@ class _ReflectorDomain {
       }
       String isCheckCode = isCheckList.join();
 
-      String typeParameterIndices = 'null';
+      var typeParameterIndices = 'null';
       if (_capabilities._impliesDeclarations) {
         int indexOf(TypeParameterElement typeParameter) =>
             typeParameters.indexOf(typeParameter)! + typeParametersOffset;
@@ -1687,7 +1680,7 @@ class _ReflectorDomain {
       int returnTypeIndex = await _computeReturnTypeIndex(element, descriptor);
       int ownerIndex = (await _computeOwnerIndex(element, descriptor)) ??
           constants.noCapabilityIndex;
-      String reflectedTypeArgumentsOfReturnType = 'null';
+      var reflectedTypeArgumentsOfReturnType = 'null';
       if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
         reflectedTypeArgumentsOfReturnType =
             await _computeReflectedTypeArguments(
@@ -1735,8 +1728,8 @@ class _ReflectorDomain {
       Map<FunctionType, int> typedefs,
       bool reflectedTypeRequested) async {
     int descriptor = _topLevelVariableDescriptor(element);
-    var owner = element.library;
-    var ownerIndex = _libraries.indexOf(owner) ?? constants.noCapabilityIndex;
+    LibraryElement owner = element.library;
+    int ownerIndex = _libraries.indexOf(owner) ?? constants.noCapabilityIndex;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int? reflectedTypeIndex = reflectedTypeRequested
         ? _typeCodeIndex(element.type, await classes, reflectedTypes,
@@ -1746,7 +1739,7 @@ class _ReflectorDomain {
         ? _dynamicTypeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
         : constants.noCapabilityIndex;
-    String reflectedTypeArguments = 'null';
+    var reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
       reflectedTypeArguments = await _computeReflectedTypeArguments(
           element.type,
@@ -1790,7 +1783,7 @@ class _ReflectorDomain {
         ? _dynamicTypeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
         : constants.noCapabilityIndex;
-    String reflectedTypeArguments = 'null';
+    var reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
       reflectedTypeArguments = await _computeReflectedTypeArguments(
           element.type,
@@ -1842,18 +1835,15 @@ class _ReflectorDomain {
       }
       // An instantiation of a generic class, or a non-generic class which is
       // not present in `classes`: Use `reflectedTypes`, possibly adding it.
-      ErasableDartType erasableDartType =
-          ErasableDartType(dartType, erased: false);
+      var erasableDartType = ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
       return reflectedTypes.indexOf(erasableDartType)! + reflectedTypesOffset;
     } else if (dartType is VoidType) {
-      ErasableDartType erasableDartType =
-          ErasableDartType(dartType, erased: false);
+      var erasableDartType = ErasableDartType(dartType, erased: false);
       reflectedTypes.add(ErasableDartType(dartType, erased: false));
       return reflectedTypes.indexOf(erasableDartType)! + reflectedTypesOffset;
     } else if (dartType is FunctionType) {
-      ErasableDartType erasableDartType =
-          ErasableDartType(dartType, erased: false);
+      var erasableDartType = ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
       int index =
           reflectedTypes.indexOf(erasableDartType)! + reflectedTypesOffset;
@@ -1897,18 +1887,16 @@ class _ReflectorDomain {
       // and iff it has type arguments we must specify that it should be erased
       // (if there are no type arguments we will use "not erased": erasure
       // makes no difference and we don't want to have two identical copies).
-      ErasableDartType erasableDartType =
+      var erasableDartType =
           ErasableDartType(dartType, erased: dartType.typeArguments.isNotEmpty);
       reflectedTypes.add(erasableDartType);
       return reflectedTypes.indexOf(erasableDartType)! + reflectedTypesOffset;
     } else if (dartType is VoidType) {
-      ErasableDartType erasableDartType =
-          ErasableDartType(dartType, erased: false);
+      var erasableDartType = ErasableDartType(dartType, erased: false);
       reflectedTypes.add(ErasableDartType(dartType, erased: false));
       return reflectedTypes.indexOf(erasableDartType)! + reflectedTypesOffset;
     } else if (dartType is FunctionType) {
-      ErasableDartType erasableDartType =
-          ErasableDartType(dartType, erased: false);
+      var erasableDartType = ErasableDartType(dartType, erased: false);
       reflectedTypes.add(erasableDartType);
       int index =
           reflectedTypes.indexOf(erasableDartType)! + reflectedTypesOffset;
@@ -1965,7 +1953,8 @@ class _ReflectorDomain {
       Map<FunctionType, int> typedefs,
       {bool useNameOfGenericFunctionType = true}) async {
     Future<String> fail() async {
-      var element = dartType is InterfaceType ? dartType.element : null;
+      InterfaceElement? element =
+          dartType is InterfaceType ? dartType.element : null;
       log.warning(await _formatDiagnosticMessage(
           'Attempt to generate code for an '
           'unsupported kind of type: $dartType (${dartType.runtimeType}). '
@@ -1989,7 +1978,7 @@ class _ReflectorDomain {
       } else {
         if (dartType.typeArguments.every(
             (type) => _hasNoFreeTypeVariables(type, typeVariablesInScope))) {
-          List<String> argumentList = [];
+          var argumentList = <String>[];
           for (DartType typeArgument in dartType.typeArguments) {
             argumentList.add(await _typeCodeOfTypeArgument(
                 typeArgument, importCollector, typeVariablesInScope, typedefs,
@@ -2026,15 +2015,15 @@ class _ReflectorDomain {
         String returnType = await _typeCodeOfTypeArgument(dartType.returnType,
             importCollector, typeVariablesInScope, typedefs,
             useNameOfGenericFunctionType: useNameOfGenericFunctionType);
-        String typeArguments = '';
+        var typeArguments = '';
         if (dartType.typeFormals.isNotEmpty) {
           Iterable<String> typeArgumentList = dartType.typeFormals.map(
               (TypeParameterElement typeParameter) => typeParameter.toString());
           typeArguments = '<${typeArgumentList.join(', ')}>';
         }
-        String argumentTypes = '';
+        var argumentTypes = '';
         if (dartType.normalParameterTypes.isNotEmpty) {
-          List<String> normalParameterTypeList = [];
+          var normalParameterTypeList = <String>[];
           for (DartType parameterType in dartType.normalParameterTypes) {
             normalParameterTypeList.add(await _typeCodeOfTypeArgument(
                 parameterType, importCollector, typeVariablesInScope, typedefs,
@@ -2043,19 +2032,19 @@ class _ReflectorDomain {
           argumentTypes = normalParameterTypeList.join(', ');
         }
         if (dartType.optionalParameterTypes.isNotEmpty) {
-          List<String> optionalParameterTypeList = [];
+          var optionalParameterTypeList = <String>[];
           for (DartType parameterType in dartType.optionalParameterTypes) {
             optionalParameterTypeList.add(await _typeCodeOfTypeArgument(
                 parameterType, importCollector, typeVariablesInScope, typedefs,
                 useNameOfGenericFunctionType: useNameOfGenericFunctionType));
           }
-          String connector = argumentTypes.isEmpty ? '' : ', ';
+          var connector = argumentTypes.isEmpty ? '' : ', ';
           argumentTypes = '$argumentTypes$connector'
               '[${optionalParameterTypeList.join(', ')}]';
         }
         if (dartType.namedParameterTypes.isNotEmpty) {
           Map<String, DartType> parameterMap = dartType.namedParameterTypes;
-          List<String> namedParameterTypeList = [];
+          var namedParameterTypeList = <String>[];
           for (String name in parameterMap.keys) {
             DartType parameterType = parameterMap[name]!;
             String typeCode = await _typeCodeOfTypeArgument(
@@ -2063,7 +2052,7 @@ class _ReflectorDomain {
                 useNameOfGenericFunctionType: useNameOfGenericFunctionType);
             namedParameterTypeList.add('$typeCode $name');
           }
-          String connector = argumentTypes.isEmpty ? '' : ', ';
+          var connector = argumentTypes.isEmpty ? '' : ', ';
           argumentTypes = '$argumentTypes$connector'
               '{${namedParameterTypeList.join(', ')}}';
         }
@@ -2144,7 +2133,8 @@ class _ReflectorDomain {
         }
       }
     } else {
-      var element = dartType is InterfaceType ? dartType.element : null;
+      InterfaceElement? element =
+          dartType is InterfaceType ? dartType.element : null;
       log.warning(await _formatDiagnosticMessage(
           'Attempt to generate code for an '
           'unsupported kind of type: $dartType (${dartType.runtimeType}). '
@@ -2200,14 +2190,14 @@ class _ReflectorDomain {
       _ImportCollector importCollector) async {
     LibraryElement library = libraryDomain._libraryElement;
 
-    List<String> gettersCodeList = [];
+    var gettersCodeList = <String>[];
     for (ExecutableElement getter in _gettersOfLibrary(libraryDomain)) {
       gettersCodeList.add(
           await _topLevelGettingClosure(importCollector, library, getter.name));
     }
     String gettersCode = _formatAsMap(gettersCodeList);
 
-    List<String> settersCodeList = [];
+    var settersCodeList = <String>[];
     for (PropertyAccessorElement setter in _settersOfLibrary(libraryDomain)) {
       settersCodeList.add(
           await _topLevelSettingClosure(importCollector, library, setter.name));
@@ -2231,7 +2221,7 @@ class _ReflectorDomain {
       return index + methodsOffset;
     });
 
-    String declarationsCode = 'const <int>[${constants.noCapabilityIndex}]';
+    var declarationsCode = 'const <int>[${constants.noCapabilityIndex}]';
     if (_capabilities._impliesDeclarations) {
       Iterable<int> declarationsIndices = [
         ...variableIndices,
@@ -2267,7 +2257,7 @@ class _ReflectorDomain {
       metadataCode = 'null';
     }
 
-    String parameterListShapesCode = 'null';
+    var parameterListShapesCode = 'null';
     if (_capabilities._impliesParameterListShapes) {
       parameterListShapesCode = _formatAsMap(
           libraryDomain._declarations.map((ExecutableElement element) {
@@ -2308,9 +2298,9 @@ class _ReflectorDomain {
         // to `classes` we use its `indexOf`; otherwise (if we do not have an
         // [ec.TypeAnnotationQuantifyCapability]) we must indicate that the
         // capability is absent.
-        var elementType = element.type;
+        DartType elementType = element.type;
         if (elementType is InterfaceType) {
-          var elementTypeElement = elementType.element;
+          InterfaceElement elementTypeElement = elementType.element;
           classMirrorIndex = (await classes).contains(elementTypeElement)
               ? (await classes).indexOf(elementTypeElement)!
               : constants.noCapabilityIndex;
@@ -2327,7 +2317,7 @@ class _ReflectorDomain {
         ? _dynamicTypeCodeIndex(element.type, await classes, reflectedTypes,
             reflectedTypesOffset, typedefs)
         : constants.noCapabilityIndex;
-    String reflectedTypeArguments = 'null';
+    var reflectedTypeArguments = 'null';
     if (reflectedTypeRequested && _capabilities._impliesTypeRelations) {
       reflectedTypeArguments = await _computeReflectedTypeArguments(
           element.type,
@@ -2336,7 +2326,7 @@ class _ReflectorDomain {
           importCollector,
           typedefs);
     }
-    String metadataCode = 'null';
+    var metadataCode = 'null';
     if (_capabilities._supportsMetadata) {
       // TODO(eernst): 'dart:*' is not considered valid. To survive, we
       // return the empty metadata for elements from 'dart:*'. Issue 173.
@@ -2356,8 +2346,8 @@ class _ReflectorDomain {
       }
     }
     String code = await _extractDefaultValueCode(importCollector, element);
-    String defaultValueCode = code.isEmpty ? 'null' : code;
-    String parameterSymbolCode = descriptor & constants.namedAttribute != 0
+    var defaultValueCode = code.isEmpty ? 'null' : code;
+    var parameterSymbolCode = descriptor & constants.namedAttribute != 0
         ? '#${element.name}'
         : 'null';
 
@@ -2453,9 +2443,9 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement> {
     if (workingSuperType == null) {
       return []; // "Superclass of [Object]", ignore.
     }
-    var workingSuperclass = workingSuperType.element;
+    InterfaceElement workingSuperclass = workingSuperType.element;
 
-    List<InterfaceElement> result = [];
+    var result = <InterfaceElement>[];
 
     if (_includedByUpwardsClosure(workingSuperclass)) {
       result.add(workingSuperclass);
@@ -2471,9 +2461,9 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement> {
     // must provide the immediate subclass of each [MixinApplication] when
     // is a regular class (not a mixin application), otherwise [null], which
     // is done with [subClass].
-    InterfaceElement superclass = workingSuperclass;
+    var superclass = workingSuperclass;
     for (InterfaceType mixin in element.mixins) {
-      var mixinClass = mixin.element;
+      InterfaceElement mixinClass = mixin.element;
       if (mixinsRequested) result.add(mixinClass);
       InterfaceElement? subClass =
           mixin == element.mixins.last ? element : null;
@@ -2506,7 +2496,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement> {
           // `bound`, so we must return false if `excludeUpperBound`.
           return !direct || !upwardsClosureBounds[bound]!;
         }
-        var interfaceElementSupertype = interfaceElement.supertype;
+        InterfaceType? interfaceElementSupertype = interfaceElement.supertype;
         if (interfaceElementSupertype == null) return false;
         return helper(interfaceElementSupertype.element, false);
       }
@@ -2528,15 +2518,15 @@ Set<InterfaceElement> _mixinApplicationsOfClasses(
     if (interfaceElement is MixinApplication) continue;
     InterfaceType? supertype = interfaceElement.supertype;
     if (supertype == null) continue; // "Superclass of [Object]", ignore.
-    var superclass = supertype.element;
+    InterfaceElement superclass = supertype.element;
     // Note that we iterate from the most general mixin to more specific ones,
     // that is, with `class C extends B with M1, M2..` we visit `M1` before
     // `M2`; this ensures that the right `superclass` is available for each
     // new [MixinApplication] created.  We must provide the immediate subclass
     // of each [MixinApplication] when it is a regular class (not a mixin
     // application), otherwise [null], which is done with [subClass].
-    for (var mixin in interfaceElement.mixins) {
-      var mixinClass = mixin.element;
+    for (InterfaceType mixin in interfaceElement.mixins) {
+      InterfaceElement mixinClass = mixin.element;
       InterfaceElement? subClass =
           mixin == interfaceElement.mixins.last ? interfaceElement : null;
       String? name = subClass == null
@@ -2584,37 +2574,37 @@ class _AnnotationClassFixedPoint extends FixedPoint<InterfaceElement> {
     // Mixin-applications do not add further methods and fields.
     if (classDomain._interfaceElement is MixinApplication) return [];
 
-    List<InterfaceElement> result = [];
+    var result = <InterfaceElement>[];
 
     // Traverse type annotations to find successors. Note that we cannot
     // abstract the many redundant elements below, because `yield` cannot
     // occur in a local function.
     for (FieldElement fieldElement in classDomain._declaredFields) {
-      var fieldType = fieldElement.type;
+      DartType fieldType = fieldElement.type;
       if (fieldType is InterfaceType) {
         result.add(fieldType.element);
       }
     }
     for (ParameterElement parameterElement in classDomain._declaredParameters) {
-      var parameterType = parameterElement.type;
+      DartType parameterType = parameterElement.type;
       if (parameterType is InterfaceType) {
         result.add(parameterType.element);
       }
     }
     for (ParameterElement parameterElement in classDomain._instanceParameters) {
-      var parameterType = parameterElement.type;
+      DartType parameterType = parameterElement.type;
       if (parameterType is InterfaceType) {
         result.add(parameterType.element);
       }
     }
     for (ExecutableElement executableElement in classDomain._declaredMethods) {
-      var executableReturnType = executableElement.returnType;
+      DartType executableReturnType = executableElement.returnType;
       if (executableReturnType is InterfaceType) {
         result.add(executableReturnType.element);
       }
     }
     for (ExecutableElement executableElement in classDomain._instanceMembers) {
-      var executableReturnType = executableElement.returnType;
+      DartType executableReturnType = executableElement.returnType;
       if (executableReturnType is InterfaceType) {
         result.add(executableReturnType.element);
       }
@@ -2823,7 +2813,7 @@ class _ClassDomain {
   String get _simpleName {
     // TODO(eernst) clarify: Decide whether this should be simplified
     // by adding a method implementation to `MixinApplication`.
-    var interfaceElement = _interfaceElement;
+    InterfaceElement interfaceElement = _interfaceElement;
     if (interfaceElement is MixinApplication &&
         interfaceElement.isMixinApplication) {
       // This is the case `class B = A with M;`.
@@ -2835,11 +2825,11 @@ class _ClassDomain {
       // excluded.
       List<InterfaceType> mixins = interfaceElement.mixins;
       var superclassType = interfaceElement.supertype as InterfaceType;
-      var superclassTypeElement = superclassType.element;
+      InterfaceElement superclassTypeElement = superclassType.element;
       String superclassName = _qualifiedName(superclassTypeElement);
-      StringBuffer name = StringBuffer(superclassName);
-      bool firstSeparator = true;
-      for (InterfaceType mixin in mixins) {
+      var name = StringBuffer(superclassName);
+      var firstSeparator = true;
+      for (var mixin in mixins) {
         name.write(firstSeparator ? ' with ' : ', ');
         name.write(_qualifiedName(mixin.element));
         firstSeparator = false;
@@ -2866,9 +2856,10 @@ class _ClassDomain {
   /// Finds all instance members by going through the class hierarchy.
   Iterable<ExecutableElement> get _instanceMembers {
     Map<String, ExecutableElement> helper(InterfaceElement interfaceElement) {
-      var member = _reflectorDomain._instanceMemberCache[interfaceElement];
+      Map<String, ExecutableElement>? member =
+          _reflectorDomain._instanceMemberCache[interfaceElement];
       if (member != null) return member;
-      Map<String, ExecutableElement> result = <String, ExecutableElement>{};
+      var result = <String, ExecutableElement>{};
 
       void addIfCapable(String name, ExecutableElement member) {
         if (member.isPrivate) return;
@@ -2915,9 +2906,9 @@ class _ClassDomain {
         helper(interfaceElement.mixin).forEach(addIfCapable);
         return cacheResult(result);
       }
-      var superclassType = interfaceElement.supertype;
+      InterfaceType? superclassType = interfaceElement.supertype;
       if (superclassType is InterfaceType) {
-        var superclassElement = superclassType.element;
+        InterfaceElement superclassElement = superclassType.element;
         helper(superclassElement).forEach(addIfCapable);
       }
       interfaceElement.mixins.forEach(addTypeIfCapable);
@@ -2932,7 +2923,7 @@ class _ClassDomain {
 
   /// Finds all parameters of instance members.
   Iterable<ParameterElement> get _instanceParameters {
-    List<ParameterElement> result = <ParameterElement>[];
+    var result = <ParameterElement>[];
     if (_reflectorDomain._capabilities._impliesDeclarations) {
       for (ExecutableElement executableElement in _instanceMembers) {
         result.addAll(executableElement.parameters);
@@ -2943,7 +2934,7 @@ class _ClassDomain {
 
   /// Finds all static members.
   Iterable<ExecutableElement> get _staticMembers {
-    List<ExecutableElement> result = <ExecutableElement>[];
+    var result = <ExecutableElement>[];
     if (_interfaceElement is MixinApplication) return result;
 
     void possiblyAddMethod(MethodElement method) {
@@ -2997,7 +2988,7 @@ class _Capabilities {
   _Capabilities(this._capabilities);
 
   bool _supportsName(ec.NamePatternCapability capability, String methodName) {
-    RegExp regexp = RegExp(capability.namePattern);
+    var regexp = RegExp(capability.namePattern);
     return regexp.hasMatch(methodName);
   }
 
@@ -3006,9 +2997,9 @@ class _Capabilities {
       ec.MetadataQuantifiedCapability capability,
       Iterable<DartObject>? metadata) {
     if (metadata == null) return false;
-    bool result = false;
+    var result = false;
     DartType capabilityType = _typeForReflectable(capability.metadataType);
-    for (var metadatum in metadata) {
+    for (DartObject metadatum in metadata) {
       if (typeSystem.isSubtypeOf(metadatum.type!, capabilityType)) {
         result = true;
         break;
@@ -3243,7 +3234,7 @@ class _Capabilities {
   /// be consulted for each key (`if (myClosureBounds[key]) ..`) in order to
   /// take `excludeUpperBound` into account.
   Future<Map<InterfaceElement, bool>> get _upwardsClosureBounds async {
-    Map<InterfaceElement, bool> result = {};
+    var result = <InterfaceElement, bool>{};
     for (ec.ReflectCapability capability in _capabilities) {
       if (capability is ec.SuperclassQuantifyCapability) {
         Element? element = capability.upperBound;
@@ -3485,8 +3476,8 @@ class BuilderImplementation {
 
     Element? element = elementAnnotation.element;
     if (element is ConstructorElement) {
-      var enclosingType = _typeForReflectable(element.enclosingElement3);
-      var focusClassType = _typeForReflectable(focusClass);
+      DartType enclosingType = _typeForReflectable(element.enclosingElement3);
+      DartType focusClassType = _typeForReflectable(focusClass);
       bool isOk = enclosingType is ParameterizedType &&
           focusClassType is InterfaceType &&
           await checkInheritance(enclosingType, focusClassType);
@@ -3510,8 +3501,8 @@ class BuilderImplementation {
       // would mean that the value is actually null, which we will also
       // reject as irrelevant.
       if (constantValue == null) return null;
-      var constantValueType = constantValue.type;
-      var focusClassType = _typeForReflectable(focusClass);
+      DartType? constantValueType = constantValue.type;
+      DartType focusClassType = _typeForReflectable(focusClass);
       bool isOk = constantValueType is ParameterizedType &&
           focusClassType is InterfaceType &&
           await checkInheritance(constantValueType, focusClassType);
@@ -3557,8 +3548,8 @@ class BuilderImplementation {
         _librariesByName['reflectable.reflectable']!;
     LibraryElement capabilityLibrary =
         _librariesByName['reflectable.capability']!;
-    var reflectableClass = reflectableLibrary.getClass('Reflectable')!;
-    var typeType = reflectableLibrary.typeProvider.typeType;
+    ClassElement reflectableClass = reflectableLibrary.getClass('Reflectable')!;
+    InterfaceType typeType = reflectableLibrary.typeProvider.typeType;
     InterfaceElement typeTypeClass = typeType.element;
 
     ConstructorElement globalQuantifyCapabilityConstructor = capabilityLibrary
@@ -3570,19 +3561,20 @@ class BuilderImplementation {
             .getNamedConstructor('')!;
 
     for (LibraryElement library in _libraries) {
-      var imports = library.definingCompilationUnit.libraryImports;
-      for (LibraryImportElement import in imports) {
+      List<LibraryImportElement> imports =
+          library.definingCompilationUnit.libraryImports;
+      for (var import in imports) {
         if (import.importedLibrary?.id != reflectableLibrary.id) continue;
         for (ElementAnnotation metadatum in import.metadata) {
-          var metadatumElement = metadatum.element?.declaration;
+          Element? metadatumElement = metadatum.element?.declaration;
           if (metadatumElement == globalQuantifyCapabilityConstructor) {
             DartObject? value = _getEvaluatedMetadatum(metadatum);
             if (value != null) {
               String? pattern =
                   value.getField('classNamePattern')?.toStringValue();
-              var valueType =
+              DartType? valueType =
                   value.getField('(super)')?.getField('reflector')?.type;
-              var reflector =
+              InterfaceElement? reflector =
                   valueType is InterfaceType ? valueType.element : null;
               if (reflector == null) {
                 await _warn(
@@ -3591,7 +3583,7 @@ class BuilderImplementation {
                     metadatumElement);
                 continue;
               } else {
-                var reflectorSupertype = reflector.supertype;
+                InterfaceType? reflectorSupertype = reflector.supertype;
                 if (reflectorSupertype is InterfaceType &&
                     reflectorSupertype.element != reflectableClass) {
                   await _warn(
@@ -3611,28 +3603,29 @@ class BuilderImplementation {
               globalQuantifyMetaCapabilityConstructor) {
             DartObject? constantValue = metadatum.computeConstantValue();
             if (constantValue != null) {
-              var metadataType = constantValue.getField('metadataType');
-              var metadataFieldType = metadataType?.toTypeValue();
-              var metadataFieldValue = metadataFieldType is InterfaceType
-                  ? metadataFieldType.element
-                  : null;
-              var metadataTypeType = metadataType?.type;
+              DartObject? metadataType = constantValue.getField('metadataType');
+              DartType? metadataFieldType = metadataType?.toTypeValue();
+              InterfaceElement? metadataFieldValue =
+                  metadataFieldType is InterfaceType
+                      ? metadataFieldType.element
+                      : null;
+              DartType? metadataTypeType = metadataType?.type;
               if (metadataFieldValue == null) {
                 var message = 'The metadata must be a Type.';
                 await _warn(WarningKind.badMetadata, message, metadatumElement);
                 continue;
               } else if (metadataTypeType is InterfaceType &&
                   metadataTypeType.element != typeTypeClass) {
-                var typeName = metadataTypeType.element.name;
+                String typeName = metadataTypeType.element.name;
                 var message = 'The metadata must be a Type. Found $typeName.';
                 await _warn(WarningKind.badMetadata, message, metadatumElement);
                 continue;
               }
-              var reflectorType = constantValue
+              DartType? reflectorType = constantValue
                   .getField('(super)')
                   ?.getField('reflector')
                   ?.type;
-              var reflector =
+              InterfaceElement? reflector =
                   reflectorType is InterfaceType ? reflectorType.element : null;
               if (reflector == null) {
                 await _warn(
@@ -3641,7 +3634,7 @@ class BuilderImplementation {
                     metadatumElement);
                 continue;
               } else {
-                var reflectorSupertype = reflector.supertype;
+                InterfaceType? reflectorSupertype = reflector.supertype;
                 if (reflectorType is InterfaceType &&
                     reflectorSupertype is InterfaceType &&
                     reflectorSupertype.element != reflectableClass) {
@@ -3721,7 +3714,7 @@ class BuilderImplementation {
       return false;
     }
 
-    var constructorDeclarationNode =
+    AstNode? constructorDeclarationNode =
         await _getDeclarationAst(constructor, _resolver);
     if (constructorDeclarationNode == null ||
         constructorDeclarationNode is! ConstructorDeclaration) {
@@ -3788,7 +3781,7 @@ class BuilderImplementation {
     /// it if none exists.
     Future<_ReflectorDomain> getReflectorDomain(
         InterfaceElement reflector) async {
-      var domain = domains[reflector];
+      _ReflectorDomain? domain = domains[reflector];
       if (domain == null) {
         LibraryElement reflectorLibrary = reflector.library;
         _Capabilities capabilities =
@@ -3825,13 +3818,19 @@ class BuilderImplementation {
           if (type is MixinApplication && type.isMixinApplication) {
             // Iterate over all mixins in most-general-first order (so with
             // `class C extends B with M1, M2..` we visit `M1` then `M2`.
-            var superclass = type.supertype!.element;
-            for (var mixin in type.mixins) {
-              var mixinElement = mixin.element;
-              var subClass = mixin == type.mixins.last ? type : null;
+            InterfaceElement superclass = type.supertype!.element;
+            for (InterfaceType mixin in type.mixins) {
+              InterfaceElement mixinElement = mixin.element;
+              MixinApplication? subClass =
+                  mixin == type.mixins.last ? type : null;
               String? name = subClass == null ? null : type.name;
-              MixinApplication mixinApplication = MixinApplication(
-                  name, superclass, mixinElement, type.library, subClass);
+              var mixinApplication = MixinApplication(
+                name,
+                superclass,
+                mixinElement,
+                type.library,
+                subClass,
+              );
               domain._classes.add(mixinApplication);
               superclass = mixinApplication;
             }
@@ -3859,7 +3858,7 @@ class BuilderImplementation {
     /// [metadata].
     Future<Iterable<InterfaceElement>> getReflectors(
         String? qualifiedName, List<ElementAnnotation> metadata) async {
-      List<InterfaceElement> result = <InterfaceElement>[];
+      var result = <InterfaceElement>[];
 
       for (ElementAnnotation metadatum in metadata) {
         DartObject? value = _getEvaluatedMetadatum(metadatum);
@@ -3867,7 +3866,7 @@ class BuilderImplementation {
         // Test if the type of this metadata is associated with any reflectors
         // via GlobalQuantifyMetaCapability.
         if (value != null) {
-          var valueType = value.type;
+          DartType? valueType = value.type;
           if (valueType is InterfaceType) {
             List<InterfaceElement>? reflectors =
                 globalMetadata[valueType.element];
@@ -3943,7 +3942,7 @@ class BuilderImplementation {
     }
 
     var usedReflectors = <InterfaceElement>{};
-    for (var domain in domains.values) {
+    for (_ReflectorDomain domain in domains.values) {
       usedReflectors.add(domain._reflector);
     }
     for (InterfaceElement reflector
@@ -3958,7 +3957,7 @@ class BuilderImplementation {
     // [_ReflectorDomain]s, and each of them refer back. Such a cycle cannot be
     // defined during construction, so `_world` is non-final and left unset by
     // the constructor, and we need to close the cycle here.
-    _ReflectionWorld world = _ReflectionWorld(
+    var world = _ReflectionWorld(
         _resolver,
         _libraries,
         dataId,
@@ -3966,7 +3965,7 @@ class BuilderImplementation {
         reflectableLibrary,
         entryPoint,
         importCollector);
-    for (var domain in domains.values) {
+    for (_ReflectorDomain domain in domains.values) {
       domain._world = world;
     }
     return world;
@@ -3979,7 +3978,8 @@ class BuilderImplementation {
       Expression expression,
       LibraryElement containingLibrary,
       Element messageTarget) async {
-    var constant = await _evaluateConstant(containingLibrary, expression);
+    DartObject? constant =
+        await _evaluateConstant(containingLibrary, expression);
 
     if (constant is! DartObject) {
       await _severe(
@@ -4006,9 +4006,9 @@ class BuilderImplementation {
     // be in the given `capabilityLibrary` (because we could never know
     // how to interpret the meaning of a user-written capability class, so
     // users cannot write their own capability classes).
-    var dartTypeElement = (dartType as InterfaceType).element;
+    InterfaceElement dartTypeElement = (dartType as InterfaceType).element;
     if (dartTypeElement is! ClassElement) {
-      var typeString = dartType.getDisplayString();
+      String typeString = dartType.getDisplayString();
       await _severe(
           errors.applyTemplate(
               errors.superArgumentNonClass, {'type': typeString}),
@@ -4026,9 +4026,10 @@ class BuilderImplementation {
     /// Extracts the namePattern String from an instance of a subclass of
     /// NamePatternCapability.
     Future<String?> extractNamePattern(DartObject constant) async {
-      var constantSuper = constant.getField('(super)');
-      var constantSuperNamePattern = constantSuper?.getField('namePattern');
-      var constantSuperNamePatternString =
+      DartObject? constantSuper = constant.getField('(super)');
+      DartObject? constantSuperNamePattern =
+          constantSuper?.getField('namePattern');
+      String? constantSuperNamePatternString =
           constantSuperNamePattern?.toStringValue();
       if (constantSuper == null ||
           constantSuperNamePattern == null ||
@@ -4044,14 +4045,15 @@ class BuilderImplementation {
     /// MetadataCapability represented by [constant], reporting any diagnostic
     /// messages as referring to [messageTarget].
     Future<InterfaceElement?> extractMetadata(DartObject constant) async {
-      var constantSuper = constant.getField('(super)');
-      var constantSuperMetadataType = constantSuper?.getField('metadataType');
+      DartObject? constantSuper = constant.getField('(super)');
+      DartObject? constantSuperMetadataType =
+          constantSuper?.getField('metadataType');
       if (constantSuper == null || constantSuperMetadataType == null) {
         await _warn(WarningKind.badMetadata,
             'Could not extract metadata type from capability.', messageTarget);
         return null;
       }
-      var metadataFieldType = constantSuperMetadataType.toTypeValue();
+      DartType? metadataFieldType = constantSuperMetadataType.toTypeValue();
       Object? metadataFieldValue =
           metadataFieldType is InterfaceType ? metadataFieldType.element : null;
       if (metadataFieldValue is InterfaceElement) return metadataFieldValue;
@@ -4082,45 +4084,45 @@ class BuilderImplementation {
       case 'LibraryDependenciesCapability':
         return ec.libraryDependenciesCapability;
       case 'InstanceInvokeCapability':
-        var namePattern = await extractNamePattern(constant);
+        String? namePattern = await extractNamePattern(constant);
         if (namePattern == null) return null;
         return ec.InstanceInvokeCapability(namePattern);
       case 'InstanceInvokeMetaCapability':
-        var metadata = await extractMetadata(constant);
+        InterfaceElement? metadata = await extractMetadata(constant);
         if (metadata == null) return null;
         return ec.InstanceInvokeMetaCapability(metadata);
       case 'StaticInvokeCapability':
-        var namePattern = await extractNamePattern(constant);
+        String? namePattern = await extractNamePattern(constant);
         if (namePattern == null) return null;
         return ec.StaticInvokeCapability(namePattern);
       case 'StaticInvokeMetaCapability':
-        var metadata = await extractMetadata(constant);
+        InterfaceElement? metadata = await extractMetadata(constant);
         if (metadata == null) return null;
         return ec.StaticInvokeMetaCapability(metadata);
       case 'TopLevelInvokeCapability':
-        var namePattern = await extractNamePattern(constant);
+        String? namePattern = await extractNamePattern(constant);
         if (namePattern == null) return null;
         return ec.TopLevelInvokeCapability(namePattern);
       case 'TopLevelInvokeMetaCapability':
-        var metadata = await extractMetadata(constant);
+        InterfaceElement? metadata = await extractMetadata(constant);
         if (metadata == null) return null;
         return ec.TopLevelInvokeMetaCapability(metadata);
       case 'NewInstanceCapability':
-        var namePattern = await extractNamePattern(constant);
+        String? namePattern = await extractNamePattern(constant);
         if (namePattern == null) return null;
         return ec.NewInstanceCapability(namePattern);
       case 'NewInstanceMetaCapability':
-        var metadata = await extractMetadata(constant);
+        InterfaceElement? metadata = await extractMetadata(constant);
         if (metadata == null) return null;
         return ec.NewInstanceMetaCapability(metadata);
       case 'TypeCapability':
         return ec.TypeCapability();
       case 'InvokingCapability':
-        var namePattern = await extractNamePattern(constant);
+        String? namePattern = await extractNamePattern(constant);
         if (namePattern == null) return null;
         return ec.InvokingCapability(namePattern);
       case 'InvokingMetaCapability':
-        var metadata = await extractMetadata(constant);
+        InterfaceElement? metadata = await extractMetadata(constant);
         if (metadata == null) return null;
         return ec.InvokingMetaCapability(metadata);
       case 'TypingCapability':
@@ -4130,17 +4132,18 @@ class BuilderImplementation {
       case '_SubtypeQuantifyCapability':
         return ec.subtypeQuantifyCapability;
       case 'SuperclassQuantifyCapability':
-        var constantUpperBound = constant.getField('upperBound');
-        var constantExcludeUpperBound = constant.getField('excludeUpperBound');
+        DartObject? constantUpperBound = constant.getField('upperBound');
+        DartObject? constantExcludeUpperBound =
+            constant.getField('excludeUpperBound');
         if (constantUpperBound == null || constantExcludeUpperBound == null) {
           return null;
         }
-        var constantUpperBoundType = constantUpperBound.toTypeValue()!;
+        DartType constantUpperBoundType = constantUpperBound.toTypeValue()!;
         if (constantUpperBoundType is! InterfaceType) return null;
         return ec.SuperclassQuantifyCapability(constantUpperBoundType.element,
             excludeUpperBound: constantExcludeUpperBound.toBoolValue()!);
       case 'TypeAnnotationQuantifyCapability':
-        var constantTransitive = constant.getField('transitive');
+        DartObject? constantTransitive = constant.getField('transitive');
         if (constantTransitive == null) return null;
         return ec.TypeAnnotationQuantifyCapability(
             transitive: constantTransitive.toBoolValue()!);
@@ -4183,7 +4186,7 @@ class BuilderImplementation {
       return _Capabilities(<ec.ReflectCapability>[]);
     }
 
-    ConstructorDeclaration constructorDeclarationNode =
+    var constructorDeclarationNode =
         await _getDeclarationAst(constructorElement, _resolver)
             as ConstructorDeclaration;
     NodeList<ConstructorInitializer> initializers =
@@ -4206,7 +4209,7 @@ class BuilderImplementation {
 
     // Main case: the initializer is exactly one element. We must
     // handle two cases: `super(..)` and `super.fromList(<_>[..])`.
-    var superInvocation = initializers[0];
+    ConstructorInitializer superInvocation = initializers[0];
 
     if (superInvocation is! SuperConstructorInvocation) {
       return _Capabilities(<ec.ReflectCapability>[]);
@@ -4230,13 +4233,15 @@ class BuilderImplementation {
       }
     }
 
-    var superInvocationConstructorName = superInvocation.constructorName;
+    SimpleIdentifier? superInvocationConstructorName =
+        superInvocation.constructorName;
     if (superInvocationConstructorName == null) {
       // Subcase: `super(..)` where 0..k arguments are accepted for some
       // k that we need not worry about here.
-      List<ec.ReflectCapability> capabilities = [];
-      for (var argument in superInvocation.argumentList.arguments) {
-        var currentCapability = await capabilityOfCollectionElement(argument);
+      var capabilities = <ec.ReflectCapability>[];
+      for (Expression argument in superInvocation.argumentList.arguments) {
+        ec.ReflectCapability? currentCapability =
+            await capabilityOfCollectionElement(argument);
         if (currentCapability != null) capabilities.add(currentCapability);
       }
       return _Capabilities(capabilities);
@@ -4247,14 +4252,14 @@ class BuilderImplementation {
     NodeList<Expression> arguments = superInvocation.argumentList.arguments;
     assert(arguments.length == 1);
     Expression listLiteral = arguments[0];
-    List<ec.ReflectCapability> capabilities = [];
+    var capabilities = <ec.ReflectCapability>[];
     if (listLiteral is! ListLiteral) {
       await _severe('Encountered a reflector using super.fromList(...) '
           'with an argument that is not a list literal, '
           'which is not supported');
     } else {
-      for (var collectionElement in listLiteral.elements) {
-        var currentCapability =
+      for (CollectionElement collectionElement in listLiteral.elements) {
+        ec.ReflectCapability? currentCapability =
             await capabilityOfCollectionElement(collectionElement);
         if (currentCapability != null) capabilities.add(currentCapability);
       }
@@ -4272,7 +4277,7 @@ class BuilderImplementation {
     // imports because generating the code can add further imports.
     String code = await world.generateCode();
 
-    List<String> imports = <String>[];
+    var imports = <String>[];
     for (LibraryElement library in world.importCollector._libraries) {
       Uri uri = library == world.entryPointLibrary
           ? Uri.parse(originalEntryPointFilename)
@@ -4285,7 +4290,7 @@ class BuilderImplementation {
     }
     imports.sort();
 
-    String result = '''
+    var result = '''
 // This file has been generated by the reflectable package.
 // https://github.com/dart-lang/reflectable.
 import 'dart:core';
@@ -4312,7 +4317,7 @@ void initializeReflectable() {
 }
 ''';
     if (_formatted) {
-      DartFormatter formatter = DartFormatter();
+      var formatter = DartFormatter();
       result = formatter.format(result);
     }
     return result;
@@ -4560,10 +4565,10 @@ int _parameterDescriptor(ParameterElement element) {
 /// Returns an integer encoding of the kind and attributes of the given
 /// method/constructor/getter/setter.
 int _declarationDescriptor(ExecutableElement element) {
-  int result = 0;
+  var result = 0;
 
   void handleReturnType(ExecutableElement element) {
-    var returnType = element.returnType;
+    DartType returnType = element.returnType;
     if (returnType is VoidType) {
       result |= constants.voidReturnTypeAttribute;
     }
@@ -4650,7 +4655,7 @@ Future<String> _extractConstantCode(
     AssetId generatedLibraryId,
     Resolver resolver) async {
   Future<String> typeAnnotationHelper(TypeAnnotation typeName) async {
-    var interfaceType = typeName.type;
+    DartType? interfaceType = typeName.type;
     if (interfaceType is InterfaceType) {
       LibraryElement library = interfaceType.element.library;
       String prefix = importCollector._getPrefix(library);
@@ -4667,7 +4672,7 @@ Future<String> _extractConstantCode(
 
   Future<String> helper(Expression expression) async {
     if (expression is ListLiteral) {
-      List<String> elements = [];
+      var elements = <String>[];
       for (CollectionElement collectionElement in expression.elements) {
         if (collectionElement is Expression) {
           Expression subExpression = collectionElement;
@@ -4680,7 +4685,7 @@ Future<String> _extractConstantCode(
           elements.add('');
         }
       }
-      var expressionTypeArguments = expression.typeArguments;
+      TypeArgumentList? expressionTypeArguments = expression.typeArguments;
       if (expressionTypeArguments == null ||
           expressionTypeArguments.arguments.isEmpty) {
         return 'const ${_formatAsDynamicList(elements)}';
@@ -4692,7 +4697,7 @@ Future<String> _extractConstantCode(
       }
     } else if (expression is SetOrMapLiteral) {
       if (expression.isMap) {
-        List<String> elements = [];
+        var elements = <String>[];
         for (CollectionElement collectionElement in expression.elements) {
           if (collectionElement is MapLiteralEntry) {
             String key = await helper(collectionElement.key);
@@ -4706,7 +4711,7 @@ Future<String> _extractConstantCode(
             elements.add('');
           }
         }
-        var expressionTypeArguments = expression.typeArguments;
+        TypeArgumentList? expressionTypeArguments = expression.typeArguments;
         if (expressionTypeArguments == null ||
             expressionTypeArguments.arguments.isEmpty) {
           return 'const ${_formatAsMap(elements)}';
@@ -4719,7 +4724,7 @@ Future<String> _extractConstantCode(
           return 'const <$keyType, $valueType>${_formatAsMap(elements)}';
         }
       } else if (expression.isSet) {
-        List<String> elements = [];
+        var elements = <String>[];
         for (CollectionElement collectionElement in expression.elements) {
           if (collectionElement is Expression) {
             Expression subExpression = collectionElement;
@@ -4732,7 +4737,7 @@ Future<String> _extractConstantCode(
             elements.add('');
           }
         }
-        var expressionTypeArguments = expression.typeArguments;
+        TypeArgumentList? expressionTypeArguments = expression.typeArguments;
         if (expressionTypeArguments == null ||
             expressionTypeArguments.arguments.isEmpty) {
           return 'const ${_formatAsDynamicSet(elements)}';
@@ -4759,7 +4764,7 @@ Future<String> _extractConstantCode(
         importCollector._addLibrary(libraryOfConstructor);
         String prefix = importCollector._getPrefix(libraryOfConstructor);
         // TODO(sigurdm) implement: Named arguments.
-        List<String> argumentList = [];
+        var argumentList = <String>[];
         for (Expression argument in expression.argumentList.arguments) {
           argumentList.add(await helper(argument));
         }
@@ -4781,7 +4786,7 @@ Future<String> _extractConstantCode(
         Element? staticElement = expression.staticElement;
         if (staticElement is PropertyAccessorElement) {
           VariableElement? variable = staticElement.variable2;
-          var variableDeclaration = variable != null
+          AstNode? variableDeclaration = variable != null
               ? await _getDeclarationAst(variable, resolver)
               : null;
           if (variableDeclaration == null ||
@@ -4806,7 +4811,7 @@ Future<String> _extractConstantCode(
         } else if (element.library == null) {
           return '${element.name}';
         } else {
-          var elementLibrary = element.library;
+          LibraryElement? elementLibrary = element.library;
           if (elementLibrary != null &&
               await _isImportableLibrary(
                   elementLibrary, generatedLibraryId, resolver)) {
@@ -4816,7 +4821,7 @@ Future<String> _extractConstantCode(
             if (enclosingElement is InterfaceElement) {
               prefix += '${enclosingElement.name}.';
             }
-            var elementName = element.name;
+            String? elementName = element.name;
             if (elementName != null && _isPrivateName(elementName)) {
               await _severe('Cannot access private name $elementName, '
                   'needed for expression $expression');
@@ -4850,7 +4855,7 @@ Future<String> _extractConstantCode(
       // We only handle 'identical(a, b)'.
       assert(expression.target == null);
       assert(expression.methodName.token.lexeme == 'identical');
-      var arguments = expression.argumentList.arguments;
+      NodeList<Expression> arguments = expression.argumentList.arguments;
       assert(arguments.length == 2);
       String a = await helper(arguments[0]);
       String b = await helper(arguments[1]);
@@ -4862,12 +4867,13 @@ Future<String> _extractConstantCode(
     } else if (expression is FunctionReference) {
       String function = await _extractConstantCode(
           expression.function, importCollector, generatedLibraryId, resolver);
-      var expressionTypeArguments = expression.typeArguments;
+      TypeArgumentList? expressionTypeArguments = expression.typeArguments;
       if (expressionTypeArguments == null) {
         return function;
       } else {
         var typeArguments = <String>[];
-        for (var expressionTypeArgument in expressionTypeArguments.arguments) {
+        for (TypeAnnotation expressionTypeArgument
+            in expressionTypeArguments.arguments) {
           String typeArgument =
               await typeAnnotationHelper(expressionTypeArgument);
           typeArguments.add(typeArgument);
@@ -4914,8 +4920,9 @@ const Set<String> sdkLibraryNames = <String>{
 // Helper for _extractMetadataCode.
 CompilationUnit? _definingCompilationUnit(
     ResolvedLibraryResult resolvedLibrary) {
-  var definingUnit = resolvedLibrary.element.definingCompilationUnit;
-  var units = resolvedLibrary.units;
+  CompilationUnitElement definingUnit =
+      resolvedLibrary.element.definingCompilationUnit;
+  List<ResolvedUnitResult> units = resolvedLibrary.units;
   for (var unit in units) {
     if (unit.unit.declaredElement == definingUnit) {
       return unit.unit;
@@ -4927,7 +4934,7 @@ CompilationUnit? _definingCompilationUnit(
 // Helper for _extractMetadataCode.
 NodeList<Annotation>? _getLibraryMetadata(CompilationUnit? unit) {
   if (unit != null) {
-    var directive = unit.directives[0];
+    Directive directive = unit.directives[0];
     if (directive is LibraryDirective) {
       return directive.metadata;
     }
@@ -4990,7 +4997,8 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
   }
 
   NodeList<Annotation>? metadata;
-  var resolvedLibrary = await _getResolvedLibrary(element.library!, resolver);
+  ResolvedLibraryResult? resolvedLibrary =
+      await _getResolvedLibrary(element.library!, resolver);
   if (element is LibraryElement && resolvedLibrary != null) {
     metadata = _getLibraryMetadata(_definingCompilationUnit(resolvedLibrary));
   } else {
@@ -5000,11 +5008,11 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
   }
   if (metadata == null || metadata.isEmpty) return 'const []';
 
-  List<String> metadataParts = <String>[];
+  var metadataParts = <String>[];
   for (Annotation annotationNode in metadata) {
     // TODO(sigurdm) diagnostic: Emit a warning/error if the element is not
     // in the global public scope of the library.
-    var annotationNodeElement = annotationNode.element;
+    Element? annotationNodeElement = annotationNode.element;
     if (annotationNodeElement == null) {
       // Some internal constants (mainly in dart:html) cannot be resolved by
       // the analyzer. Ignore them.
@@ -5026,12 +5034,12 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
     LibraryElement annotationLibrary = annotationNodeElement.library!;
     importCollector._addLibrary(annotationLibrary);
     String prefix = importCollector._getPrefix(annotationLibrary);
-    var annotationNodeArguments = annotationNode.arguments;
+    ArgumentList? annotationNodeArguments = annotationNode.arguments;
     if (annotationNodeArguments != null) {
       // A const constructor.
       String name =
           await _extractNameWithoutPrefix(annotationNode.name, element);
-      List<String> argumentList = [];
+      var argumentList = <String>[];
       for (Expression argument in annotationNodeArguments.arguments) {
         argumentList.add(await _extractConstantCode(
             argument, importCollector, dataId, resolver));
@@ -5126,7 +5134,7 @@ Iterable<ParameterElement> _extractDeclaredFunctionParameters(
     Resolver resolver,
     Iterable<FunctionElement> declaredFunctions,
     Iterable<ExecutableElement> accessors) {
-  List<ParameterElement> result = <ParameterElement>[];
+  var result = <ParameterElement>[];
   for (FunctionElement declaredFunction in declaredFunctions) {
     result.addAll(declaredFunction.parameters);
   }
@@ -5180,7 +5188,7 @@ List<ParameterElement> _extractDeclaredParameters(
     Iterable<MethodElement> declaredMethods,
     Iterable<ConstructorElement> declaredConstructors,
     Iterable<PropertyAccessorElement> accessors) {
-  List<ParameterElement> result = <ParameterElement>[];
+  var result = <ParameterElement>[];
   for (MethodElement declaredMethod in declaredMethods) {
     result.addAll(declaredMethod.parameters);
   }
@@ -5397,8 +5405,8 @@ Future<String?> _assetIdToUri(AssetId assetId, AssetId from,
 
 Future<Uri> _getImportUri(
     LibraryElement lib, Resolver resolver, AssetId from) async {
-  var source = lib.source;
-  var uri = source.uri;
+  Source source = lib.source;
+  Uri uri = source.uri;
   if (uri.scheme == 'asset') {
     // This can occur if the library is not accessed via a package uri
     // but instead is given as a path (outside a package, e.g., in `example`
@@ -5491,7 +5499,7 @@ class MixinApplication implements ClassElement {
 
   @override
   List<InterfaceType> get mixins {
-    List<InterfaceType> result = <InterfaceType>[];
+    var result = <InterfaceType>[];
     if (superclass is MixinApplication) {
       result.addAll(superclass.mixins);
     }
@@ -5519,7 +5527,7 @@ class MixinApplication implements ClassElement {
 
   @override
   bool get isAbstract {
-    var mixin = this.mixin;
+    InterfaceElement mixin = this.mixin;
     return !isMixinApplication ||
         mixin is MixinElement ||
         mixin is ClassElement && mixin.isAbstract;
@@ -5575,7 +5583,7 @@ String _setterNameToGetterName(String name) {
 }
 
 String _qualifiedName(Element? element) {
-  var elementLibrary = element?.library;
+  LibraryElement? elementLibrary = element?.library;
   if (element == null || elementLibrary == null) return 'null';
   return '${elementLibrary.name}.${element.name}';
 }
@@ -5596,8 +5604,8 @@ bool _isPrivateName(String name) {
 
 Future<DartObject?> _evaluateConstant(
     LibraryElement library, Expression expression) async {
-  var currentUnit = expression.parent;
-  int levels = 0;
+  AstNode? currentUnit = expression.parent;
+  var levels = 0;
   while (currentUnit != null &&
       currentUnit is! CompilationUnit &&
       ++levels < 100) {
@@ -5609,8 +5617,8 @@ Future<DartObject?> _evaluateConstant(
     return null;
   }
 
-  var unitElement = currentUnit.declaredElement!;
-  var source = unitElement.source;
+  CompilationUnitElement unitElement = currentUnit.declaredElement!;
+  Source source = unitElement.source;
   var libraryElement = unitElement.library as LibraryElementImpl;
 
   var errorListener = RecordingErrorListener();
@@ -5641,12 +5649,12 @@ Future<DartObject?> _evaluateConstant(
     errorReporter,
   );
 
-  var constant = visitor.evaluateAndReportInvalidConstant(expression);
-  var dartObject = constant is DartObjectImpl ? constant : null;
+  Constant constant = visitor.evaluateAndReportInvalidConstant(expression);
+  DartObjectImpl? dartObject = constant is DartObjectImpl ? constant : null;
 
   if (errorListener.errors.isNotEmpty) {
     var message = StringBuffer('Constant `$expression` has errors:\n');
-    for (var error in errorListener.errors) {
+    for (AnalysisError error in errorListener.errors) {
       message.writeln(error);
     }
     _severe(message.toString());
@@ -5667,8 +5675,8 @@ Iterable<DartObject> _getEvaluatedMetadata(
     Iterable<ElementAnnotation>? metadata) {
   if (metadata == null) return [];
   var result = <DartObject>[];
-  for (var annotation in metadata) {
-    var evaluatedMetadatum = _getEvaluatedMetadatum(annotation);
+  for (ElementAnnotation annotation in metadata) {
+    DartObject? evaluatedMetadatum = _getEvaluatedMetadatum(annotation);
     if (evaluatedMetadatum != null) result.add(evaluatedMetadatum);
   }
   return result;
@@ -5711,19 +5719,22 @@ Future<String> _formatDiagnosticMessage(
     String message, Element? target, Resolver resolver) async {
   Source? source = target?.source;
   if (source == null) return message;
-  String locationString = '';
+  var locationString = '';
   int? nameOffset = target?.nameOffset;
   // TODO(eernst): 'dart:*' is not considered valid. To survive, we return
   // a message with no location info when `element` is from 'dart:*'. Issue 173.
-  var targetLibrary = target?.library;
+  LibraryElement? targetLibrary = target?.library;
   if (targetLibrary != null &&
       nameOffset != null &&
       !_isPlatformLibrary(targetLibrary)) {
-    final resolvedLibrary = await _getResolvedLibrary(targetLibrary, resolver);
+    final ResolvedLibraryResult? resolvedLibrary =
+        await _getResolvedLibrary(targetLibrary, resolver);
     if (resolvedLibrary != null) {
-      final targetDeclaration = resolvedLibrary.getElementDeclaration(target!);
-      final unit = targetDeclaration?.resolvedUnit?.unit;
-      final location = unit?.lineInfo.getLocation(nameOffset);
+      final ElementDeclarationResult? targetDeclaration =
+          resolvedLibrary.getElementDeclaration(target!);
+      final CompilationUnit? unit = targetDeclaration?.resolvedUnit?.unit;
+      final CharacterLocation? location =
+          unit?.lineInfo.getLocation(nameOffset);
       if (location != null) {
         locationString = '${location.lineNumber}:${location.columnNumber}';
       }
@@ -5738,7 +5749,7 @@ Future<String> _formatDiagnosticMessage(
 // ignore:unused_element
 Future<void> _emitMessage(String message,
     [Element? target, Resolver? resolver]) async {
-  var formattedMessage = (target != null && resolver != null)
+  String formattedMessage = (target != null && resolver != null)
       ? await _formatDiagnosticMessage(message, target, resolver)
       : message;
   log.warning(formattedMessage);
@@ -5755,10 +5766,11 @@ Future<AstNode?> _getDeclarationAst(Element element, Resolver resolver) =>
 /// which will be thrown if we use `library.session` directly.
 Future<ResolvedLibraryResult?> _getResolvedLibrary(
     LibraryElement library, Resolver resolver) async {
-  final freshLibrary =
+  final LibraryElement freshLibrary =
       await resolver.libraryFor(await resolver.assetIdForElement(library));
-  final freshSession = freshLibrary.session;
-  var someResult = await freshSession.getResolvedLibraryByElement(freshLibrary);
+  final AnalysisSession freshSession = freshLibrary.session;
+  final SomeResolvedLibraryResult someResult =
+      await freshSession.getResolvedLibraryByElement(freshLibrary);
   if (someResult is ResolvedLibraryResult) {
     return someResult;
   } else {

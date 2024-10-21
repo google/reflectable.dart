@@ -51,8 +51,8 @@ const String isEnum = 'Encountered a reflector class which is an enum.';
 /// with the corresponding value in [replacements].
 String applyTemplate(String template, Map<String, String> replacements) {
   return template.replaceAllMapped(RegExp(r'{(.*?)}'), (Match match) {
-    var index = match.group(1);
-    var replacement = replacements[index];
+    String? index = match.group(1);
+    String? replacement = replacements[index];
     if (replacement == null) {
       throw ArgumentError('Missing template replacement for $index');
     }
