@@ -794,6 +794,10 @@ not support getting a mirror on their instances.
 
 #### Considerations around Admitting Subtypes
 
+**This feature has not been implemented.** It is not obviously a desirable
+feature, and hence it might not be implemented at all. The following
+explains why.
+
 When a *`targetMetadata`* on the form *`apiSelection`*&#42; is attached
 to a given class `C`, the effect is that reflection support is provided
 for the class `C` and for instances of `C`. However, that support can be
@@ -914,19 +918,19 @@ return tolerate the partial support for reflection (using `admitSubtype`).
 We have described the design of the capabilities used in the package
 reflectable to specify the desired level of support for reflection. The
 underlying idea is that the capabilities at the base level specify a
-selection of operations from the API of the mirror classes, along with some
-simple restrictions on the allowable arguments to those operations.  On top
-of that, the API based capabilities can be associated with specific parts
-of the target program (though at this point only classes) such that exactly
-those classes will have the reflection support specified with the API based
-capabilities. The target classes can be selected individually, by adding a
-reflector as metadata on each target class. Alternatively, target classes
-can be selected by quantification: For instance, it is possible to quantify
+selection of operations from the API of the mirror classes, along with
+some simple restrictions on the allowable arguments to those operations.
+On top of that, the API based capabilities can be associated with specific
+parts of the target program such that exactly those declarations will have
+the reflection support specified with the API based capabilities. The
+target declarations can be selected individually, by adding a reflector as
+metadata on each target declaration. Alternatively, target declarations can
+be selected by quantification: For instance, it is possible to quantify
 over all subtypes, in which case not only the class `C` that holds the
 metadata receives reflection support, but also all subtypes of `C`.
 Finally, it is possible to admit instances of subtypes as reflectees of a
 small set of mirrors, such that partial reflection support is achieved for
-many classes, without the cost of having many mirror classes.
+many declarations, without the cost of having many mirror classes.
 
 # References
 
