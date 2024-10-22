@@ -554,13 +554,6 @@ class ReflectableNoSuchMethodError extends Error
         break;
       case StringInvocationKind.constructor:
         kindName = 'constructor';
-        break;
-      default:
-        // Reaching this point is a bug, so we ought to do this:
-        // `throw unreachableError('Unexpected StringInvocationKind value');`
-        // but it is a bit harsh to raise an exception because of a slightly
-        // imprecise diagnostic message, so we use a default instead.
-        kindName = '';
     }
     var description = 'NoSuchCapabilityError: no capability to invoke the '
         '$kindName "$memberName"\n'

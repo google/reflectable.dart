@@ -5,6 +5,7 @@
 library reflectable.reflectable_builder;
 
 import 'dart:async';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:build_config/build_config.dart';
 import 'package:build_runner_core/build_runner_core.dart';
@@ -20,13 +21,15 @@ class ReflectableBuilder implements Builder {
     var targetId = buildStep.inputId.toString();
     if (targetId.contains('.vm_test.') ||
         targetId.contains('.node_test.') ||
-        targetId.contains('.browser_test.')) return;
-    var inputLibrary = await buildStep.inputLibrary;
-    var resolver = buildStep.resolver;
-    var inputId = buildStep.inputId;
-    var outputId = inputId.changeExtension('.reflectable.dart');
-    var visibleLibraries = await resolver.libraries.toList();
-    var generatedSource = await BuilderImplementation().buildMirrorLibrary(
+        targetId.contains('.browser_test.')) {
+      return;
+    }
+    LibraryElement inputLibrary = await buildStep.inputLibrary;
+    Resolver resolver = buildStep.resolver;
+    AssetId inputId = buildStep.inputId;
+    AssetId outputId = inputId.changeExtension('.reflectable.dart');
+    List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
+    String generatedSource = await BuilderImplementation().buildMirrorLibrary(
         resolver, inputId, outputId, inputLibrary, visibleLibraries, true, []);
     await buildStep.writeAsString(outputId, generatedSource);
   }
@@ -59,18 +62,18 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
     var builders = <BuilderApplication>[
       applyToRoot(builder, generateFor: InputSet(include: arguments))
     ];
-    var packageGraph = await PackageGraph.forThisPackage();
+    PackageGraph packageGraph = await PackageGraph.forThisPackage();
     var environment = OverrideableEnvironment(IOEnvironment(packageGraph));
-    var buildOptions = await BuildOptions.create(
+    BuildOptions buildOptions = await BuildOptions.create(
       LogSubscription(environment),
       deleteFilesByDefault: true,
       packageGraph: packageGraph,
     );
     try {
-      var build = await BuildRunner.create(
+      BuildRunner build = await BuildRunner.create(
           buildOptions, environment, builders, const {},
           isReleaseBuild: false);
-      var result = await build.run(const {});
+      BuildResult result = await build.run(const {});
       await build.beforeExit();
       return result;
     } finally {
