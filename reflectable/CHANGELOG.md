@@ -1,7 +1,8 @@
 ## 4.0.12
 
 * Revert analyzer dependency to 6.8.0 and lints to 5.0.0 due to macro
-  related version resolution conflict.
+  related version resolution conflict. Undo some changes that are
+  required for analyzer 6.11.0, but which are errors with 6.8.0.
 
 ## 4.0.11
 
