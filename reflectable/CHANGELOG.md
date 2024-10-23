@@ -1,3 +1,7 @@
+## 4.0.12
+
+* Reverting analyzer dependency to 6.8.0 due to macros conflict.
+
 ## 4.0.11
 
 * Fix bug 291 (such that metadata on enum values can be obtained).
