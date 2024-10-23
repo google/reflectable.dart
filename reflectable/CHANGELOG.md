@@ -1,6 +1,7 @@
 ## 4.0.12
 
-* Reverting analyzer dependency to 6.8.0 due to macros conflict.
+* Revert analyzer dependency to 6.8.0 and lints to 5.0.0 due to macro
+  related version resolution conflict.
 
 ## 4.0.11
 
@@ -52,8 +53,8 @@
   https://pub.dev/documentation/build/latest/build/AssetId-class.html .
 
   For documentation about package URIs, please see
-  https://api.dart.dev/stable/2.19.2/dart-isolate/Isolate/packageConfig.html 
-  and, for example, https://pub.dev/packages/package_config .
+  `https://api.dart.dev/stable/2.19.2/dart-isolate/Isolate/packageConfig.html`
+  and, for example, `https://pub.dev/packages/package_config`.
 
 ## 4.0.4
 
