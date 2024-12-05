@@ -5036,23 +5036,36 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
       }
       var typeArguments = annotationNode.typeArguments;
       if (typeArguments != null) {
-        List<String> typeArgumentsStringParts = <String>[];
-        for (TypeAnnotation typeArgument in typeArguments.arguments) {
-          DartType typeArgumentType = typeArgument.type!;
-          if (typeArgumentType.element?.library == null || !await _isImportable(typeArgumentType.element!, dataId, resolver)) {
-            await _fine('Ignoring unresolved metadata $typeArgumentType', element);
-            // fallback to dynamic
-            typeArgumentsStringParts.add('dynamic');
-            continue;
+        extractTypeArguments(List<DartType?> typeArguments) async {
+          List<String> typeArgumentsStringParts = <String>[];
+          for (DartType? typeArgumentType in typeArguments) {
+            if (typeArgumentType == null || typeArgumentType.element?.library == null || !await _isImportable(typeArgumentType.element!, dataId, resolver)) {
+              await _fine('Ignoring unresolved metadata $typeArgumentType', element);
+              // fallback to dynamic
+              typeArgumentsStringParts.add('dynamic');
+              continue;
+            }
+
+            LibraryElement annotationTypeArgumentLibrary = typeArgumentType.element!.library!;
+            importCollector._addLibrary(annotationTypeArgumentLibrary);
+            String prefix = importCollector._getPrefix(annotationTypeArgumentLibrary);
+
+            final outerType = typeArgumentType.toString().split("<")[0];
+
+            if (typeArgumentType is ParameterizedType && typeArgumentType.typeArguments.isNotEmpty) {
+              final innerTypeArgs = await extractTypeArguments(typeArgumentType.typeArguments);
+              typeArgumentsStringParts.add('$prefix$outerType<$innerTypeArgs>');
+            } else {
+              typeArgumentsStringParts.add('$prefix$outerType');
+            }
           }
 
-          LibraryElement annotationTypeArgumentLibrary = typeArgumentType.element!.library!;
-          importCollector._addLibrary(annotationTypeArgumentLibrary);
-          String prefix = importCollector._getPrefix(annotationTypeArgumentLibrary);
-          typeArgumentsStringParts.add('$prefix$typeArgument');
+          String typeArgumentsString = typeArgumentsStringParts.join(', ');
+          return typeArgumentsString;
         }
 
-        String typeArgumentsString = typeArgumentsStringParts.join(', ');
+        final typeArgumentsString = await extractTypeArguments(typeArguments.arguments.map((annotation) => annotation.type).toList());
+        print(typeArgumentsString);
         metadataParts.add('const $prefix$name<$typeArgumentsString>($arguments)');
       } else {
         metadataParts.add('const $prefix$name($arguments)');
