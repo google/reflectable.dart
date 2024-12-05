@@ -31,7 +31,7 @@ upgrade:
 	( cd ..; dart pub upgrade )
 
 check:
-	( cd ..; dart analyze $(OPTIONS) {lib,test{,/legacy}}/*.dart )
+	( cd ..; dart analyze $(OPTIONS) {lib,test}/*.dart )
 
 measure_output: build
 	@./measure_output --include-js --include-source-tree --include-unminified
@@ -44,6 +44,6 @@ test:
 
 clean:
 	( rm -rf ../.dart_tool )
-	( rm -f ../test{,/legacy}/*.reflectable.dart )
+	( rm -f ../test/*.reflectable.dart )
 
 .PHONY: all g u c b t ft get upgrade check measure_output build test clean

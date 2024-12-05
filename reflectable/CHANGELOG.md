@@ -1,3 +1,41 @@
+## 4.0.5
+
+* Remove legacy tests (they cannot be executed when using a version of Dart
+  which will be released soon).
+* Use an upper bound of 4.0.0 for the SDK constraint, preparing for said
+  release.
+* Change the computation of the Uri of a library mirror such that it is taken
+  from the `AssetId` of the library, when possible. This should be helpful in
+  situations where the Uri is used to find the actual file. This is technically
+  a breaking change, but we do not consider it to be a breaking change in
+  practice, because the Uri's provided in previous versions were essentially
+  meaningless strings. They were just known to be distinct for distinct
+  libraries, and that property also holds with this change.
+
+  For documentation about how these URIs are generated, please see
+  https://pub.dev/documentation/build/latest/build/AssetId/uri.html and
+  https://pub.dev/documentation/build/latest/build/AssetId-class.html .
+
+  For documentation about package URIs, please see
+  https://api.dart.dev/stable/2.19.2/dart-isolate/Isolate/packageConfig.html 
+  and, for example, https://pub.dev/packages/package_config .
+
+## 4.0.4
+
+* Resolve bug #300. Expressions of the form `f<T>` denoting a generic
+  instantiation of a function (that is: the result of passing the type
+  argument `T` to the generic function `f`, yielding a non-generic
+  function) was not supported; this version supports it.
+
+## 4.0.3
+
+* Change code generation such that null safe programs do not give rise
+  to a language version comment in the generated code. Previously, such
+  programs would have `// @dart = 2.12` in the generated library, but
+  this causes newer features to be unavailable in the generated code.
+  As before, programs which are not fully null safe will have a
+  generated library that contains `// @dart = 2.9`.
+
 ## 4.0.2
 
 * Change handling of 'dart:...' libraries, to handle new behavior by
@@ -29,8 +67,8 @@
   implies that the mixin application class works like a regular class
   declaration with an empty body, e.g., `class B = A with M1, M2;` works like
   `class B extends A with M1, M2 {}`, where `mirror.superclass.mixin` is
-  the natural way to obtain a mirror of `M2`). This is a breaking change, 
-  but it only affects usages where there is a dependency on the exact 
+  the natural way to obtain a mirror of `M2`). This is a breaking change,
+  but it only affects usages where there is a dependency on the exact
   superclass structure, and it seems likely that this only happens rarely:
   we may well traverse all supertypes or all superclasses, but we are not
   likely to do things like "go to the 5th superclass, find the mixin, and
