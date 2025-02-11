@@ -1,21 +1,25 @@
 @c
-library test_reflectable.test.metadata_test;
+library test_reflectable.test.generic_metadata_test;
 
 import 'package:reflectable/reflectable.dart';
 import 'package:test/test.dart';
-import 'metadata_test.reflectable.dart';
+import 'generic_metadata_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable()
       : super(metadataCapability, instanceInvokeCapability,
-      staticInvokeCapability, declarationsCapability, libraryCapability);
+            staticInvokeCapability, declarationsCapability, libraryCapability);
 }
 
 const myReflectable = MyReflectable();
 
+const b = 0;
+
 const c = [
   Bar<num>({'a': 14})
 ];
+
+const d = true;
 
 class K {
   static const p = 2;
@@ -36,10 +40,10 @@ class Foo {
   @Bar<bool>({})
   @Bar<Bar<Bar>>({})
   @Bar<MyReflectable>.namedConstructor({})
-@Bar<void Function()>.namedConstructor({})
-@c
-void foo() {}
-var x = 10;
+  @Bar<void Function()>.namedConstructor({})
+  @c
+  void foo() {}
+  var x = 10;
 }
 
 class Bar<X> {
