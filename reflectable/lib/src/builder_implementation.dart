@@ -152,7 +152,7 @@ class _ReflectionWorld {
           await reflector._generateCode(this, importCollector, typedefs);
       if (typedefs.isNotEmpty) {
         for (DartType dartType in typedefs.keys) {
-          String body = await reflector._typeCodeOfTypeArgument(
+          String body = await _ReflectorDomain._typeCodeOfTypeArgument(
               dartType, importCollector, typeVariablesInScope, typedefs,
               useNameOfGenericFunctionType: false);
           typedefsCode +=
@@ -1918,7 +1918,7 @@ class _ReflectorDomain {
   /// Returns true iff the given [type] is not and does not contain a free
   /// type variable. [typeVariablesInScope] gives the names of type variables
   /// which are in scope (and hence not free in the relevant context).
-  bool _hasNoFreeTypeVariables(DartType type,
+  static bool _hasNoFreeTypeVariables(DartType type,
       [Set<String>? typeVariablesInScope]) {
     if (type is TypeParameterType &&
         (typeVariablesInScope == null ||
@@ -1951,7 +1951,7 @@ class _ReflectorDomain {
   /// is used to decide whether the output should be a simple `typedef`
   /// name or a fully spelled-out generic function type (and it has no
   /// effect when [dartType] is not a generic function type).
-  Future<String> _typeCodeOfTypeArgument(
+  static Future<String> _typeCodeOfTypeArgument(
       DartType dartType,
       _ImportCollector importCollector,
       Set<String> typeVariablesInScope,
@@ -1963,8 +1963,7 @@ class _ReflectorDomain {
           'Attempt to generate code for an '
           'unsupported kind of type: $dartType (${dartType.runtimeType}). '
           'Generating `dynamic`.',
-          element,
-          _resolver));
+          element));
       return 'dynamic';
     }
 
@@ -5036,36 +5035,14 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
       }
       var typeArguments = annotationNode.typeArguments;
       if (typeArguments != null) {
-        extractTypeArguments(List<DartType?> typeArguments) async {
-          List<String> typeArgumentsStringParts = <String>[];
-          for (DartType? typeArgumentType in typeArguments) {
-            if (typeArgumentType == null || typeArgumentType.element?.library == null || !await _isImportable(typeArgumentType.element!, dataId, resolver)) {
-              await _fine('Ignoring unresolved metadata $typeArgumentType', element);
-              // fallback to dynamic
-              typeArgumentsStringParts.add('dynamic');
-              continue;
-            }
+        var typedefs = <FunctionType, int>{};
+        var typeVariablesInScope = <String>{}; // None at top level.
 
-            LibraryElement annotationTypeArgumentLibrary = typeArgumentType.element!.library!;
-            importCollector._addLibrary(annotationTypeArgumentLibrary);
-            String prefix = importCollector._getPrefix(annotationTypeArgumentLibrary);
-
-            final outerType = typeArgumentType.toString().split("<")[0];
-
-            if (typeArgumentType is ParameterizedType && typeArgumentType.typeArguments.isNotEmpty) {
-              final innerTypeArgs = await extractTypeArguments(typeArgumentType.typeArguments);
-              typeArgumentsStringParts.add('$prefix$outerType<$innerTypeArgs>');
-            } else {
-              typeArgumentsStringParts.add('$prefix$outerType');
-            }
-          }
-
-          String typeArgumentsString = typeArgumentsStringParts.join(', ');
-          return typeArgumentsString;
-        }
-
-        final typeArgumentsString = await extractTypeArguments(typeArguments.arguments.map((annotation) => annotation.type).toList());
-        print(typeArgumentsString);
+        final typeArgumentsList = typeArguments.arguments.map((annotation) => annotation.type);
+        final typeArgumentsString = (await Future.wait(typeArgumentsList.map((type) async =>
+            type != null ? await _ReflectorDomain._typeCodeOfTypeArgument(type, importCollector, typeVariablesInScope, typedefs, useNameOfGenericFunctionType: false) : 'dynamic'
+        ))).join(', ');
+        // print(typeArgumentsString);
         metadataParts.add('const $prefix$name<$typeArgumentsString>($arguments)');
       } else {
         metadataParts.add('const $prefix$name($arguments)');
@@ -5676,7 +5653,7 @@ Future<void> _fine(String message,
 /// Returns a string containing the given [message] and identifying the
 /// associated source code location as the location of the given [target].
 Future<String> _formatDiagnosticMessage(
-    String message, Element? target, Resolver resolver) async {
+    String message, Element? target, [Resolver? resolver]) async {
   Source? source = target?.source;
   if (source == null) return message;
   String locationString = '';
@@ -5686,7 +5663,8 @@ Future<String> _formatDiagnosticMessage(
   var targetLibrary = target?.library;
   if (targetLibrary != null &&
       nameOffset != null &&
-      !_isPlatformLibrary(targetLibrary)) {
+      !_isPlatformLibrary(targetLibrary) &&
+      resolver != null) {
     final resolvedLibrary = await _getResolvedLibrary(targetLibrary, resolver);
     if (resolvedLibrary != null) {
       final targetDeclaration = resolvedLibrary.getElementDeclaration(target!);
