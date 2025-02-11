@@ -5047,7 +5047,42 @@ Future<String> _extractMetadataCode(Element element, Resolver resolver,
       if (_isPrivateName(name)) {
         await _severe('Cannot access private name $name', element);
       }
-      metadataParts.add('const $prefix$name($arguments)');
+      var typeArguments = annotationNode.typeArguments;
+      if (typeArguments != null) {
+        extractTypeArguments(List<DartType?> typeArguments) async {
+          List<String> typeArgumentsStringParts = <String>[];
+          for (DartType? typeArgumentType in typeArguments) {
+            if (typeArgumentType == null || typeArgumentType.element?.library == null || !await _isImportable(typeArgumentType.element!, dataId, resolver)) {
+              await _fine('Ignoring unresolved metadata $typeArgumentType', element);
+              // fallback to dynamic
+              typeArgumentsStringParts.add('dynamic');
+              continue;
+            }
+
+            LibraryElement annotationTypeArgumentLibrary = typeArgumentType.element!.library!;
+            importCollector._addLibrary(annotationTypeArgumentLibrary);
+            String prefix = importCollector._getPrefix(annotationTypeArgumentLibrary);
+
+            final outerType = typeArgumentType.toString().split("<")[0];
+
+            if (typeArgumentType is ParameterizedType && typeArgumentType.typeArguments.isNotEmpty) {
+              final innerTypeArgs = await extractTypeArguments(typeArgumentType.typeArguments);
+              typeArgumentsStringParts.add('$prefix$outerType<$innerTypeArgs>');
+            } else {
+              typeArgumentsStringParts.add('$prefix$outerType');
+            }
+          }
+
+          String typeArgumentsString = typeArgumentsStringParts.join(', ');
+          return typeArgumentsString;
+        }
+
+        final typeArgumentsString = await extractTypeArguments(typeArguments.arguments.map((annotation) => annotation.type).toList());
+        print(typeArgumentsString);
+        metadataParts.add('const $prefix$name<$typeArgumentsString>($arguments)');
+      } else {
+        metadataParts.add('const $prefix$name($arguments)');
+      }
     } else {
       // A field reference.
       if (_isPrivateName(annotationNode.name.name)) {
