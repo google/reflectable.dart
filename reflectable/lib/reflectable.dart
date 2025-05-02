@@ -114,17 +114,18 @@ abstract class Reflectable extends implementation.ReflectableImpl
 
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
-  const Reflectable(
-      [super.cap0,
-      super.cap1,
-      super.cap2,
-      super.cap3,
-      super.cap4,
-      super.cap5,
-      super.cap6,
-      super.cap7,
-      super.cap8,
-      super.cap9]);
+  const Reflectable([
+    super.cap0,
+    super.cap1,
+    super.cap2,
+    super.cap3,
+    super.cap4,
+    super.cap5,
+    super.cap6,
+    super.cap7,
+    super.cap8,
+    super.cap9,
+  ]);
 
   const Reflectable.fromList(super.capabilities) : super.fromList();
 

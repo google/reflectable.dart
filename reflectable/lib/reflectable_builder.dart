@@ -30,14 +30,21 @@ class ReflectableBuilder implements Builder {
     AssetId outputId = inputId.changeExtension('.reflectable.dart');
     List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
     String generatedSource = await BuilderImplementation().buildMirrorLibrary(
-        resolver, inputId, outputId, inputLibrary, visibleLibraries, true, []);
+      resolver,
+      inputId,
+      outputId,
+      inputLibrary,
+      visibleLibraries,
+      true,
+      [],
+    );
     await buildStep.writeAsString(outputId, generatedSource);
   }
 
   @override
   Map<String, List<String>> get buildExtensions => const {
-        '.dart': ['.reflectable.dart']
-      };
+    '.dart': ['.reflectable.dart'],
+  };
 }
 
 ReflectableBuilder reflectableBuilder(BuilderOptions options) {
@@ -55,12 +62,13 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
   } else {
     // TODO(eernst) feature: We should support some customization of
     // the settings, e.g., specifying options like `suppress_warnings`.
-    var options = BuilderOptions(
-        <String, dynamic>{'entry_points': arguments, 'formatted': true},
-        isRoot: true);
+    var options = BuilderOptions(<String, dynamic>{
+      'entry_points': arguments,
+      'formatted': true,
+    }, isRoot: true);
     final builder = ReflectableBuilder(options);
     var builders = <BuilderApplication>[
-      applyToRoot(builder, generateFor: InputSet(include: arguments))
+      applyToRoot(builder, generateFor: InputSet(include: arguments)),
     ];
     PackageGraph packageGraph = await PackageGraph.forThisPackage();
     var environment = OverrideableEnvironment(IOEnvironment(packageGraph));
@@ -71,8 +79,12 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
     );
     try {
       BuildRunner build = await BuildRunner.create(
-          buildOptions, environment, builders, const {},
-          isReleaseBuild: false);
+        buildOptions,
+        environment,
+        builders,
+        const {},
+        isReleaseBuild: false,
+      );
       BuildResult result = await build.run(const {});
       await build.beforeExit();
       return result;
