@@ -31,6 +31,7 @@ import 'package:analyzer/src/summary/package_bundle_reader.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:path/path.dart' as path;
+import 'package:pub_semver/pub_semver.dart';
 import 'element_capability.dart' as ec;
 import 'encoding_constants.dart' as constants;
 import 'fixed_point.dart';
@@ -765,7 +766,7 @@ class _ReflectorDomain {
     // would suppress an error in a very-hard-to-explain case, so that's safer
     // in a sense, but too weird.
     if (constructor.library.isDartCore &&
-        constructor.enclosingElement.name == 'List' &&
+        constructor.enclosingElement3.name == 'List' &&
         constructor.name == '') {
       return '(bool b) => ([length]) => '
           'b ? (length == null ? [] : List.filled(length, null)) : null';
@@ -4831,7 +4832,7 @@ void initializeReflectable() {
 }
 ''';
     if (_formatted) {
-      var formatter = DartFormatter();
+      var formatter = DartFormatter(languageVersion: Version(3, 0, 0));
       result = formatter.format(result);
     }
     return result;
