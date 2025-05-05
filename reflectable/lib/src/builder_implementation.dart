@@ -1407,9 +1407,9 @@ class _ReflectorDomain {
     ExecutableElement element,
     int descriptor,
   ) async {
-    if (element.enclosingElement is InterfaceElement) {
-      return (await classes).indexOf(element.enclosingElement);
-    } else if (element.enclosingElement is CompilationUnitElement) {
+    if (element.enclosingElement3 is InterfaceElement) {
+      return (await classes).indexOf(element.enclosingElement3);
+    } else if (element.enclosingElement3 is CompilationUnitElement) {
       return _libraries.indexOf(element.library);
     }
     await _severe('Unexpected kind of request for owner');
@@ -1456,7 +1456,7 @@ class _ReflectorDomain {
       }
     }
     int? ownerIndex = (await classes).indexOf(
-      typeParameterElement.enclosingElement!,
+      typeParameterElement.enclosingElement3!,
     );
     // TODO(eernst) implement: Update when type variables support metadata.
     var metadataCode = _capabilities._supportsMetadata ? '<Object>[]' : 'null';
@@ -1581,7 +1581,7 @@ class _ReflectorDomain {
     } else {
       var mapEntries = <String>[];
       for (ConstructorElement constructor in classDomain._constructors) {
-        InterfaceElement enclosingElement = constructor.enclosingElement;
+        InterfaceElement enclosingElement = constructor.enclosingElement3;
         if (constructor.isFactory ||
             ((enclosingElement is ClassElement &&
                     !enclosingElement.isAbstract) &&
@@ -1967,7 +1967,7 @@ class _ReflectorDomain {
   ) async {
     int descriptor = _fieldDescriptor(element);
     int ownerIndex =
-        (await classes).indexOf(element.enclosingElement) ??
+        (await classes).indexOf(element.enclosingElement3) ??
         constants.noCapabilityIndex;
     int classMirrorIndex = await _computeVariableTypeIndex(element, descriptor);
     int reflectedTypeIndex =
@@ -2572,7 +2572,7 @@ class _ReflectorDomain {
   ) async {
     int descriptor = _parameterDescriptor(element);
     int ownerIndex =
-        members.indexOf(element.enclosingElement!)! + fields.length;
+        members.indexOf(element.enclosingElement3!)! + fields.length;
     int classMirrorIndex = constants.noCapabilityIndex;
     if (_capabilities._impliesTypes) {
       if (descriptor & constants.dynamicAttribute != 0 ||
@@ -3895,7 +3895,7 @@ class BuilderImplementation {
 
     Element? element = elementAnnotation.element;
     if (element is ConstructorElement) {
-      DartType enclosingType = _typeForReflectable(element.enclosingElement);
+      DartType enclosingType = _typeForReflectable(element.enclosingElement3);
       DartType focusClassType = _typeForReflectable(focusClass);
       bool isOk =
           enclosingType is ParameterizedType &&
@@ -5143,7 +5143,7 @@ int _declarationDescriptor(ExecutableElement element) {
   if (element is! ConstructorElement) {
     if (element.isAbstract) result |= constants.abstractAttribute;
   }
-  if (element.enclosingElement is! InterfaceElement) {
+  if (element.enclosingElement3 is! InterfaceElement) {
     result |= constants.topLevelAttribute;
   }
   return result;
@@ -5152,8 +5152,8 @@ int _declarationDescriptor(ExecutableElement element) {
 Future<String> _nameOfConstructor(ConstructorElement element) async {
   String name =
       element.name == ''
-          ? element.enclosingElement.name
-          : '${element.enclosingElement.name}.${element.name}';
+          ? element.enclosingElement3.name
+          : '${element.enclosingElement3.name}.${element.name}';
   if (_isPrivateName(name)) {
     await _severe('Cannot access private name $name', element);
   }
@@ -5369,7 +5369,7 @@ Future<String> _extractConstantCode(
               )) {
             importCollector._addLibrary(elementLibrary);
             String prefix = importCollector._getPrefix(elementLibrary);
-            Element? enclosingElement = element.enclosingElement;
+            Element? enclosingElement = element.enclosingElement3;
             if (enclosingElement is InterfaceElement) {
               prefix += '${enclosingElement.name}.';
             }
@@ -6305,7 +6305,7 @@ String _qualifiedFunctionName(FunctionElement functionElement) {
 
 String _qualifiedTypeParameterName(TypeParameterElement? typeParameterElement) {
   if (typeParameterElement == null) return 'null';
-  return '${_qualifiedName(typeParameterElement.enclosingElement!)}.'
+  return '${_qualifiedName(typeParameterElement.enclosingElement3!)}.'
       '${typeParameterElement.name}';
 }
 
