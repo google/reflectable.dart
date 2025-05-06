@@ -3988,9 +3988,9 @@ class BuilderImplementation {
             .getNamedConstructor('')!;
 
     for (LibraryElement library in _libraries) {
-      List<LibraryImportElement> imports = library.libraryImports;
+      List<LibraryElement> imports = library.importedLibraries;
       for (var import in imports) {
-        if (import.importedLibrary?.id != reflectableLibrary.id) continue;
+        if (import.id != reflectableLibrary.id) continue;
         for (ElementAnnotation metadatum in import.metadata) {
           Element? metadatumElement = metadatum.element?.declaration;
           if (metadatumElement == globalQuantifyCapabilityConstructor) {
