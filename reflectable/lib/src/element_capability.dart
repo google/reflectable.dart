@@ -19,7 +19,7 @@ library reflectable.src.element_capability;
 // NB! It is crucial that all changes in '../capabilities.dart' are
 // performed in the corresponding manner here, and vice versa.
 
-import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/element2.dart';
 
 abstract class ReflectCapability {
   const ReflectCapability();
@@ -35,7 +35,7 @@ abstract class NamePatternCapability implements ApiReflectCapability {
 }
 
 abstract class MetadataQuantifiedCapability implements ApiReflectCapability {
-  final InterfaceElement metadataType;
+  final InterfaceElement2 metadataType;
   const MetadataQuantifiedCapability(this.metadataType);
 }
 
@@ -195,7 +195,7 @@ abstract class ReflecteeQuantifyCapability implements ReflectCapability {
 const subtypeQuantifyCapability = _SubtypeQuantifyCapability();
 
 class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
-  final Element? upperBound;
+  final Element2? upperBound;
   final bool excludeUpperBound;
   const SuperclassQuantifyCapability(
     this.upperBound, {
@@ -223,19 +223,19 @@ const correspondingSetterQuantifyCapability =
 const admitSubtypeCapability = _AdmitSubtypeCapability();
 
 class ImportAttachedCapability {
-  final Element reflector;
+  final Element2 reflector;
   const ImportAttachedCapability(this.reflector);
 }
 
 class GlobalQuantifyCapability extends ImportAttachedCapability {
   final String classNamePattern;
-  const GlobalQuantifyCapability(this.classNamePattern, Element reflector)
+  const GlobalQuantifyCapability(this.classNamePattern, Element2 reflector)
     : super(reflector);
 }
 
 class GlobalQuantifyMetaCapability extends ImportAttachedCapability {
-  final Element metadataType;
-  const GlobalQuantifyMetaCapability(this.metadataType, Element reflector)
+  final Element2 metadataType;
+  const GlobalQuantifyMetaCapability(this.metadataType, Element2 reflector)
     : super(reflector);
 }
 

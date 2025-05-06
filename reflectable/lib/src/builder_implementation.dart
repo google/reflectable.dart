@@ -40,6 +40,12 @@ import 'incompleteness.dart';
 import 'reflectable_class_constants.dart' as reflectable_class_constants;
 import 'reflectable_errors.dart' as errors;
 
+// !!!MIGRATION!!!
+
+extension on InterfaceElement2 {
+  dynamic get typeParameters => throw "!!!TODO!!!";
+}
+
 // ignore_for_file: omit_local_variable_types
 
 /// Specifiers for warnings that may be suppressed; `allWarnings` disables all
@@ -1754,7 +1760,7 @@ class _ReflectorDomain {
                 !await _isImportable(subtype, _generatedLibraryId, _resolver)) {
               await helper(list, subtype);
             } else {
-              String prefix = importCollector._getPrefix(subtype.library);
+              String prefix = importCollector._getPrefix(subtype.library2);
               list.add(' && o is! $prefix${subtype.name3!}');
             }
           }
@@ -1809,10 +1815,10 @@ class _ReflectorDomain {
     Map<FunctionType, int> typedefs,
     bool reflectedTypeRequested,
   ) async {
-    if (element is PropertyAccessorElement && element.isSynthetic) {
+    if (element is PropertyAccessorElement2 && element.isSynthetic) {
       // There is no type propagation, so we declare an `accessorElement`.
       PropertyAccessorElement2 accessorElement = element;
-      PropertyInducingElement2? variable = accessorElement.variable2;
+      PropertyInducingElement2? variable = accessorElement.variable3;
       int variableMirrorIndex =
           variable is TopLevelVariableElement2
               ? topLevelVariables.indexOf(variable)!
@@ -1820,12 +1826,12 @@ class _ReflectorDomain {
               ? fields.indexOf(variable)!
               : constants.noCapabilityIndex;
       int selfIndex = members.indexOf(accessorElement)! + fields.length;
-      if (accessorElement.isGetter) {
+      if (accessorElement is GetterElement) {
         return 'r.ImplicitGetterMirrorImpl('
             '${await _constConstructionCode(importCollector)}, '
             '$variableMirrorIndex, $selfIndex)';
       } else {
-        assert(accessorElement.isSetter);
+        assert(accessorElement is SetterElement);
         return 'r.ImplicitSetterMirrorImpl('
             '${await _constConstructionCode(importCollector)}, '
             '$variableMirrorIndex, $selfIndex)';
@@ -1884,7 +1890,7 @@ class _ReflectorDomain {
                 _generatedLibraryId,
               )
               : null;
-      return "r.MethodMirrorImpl(r'${element.name}', $descriptor, "
+      return "r.MethodMirrorImpl(r'${element.name3}', $descriptor, "
           '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, '
           '$dynamicReflectedReturnTypeIndex, '
           '$reflectedTypeArgumentsOfReturnType, $parameterIndicesCode, '
@@ -2090,7 +2096,7 @@ class _ReflectorDomain {
       return constants.noCapabilityIndex;
     }
     if (dartType is InterfaceType) {
-      InterfaceElement2 interfaceElement = dartType.element;
+      InterfaceElement2 interfaceElement = dartType.element3;
       if (classes.contains(interfaceElement)) {
         return classes.indexOf(interfaceElement)!;
       }
@@ -2186,13 +2192,13 @@ class _ReflectorDomain {
 
     if (dartType is DynamicType) return 'dynamic';
     if (dartType is InterfaceType) {
-      InterfaceElement2 interfaceElement = dartType.element;
+      InterfaceElement2 interfaceElement = dartType.element3;
       if ((interfaceElement is MixinApplication &&
               interfaceElement.declaredName == null) ||
           interfaceElement.isPrivate) {
         return await fail();
       }
-      String prefix = importCollector._getPrefix(interfaceElement.library);
+      String prefix = importCollector._getPrefix(interfaceElement.library2);
       if (interfaceElement.typeParameters.isEmpty) {
         return '$prefix${interfaceElement.name3}';
       } else {
@@ -2249,8 +2255,8 @@ class _ReflectorDomain {
           useNameOfGenericFunctionType: useNameOfGenericFunctionType,
         );
         var typeArguments = '';
-        if (dartType.typeFormals.isNotEmpty) {
-          Iterable<String> typeArgumentList = dartType.typeFormals.map(
+        if (dartType.typeParameters.isNotEmpty) {
+          Iterable<String> typeArgumentList = dartType.typeParameters.map(
             (TypeParameterElement2 typeParameter) => typeParameter.toString(),
           );
           typeArguments = '<${typeArgumentList.join(', ')}>';
@@ -2331,7 +2337,7 @@ class _ReflectorDomain {
     var typeVariablesInScope = <String>{}; // None at this level.
     if (dartType is DynamicType) return 'dynamic';
     if (dartType is InterfaceType) {
-      InterfaceElement2 interfaceElement = dartType.element;
+      InterfaceElement2 interfaceElement = dartType.element3;
       if ((interfaceElement is MixinApplication &&
               interfaceElement.declaredName == null) ||
           interfaceElement.isPrivate) {
@@ -2347,7 +2353,7 @@ class _ReflectorDomain {
         // class.
         return "const r.FakeType(r'${_qualifiedName(interfaceElement)}')";
       }
-      String prefix = importCollector._getPrefix(interfaceElement.library);
+      String prefix = importCollector._getPrefix(interfaceElement.library2);
       if (interfaceElement.typeParameters.isEmpty) {
         return '$prefix${interfaceElement.name3}';
       } else {
@@ -2376,7 +2382,7 @@ class _ReflectorDomain {
       // 0.36.4, so it is a bug to test for it.
       final Element2? dartTypeElement = dartType.alias?.element2;
       if (dartTypeElement is TypeAliasElement2) {
-        String prefix = importCollector._getPrefix(dartTypeElement.library);
+        String prefix = importCollector._getPrefix(dartTypeElement.library2);
         return '$prefix${dartTypeElement.name3}';
       } else {
         if (dartType.typeFormals.isNotEmpty) {
@@ -2546,12 +2552,12 @@ class _ReflectorDomain {
           ParameterListShape shape = parameterListShapeOf[element]!;
           // index != null: every shape is in `..Shapes`.
           int index = parameterListShapes.indexOf(shape)!;
-          return "r'${element.name}': $index";
+          return "r'${element.name3}': $index";
         }),
       );
     }
 
-    return "r.LibraryMirrorImpl(r'${library.name}', $uriCode, "
+    return "r.LibraryMirrorImpl(r'${library.name3}', $uriCode, "
         '${await _constConstructionCode(importCollector)}, '
         '$declarationsCode, $gettersCode, $settersCode, $metadataCode, '
         '$parameterListShapesCode)';
@@ -2583,7 +2589,7 @@ class _ReflectorDomain {
         // capability is absent.
         DartType elementType = element.type;
         if (elementType is InterfaceType) {
-          InterfaceElement2 elementTypeElement = elementType.element;
+          InterfaceElement2 elementTypeElement = elementType.element3;
           classMirrorIndex =
               (await classes).contains(elementTypeElement)
                   ? (await classes).indexOf(elementTypeElement)!
@@ -2627,7 +2633,7 @@ class _ReflectorDomain {
     if (_capabilities._supportsMetadata) {
       // TODO(eernst): 'dart:*' is not considered valid. To survive, we
       // return the empty metadata for elements from 'dart:*'. Issue 173.
-      if (_isPlatformLibrary(element.library!)) {
+      if (_isPlatformLibrary(element.library2!)) {
         metadataCode = 'const []';
       } else {
         var node =
@@ -2650,10 +2656,10 @@ class _ReflectorDomain {
     var defaultValueCode = code.isEmpty ? 'null' : code;
     var parameterSymbolCode =
         descriptor & constants.namedAttribute != 0
-            ? '#${element.name}'
+            ? '#${element.name3}'
             : 'null';
 
-    return "r.ParameterMirrorImpl(r'${element.name}', $descriptor, "
+    return "r.ParameterMirrorImpl(r'${element.name3}', $descriptor, "
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
         '$reflectedTypeArguments, $metadataCode, $defaultValueCode, '
@@ -2669,7 +2675,7 @@ class _ReflectorDomain {
   ) async {
     // TODO(eernst): 'dart:*' is not considered valid. To survive, we return
     // '' for all declarations from there. Issue 173.
-    if (_isPlatformLibrary(parameterElement.library!)) return '';
+    if (_isPlatformLibrary(parameterElement.library2!)) return '';
     var parameterNode =
         await _getDeclarationAst(parameterElement, _resolver)
             as FormalParameter?;
@@ -2704,7 +2710,7 @@ DartType _typeForReflectable(InterfaceElement2 interfaceElement) {
   // be able to improve performance by working on classes as such.
   var typeArguments = List<DartType>.filled(
     interfaceElement.typeParameters.length,
-    interfaceElement.library.typeProvider.dynamicType,
+    interfaceElement.library2.typeProvider.dynamicType,
   );
   return interfaceElement.instantiate(
     typeArguments: typeArguments,
@@ -2761,7 +2767,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement2> {
     if (workingSuperType == null) {
       return []; // "Superclass of [Object]", ignore.
     }
-    InterfaceElement2 workingSuperclass = workingSuperType.element;
+    InterfaceElement2 workingSuperclass = workingSuperType.element3;
 
     var result = <InterfaceElement2>[];
 
@@ -2781,7 +2787,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement2> {
     // is done with [subClass].
     var superclass = workingSuperclass;
     for (InterfaceType mixin in element.mixins) {
-      InterfaceElement2 mixinClass = mixin.element;
+      InterfaceElement2 mixinClass = mixin.element3;
       if (mixinsRequested) result.add(mixinClass);
       InterfaceElement2? subClass =
           mixin == element.mixins.last ? element : null;
@@ -2795,7 +2801,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement2> {
         name,
         superclass,
         mixinClass,
-        element.library,
+        element.library2,
         subClass,
       );
       // We have already ensured that `workingSuperclass` is a
@@ -2822,7 +2828,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement2> {
         }
         InterfaceType? interfaceElementSupertype = interfaceElement.supertype;
         if (interfaceElementSupertype == null) return false;
-        return helper(interfaceElementSupertype.element, false);
+        return helper(interfaceElementSupertype.element3, false);
       }
 
       return upwardsClosureBounds.keys.any(isSuperclassOfInterfaceElement);
@@ -2843,7 +2849,7 @@ Set<InterfaceElement2> _mixinApplicationsOfClasses(
     if (interfaceElement is MixinApplication) continue;
     InterfaceType? supertype = interfaceElement.supertype;
     if (supertype == null) continue; // "Superclass of [Object]", ignore.
-    InterfaceElement2 superclass = supertype.element;
+    InterfaceElement2 superclass = supertype.element3;
     // Note that we iterate from the most general mixin to more specific ones,
     // that is, with `class C extends B with M1, M2..` we visit `M1` before
     // `M2`; this ensures that the right `superclass` is available for each
@@ -2851,7 +2857,7 @@ Set<InterfaceElement2> _mixinApplicationsOfClasses(
     // of each [MixinApplication] when it is a regular class (not a mixin
     // application), otherwise [null], which is done with [subClass].
     for (InterfaceType mixin in interfaceElement.mixins) {
-      InterfaceElement2 mixinClass = mixin.element;
+      InterfaceElement2 mixinClass = mixin.element3;
       InterfaceElement2? subClass =
           mixin == interfaceElement.mixins.last ? interfaceElement : null;
       String? name =
@@ -2865,7 +2871,7 @@ Set<InterfaceElement2> _mixinApplicationsOfClasses(
         name,
         superclass,
         mixinClass,
-        interfaceElement.library,
+        interfaceElement.library2,
         subClass,
       );
       mixinApplications.add(mixinApplication);
@@ -2917,33 +2923,33 @@ class _AnnotationClassFixedPoint extends FixedPoint<InterfaceElement2> {
     for (FieldElement2 fieldElement in classDomain._declaredFields) {
       DartType fieldType = fieldElement.type;
       if (fieldType is InterfaceType) {
-        result.add(fieldType.element);
+        result.add(fieldType.element3);
       }
     }
     for (FormalParameterElement parameterElement
         in classDomain._declaredParameters) {
       DartType parameterType = parameterElement.type;
       if (parameterType is InterfaceType) {
-        result.add(parameterType.element);
+        result.add(parameterType.element3);
       }
     }
     for (FormalParameterElement parameterElement
         in classDomain._instanceParameters) {
       DartType parameterType = parameterElement.type;
       if (parameterType is InterfaceType) {
-        result.add(parameterType.element);
+        result.add(parameterType.element3);
       }
     }
     for (ExecutableElement2 executableElement in classDomain._declaredMethods) {
       DartType executableReturnType = executableElement.returnType;
       if (executableReturnType is InterfaceType) {
-        result.add(executableReturnType.element);
+        result.add(executableReturnType.element3);
       }
     }
     for (ExecutableElement2 executableElement in classDomain._instanceMembers) {
       DartType executableReturnType = executableElement.returnType;
       if (executableReturnType is InterfaceType) {
-        result.add(executableReturnType.element);
+        result.add(executableReturnType.element3);
       }
     }
     return result;
@@ -2985,8 +2991,8 @@ Future<String> _staticGettingClosure(
   InterfaceElement2 interfaceElement,
   String getterName,
 ) async {
-  String className = interfaceElement.name;
-  String prefix = importCollector._getPrefix(interfaceElement.library);
+  String className = interfaceElement.name3!;
+  String prefix = importCollector._getPrefix(interfaceElement.library2);
   // Operators cannot be static.
   if (_isPrivateName(getterName)) {
     await _severe('Cannot access private name $getterName', interfaceElement);
@@ -3006,8 +3012,8 @@ Future<String> _staticSettingClosure(
   assert(setterName.substring(setterName.length - 1) == '=');
   // The [setterName] includes the '=', remove it.
   String name = setterName.substring(0, setterName.length - 1);
-  String className = interfaceElement.name;
-  String prefix = importCollector._getPrefix(interfaceElement.library);
+  String className = interfaceElement.name3!;
+  String prefix = importCollector._getPrefix(interfaceElement.library2);
   if (_isPrivateName(setterName)) {
     await _severe('Cannot access private name $setterName', interfaceElement);
   }
@@ -3058,12 +3064,12 @@ class _LibraryDomain {
   /// Fields declared by [_libraryElement] and included for reflection support,
   /// according to the reflector described by the [_reflectorDomain];
   /// obtained by filtering `_libraryElement.fields`.
-  final Iterable<TopLevelVariableElement> _declaredVariables;
+  final Iterable<TopLevelVariableElement2> _declaredVariables;
 
   /// Methods which are declared by [_libraryElement] and included for
   /// reflection support, according to the reflector described by
   /// [_reflectorDomain]; obtained by filtering `_libraryElement.functions`.
-  final Iterable<FunctionElement> _declaredFunctions;
+  final Iterable<TopLevelFunctionElement> _declaredFunctions;
 
   /// Formal parameters declared by one of the [_declaredFunctions].
   final Iterable<FormalParameterElement> _declaredParameters;
@@ -3199,13 +3205,13 @@ class _ClassDomain {
       var firstSeparator = true;
       for (var mixin in mixins) {
         name.write(firstSeparator ? ' with ' : ', ');
-        name.write(_qualifiedName(mixin.element));
+        name.write(_qualifiedName(mixin.element3));
         firstSeparator = false;
       }
       return name.toString();
     } else {
       // This is a regular class, i.e., we can use its declared name.
-      return interfaceElement.name;
+      return interfaceElement.name3!;
     }
   }
 
@@ -3236,8 +3242,7 @@ class _ClassDomain {
         // the metadata on the original field.
         List<ElementAnnotation> metadata =
             (member is PropertyAccessorElement2 && member.isSynthetic)
-                ? member.variable3?.metadata2.annotations ??
-                    const <ElementAnnotation>[]
+                ? member.variable3?.metadata2.annotations ?? const []
                 : member.metadata2.annotations;
         List<ElementAnnotation>? getterMetadata;
         if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
@@ -3281,12 +3286,13 @@ class _ClassDomain {
       }
       InterfaceType? superclassType = interfaceElement.supertype;
       if (superclassType is InterfaceType) {
-        InterfaceElement2 superclassElement = superclassType.element;
+        InterfaceElement2 superclassElement = superclassType.element3;
         helper(superclassElement).forEach(addIfCapable);
       }
       interfaceElement.mixins.forEach(addTypeIfCapable);
-      interfaceElement.methods.forEach(addIfCapableConcreteInstance);
-      interfaceElement.accessors.forEach(addIfCapableConcreteInstance);
+      interfaceElement.methods2.forEach(addIfCapableConcreteInstance);
+      interfaceElement.getters2.forEach(addIfCapableConcreteInstance);
+      interfaceElement.setters2.forEach(addIfCapableConcreteInstance);
 
       return cacheResult(result);
     }
@@ -3299,7 +3305,7 @@ class _ClassDomain {
     var result = <FormalParameterElement>[];
     if (_reflectorDomain._capabilities._impliesDeclarations) {
       for (ExecutableElement2 executableElement in _instanceMembers) {
-        result.addAll(executableElement.parameters);
+        result.addAll(executableElement.formalParameters);
       }
     }
     return result;
@@ -3314,34 +3320,34 @@ class _ClassDomain {
       if (method.isStatic &&
           !method.isPrivate &&
           _reflectorDomain._capabilities.supportsStaticInvoke(
-            method.library.typeSystem,
-            method.name,
-            method.metadata,
+            method.library2.typeSystem,
+            method.name3!,
+            method.metadata2.annotations,
             null,
           )) {
         result.add(method);
       }
     }
 
-    void possiblyAddAccessor(PropertyAccessorElement accessor) {
+    void possiblyAddAccessor(PropertyAccessorElement2 accessor) {
       if (!accessor.isStatic || accessor.isPrivate) return;
       // If [member] is a synthetic accessor created from a field, search for
       // the metadata on the original field.
       List<ElementAnnotation> metadata =
           accessor.isSynthetic
-              ? (accessor.variable2?.metadata ?? const <ElementAnnotation>[])
-              : accessor.metadata;
+              ? (accessor.variable3?.metadata2.annotations ?? const [])
+              : accessor.metadata2.annotations;
       List<ElementAnnotation>? getterMetadata;
       if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
-          accessor.isSetter &&
+          accessor is SetterElement &&
           !accessor.isSynthetic) {
-        PropertyAccessorElement? correspondingGetter =
+        PropertyAccessorElement2? correspondingGetter =
             accessor.correspondingGetter;
-        getterMetadata = correspondingGetter?.metadata;
+        getterMetadata = correspondingGetter?.metadata2.annotations;
       }
       if (_reflectorDomain._capabilities.supportsStaticInvoke(
-        accessor.library.typeSystem,
-        accessor.name,
+        accessor.library2.typeSystem,
+        accessor.name3!,
         metadata,
         getterMetadata,
       )) {
@@ -3349,8 +3355,9 @@ class _ClassDomain {
       }
     }
 
-    _interfaceElement.methods.forEach(possiblyAddMethod);
-    _interfaceElement.accessors.forEach(possiblyAddAccessor);
+    _interfaceElement.methods2.forEach(possiblyAddMethod);
+    _interfaceElement.getters2.forEach(possiblyAddAccessor);
+    _interfaceElement.setters2.forEach(possiblyAddAccessor);
     return result;
   }
 
@@ -3832,10 +3839,11 @@ class BuilderImplementation {
     LibraryElement2 reflectableLibrary,
   ) async {
     for (LibraryFragment fragment in reflectableLibrary.fragments) {
-      for (InterfaceElement2 type in fragment.classes) {
-        if (type.name3 == reflectable_class_constants.name &&
-            _equalsClassReflectable(type)) {
-          return type;
+      for (ClassFragment fragment in fragment.classes2) {
+        final element = fragment.element;
+        if (element.name3 == reflectable_class_constants.name &&
+            _equalsClassReflectable(element)) {
+          return element;
         }
       }
       // No need to check `unit.enums`: [Reflectable] is not an enum.
@@ -3901,7 +3909,7 @@ class BuilderImplementation {
         // of [classReflectable]: Not supported, report an error.
         await _severe(
           errors.metadataNotDirectSubclass,
-          elementAnnotation.element,
+          elementAnnotation.element2,
         );
         return false;
       }
@@ -3909,7 +3917,7 @@ class BuilderImplementation {
       return true;
     }
 
-    Element2? element = elementAnnotation.element;
+    Element2? element = elementAnnotation.element2;
     if (element is ConstructorElement2) {
       DartType enclosingType = _typeForReflectable(element.enclosingElement2);
       DartType focusClassType = _typeForReflectable(focusClass);
@@ -3919,15 +3927,15 @@ class BuilderImplementation {
           await checkInheritance(enclosingType, focusClassType);
       if (isOk) {
         if (enclosingType is InterfaceType) {
-          return enclosingType.element;
+          return enclosingType.element3;
         } else {
           return null;
         }
       } else {
         return null;
       }
-    } else if (element is PropertyAccessorElement) {
-      PropertyInducingElement? variable = element.variable2;
+    } else if (element is PropertyAccessorElement2) {
+      PropertyInducingElement2? variable = element.variable3;
       DartObject? constantValue = variable?.computeConstantValue();
       // Handle errors during evaluation. In general `constantValue` is
       // null for (1) non-const variables, (2) variables without an
@@ -3946,7 +3954,7 @@ class BuilderImplementation {
       // When `isOK` is true, result.value.type.element is a InterfaceElement2.
       if (isOk) {
         if (constantValueType is InterfaceType) {
-          return constantValueType.element;
+          return constantValueType.element3;
         } else {
           return null;
         }
@@ -3958,7 +3966,7 @@ class BuilderImplementation {
     await _fine(
       'Ignoring metadata in a form ($elementAnnotation) '
       'which is not yet supported.',
-      elementAnnotation.element,
+      elementAnnotation.element2,
     );
     return null;
   }
@@ -3993,7 +4001,7 @@ class BuilderImplementation {
     ClassElement2 reflectableClass =
         reflectableLibrary.getClass('Reflectable')!;
     InterfaceType typeType = reflectableLibrary.typeProvider.typeType;
-    InterfaceElement2 typeTypeClass = typeType.element;
+    InterfaceElement2 typeTypeClass = typeType.element3;
 
     ConstructorElement2 globalQuantifyCapabilityConstructor =
         capabilityLibrary
@@ -4008,8 +4016,8 @@ class BuilderImplementation {
       List<LibraryElement2> imports = library.importedLibraries;
       for (var import in imports) {
         if (import.id != reflectableLibrary.id) continue;
-        for (ElementAnnotation metadatum in import.metadata) {
-          Element2? metadatumElement = metadatum.element?.declaration;
+        for (ElementAnnotation metadatum in import.metadata2.annotations) {
+          Element2? metadatumElement = metadatum.element2?.declaration;
           if (metadatumElement == globalQuantifyCapabilityConstructor) {
             DartObject? value = _getEvaluatedMetadatum(metadatum);
             if (value != null) {
@@ -4018,7 +4026,7 @@ class BuilderImplementation {
               DartType? valueType =
                   value.getField('(super)')?.getField('reflector')?.type;
               InterfaceElement2? reflector =
-                  valueType is InterfaceType ? valueType.element : null;
+                  valueType is InterfaceType ? valueType.element3 : null;
               if (reflector == null) {
                 await _warn(
                   WarningKind.badSuperclass,
@@ -4033,7 +4041,7 @@ class BuilderImplementation {
                   await _warn(
                     WarningKind.badSuperclass,
                     'The reflector must be a direct subclass of '
-                    'Reflectable. Found ${reflector.name}.',
+                    'Reflectable. Found ${reflector.name3}.',
                     metadatumElement,
                   );
                   continue;
@@ -4054,7 +4062,7 @@ class BuilderImplementation {
               DartType? metadataFieldType = metadataType?.toTypeValue();
               InterfaceElement2? metadataFieldValue =
                   metadataFieldType is InterfaceType
-                      ? metadataFieldType.element
+                      ? metadataFieldType.element3
                       : null;
               DartType? metadataTypeType = metadataType?.type;
               if (metadataFieldValue == null) {
@@ -4074,7 +4082,9 @@ class BuilderImplementation {
                       ?.getField('reflector')
                       ?.type;
               InterfaceElement2? reflector =
-                  reflectorType is InterfaceType ? reflectorType.element : null;
+                  reflectorType is InterfaceType
+                      ? reflectorType.element3
+                      : null;
               if (reflector == null) {
                 await _warn(
                   WarningKind.badSuperclass,
@@ -4090,7 +4100,7 @@ class BuilderImplementation {
                   await _warn(
                     WarningKind.badSuperclass,
                     'The reflector must be a direct subclass of '
-                    'Reflectable. Found ${reflector.name}.',
+                    'Reflectable. Found ${reflector.name3}.',
                     metadatumElement,
                   );
                   continue;
@@ -4156,14 +4166,14 @@ class BuilderImplementation {
       );
     }
 
-    if (potentialReflectorClass.constructors.length != 1) {
+    if (potentialReflectorClass.constructors2.length != 1) {
       // We "own" the direct subclasses of `Reflectable` so when they are
       // malformed as reflector classes we raise an error.
       await constructorFail();
       return false;
     }
-    ConstructorElement2 constructor = potentialReflectorClass.constructors[0];
-    if (constructor.parameters.isNotEmpty || !constructor.isConst) {
+    ConstructorElement2 constructor = potentialReflectorClass.constructors2[0];
+    if (constructor.formalParameters.isNotEmpty || !constructor.isConst) {
       // We still "own" `potentialReflectorClass`.
       await constructorFail();
       return false;
@@ -4248,7 +4258,7 @@ class BuilderImplementation {
     ) async {
       _ReflectorDomain? domain = domains[reflector];
       if (domain == null) {
-        LibraryElement2 reflectorLibrary = reflector.library;
+        LibraryElement2 reflectorLibrary = reflector.library2;
         _Capabilities capabilities = await _capabilitiesOf(
           capabilityLibrary,
           reflector,
@@ -4282,16 +4292,16 @@ class BuilderImplementation {
       InterfaceElement2 reflector,
     ) async {
       if (!await _isImportable(type, dataId, _resolver)) {
-        await _fine('Ignoring unrepresentable class ${type.name}', type);
+        await _fine('Ignoring unrepresentable class ${type.name3}', type);
       } else {
         _ReflectorDomain domain = await getReflectorDomain(reflector);
         if (!domain._classes.contains(type)) {
           if (type is MixinApplication && type.isMixinApplication) {
             // Iterate over all mixins in most-general-first order (so with
             // `class C extends B with M1, M2..` we visit `M1` then `M2`.
-            InterfaceElement2 superclass = type.supertype!.element;
+            InterfaceElement2 superclass = type.supertype!.element3;
             for (InterfaceType mixin in type.mixins) {
-              InterfaceElement2 mixinElement = mixin.element;
+              InterfaceElement2 mixinElement = mixin.element3;
               MixinApplication? subClass =
                   mixin == type.mixins.last ? type : null;
               String? name = subClass == null ? null : type.name;
@@ -4308,7 +4318,7 @@ class BuilderImplementation {
           } else {
             domain._classes.add(type);
           }
-          await addLibrary(type.library, reflector);
+          await addLibrary(type.library2, reflector);
           // We need to ensure that the [importCollector] has indeed added
           // `type.library` (if we have no library capability `addLibrary` will
           // not do that), because it may be needed in import directives in the
@@ -4317,7 +4327,7 @@ class BuilderImplementation {
           // TODO(eernst) clarify: Maybe the following statement could be moved
           // out of the `if` in `addLibrary` such that we don't have to have
           // an extra copy of it here.
-          importCollector._addLibrary(type.library);
+          importCollector._addLibrary(type.library2);
         }
       }
     }
@@ -4383,39 +4393,42 @@ class BuilderImplementation {
     // reflector.
     for (LibraryElement2 library in _libraries) {
       for (InterfaceElement2 reflector in await getReflectors(
-        library.name,
-        library.metadata,
+        library.name3,
+        library.metadata2.annotations,
       )) {
         assert(await _isImportableLibrary(library, dataId, _resolver));
         await addLibrary(library, reflector);
       }
 
-      for (LibraryFragment unit in library.units) {
-        for (InterfaceElement2 type in unit.classes) {
+      for (LibraryFragment fragment in library.fragments) {
+        for (ClassFragment classFragment in fragment.classes2) {
           for (InterfaceElement2 reflector in await getReflectors(
-            _qualifiedName(type),
-            type.metadata,
+            _qualifiedName(classFragment.element),
+            classFragment.metadata2.annotations,
           )) {
-            await addClassDomain(type, reflector);
+            await addClassDomain(classFragment.element, reflector);
           }
-          if (!allReflectors.contains(type) &&
-              await _isReflectorClass(type, classReflectable)) {
-            allReflectors.add(type);
+          if (!allReflectors.contains(classFragment.element) &&
+              await _isReflectorClass(
+                classFragment.element,
+                classReflectable,
+              )) {
+            allReflectors.add(classFragment.element);
           }
         }
-        for (EnumElement2 type in unit.enums) {
+        for (EnumFragment type in fragment.enums2) {
           for (InterfaceElement2 reflector in await getReflectors(
-            _qualifiedName(type),
-            type.metadata,
+            _qualifiedName(type.element),
+            type.metadata2.annotations,
           )) {
-            await addClassDomain(type, reflector);
+            await addClassDomain(type.element, reflector);
           }
           // An enum is never a reflector class, hence no `_isReflectorClass`.
         }
-        for (FunctionElement function in unit.functions) {
+        for (TopLevelFunctionElement function in fragment.functions) {
           for (InterfaceElement2 reflector in await getReflectors(
             _qualifiedFunctionName(function),
-            function.metadata,
+            function.metadata2.annotations,
           )) {
             // We just add the library here, the function itself will be
             // supported using `invoke` and `declarations` of that library
@@ -4499,7 +4512,7 @@ class BuilderImplementation {
     // be in the given `capabilityLibrary` (because we could never know
     // how to interpret the meaning of a user-written capability class, so
     // users cannot write their own capability classes).
-    InterfaceElement2 dartTypeElement = (dartType as InterfaceType).element;
+    InterfaceElement2 dartTypeElement = (dartType as InterfaceType).element3;
     if (dartTypeElement is! ClassElement2) {
       String typeString = dartType.getDisplayString();
       await _severe(
@@ -4510,7 +4523,7 @@ class BuilderImplementation {
       );
       return null; // Error default.
     }
-    if (dartTypeElement.library != capabilityLibrary) {
+    if (dartTypeElement.library2 != capabilityLibrary) {
       await _severe(
         errors.applyTemplate(errors.superArgumentWrongLibrary, {
           'library': '$capabilityLibrary',
@@ -4571,7 +4584,7 @@ class BuilderImplementation {
       return null;
     }
 
-    switch (dartTypeElement.name) {
+    switch (dartTypeElement.name3) {
       case 'NameCapability':
         return ec.nameCapability;
       case 'ClassifyCapability':
@@ -4649,7 +4662,7 @@ class BuilderImplementation {
         DartType constantUpperBoundType = constantUpperBound.toTypeValue()!;
         if (constantUpperBoundType is! InterfaceType) return null;
         return ec.SuperclassQuantifyCapability(
-          constantUpperBoundType.element,
+          constantUpperBoundType.element3,
           excludeUpperBound: constantExcludeUpperBound.toBoolValue()!,
         );
       case 'TypeAnnotationQuantifyCapability':
@@ -4684,7 +4697,7 @@ class BuilderImplementation {
     LibraryElement2 capabilityLibrary,
     InterfaceElement2 reflector,
   ) async {
-    List<ConstructorElement2> constructors = reflector.constructors;
+    List<ConstructorElement2> constructors = reflector.constructors2;
 
     // Well-formedness for each reflector class is checked by
     // `_isReflectorClass`, so we do not report errors here. But errors will
@@ -4738,7 +4751,7 @@ class BuilderImplementation {
       return await _capabilityOfExpression(
         capabilityLibrary,
         expression,
-        reflector.library,
+        reflector.library2,
         constructorElement,
       );
     }
@@ -4874,7 +4887,7 @@ void initializeReflectable() {
     _libraries = visibleLibraries;
 
     for (LibraryElement2 library in _libraries) {
-      _librariesByName[library.name] = library;
+      _librariesByName[library.name3!] = library;
     }
     LibraryElement2? reflectableLibrary =
         _librariesByName['reflectable.reflectable'];
@@ -4952,12 +4965,13 @@ void initializeReflectable() {
   }
 }
 
-bool _accessorIsntImplicitGetterOrSetter(PropertyAccessorElement accessor) {
-  return !accessor.isSynthetic || (!accessor.isGetter && !accessor.isSetter);
+bool _accessorIsntImplicitGetterOrSetter(PropertyAccessorElement2 accessor) {
+  return !accessor.isSynthetic ||
+      (accessor is! GetterElement && accessor is! SetterElement);
 }
 
 bool _executableIsntImplicitGetterOrSetter(ExecutableElement2 executable) {
-  if (executable is PropertyAccessorElement) {
+  if (executable is PropertyAccessorElement2) {
     return _accessorIsntImplicitGetterOrSetter(executable);
   } else {
     return true;
@@ -4980,7 +4994,7 @@ int _classDescriptor(InterfaceElement2 element) {
     return result;
   }
   DartType thisType = element.thisType;
-  LibraryElement2 library = element.library;
+  LibraryElement2 library = element.library2;
   if (library.typeSystem.isNullable(thisType)) {
     result |= constants.nullableAttribute;
   }
@@ -4992,7 +5006,7 @@ int _classDescriptor(InterfaceElement2 element) {
 
 /// Returns an integer encoding of the kind and attributes of the given
 /// variable.
-int _topLevelVariableDescriptor(TopLevelVariableElement element) {
+int _topLevelVariableDescriptor(TopLevelVariableElement2 element) {
   int result = constants.field;
   if (element.isPrivate) result |= constants.privateAttribute;
   if (element.isSynthetic) result |= constants.syntheticAttribute;
@@ -5011,13 +5025,13 @@ int _topLevelVariableDescriptor(TopLevelVariableElement element) {
   if (declaredType is DynamicType) result |= constants.dynamicAttribute;
   if (declaredType is NeverType) result |= constants.neverAttribute;
   if (declaredType is InterfaceType) {
-    Element2? elementType = declaredType.element;
+    Element2? elementType = declaredType.element3;
     if (elementType is InterfaceElement2) {
       result |= constants.classTypeAttribute;
     }
     result |= constants.topLevelAttribute;
   }
-  LibraryElement2 library = element.library;
+  LibraryElement2 library = element.library2;
   if (library.typeSystem.isNullable(declaredType)) {
     result |= constants.nullableAttribute;
   }
@@ -5048,7 +5062,7 @@ int _fieldDescriptor(FieldElement2 element) {
   if (declaredType is DynamicType) result |= constants.dynamicAttribute;
   if (declaredType is NeverType) result |= constants.neverAttribute;
   if (declaredType is InterfaceType) {
-    Element2? elementType = declaredType.element;
+    Element2? elementType = declaredType.element3;
     if (elementType is InterfaceElement2) {
       result |= constants.classTypeAttribute;
       if (elementType.typeParameters.isNotEmpty) {
@@ -5056,7 +5070,7 @@ int _fieldDescriptor(FieldElement2 element) {
       }
     }
   }
-  LibraryElement2 library = element.library;
+  LibraryElement2 library = element.library2;
   if (library.typeSystem.isNullable(declaredType)) {
     result |= constants.nullableAttribute;
   }
@@ -5084,7 +5098,7 @@ int _parameterDescriptor(FormalParameterElement element) {
   if (declaredType is DynamicType) result |= constants.dynamicAttribute;
   if (declaredType is NeverType) result |= constants.neverAttribute;
   if (declaredType is InterfaceType) {
-    Element2? elementType = declaredType.element;
+    Element2? elementType = declaredType.element3;
     if (elementType is InterfaceElement2) {
       result |= constants.classTypeAttribute;
       if (elementType.typeParameters.isNotEmpty) {
@@ -5092,7 +5106,7 @@ int _parameterDescriptor(FormalParameterElement element) {
       }
     }
   }
-  LibraryElement2? library = element.library;
+  LibraryElement2? library = element.library2;
   if (library != null) {
     if (library.typeSystem.isNullable(declaredType)) {
       result |= constants.nullableAttribute;
@@ -5121,7 +5135,7 @@ int _declarationDescriptor(ExecutableElement2 element) {
       result |= constants.neverReturnTypeAttribute;
     }
     if (returnType is InterfaceType) {
-      Element2? elementReturnType = returnType.element;
+      Element2? elementReturnType = returnType.element3;
       if (elementReturnType is InterfaceElement2) {
         result |= constants.classReturnTypeAttribute;
         if (elementReturnType.typeParameters.isNotEmpty) {
@@ -5131,8 +5145,8 @@ int _declarationDescriptor(ExecutableElement2 element) {
     }
   }
 
-  if (element is PropertyAccessorElement) {
-    result |= element.isGetter ? constants.getter : constants.setter;
+  if (element is PropertyAccessorElement2) {
+    result |= element is GetterElement ? constants.getter : constants.setter;
     handleReturnType(element);
   } else if (element is ConstructorElement2) {
     if (element.isFactory) {
@@ -5148,7 +5162,7 @@ int _declarationDescriptor(ExecutableElement2 element) {
     result |= constants.method;
     handleReturnType(element);
   } else {
-    assert(element is FunctionElement);
+    assert(element is TopLevelFunctionElement);
     result |= constants.function;
     handleReturnType(element);
   }
@@ -5201,7 +5215,7 @@ Future<String> _extractConstantCode(
   Future<String> typeAnnotationHelper(TypeAnnotation typeName) async {
     DartType? interfaceType = typeName.type;
     if (interfaceType is InterfaceType) {
-      LibraryElement2 library = interfaceType.element.library;
+      LibraryElement2 library = interfaceType.element3.library2;
       String prefix = importCollector._getPrefix(library);
       return '$prefix$typeName';
     } else {
