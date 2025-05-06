@@ -3234,21 +3234,11 @@ class _ClassDomain {
         if (member.isPrivate) return;
         // If [member] is a synthetic accessor created from a field, search for
         // the metadata on the original field.
-        List<ElementAnnotation> metadata;
-        if (member is GetterElement) {
-          metadata =
-              member.isSynthetic
-                  ? (member.variable3?.metadata2.annotations ??
-                      const <ElementAnnotation>[])
-                  : member.metadata2.annotations;
-        } else if (member is SetterElement) {
-          metadata =
-              member.isSynthetic
-                  ? (member.variable3?.metadata2.annotations ??
-                      const <ElementAnnotation>[])
-                  : member.metadata2.annotations;
-        }
-
+        List<ElementAnnotation> metadata =
+            (member is PropertyAccessorElement2 && member.isSynthetic)
+                ? member.variable3?.metadata2.annotations ??
+                    const <ElementAnnotation>[]
+                : member.metadata2.annotations;
         List<ElementAnnotation>? getterMetadata;
         if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
             member is SetterElement &&
