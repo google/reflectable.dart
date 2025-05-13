@@ -2798,7 +2798,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement2> {
           subClass == null
               ? null
               : (element is MixinApplication && element.isMixinApplication
-                  ? element.name
+                  ? element.name3
                   : null);
       InterfaceElement2 mixinApplication = MixinApplication(
         name,
@@ -2868,7 +2868,7 @@ Set<InterfaceElement2> _mixinApplicationsOfClasses(
               ? null
               : (interfaceElement is MixinApplication &&
                       interfaceElement.isMixinApplication
-                  ? interfaceElement.name
+                  ? interfaceElement.name3
                   : null);
       InterfaceElement2 mixinApplication = MixinApplication(
         name,
@@ -3194,7 +3194,7 @@ class _ClassDomain {
     if (interfaceElement is MixinApplication &&
         interfaceElement.isMixinApplication) {
       // This is the case `class B = A with M;`.
-      return interfaceElement.name;
+      return interfaceElement.name3!;
     } else if (interfaceElement is MixinApplication) {
       // This is the case `class B extends A with M1, .. Mk {..}`
       // where `interfaceElement` denotes one of the mixin applications
@@ -4307,7 +4307,7 @@ class BuilderImplementation {
               InterfaceElement2 mixinElement = mixin.element3;
               MixinApplication? subClass =
                   mixin == type.mixins.last ? type : null;
-              String? name = subClass == null ? null : type.name;
+              String? name = subClass == null ? null : type.name3!;
               var mixinApplication = MixinApplication(
                 name,
                 superclass,
