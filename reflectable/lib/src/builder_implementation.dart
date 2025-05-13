@@ -2443,7 +2443,7 @@ class _ReflectorDomain {
     if (type is InterfaceType) {
       InterfaceElement2 interfaceElement = type.element3;
       if ((interfaceElement is MixinApplication &&
-              interfaceElement.declaredName == null) ||
+              interfaceElement.firstFragment.name2 == null) ||
           interfaceElement.isPrivate) {
         return "const r.FakeType(r'${_qualifiedName(interfaceElement)}')";
       }
