@@ -337,8 +337,11 @@ abstract class ObjectMirror implements Mirror {
   /// [StaticInvokeMetaCapability]; and [invoke] on a top-level function
   /// requires a matching [TopLevelInvokeCapability] or
   /// [TopLevelInvokeMetaCapability].
-  Object? invoke(String memberName, List positionalArguments,
-      [Map<Symbol, dynamic>? namedArguments]); // RET: InstanceMirror
+  Object? invoke(
+    String memberName,
+    List positionalArguments, [
+    Map<Symbol, dynamic>? namedArguments,
+  ]); // RET: InstanceMirror
 
   /// Invokes a getter and returns the result. The getter can be the
   /// implicit getter for a field, or a user-defined getter method.
@@ -540,8 +543,10 @@ abstract class ClosureMirror implements InstanceMirror {
   /// Required capabilities: [apply] requires a matching
   /// [InstanceInvokeCapability] or [InstanceInvokeMetaCapability], targeting
   /// the relevant `call` method.
-  Object? apply(List positionalArguments,
-      [Map<Symbol, dynamic>? namedArguments]); // RET: InstanceMirror
+  Object? apply(
+    List positionalArguments, [
+    Map<Symbol, dynamic>? namedArguments,
+  ]); // RET: InstanceMirror
 }
 
 /// A [LibraryMirror] reflects a Dart language library, providing
@@ -965,8 +970,11 @@ abstract class ClassMirror implements TypeMirror, ObjectMirror {
   ///
   /// Required capabilities: [newInstance] requires a matching
   /// [NewInstanceCapability] or [NewInstanceMetaCapability].
-  Object newInstance(String constructorName, List positionalArguments,
-      [Map<Symbol, dynamic> namedArguments]); // RET: InstanceMirror
+  Object newInstance(
+    String constructorName,
+    List positionalArguments, [
+    Map<Symbol, dynamic> namedArguments,
+  ]); // RET: InstanceMirror
 
   /// Whether this mirror is equal to [other].
   ///

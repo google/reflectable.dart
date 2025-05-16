@@ -1,3 +1,8 @@
+## 4.0.13
+
+* Update dependencies: `analyzer` 7.4, `build_runner` 2.4.15,
+  `dart_style` 3.0.0, `lints` 6.0.0.
+
 ## 4.0.12
 
 * Revert analyzer dependency to 6.8.0 and lints to 5.0.0 due to macro

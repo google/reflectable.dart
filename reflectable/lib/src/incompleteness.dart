@@ -36,7 +36,8 @@ Never unreachableError(String message) {
 /// avoid warnings about a missing return problem, and the code may be more
 /// readable.
 Never unimplementedError(String message) {
-  var extendedMessage = '*** Unfortunately, this feature has not yet been '
+  var extendedMessage =
+      '*** Unfortunately, this feature has not yet been '
       'implemented: $message.\n'
       'If you wish to ensure that it is prioritized, please report it '
       'on github.com/dart-lang/reflectable.';
