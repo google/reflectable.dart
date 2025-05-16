@@ -2197,7 +2197,7 @@ class _ReflectorDomain {
     if (dartType is InterfaceType) {
       InterfaceElement2 interfaceElement = dartType.element3;
       if ((interfaceElement is MixinApplication &&
-              interfaceElement.declaredName == null) ||
+              interfaceElement.firstFragment.name2 == null) ||
           interfaceElement.isPrivate) {
         return await fail();
       }
@@ -2342,7 +2342,7 @@ class _ReflectorDomain {
     if (dartType is InterfaceType) {
       InterfaceElement2 interfaceElement = dartType.element3;
       if ((interfaceElement is MixinApplication &&
-              interfaceElement.declaredName == null) ||
+              interfaceElement.firstFragment.name2 == null) ||
           interfaceElement.isPrivate) {
         // The test for an anonymous mixin application above may be dead code:
         // Currently no test uses an anonymous mixin application to reach this
