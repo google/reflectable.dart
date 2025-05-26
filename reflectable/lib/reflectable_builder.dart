@@ -2,13 +2,13 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.reflectable_builder;
+library;
 
 import 'dart:async';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
-import 'package:build_config/build_config.dart';
-import 'package:build_runner_core/build_runner_core.dart';
+// import 'package:build_config/build_config.dart';
+// import 'package:build_runner_core/build_runner_core.dart';
 import 'src/builder_implementation.dart';
 
 class ReflectableBuilder implements Builder {
@@ -46,6 +46,7 @@ ReflectableBuilder reflectableBuilder(BuilderOptions options) {
   return ReflectableBuilder(options);
 }
 
+/*
 Future<BuildResult> reflectableBuild(List<String> arguments) async {
   if (arguments.isEmpty) {
     // Globbing may produce an empty argument list, and it might be ok,
@@ -81,3 +82,4 @@ Future<BuildResult> reflectableBuild(List<String> arguments) async {
     }
   }
 }
+*/
