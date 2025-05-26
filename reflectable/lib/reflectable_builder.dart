@@ -5,11 +5,36 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 // import 'package:build_config/build_config.dart';
 // import 'package:build_runner_core/build_runner_core.dart';
 import 'src/builder_implementation.dart';
+
+final mapEnvironmentToWarningKind = <String, Set<WarningKind>>{
+  "REFLECTABLE_SUPPRESS_MISSING_ENTRY_POINT": {WarningKind.missingEntryPoint},
+  "REFLECTABLE_SUPPRESS_BAD_SUPERCLASS": {WarningKind.badSuperclass},
+  "REFLECTABLE_SUPPRESS_BAD_NAME_PATTERN": {WarningKind.badNamePattern},
+  "REFLECTABLE_SUPPRESS_BAD_METADATA": {WarningKind.badMetadata},
+  "REFLECTABLE_SUPPRESS_BAD_REFLECTOR_CLASS": {WarningKind.badReflectorClass},
+  "REFLECTABLE_SUPPRESS_UNRECOGNIZED_REFLECTOR": {
+    WarningKind.unrecognizedReflector
+  },
+  "REFLECTABLE_SUPPRESS_UNUSED_REFLECTOR": {WarningKind.unusedReflector},
+  "REFLECTABLE_SUPPRESS_ALL_WARNINGS": WarningKind.values.toSet(),
+};
+
+List<WarningKind> _computeSuppressedWarnings() {
+  final suppressedWarnings = <WarningKind>{};
+  final environmentMap = Platform.environment;
+  for (final variable in mapEnvironmentToWarningKind.keys) {
+    if (environmentMap[variable]?.isNotEmpty == true) {
+      suppressedWarnings.addAll(mapEnvironmentToWarningKind[variable]!);
+    }
+  }
+  return suppressedWarnings.toList();
+}
 
 class ReflectableBuilder implements Builder {
   BuilderOptions builderOptions;
@@ -29,6 +54,7 @@ class ReflectableBuilder implements Builder {
     AssetId inputId = buildStep.inputId;
     AssetId outputId = inputId.changeExtension('.reflectable.dart');
     List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
+    List<WarningKind> suppressedWarnings = _computeSuppressedWarnings();
     String generatedSource = await BuilderImplementation().buildMirrorLibrary(
         resolver, inputId, outputId, inputLibrary, visibleLibraries, true, []);
     await buildStep.writeAsString(outputId, generatedSource);
@@ -45,41 +71,3 @@ ReflectableBuilder reflectableBuilder(BuilderOptions options) {
   config.putIfAbsent('entry_points', () => ['**.dart']);
   return ReflectableBuilder(options);
 }
-
-/*
-Future<BuildResult> reflectableBuild(List<String> arguments) async {
-  if (arguments.isEmpty) {
-    // Globbing may produce an empty argument list, and it might be ok,
-    // but we should give at least notify the caller.
-    print('reflectable_builder: No arguments given, exiting.');
-    return BuildResult(BuildStatus.success, []);
-  } else {
-    // TODO(eernst) feature: We should support some customization of
-    // the settings, e.g., specifying options like `suppress_warnings`.
-    var options = BuilderOptions(
-        <String, dynamic>{'entry_points': arguments, 'formatted': true},
-        isRoot: true);
-    final builder = ReflectableBuilder(options);
-    var builders = <BuilderApplication>[
-      applyToRoot(builder, generateFor: InputSet(include: arguments))
-    ];
-    PackageGraph packageGraph = await PackageGraph.forThisPackage();
-    var environment = OverrideableEnvironment(IOEnvironment(packageGraph));
-    BuildOptions buildOptions = await BuildOptions.create(
-      LogSubscription(environment),
-      deleteFilesByDefault: true,
-      packageGraph: packageGraph,
-    );
-    try {
-      BuildRunner build = await BuildRunner.create(
-          buildOptions, environment, builders, const {},
-          isReleaseBuild: false);
-      BuildResult result = await build.run(const {});
-      await build.beforeExit();
-      return result;
-    } finally {
-      await buildOptions.logListener.cancel();
-    }
-  }
-}
-*/
