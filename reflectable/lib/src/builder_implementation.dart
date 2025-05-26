@@ -177,6 +177,7 @@ class _ReflectionWorld {
             importCollector,
             typeVariablesInScope,
             typedefs,
+            suppressedWarnings,
             useNameOfGenericFunctionType: false,
           );
           typedefsCode +=
@@ -1214,6 +1215,7 @@ class _ReflectorDomain {
             erasableDartType.dartType,
             importCollector,
             typedefs,
+            suppressedWarnings,
           ),
         );
       }
@@ -2153,21 +2155,24 @@ class _ReflectorDomain {
     DartType dartType,
     _ImportCollector importCollector,
     Set<String> typeVariablesInScope,
-    Map<FunctionType, int> typedefs, {
+    Map<FunctionType, int> typedefs,
+    List<WarningKind> suppressedWarnings, {
     bool useNameOfGenericFunctionType = true,
   }) async {
     Future<String> fail() async {
       InterfaceElement? element =
           dartType is InterfaceType ? dartType.element : null;
-      log.warning(
-        await _formatDiagnosticMessage(
-          'Attempt to generate code for an '
-          'unsupported kind of type: $dartType (${dartType.runtimeType}). '
-          'Generating `dynamic`.',
-          element,
-          _resolver,
-        ),
-      );
+      if (!suppressedWarnings.contains(WarningKind.unsupportedType)) {
+        log.warning(
+          await _formatDiagnosticMessage(
+            'Attempt to generate code for an '
+            'unsupported kind of type: $dartType (${dartType.runtimeType}). '
+            'Generating `dynamic`.',
+            element,
+            _resolver,
+          ),
+        );
+      }
       return 'dynamic';
     }
 
@@ -2194,6 +2199,7 @@ class _ReflectorDomain {
                 importCollector,
                 typeVariablesInScope,
                 typedefs,
+                suppressedWarnings,
                 useNameOfGenericFunctionType: useNameOfGenericFunctionType,
               ),
             );
@@ -2232,6 +2238,7 @@ class _ReflectorDomain {
           importCollector,
           typeVariablesInScope,
           typedefs,
+          suppressedWarnings,
           useNameOfGenericFunctionType: useNameOfGenericFunctionType,
         );
         var typeArguments = '';
@@ -2251,6 +2258,7 @@ class _ReflectorDomain {
                 importCollector,
                 typeVariablesInScope,
                 typedefs,
+                suppressedWarnings,
                 useNameOfGenericFunctionType: useNameOfGenericFunctionType,
               ),
             );
@@ -2266,6 +2274,7 @@ class _ReflectorDomain {
                 importCollector,
                 typeVariablesInScope,
                 typedefs,
+                suppressedWarnings,
                 useNameOfGenericFunctionType: useNameOfGenericFunctionType,
               ),
             );
@@ -2284,6 +2293,7 @@ class _ReflectorDomain {
               importCollector,
               typeVariablesInScope,
               typedefs,
+              suppressedWarnings,
               useNameOfGenericFunctionType: useNameOfGenericFunctionType,
             );
             namedParameterTypeList.add('$typeCode $name');
@@ -2311,6 +2321,7 @@ class _ReflectorDomain {
     DartType dartType,
     _ImportCollector importCollector,
     Map<FunctionType, int> typedefs,
+    List<WarningKind> suppressedWarnings,
   ) async {
     var typeVariablesInScope = <String>{}; // None at this level.
     if (dartType is DynamicType) return 'dynamic';
@@ -2341,6 +2352,7 @@ class _ReflectorDomain {
             importCollector,
             typeVariablesInScope,
             typedefs,
+            suppressedWarnings,
             useNameOfGenericFunctionType: true,
           );
           return 'const m.TypeValue<$typeArgumentCode>().type';
@@ -2371,6 +2383,7 @@ class _ReflectorDomain {
             importCollector,
             typeVariablesInScope,
             typedefs,
+            suppressedWarnings,
             useNameOfGenericFunctionType: true,
           );
         } else {
@@ -2379,6 +2392,7 @@ class _ReflectorDomain {
             importCollector,
             typeVariablesInScope,
             typedefs,
+            suppressedWarnings,
           );
           return 'const m.TypeValue<$typeArgumentCode>().type';
         }
@@ -2386,15 +2400,17 @@ class _ReflectorDomain {
     } else {
       InterfaceElement? element =
           dartType is InterfaceType ? dartType.element : null;
-      log.warning(
-        await _formatDiagnosticMessage(
-          'Attempt to generate code for an '
-          'unsupported kind of type: $dartType (${dartType.runtimeType}). '
-          'Generating `dynamic`.',
-          element,
-          _resolver,
-        ),
-      );
+      if (!suppressedWarnings.contains(WarningKind.unsupportedType)) {
+        log.warning(
+          await _formatDiagnosticMessage(
+            'Attempt to generate code for an '
+            'unsupported kind of type: $dartType (${dartType.runtimeType}). '
+            'Generating `dynamic`.',
+            element,
+            _resolver,
+          ),
+        );
+      }
       return 'dynamic';
     }
   }
