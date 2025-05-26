@@ -56,7 +56,13 @@ class ReflectableBuilder implements Builder {
     List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
     List<WarningKind> suppressedWarnings = _computeSuppressedWarnings();
     String generatedSource = await BuilderImplementation().buildMirrorLibrary(
-        resolver, inputId, outputId, inputLibrary, visibleLibraries, true, []);
+        resolver,
+        inputId,
+        outputId,
+        inputLibrary,
+        visibleLibraries,
+        true,
+        suppressedWarnings);
     await buildStep.writeAsString(outputId, generatedSource);
   }
 

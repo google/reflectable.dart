@@ -22,7 +22,7 @@
 /// expensive in terms of program size, but if only few features are needed
 /// then a small set of capabilities it is likely to be much smaller.
 ///
-library reflectable.reflectable;
+library;
 
 import 'capability.dart';
 import 'mirrors.dart';

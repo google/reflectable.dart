@@ -130,7 +130,7 @@
 // Some of these locations are marked with '// Possible'.  They are in
 // general concerned with types in a broad sense: [ClassMirror],
 // [TypeMirror], and [LibraryMirror].
-library reflectable.mirrors;
+library;
 
 // Currently skip 'abstract class MirrorSystem': represented by reflectors.
 

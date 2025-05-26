@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.src.element_capability;
+library;
 
 // This library provides a variant of the `ReflectCapability` class
 // hierarchy from `../capability.dart` which is suitable for holding

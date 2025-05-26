@@ -41,7 +41,7 @@
 /// More details can be found in the [design
 /// document](https://github.com/dart-lang/reflectable/blob/master/reflectable/doc/TheDesignOfReflectableCapabilities.md)
 /// about this library.
-library reflectable.capability;
+library;
 
 import 'reflectable.dart';
 

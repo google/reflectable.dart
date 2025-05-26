@@ -1,3 +1,18 @@
+## 4.0.13
+
+- Use language version 3.6.
+- Use newer versions of `build_runner_core` (^8.0.0) and `dart_style`
+  (^3.0.0), to enable the new formatting style.
+- Ignore deprecated member use because `build_runner` is not yet
+  ready for the new `Element` model.
+- Add support for suppression of warnings via environment variables.
+  The environment variable has prefix `REFLECTABLE_SUPPRESS_...` and
+  then `UPPER_CASE` of the `WarningKind`. For example,
+  `export REFLECTABLE_SUPPRESS_BAD_METADATA=yes` will suppress
+  the `badMetadata` warning.
+- 
+
+
 ## 4.0.12
 
 * Revert analyzer dependency to 6.8.0 and lints to 5.0.0 due to macro

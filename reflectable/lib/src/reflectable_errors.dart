@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.src.transformer_errors;
+library;
 
 /// It is a transformation time error to use an instance of a
 /// class that is not a direct subclass of [Reflectable] as
