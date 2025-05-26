@@ -7,7 +7,7 @@ description: >
   package. It is not intended to be useful for other purposes than
   testing package reflectable.
 environment:
-  sdk: '>=3.7.0 <4.0.0'
+  sdk: '>=3.6.0 <4.0.0'
 dependencies:
   build_runner: any
   glob: any
