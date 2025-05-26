@@ -5,7 +5,7 @@
 /// This library provides shared features dealing with incompleteness in
 /// the package, e.g., exceptions intended to be thrown when an unimplemented
 /// method is called.
-library;
+library reflectable.src.incompleteness;
 
 /// Throwing an instance of this class indicates that a location in code
 /// has been reached which should never be reached, typically because the code

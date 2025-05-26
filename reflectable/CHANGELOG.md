@@ -11,9 +11,6 @@
   `export REFLECTABLE_SUPPRESS_BAD_METADATA=yes` will suppress
   the `badMetadata` warning.
 - Reformat the implementation to use the new style.
-- Remove library names (they are useful when a library will be accessed
-  using any kind of reflection, but that is not actually expected to
-  occur with the libraries in the package reflectable itself).
 
 ## 4.0.12
 

@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library;
+library reflectable.src.builder_implementation;
 
 // ignore_for_file:implementation_imports
 
