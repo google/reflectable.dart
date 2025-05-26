@@ -2,8 +2,9 @@ include: package:lints/recommended.yaml
 linter:
   rules:
     await_only_futures: true
-    unnecessary_library_name: false
+    deprecated_member_use: true
     omit_local_variable_types: false
-    # Enable the following when analyzer ^6.11.0 can be used:
+    unnecessary_library_name: false
+    # Enable the following when a newer analyzer can be used:
     # omit_obvious_local_variable_types: true
     # specify_nonobvious_local_variable_types: true
