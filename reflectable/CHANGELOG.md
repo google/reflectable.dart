@@ -15,7 +15,6 @@
   using any kind of reflection, but that is not actually expected to
   occur with the libraries in the package reflectable itself).
 
-
 ## 4.0.12
 
 * Revert analyzer dependency to 6.8.0 and lints to 5.0.0 due to macro
