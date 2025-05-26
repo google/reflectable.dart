@@ -21,6 +21,7 @@ final mapEnvironmentToWarningKind = <String, Set<WarningKind>>{
   "REFLECTABLE_SUPPRESS_UNRECOGNIZED_REFLECTOR": {
     WarningKind.unrecognizedReflector
   },
+  "REFLECTABLE_SUPPRESS_UNSUPPORTED_TYPE": {WarningKind.unsupportedType},
   "REFLECTABLE_SUPPRESS_UNUSED_REFLECTOR": {WarningKind.unusedReflector},
   "REFLECTABLE_SUPPRESS_ALL_WARNINGS": WarningKind.values.toSet(),
 };

@@ -51,6 +51,7 @@ enum WarningKind {
   badMetadata,
   badReflectorClass,
   unrecognizedReflector,
+  unsupportedType,
   unusedReflector,
 }
 
@@ -6424,21 +6425,6 @@ Future<String> _formatDiagnosticMessage(
     }
   }
   return '${source.fullName}:$locationString: $message';
-}
-
-// Emits a warning-level log message which will be preserved by `pub run`
-// (as opposed to stdout and stderr which are swallowed). If given, [target]
-// is used to indicate a source code location.
-// ignore:unused_element
-Future<void> _emitMessage(
-  String message, [
-  Element? target,
-  Resolver? resolver,
-]) async {
-  String formattedMessage = (target != null && resolver != null)
-      ? await _formatDiagnosticMessage(message, target, resolver)
-      : message;
-  log.warning(formattedMessage);
 }
 
 /// Return [AstNode] of declaration of [element], null if synthetic.
