@@ -14,6 +14,8 @@
 - Introduce support for specifying the language version used by the
   formatter by setting `REFLECTABLE_FORMATTER_LANGUAGE_VERSION` to
   a value of the form `[0-9]+\\.[0-9]+`.
+- Added information to the design document in `doc` about the supported
+  environment variables.
 
 ## 4.0.12
 
