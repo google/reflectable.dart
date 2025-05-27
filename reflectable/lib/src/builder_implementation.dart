@@ -7,6 +7,7 @@ library reflectable.src.builder_implementation;
 // ignore_for_file:implementation_imports
 
 import 'dart:developer' as developer;
+import 'dart:io';
 import 'package:analyzer/dart/analysis/declared_variables.dart';
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/analysis/results.dart';
@@ -30,6 +31,7 @@ import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/summary/package_bundle_reader.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
+import 'package:pub_semver/pub_semver.dart' as semver;
 import 'package:path/path.dart' as path;
 import 'element_capability.dart' as ec;
 import 'encoding_constants.dart' as constants;
@@ -4763,6 +4765,25 @@ class BuilderImplementation {
     return _Capabilities(capabilities);
   }
 
+  semver.Version? _getFormatterLanguageVersion() {
+    final environmentMap = Platform.environment;
+    final version = environmentMap["REFLECTABLE_FORMATTER_LANGUAGE_VERSION"];
+    if (version == null) return null;
+    final match = RegExp(r"[0-9]+\.[0-9]+").firstMatch(version);
+    if (match == null) {
+      log.warning(
+        "Unexpected: REFLECTABLE_FORMATTER_LANGUAGE_VERSION=$version\n"
+        "This variable should match /[0-9]+\.[0-9]+/.",
+      );
+      return null;
+    }
+    final periodIndex = version.indexOf('.');
+    final majorVersion = int.parse(version.substring(0, periodIndex));
+    final minorVersion =
+        int.parse(version.substring(periodIndex + 1, version.length));
+    return semver.Version(majorVersion, minorVersion, 0);
+  }
+
   /// Generates code for a new entry-point file that will initialize the
   /// reflection data according to [world], and invoke the main of
   /// [entrypointLibrary] located at [originalEntryPointFilename]. The code is
@@ -4818,9 +4839,9 @@ void initializeReflectable() {
 }
 ''';
     if (_formatted) {
-      var formatter = DartFormatter(
-        languageVersion: DartFormatter.latestLanguageVersion,
-      );
+      var languageVersion =
+          _getFormatterLanguageVersion() ?? DartFormatter.latestLanguageVersion;
+      var formatter = DartFormatter(languageVersion: languageVersion);
       result = formatter.format(result);
     }
     return result;
