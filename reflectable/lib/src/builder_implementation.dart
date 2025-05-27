@@ -4772,7 +4772,7 @@ class BuilderImplementation {
     final match = RegExp(r"[0-9]+\.[0-9]+").firstMatch(version);
     if (match == null) {
       log.warning(
-        "Unexpected: REFLECTABLE_FORMATTER_LANGUAGE_VERSION=$version\n"
+        "Unexpected: REFLECTABLE_FORMATTER_LANGUAGE_VERSION=\"$version\"\n"
         "This variable should match /[0-9]+\\.[0-9]+/.",
       );
       return null;

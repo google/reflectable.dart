@@ -11,6 +11,9 @@
   `export REFLECTABLE_SUPPRESS_BAD_METADATA=yes` will suppress
   the `badMetadata` warning.
 - Reformat the implementation to use the new style.
+- Introduce support for specifying the language version used by the
+  formatter by setting `REFLECTABLE_FORMATTER_LANGUAGE_VERSION` to
+  a value of the form `[0-9]+\\.[0-9]+`.
 
 ## 4.0.12
 
