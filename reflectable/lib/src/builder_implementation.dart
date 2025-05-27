@@ -47,12 +47,10 @@ import 'reflectable_errors.dart' as errors;
 /// Remember to update the explanatory text in [_findSuppressWarnings] whenever
 /// this list is updated.
 enum WarningKind {
-  missingEntryPoint,
   badSuperclass,
   badNamePattern,
   badMetadata,
   badReflectorClass,
-  unrecognizedReflector,
   unsupportedType,
   unusedReflector,
 }

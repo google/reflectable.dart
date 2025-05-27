@@ -11,14 +11,10 @@ import 'package:build/build.dart';
 import 'src/builder_implementation.dart';
 
 final mapEnvironmentToWarningKind = <String, Set<WarningKind>>{
-  "REFLECTABLE_SUPPRESS_MISSING_ENTRY_POINT": {WarningKind.missingEntryPoint},
   "REFLECTABLE_SUPPRESS_BAD_SUPERCLASS": {WarningKind.badSuperclass},
   "REFLECTABLE_SUPPRESS_BAD_NAME_PATTERN": {WarningKind.badNamePattern},
   "REFLECTABLE_SUPPRESS_BAD_METADATA": {WarningKind.badMetadata},
   "REFLECTABLE_SUPPRESS_BAD_REFLECTOR_CLASS": {WarningKind.badReflectorClass},
-  "REFLECTABLE_SUPPRESS_UNRECOGNIZED_REFLECTOR": {
-    WarningKind.unrecognizedReflector
-  },
   "REFLECTABLE_SUPPRESS_UNSUPPORTED_TYPE": {WarningKind.unsupportedType},
   "REFLECTABLE_SUPPRESS_UNUSED_REFLECTOR": {WarningKind.unusedReflector},
   "REFLECTABLE_SUPPRESS_ALL_WARNINGS": WarningKind.values.toSet(),
