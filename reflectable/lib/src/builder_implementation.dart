@@ -159,7 +159,7 @@ class _ReflectionWorld {
 
   /// Returns code which will create all the data structures (esp. mirrors)
   /// needed to enable the correct behavior for all [reflectors].
-  Future<String> generateCode() async {
+  Future<String> generateCode(List<WarningKind> suppressedWarnings) async {
     var typedefs = <FunctionType, int>{};
     var typeVariablesInScope = <String>{}; // None at top level.
     var typedefsCode = '\n';
@@ -169,6 +169,7 @@ class _ReflectionWorld {
         this,
         importCollector,
         typedefs,
+        suppressedWarnings,
       );
       if (typedefs.isNotEmpty) {
         for (DartType dartType in typedefs.keys) {
@@ -859,6 +860,7 @@ class _ReflectorDomain {
     _ReflectionWorld world,
     _ImportCollector importCollector,
     Map<FunctionType, int> typedefs,
+    List<WarningKind> suppressedWarnings,
   ) async {
     // Library related collections.
     var libraries = Enumerator<_LibraryDomain>();
@@ -4769,10 +4771,11 @@ class BuilderImplementation {
     _ReflectionWorld world,
     AssetId generatedLibraryId,
     String originalEntryPointFilename,
+    List<WarningKind> suppressedWarnings,
   ) async {
     // Notice it is important to generate the code before printing the
     // imports because generating the code can add further imports.
-    String code = await world.generateCode();
+    String code = await world.generateCode(suppressedWarnings);
 
     var imports = <String>[];
     for (LibraryElement library in world.importCollector._libraries) {
@@ -4888,6 +4891,7 @@ void initializeReflectable() {
             world,
             generatedLibraryId,
             path.basename(inputId.path),
+            suppressedWarnings,
           );
           if (const bool.fromEnvironment('reflectable.pause.at.exit')) {
             _processedEntryPointCount++;
