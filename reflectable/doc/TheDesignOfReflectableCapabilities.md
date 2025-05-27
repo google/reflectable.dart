@@ -932,6 +932,43 @@ Finally, it is possible to admit instances of subtypes as reflectees of a
 small set of mirrors, such that partial reflection support is achieved for
 many declarations, without the cost of having many mirror classes.
 
+# Appendix
+
+## Environment variables
+
+The reflectable code generator uses environment variables to control the
+emission of warnings and choose the language version for the formatter. 
+
+For the variables that are used to silence warnings, any non-empty setting
+can be used. If there is no value for such a variable in the environment,
+or it is the empty string, the warning will be emitted if and when the
+corresponding situation arises. If the variable setting is a non-empty
+string then the warning will never be emitted.
+
+- `REFLECTABLE_SUPPRESS_BAD_SUPERCLASS`: Warning that a reflector is not a
+  direct subclass of `Reflectable`, and hence it will not work.
+- `REFLECTABLE_SUPPRESS_BAD_NAME_PATTERN`: Warning that a capability that
+  depends on a namePattern does not have one.
+- `REFLECTABLE_SUPPRESS_BAD_METADATA`: Warning that a capability that
+  depends on metadata has metadata of a kind which cannot be used.
+- `REFLECTABLE_SUPPRESS_BAD_REFLECTOR_CLASS`: Warning that a given class is
+  an indirect subtype of `Reflectable`, which is never useful.
+- `REFLECTABLE_SUPPRESS_UNSUPPORTED_TYPE`: Warning that reflection is
+  attempted on a kind of type which isn't supported (for example, a type
+  variable).
+- `REFLECTABLE_SUPPRESS_UNUSED_REFLECTOR`: Warning that a given reflector
+  does not match anything, which probably means that it is incorrect.
+- `REFLECTABLE_SUPPRESS_ALL_WARNINGS`: Shared setting that disables all
+  warnings.
+
+Finally, it is possible to specify the language version which will be used
+by the formatter when the generated code is formatted:
+
+- `REFLECTABLE_FORMATTER_LANGUAGE_VERSION`: Specify the language version
+  which will be used by the formatter that formats the generated code.
+  The supported format is `[0-9]+\.[0-9]+`. For example,
+  `export REFLECTABLE_FORMATTER_LANGUAGE_VERSION=3.7`.
+
 # References
 
  1. Gilad Bracha and David Ungar. "Mirrors: design principles for
