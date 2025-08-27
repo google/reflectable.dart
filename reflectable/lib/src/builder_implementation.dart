@@ -6302,6 +6302,9 @@ class MixinApplication2 implements InterfaceElementImpl2 {
   bool get isSimplyBounded => true;
 
   @override
+  set isSimplyBounded(bool value) => throw UnimplementedError();
+
+  @override
   T? accept2<T>(ElementVisitor2<T> visitor) {
     // TODO: implement accept2
     throw UnimplementedError();
