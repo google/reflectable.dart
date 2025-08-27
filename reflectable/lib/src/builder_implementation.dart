@@ -61,7 +61,7 @@ enum WarningKind {
 
 class _ReflectionWorld {
   final Resolver resolver;
-  final List<LibraryElement> libraries;
+  final List<LibraryElementImpl> libraries;
   final AssetId generatedLibraryId;
   final List<_ReflectorDomain> reflectors;
   final LibraryElement reflectableLibrary;
@@ -103,7 +103,7 @@ class _ReflectionWorld {
     }
 
     // Fill in [_subtypesCache].
-    for (LibraryElement library in libraries) {
+    for (LibraryElementImpl library in libraries) {
       void addInterfaceElement(InterfaceElement interfaceElement) {
         InterfaceType? supertype = interfaceElement.supertype;
         if (interfaceElement.mixins.isEmpty) {
@@ -2795,7 +2795,7 @@ class _SuperclassFixedPoint extends FixedPoint<InterfaceElement> {
         name,
         superclass,
         mixinClass,
-        element.library,
+        element.library as LibraryElementImpl,
         subClass,
       );
       // We have already ensured that `workingSuperclass` is a
@@ -2864,7 +2864,7 @@ Set<InterfaceElement> _mixinApplicationsOfClasses(
         name,
         superclass,
         mixinClass,
-        interfaceElement.library,
+        interfaceElement.library as LibraryElementImpl,
         subClass,
       );
       mixinApplications.add(mixinApplication);
@@ -3766,7 +3766,7 @@ int _processedEntryPointCount = 0;
 
 class BuilderImplementation {
   late final Resolver _resolver;
-  var _libraries = <LibraryElement>[];
+  var _libraries = <LibraryElementImpl>[];
   final _librariesByName = <String, LibraryElement>{};
   late final bool _formatted;
   late final List<WarningKind> _suppressedWarnings;
@@ -4827,6 +4827,7 @@ ${imports.join('\n')}
 // ignore_for_file: prefer_collection_literals
 // ignore_for_file: unnecessary_const
 // ignore_for_file: unused_import
+// ignore_for_file: sdk_version_since
 
 import 'package:reflectable/mirrors.dart' as m;
 import 'package:reflectable/src/reflectable_builder_based.dart' as r;
@@ -4857,7 +4858,7 @@ void initializeReflectable() {
     AssetId inputId,
     AssetId generatedLibraryId,
     LibraryElement inputLibrary,
-    List<LibraryElement> visibleLibraries,
+    List<LibraryElementImpl> visibleLibraries,
     bool formatted,
     List<WarningKind> suppressedWarnings,
   ) async {
@@ -6152,14 +6153,14 @@ Future<Uri> _getImportUri(
 ///
 /// This class is only used to mark the synthetic mixin application classes,
 /// so most of the class is left unimplemented.
-class MixinApplication implements ClassElement {
+class MixinApplication implements ClassElementImpl {
   final String? declaredName;
   final InterfaceElement superclass;
   final InterfaceElement mixin;
   final InterfaceElement? subclass;
 
   @override
-  final LibraryElement library;
+  final LibraryElementImpl library;
 
   MixinApplication(
     this.declaredName,
@@ -6188,38 +6189,40 @@ class MixinApplication implements ClassElement {
   InterfaceElementImpl2 get element3 => MixinApplication2(this);
 
   @override
-  List<InterfaceType> get interfaces => const <InterfaceType>[];
+  List<InterfaceTypeImpl> get interfaces => const <InterfaceTypeImpl>[];
 
   @override
-  List<ElementAnnotation> get metadata => const <ElementAnnotation>[];
+  List<ElementAnnotationImpl> get metadata => const <ElementAnnotationImpl>[];
 
   @override
   bool get isSynthetic => declaredName == null;
 
   @override
-  InterfaceType instantiate({
+  InterfaceTypeImpl instantiate({
     required List<DartType> typeArguments,
     required NullabilitySuffix nullabilitySuffix,
   }) =>
       InterfaceTypeImpl(
-        element: this.element3,
+        element: element3,
         typeArguments: typeArguments.cast(),
         nullabilitySuffix: nullabilitySuffix,
       );
 
   @override
-  InterfaceType? get supertype {
-    if (superclass is MixinApplication) return superclass.supertype;
-    return _typeForReflectable(superclass) as InterfaceType;
+  InterfaceTypeImpl? get supertype {
+    if (superclass is MixinApplication) {
+      return superclass.supertype as InterfaceTypeImpl;
+    }
+    return _typeForReflectable(superclass) as InterfaceTypeImpl;
   }
 
   @override
-  List<InterfaceType> get mixins {
-    var result = <InterfaceType>[];
+  List<InterfaceTypeImpl> get mixins {
+    var result = <InterfaceTypeImpl>[];
     if (superclass is MixinApplication) {
-      result.addAll(superclass.mixins);
+      result.addAll(superclass.mixins.cast());
     }
-    result.add(_typeForReflectable(mixin) as InterfaceType);
+    result.add(_typeForReflectable(mixin) as InterfaceTypeImpl);
     return result;
   }
 
@@ -6254,7 +6257,8 @@ class MixinApplication implements ClassElement {
   bool get isPrivate => false;
 
   @override
-  List<TypeParameterElement> get typeParameters => <TypeParameterElement>[];
+  List<TypeParameterElementImpl> get typeParameters =>
+      <TypeParameterElementImpl>[];
 
   @override
   ElementKind get kind => ElementKind.CLASS;
@@ -6263,7 +6267,7 @@ class MixinApplication implements ClassElement {
   bool get isAugmentation => false;
 
   @override
-  ElementLocation? get location => null;
+  ElementLocation get location => throw UnimplementedError();
 
   @override
   bool operator ==(Object other) {
@@ -6340,6 +6344,8 @@ class MixinApplication2 implements InterfaceElementImpl2 {
   @override
   String? get documentationComment => delegatee.documentationComment;
 
+  MixinApplication get element => delegatee;
+
   @override
   // TODO: implement enclosingElement2
   LibraryElement2 get enclosingElement2 => throw UnimplementedError();
@@ -6350,11 +6356,10 @@ class MixinApplication2 implements InterfaceElementImpl2 {
 
   @override
   // TODO: implement firstFragment
-  InterfaceElementImpl get firstFragment => throw UnimplementedError();
+  InterfaceElementImpl get firstFragment => delegatee;
 
   @override
-  // TODO: implement fragments
-  List<InterfaceElementImpl> get fragments => throw UnimplementedError();
+  List<InterfaceElementImpl> get fragments => [];
 
   @override
   String getExtendedDisplayName2({String? shortName}) =>
@@ -6599,7 +6604,7 @@ class MixinApplication2 implements InterfaceElementImpl2 {
 
   @override
   // TODO: implement name3
-  String? get name3 => throw UnimplementedError();
+  String? get name3 => delegatee.name;
 
   @override
   // TODO: implement nonSynthetic2

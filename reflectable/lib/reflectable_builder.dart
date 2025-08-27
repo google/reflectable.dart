@@ -55,7 +55,7 @@ class ReflectableBuilder implements Builder {
         inputId,
         outputId,
         inputLibrary,
-        visibleLibraries,
+        visibleLibraries.cast(),
         true,
         suppressedWarnings);
     await buildStep.writeAsString(outputId, generatedSource);
