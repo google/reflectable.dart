@@ -3978,7 +3978,7 @@ class BuilderImplementation {
         capabilityLibrary
             .getClass('GlobalQuantifyMetaCapability')!
             .getNamedConstructor('')!;
-    print('>>> $globalQuantifyCapabilityConstructor'); // DEBUG
+    print('>>> constructor: $globalQuantifyCapabilityConstructor'); // DEBUG
 
     for (LibraryElement library in _libraries) {
       List<LibraryElement> imports = library.importedLibraries;
@@ -4015,7 +4015,7 @@ class BuilderImplementation {
                   continue;
                 }
               }
-              print('>>> $reflector'); // DEBUG
+              print('>>> reflector: $reflector'); // DEBUG
               globalPatterns
                   .putIfAbsent(
                     RegExp(pattern ?? ''),
