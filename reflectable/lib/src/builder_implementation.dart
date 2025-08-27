@@ -4016,7 +4016,6 @@ class BuilderImplementation {
                 }
               }
               print('>>> $reflector'); // DEBUG
-              if (pattern == null
               globalPatterns
                   .putIfAbsent(
                     RegExp(pattern ?? ''),
