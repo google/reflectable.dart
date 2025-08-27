@@ -3,6 +3,6 @@ targets:
     builders:
       reflectable:
         generate_for:
-          - test/new_instance_native_test.dart
+          - test/global_quantify_test.dart
         options:
           formatted: true
