@@ -6340,6 +6340,12 @@ class MixinApplication implements ClassElementImpl {
 }
 
 /// Partially migrating [MixinApplication] to the [Element2] model.
+///
+/// This class is only needed because one location in `MixinApplication`
+/// needs to return an `Element2`, so we create an instance of this class
+/// and use that to wrap the `MixinApplication`. Members have been implemented
+/// based on what is needed. This class will probably go away when the
+/// package is migrated to use the new element model consistently.
 class MixinApplication2 implements InterfaceElementImpl2 {
   final MixinApplication delegatee;
 
@@ -6353,7 +6359,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
 
   @override
   T? accept2<T>(ElementVisitor2<T> visitor) {
-    // TODO: implement accept2
     throw UnimplementedError();
   }
 
@@ -6361,19 +6366,15 @@ class MixinApplication2 implements InterfaceElementImpl2 {
   List<InterfaceType> get allSupertypes => delegatee.interfaces;
 
   @override
-  void appendTo(ElementDisplayStringBuilder builder) {
-    // TODO: implement appendTo
-  }
+  void appendTo(ElementDisplayStringBuilder builder) {}
 
   @override
   InstanceElement2 get baseElement => this;
 
   @override
-  // TODO: implement children2
   List<Element2> get children2 => throw UnimplementedError();
 
   @override
-  // TODO: implement constructors2
   List<ConstructorElementImpl2> get constructors2 => throw UnimplementedError();
 
   @override
@@ -6391,15 +6392,12 @@ class MixinApplication2 implements InterfaceElementImpl2 {
   MixinApplication get element => delegatee;
 
   @override
-  // TODO: implement enclosingElement2
   LibraryElement2 get enclosingElement2 => throw UnimplementedError();
 
   @override
-  // TODO: implement fields2
   List<FieldElementImpl2> get fields2 => throw UnimplementedError();
 
   @override
-  // TODO: implement firstFragment
   InterfaceElementImpl get firstFragment => delegatee;
 
   @override
@@ -6411,87 +6409,71 @@ class MixinApplication2 implements InterfaceElementImpl2 {
 
   @override
   FieldElementImpl2? getField2(String name) {
-    // TODO: implement getField2
     throw UnimplementedError();
   }
 
   @override
   GetterElementImpl? getGetter2(String name) {
-    // TODO: implement getGetter2
     throw UnimplementedError();
   }
 
   @override
   ExecutableElement2? getInheritedConcreteMember(Name name) {
-    // TODO: implement getInheritedConcreteMember
     throw UnimplementedError();
   }
 
   @override
   ExecutableElement2? getInheritedMember(Name name) {
-    // TODO: implement getInheritedMember
     throw UnimplementedError();
   }
 
   @override
   ExecutableElement2? getInterfaceMember(Name name) {
-    // TODO: implement getInterfaceMember
     throw UnimplementedError();
   }
 
   @override
   MethodElementImpl2? getMethod2(String name) {
-    // TODO: implement getMethod2
     throw UnimplementedError();
   }
 
   @override
   ConstructorElementImpl2? getNamedConstructor2(String name) {
-    // TODO: implement getNamedConstructor2
     throw UnimplementedError();
   }
 
   @override
   List<ExecutableElement2>? getOverridden(Name name) {
-    // TODO: implement getOverridden
     throw UnimplementedError();
   }
 
   @override
   SetterElementImpl? getSetter2(String name) {
-    // TODO: implement getSetter2
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement getters2
   List<GetterElementImpl> get getters2 => throw UnimplementedError();
 
   @override
   bool hasModifier(Modifier modifier) {
-    // TODO: implement hasModifier
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement id
   int get id => throw UnimplementedError();
 
   @override
-  // TODO: implement identifier
   String get identifier => throw UnimplementedError();
 
   @override
-  // TODO: implement inheritanceManager
   InheritanceManager3 get inheritanceManager => throw UnimplementedError();
 
   @override
-  // TODO: implement inheritedConcreteMembers
   Map<Name, ExecutableElement2> get inheritedConcreteMembers =>
       throw UnimplementedError();
 
   @override
-  // TODO: implement inheritedMembers
   Map<Name, ExecutableElement2> get inheritedMembers =>
       throw UnimplementedError();
 
@@ -6500,7 +6482,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     required List<DartType> typeArguments,
     required NullabilitySuffix nullabilitySuffix,
   }) {
-    // TODO: implement instantiate
     throw UnimplementedError();
   }
 
@@ -6509,43 +6490,34 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     required List<TypeImpl> typeArguments,
     required NullabilitySuffix nullabilitySuffix,
   }) {
-    // TODO: implement instantiateImpl
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement interfaceMembers
   Map<Name, ExecutableElement2> get interfaceMembers =>
       throw UnimplementedError();
 
   @override
-  // TODO: implement interfaces
   List<InterfaceTypeImpl> get interfaces => throw UnimplementedError();
 
   @override
   bool isAccessibleIn2(LibraryElement2 library) {
-    // TODO: implement isAccessibleIn2
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement isPrivate
   bool get isPrivate => throw UnimplementedError();
 
   @override
-  // TODO: implement isPublic
   bool get isPublic => throw UnimplementedError();
 
   @override
-  // TODO: implement isSynthetic
   bool get isSynthetic => throw UnimplementedError();
 
   @override
-  // TODO: implement kind
   ElementKind get kind => throw UnimplementedError();
 
   @override
-  // TODO: implement library2
   LibraryElementImpl get library2 => throw UnimplementedError();
 
   @override
@@ -6553,7 +6525,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     String methodName,
     LibraryElement2 library,
   ) {
-    // TODO: implement lookUpConcreteMethod
     throw UnimplementedError();
   }
 
@@ -6562,7 +6533,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     required String name,
     required LibraryElement2 library,
   }) {
-    // TODO: implement lookUpGetter2
     throw UnimplementedError();
   }
 
@@ -6571,7 +6541,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     String getterName,
     LibraryElement2 library,
   ) {
-    // TODO: implement lookUpInheritedConcreteGetter
     throw UnimplementedError();
   }
 
@@ -6580,7 +6549,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     String methodName,
     LibraryElement2 library,
   ) {
-    // TODO: implement lookUpInheritedConcreteMethod
     throw UnimplementedError();
   }
 
@@ -6589,7 +6557,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     String setterName,
     LibraryElement2 library,
   ) {
-    // TODO: implement lookUpInheritedConcreteSetter
     throw UnimplementedError();
   }
 
@@ -6598,7 +6565,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     String methodName,
     LibraryElement2 library,
   ) {
-    // TODO: implement lookUpInheritedMethod
     throw UnimplementedError();
   }
 
@@ -6607,7 +6573,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     required String methodName,
     required LibraryElement2 library,
   }) {
-    // TODO: implement lookUpInheritedMethod2
     throw UnimplementedError();
   }
 
@@ -6616,7 +6581,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     required String name,
     required LibraryElement2 library,
   }) {
-    // TODO: implement lookUpMethod2
     throw UnimplementedError();
   }
 
@@ -6625,12 +6589,10 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     required String name,
     required LibraryElement2 library,
   }) {
-    // TODO: implement lookUpSetter2
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement lookupName
   String? get lookupName => throw UnimplementedError();
 
   @override
@@ -6638,7 +6600,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     String name,
     LibraryElement2 library,
   ) {
-    // TODO: implement lookupStaticGetter
     throw UnimplementedError();
   }
 
@@ -6647,7 +6608,6 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     String name,
     LibraryElement2 library,
   ) {
-    // TODO: implement lookupStaticMethod
     throw UnimplementedError();
   }
 
@@ -6656,90 +6616,68 @@ class MixinApplication2 implements InterfaceElementImpl2 {
     String name,
     LibraryElement2 library,
   ) {
-    // TODO: implement lookupStaticSetter
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement metadata2
   MetadataImpl get metadata2 => throw UnimplementedError();
 
   @override
-  // TODO: implement methods2
   List<MethodElementImpl2> get methods2 => throw UnimplementedError();
 
   @override
-  // TODO: implement mixins
   List<InterfaceTypeImpl> get mixins => throw UnimplementedError();
 
   @override
-  // TODO: implement name3
   String? get name3 => delegatee.name;
 
   @override
-  // TODO: implement nonSynthetic2
   Element2 get nonSynthetic2 => throw UnimplementedError();
 
   @override
-  // TODO: implement reference
   Reference? get reference => throw UnimplementedError();
 
   @override
-  void resetCachedAllSupertypes() {
-    // TODO: implement resetCachedAllSupertypes
-  }
+  void resetCachedAllSupertypes() {}
 
   @override
-  // TODO: implement session
   AnalysisSession? get session => throw UnimplementedError();
 
   @override
-  void setModifier(Modifier modifier, bool value) {
-    // TODO: implement setModifier
-  }
+  void setModifier(Modifier modifier, bool value) {}
 
   @override
-  // TODO: implement setters2
   List<SetterElementImpl> get setters2 => throw UnimplementedError();
 
   @override
-  // TODO: implement sinceSdkVersion
   semver.Version? get sinceSdkVersion => throw UnimplementedError();
 
   @override
-  // TODO: implement supertype
   InterfaceTypeImpl? get supertype => throw UnimplementedError();
 
   @override
   Element2? thisOrAncestorMatching2(bool Function(Element2 p1) predicate) {
-    // TODO: implement thisOrAncestorMatching2
     throw UnimplementedError();
   }
 
   @override
   E? thisOrAncestorOfType2<E extends Element2>() {
-    // TODO: implement thisOrAncestorOfType2
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement thisType
   InterfaceTypeImpl get thisType => throw UnimplementedError();
 
   @override
-  // TODO: implement typeParameters2
   List<TypeParameterElementImpl2> get typeParameters2 =>
       throw UnimplementedError();
 
   @override
-  // TODO: implement unnamedConstructor2
   ConstructorElementImpl2? get unnamedConstructor2 =>
       throw UnimplementedError();
 
   @override
-  void visitChildren2<T>(ElementVisitor2<T> visitor) {
-    // TODO: implement visitChildren2
-  }
+  void visitChildren2<T>(ElementVisitor2<T> visitor) {}
 }
 
 bool _isSetterName(String name) => name.endsWith('=');
