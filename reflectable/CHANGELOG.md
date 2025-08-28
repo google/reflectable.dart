@@ -1,8 +1,11 @@
 ## 4.0.14
 
 - Use language version 3.7.
-
-
+- Migrate reflectable to use analyzer version ^7.0.0 (which removes
+  the dependency on `_macros`, which doesn't exist any more).
+- This includes a small part of the migration work needed in order
+  to use the new element model in the analyzer (`Element2`, for now).
+- Lots of reformatting (creates a big diff).
 
 ## 4.0.13
 
