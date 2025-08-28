@@ -767,7 +767,6 @@ class _ReflectorDomain {
     // argument (say, "Hello, world!") and then test for that value, but that
     // would suppress an error in a very-hard-to-explain case, so that's safer
     // in a sense, but too weird.
-    ConstructorElement? _; // DEBUG
     if (constructor.library.isDartCore &&
         constructor.enclosingElement3.name == 'List' &&
         constructor.name == '') {
@@ -3978,12 +3977,10 @@ class BuilderImplementation {
         capabilityLibrary
             .getClass('GlobalQuantifyMetaCapability')!
             .getNamedConstructor('')!;
-    print('>>> constructor: $globalQuantifyCapabilityConstructor'); // DEBUG
 
     for (LibraryElement library in _libraries) {
       List<LibraryImportElement> imports =
           library.definingCompilationUnit.libraryImports;
-      print('>>> imports: $imports'); // DEBUG
       for (var importElement in imports) {
         if (importElement.importedLibrary?.id != reflectableLibrary.id)
           continue;
@@ -4018,7 +4015,6 @@ class BuilderImplementation {
                   continue;
                 }
               }
-              print('>>> reflector: $reflector'); // DEBUG
               globalPatterns
                   .putIfAbsent(
                     RegExp(pattern ?? ''),
@@ -4083,8 +4079,6 @@ class BuilderImplementation {
         }
       }
     }
-    print(
-        '>>> globalMetadata: $globalMetadata, globalPatterns: $globalPatterns'); // DEBUG
   }
 
   /// Returns true iff [potentialReflectorClass] is a proper reflector class,
