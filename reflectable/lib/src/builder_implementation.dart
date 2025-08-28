@@ -4080,7 +4080,8 @@ class BuilderImplementation {
         }
       }
     }
-    print('>>> globalMetadata: $globalMetadata'); // DEBUG
+    print(
+        '>>> globalMetadata: $globalMetadata, globalPatterns: $globalPatterns'); // DEBUG
   }
 
   /// Returns true iff [potentialReflectorClass] is a proper reflector class,
