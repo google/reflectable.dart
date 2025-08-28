@@ -3982,6 +3982,7 @@ class BuilderImplementation {
 
     for (LibraryElement library in _libraries) {
       List<LibraryElement> imports = library.importedLibraries;
+      print('>>> imports: $imports'); // DEBUG
       for (var import in imports) {
         if (import.id != reflectableLibrary.id) continue;
         for (ElementAnnotation metadatum in import.metadata) {
