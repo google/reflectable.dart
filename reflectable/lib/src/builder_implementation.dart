@@ -3981,11 +3981,13 @@ class BuilderImplementation {
     print('>>> constructor: $globalQuantifyCapabilityConstructor'); // DEBUG
 
     for (LibraryElement library in _libraries) {
-      List<LibraryElement> imports = library.importedLibraries;
+      List<LibraryImportElement> imports =
+          library.definingCompilationUnit.libraryImports;
       print('>>> imports: $imports'); // DEBUG
-      for (var import in imports) {
-        if (import.id != reflectableLibrary.id) continue;
-        for (ElementAnnotation metadatum in import.metadata) {
+      for (var importElement in imports) {
+        if (importElement.importedLibrary?.id != reflectableLibrary.id)
+          continue;
+        for (ElementAnnotation metadatum in importElement.metadata) {
           Element? metadatumElement = metadatum.element?.declaration;
           if (metadatumElement == globalQuantifyCapabilityConstructor) {
             DartObject? value = _getEvaluatedMetadatum(metadatum);
