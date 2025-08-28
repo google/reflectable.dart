@@ -54,30 +54,30 @@ class ReflectableBase {
 
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
-  const ReflectableBase(
-      [this._cap0,
-      this._cap1,
-      this._cap2,
-      this._cap3,
-      this._cap4,
-      this._cap5,
-      this._cap6,
-      this._cap7,
-      this._cap8,
-      this._cap9])
-      : _capabilitiesGivenAsList = false,
-        _capabilities = null;
+  const ReflectableBase([
+    this._cap0,
+    this._cap1,
+    this._cap2,
+    this._cap3,
+    this._cap4,
+    this._cap5,
+    this._cap6,
+    this._cap7,
+    this._cap8,
+    this._cap9,
+  ]) : _capabilitiesGivenAsList = false,
+       _capabilities = null;
 
   const ReflectableBase.fromList(this._capabilities)
-      : _capabilitiesGivenAsList = true,
-        _cap0 = null,
-        _cap1 = null,
-        _cap2 = null,
-        _cap3 = null,
-        _cap4 = null,
-        _cap5 = null,
-        _cap6 = null,
-        _cap7 = null,
-        _cap8 = null,
-        _cap9 = null;
+    : _capabilitiesGivenAsList = true,
+      _cap0 = null,
+      _cap1 = null,
+      _cap2 = null,
+      _cap3 = null,
+      _cap4 = null,
+      _cap5 = null,
+      _cap6 = null,
+      _cap7 = null,
+      _cap8 = null,
+      _cap9 = null;
 }

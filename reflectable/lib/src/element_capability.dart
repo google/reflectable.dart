@@ -197,8 +197,10 @@ const subtypeQuantifyCapability = _SubtypeQuantifyCapability();
 class SuperclassQuantifyCapability implements ReflecteeQuantifyCapability {
   final Element? upperBound;
   final bool excludeUpperBound;
-  const SuperclassQuantifyCapability(this.upperBound,
-      {this.excludeUpperBound = false});
+  const SuperclassQuantifyCapability(
+    this.upperBound, {
+    this.excludeUpperBound = false,
+  });
 }
 
 // Note that `null` represents the [ClassElement] for `Object`.
@@ -211,8 +213,9 @@ class TypeAnnotationQuantifyCapability implements ReflecteeQuantifyCapability {
 
 const typeAnnotationQuantifyCapability = TypeAnnotationQuantifyCapability();
 
-const typeAnnotationDeepQuantifyCapability =
-    TypeAnnotationQuantifyCapability(transitive: true);
+const typeAnnotationDeepQuantifyCapability = TypeAnnotationQuantifyCapability(
+  transitive: true,
+);
 
 const correspondingSetterQuantifyCapability =
     _CorrespondingSetterQuantifyCapability();
@@ -227,13 +230,13 @@ class ImportAttachedCapability {
 class GlobalQuantifyCapability extends ImportAttachedCapability {
   final String classNamePattern;
   const GlobalQuantifyCapability(this.classNamePattern, Element reflector)
-      : super(reflector);
+    : super(reflector);
 }
 
 class GlobalQuantifyMetaCapability extends ImportAttachedCapability {
   final Element metadataType;
   const GlobalQuantifyMetaCapability(this.metadataType, Element reflector)
-      : super(reflector);
+    : super(reflector);
 }
 
 class _ReflectedTypeCapability implements DeclarationsCapability {
