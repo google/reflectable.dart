@@ -110,15 +110,16 @@ class ReflectorData {
   Map<Type, TypeMirror>? _typeToTypeMirrorCache;
 
   ReflectorData(
-      this.typeMirrors,
-      this.memberMirrors,
-      this.parameterMirrors,
-      this.types,
-      this.supportedClassCount,
-      this.getters,
-      this.setters,
-      this.libraryMirrors,
-      this.parameterListShapes);
+    this.typeMirrors,
+    this.memberMirrors,
+    this.parameterMirrors,
+    this.types,
+    this.supportedClassCount,
+    this.getters,
+    this.setters,
+    this.libraryMirrors,
+    this.parameterListShapes,
+  );
 
   /// Returns a type mirror for the given [type].
   ///
@@ -135,9 +136,11 @@ class ReflectorData {
         // Note that [types] corresponds to the prefix of [typeMirrors] which
         // are class mirrors; [typeMirrors] continues with type variable
         // mirrors, and they are irrelevant here.
-        _typeToTypeMirrorCache = typeToTypeMirrorCache = <Type, TypeMirror>{
-          for (var i = 0; i < supportedClassCount; ++i) types[i]: typeMirrors[i]
-        };
+        _typeToTypeMirrorCache =
+            typeToTypeMirrorCache = <Type, TypeMirror>{
+              for (var i = 0; i < supportedClassCount; ++i)
+                types[i]: typeMirrors[i],
+            };
       }
       typeToTypeMirrorCache[_typeOf<void>()] = VoidMirrorImpl();
       typeToTypeMirrorCache[dynamic] = DynamicMirrorImpl();
@@ -154,7 +157,10 @@ class ReflectorData {
       if (typeMirror is GenericClassMirrorImpl) {
         if (typeMirror._isGenericRuntimeTypeOf(instance)) {
           return _createInstantiatedGenericClass(
-              typeMirror, instance.runtimeType, null);
+            typeMirror,
+            instance.runtimeType,
+            null,
+          );
         }
       }
     }
@@ -163,7 +169,8 @@ class ReflectorData {
   }
 }
 
-const String pleaseInitializeMessage = 'Reflectable has not been initialized.\n'
+const String pleaseInitializeMessage =
+    'Reflectable has not been initialized.\n'
     'Please make sure that the first action taken by your program\n'
     'in `main` is to call `initializeReflectable()`.';
 
@@ -216,7 +223,8 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
       // type of the reflectee is known.
       if (!_data.types.contains(reflectee.runtimeType)) {
         throw NoSuchCapabilityError(
-            'Reflecting on un-marked type "${reflectee.runtimeType}"');
+          'Reflecting on un-marked type "${reflectee.runtimeType}"',
+        );
       }
     }
   }
@@ -229,21 +237,29 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   ClassMirror get type {
     if (!_supportsType) {
       throw NoSuchCapabilityError(
-          'Attempt to get `type` without `TypeCapability`.');
+        'Attempt to get `type` without `TypeCapability`.',
+      );
     }
     return _type!;
   }
 
   @override
-  Object? invoke(String methodName, List<Object?> positionalArguments,
-      [Map<Symbol, Object?>? namedArguments]) {
+  Object? invoke(
+    String methodName,
+    List<Object?> positionalArguments, [
+    Map<Symbol, Object?>? namedArguments,
+  ]) {
     Never fail() {
       // It could be a method that exists but the given capabilities rejected
       // it, it could be a method that does not exist at all, or it could be
       // a non-conforming argument list shape. In all cases we consider the
       // invocation to be a capability violation.
       throw reflectableNoSuchMethodError(
-          reflectee, methodName, positionalArguments, namedArguments);
+        reflectee,
+        methodName,
+        positionalArguments,
+        namedArguments,
+      );
     }
 
     // Obtain the tear-off closure for the method that we will invoke.
@@ -260,11 +276,17 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
       throw unreachableError('Attempt to `invoke` without class mirrors');
     }
     if (!_type!._checkInstanceParameterListShape(
-        methodName, positionalArguments.length, namedArguments?.keys)) {
+      methodName,
+      positionalArguments.length,
+      namedArguments?.keys,
+    )) {
       fail();
     }
     return Function.apply(
-        methodTearer(reflectee), positionalArguments, namedArguments);
+      methodTearer(reflectee),
+      positionalArguments,
+      namedArguments,
+    );
   }
 
   @override
@@ -283,26 +305,29 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   @override
   dynamic delegate(Invocation invocation) {
     Never fail() {
-      StringInvocationKind kind = invocation.isGetter
-          ? StringInvocationKind.getter
-          : (invocation.isSetter
-              ? StringInvocationKind.setter
-              : StringInvocationKind.method);
+      StringInvocationKind kind =
+          invocation.isGetter
+              ? StringInvocationKind.getter
+              : (invocation.isSetter
+                  ? StringInvocationKind.setter
+                  : StringInvocationKind.method);
       // TODO(eernst) implement: Pass the de-minified `memberName` string, if
       // get support for translating arbitrary symbols to strings (the caller
       // could use `new Symbol(..)` so we cannot assume that this symbol is
       // known).
       throw reflectableNoSuchInvokableError(
-          reflectee,
-          '${invocation.memberName}',
-          invocation.positionalArguments,
-          invocation.namedArguments,
-          kind);
+        reflectee,
+        '${invocation.memberName}',
+        invocation.positionalArguments,
+        invocation.namedArguments,
+        kind,
+      );
     }
 
     if (memberSymbolMap == null) {
       throw NoSuchCapabilityError(
-          'Attempt to `delegate` without `delegateCapability`');
+        'Attempt to `delegate` without `delegateCapability`',
+      );
     }
     String? memberName = memberSymbolMap![invocation.memberName];
     if (memberName == null) {
@@ -325,8 +350,11 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
       }
       return invokeSetter(memberName, invocation.positionalArguments[0]);
     } else {
-      return invoke(memberName, invocation.positionalArguments,
-          invocation.namedArguments);
+      return invoke(
+        memberName,
+        invocation.positionalArguments,
+        invocation.namedArguments,
+      );
     }
   }
 
@@ -392,8 +420,9 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     if (_superinterfaceIndices.length == 1 &&
         _superinterfaceIndices[0] == noCapabilityIndex) {
       throw NoSuchCapabilityError(
-          'Requesting `superinterfaces` of `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Requesting `superinterfaces` of `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return _superinterfaceIndices.map<ClassMirror>((int i) {
       if (i == noCapabilityIndex) {
@@ -402,8 +431,9 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
         // we do have the `typeRelationsCapability`, but we may still
         // encounter a single unsupported superinterface.
         throw NoSuchCapabilityError(
-            'Requesting a superinterface of `$qualifiedName` '
-            'without capability');
+          'Requesting a superinterface of `$qualifiedName` '
+          'without capability',
+        );
       }
       return _data.typeMirrors[i] as ClassMirror;
     }).toList();
@@ -450,23 +480,24 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   final Map<String, int>? _parameterListShapes;
 
   ClassMirrorBase(
-      this.simpleName,
-      this.qualifiedName,
-      this._descriptor,
-      this._classIndex,
-      this._reflector,
-      this._declarationIndices,
-      this._instanceMemberIndices,
-      this._staticMemberIndices,
-      this._superclassIndex,
-      this._getters,
-      this._setters,
-      this._constructors,
-      this._ownerIndex,
-      this._mixinIndex,
-      this._superinterfaceIndices,
-      this._metadata,
-      this._parameterListShapes);
+    this.simpleName,
+    this.qualifiedName,
+    this._descriptor,
+    this._classIndex,
+    this._reflector,
+    this._declarationIndices,
+    this._instanceMemberIndices,
+    this._staticMemberIndices,
+    this._superclassIndex,
+    this._getters,
+    this._setters,
+    this._constructors,
+    this._ownerIndex,
+    this._mixinIndex,
+    this._superinterfaceIndices,
+    this._metadata,
+    this._parameterListShapes,
+  );
 
   @override
   bool get isAbstract => (_descriptor & constants.abstractAttribute != 0);
@@ -487,7 +518,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
         // that.
         if (declarationIndex == noCapabilityIndex) {
           throw NoSuchCapabilityError(
-              'Requesting declarations of "$qualifiedName" without capability');
+            'Requesting declarations of "$qualifiedName" without capability',
+          );
         }
         DeclarationMirror declarationMirror =
             _data.memberMirrors![declarationIndex];
@@ -508,7 +540,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       List<int>? instanceMemberIndices = _instanceMemberIndices;
       if (instanceMemberIndices == null) {
         throw NoSuchCapabilityError(
-            'Requesting instanceMembers without `declarationsCapability`.');
+          'Requesting instanceMembers without `declarationsCapability`.',
+        );
       }
       var result = <String, MethodMirror>{};
       for (int instanceMemberIndex in instanceMemberIndices) {
@@ -532,7 +565,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       List<int>? staticMemberIndices = _staticMemberIndices;
       if (staticMemberIndices == null) {
         throw NoSuchCapabilityError(
-            'Requesting instanceMembers without `declarationsCapability`.');
+          'Requesting instanceMembers without `declarationsCapability`.',
+        );
       }
       var result = <String, MethodMirror>{};
       for (int staticMemberIndex in staticMemberIndices) {
@@ -553,22 +587,28 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     if (_mixinIndex == noCapabilityIndex) {
       if (!_supportsTypeRelations(_reflector)) {
         throw NoSuchCapabilityError(
-            'Attempt to get `mixin` for `$qualifiedName` '
-            'without `typeRelationsCapability`');
+          'Attempt to get `mixin` for `$qualifiedName` '
+          'without `typeRelationsCapability`',
+        );
       }
       throw NoSuchCapabilityError(
-          'Attempt to get mixin from "$simpleName" without capability');
+        'Attempt to get mixin from "$simpleName" without capability',
+      );
     }
     return _data.typeMirrors[_mixinIndex] as ClassMirror;
   }
 
   bool _checkParameterListShape(
-      String methodName,
+    String methodName,
+    int numberOfPositionalArguments,
+    Iterable<Symbol>? namedArgumentNames,
+    MethodMirrorProvider methodMirrorProvider,
+  ) {
+    bool checkUsingShape(
+      List parameterListShape,
       int numberOfPositionalArguments,
       Iterable<Symbol>? namedArgumentNames,
-      MethodMirrorProvider methodMirrorProvider) {
-    bool checkUsingShape(List parameterListShape,
-        int numberOfPositionalArguments, Iterable<Symbol>? namedArgumentNames) {
+    ) {
       assert(parameterListShape.length == 3);
       int numberOfPositionalParameters = parameterListShape[0];
       int numberOfOptionalPositionalParameters = parameterListShape[1];
@@ -586,8 +626,9 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       // We do have named arguments; check that they are all known.
       return namesOfNamedParameters == null
           ? false
-          : namedArgumentNames
-              .every((Symbol name) => namesOfNamedParameters.contains(name));
+          : namedArgumentNames.every(
+            (Symbol name) => namesOfNamedParameters.contains(name),
+          );
     }
 
     Map<String, int>? parameterListShapes = _parameterListShapes;
@@ -605,8 +646,11 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       // invocation received an argument list that it supports. It is a bug if
       // `shapeIndex` is out of range for `parameterListShapes`, but if that
       // happens the built-in range check will catch it.
-      return checkUsingShape(_data.parameterListShapes![shapeIndex],
-          numberOfPositionalArguments, namedArgumentNames);
+      return checkUsingShape(
+        _data.parameterListShapes![shapeIndex],
+        numberOfPositionalArguments,
+        namedArgumentNames,
+      );
     } else {
       // Without ready-to-use parameter list shape information we must compute
       // the shape from declaration mirrors.
@@ -627,29 +671,52 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       var methodMirrorImpl = methodMirror as MethodMirrorImpl;
       // Let the [methodMirrorImpl] check it based on declaration mirrors.
       return methodMirrorImpl._isArgumentListShapeAppropriate(
-          numberOfPositionalArguments, namedArgumentNames);
+        numberOfPositionalArguments,
+        namedArgumentNames,
+      );
     }
   }
 
-  bool _checkInstanceParameterListShape(String methodName,
-      int numberOfPositionalArguments, Iterable<Symbol>? namedArgumentNames) {
-    return _checkParameterListShape(methodName, numberOfPositionalArguments,
-        namedArgumentNames, (String name) => instanceMembers[name]);
+  bool _checkInstanceParameterListShape(
+    String methodName,
+    int numberOfPositionalArguments,
+    Iterable<Symbol>? namedArgumentNames,
+  ) {
+    return _checkParameterListShape(
+      methodName,
+      numberOfPositionalArguments,
+      namedArgumentNames,
+      (String name) => instanceMembers[name],
+    );
   }
 
-  bool _checkStaticParameterListShape(String methodName,
-      int numberOfPositionalArguments, Iterable<Symbol>? namedArgumentNames) {
-    return _checkParameterListShape(methodName, numberOfPositionalArguments,
-        namedArgumentNames, (String name) => staticMembers[name]);
+  bool _checkStaticParameterListShape(
+    String methodName,
+    int numberOfPositionalArguments,
+    Iterable<Symbol>? namedArgumentNames,
+  ) {
+    return _checkParameterListShape(
+      methodName,
+      numberOfPositionalArguments,
+      namedArgumentNames,
+      (String name) => staticMembers[name],
+    );
   }
 
   @override
-  Object newInstance(String constructorName, List positionalArguments,
-      [Map<Symbol, dynamic>? namedArguments]) {
+  Object newInstance(
+    String constructorName,
+    List positionalArguments, [
+    Map<Symbol, dynamic>? namedArguments,
+  ]) {
     Never fail() {
       Type? type = hasReflectedType ? reflectedType : null;
       throw reflectableNoSuchConstructorError(
-          type, constructorName, positionalArguments, namedArguments);
+        type,
+        constructorName,
+        positionalArguments,
+        namedArguments,
+      );
     }
 
     Function? constructor = _constructors[constructorName];
@@ -660,28 +727,41 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       fail();
     }
     return Function.apply(
-        constructor(true), positionalArguments, namedArguments);
+      constructor(true),
+      positionalArguments,
+      namedArguments,
+    );
   }
 
   @override
-  Object? invoke(String memberName, List positionalArguments,
-      [Map<Symbol, dynamic>? namedArguments]) {
+  Object? invoke(
+    String memberName,
+    List positionalArguments, [
+    Map<Symbol, dynamic>? namedArguments,
+  ]) {
     Never fail() {
       throw reflectableNoSuchMethodError(
-          hasReflectedType ? reflectedType : null,
-          memberName,
-          positionalArguments,
-          namedArguments);
+        hasReflectedType ? reflectedType : null,
+        memberName,
+        positionalArguments,
+        namedArguments,
+      );
     }
 
     StaticGetter? getter = _getters[memberName];
     if (getter == null) fail();
     if (!_checkStaticParameterListShape(
-        memberName, positionalArguments.length, namedArguments?.keys)) {
+      memberName,
+      positionalArguments.length,
+      namedArguments?.keys,
+    )) {
       fail();
     }
     return Function.apply(
-        getter() as Function, positionalArguments, namedArguments);
+      getter() as Function,
+      positionalArguments,
+      namedArguments,
+    );
   }
 
   @override
@@ -699,8 +779,9 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
         _isSetterName(name) ? name : _getterNameToSetterName(name);
     StaticSetter? setter = _setters[setterName];
     if (setter == null) {
-      throw reflectableNoSuchSetterError(
-          reflectedType, setterName, [value], {});
+      throw reflectableNoSuchSetterError(reflectedType, setterName, [
+        value,
+      ], {});
     }
     return setter(value);
   }
@@ -736,7 +817,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       String description =
           hasReflectedType ? reflectedType.toString() : qualifiedName;
       throw NoSuchCapabilityError(
-          'Requesting metadata of "$description" without capability');
+        'Requesting metadata of "$description" without capability',
+      );
     }
     return _metadata;
   }
@@ -762,12 +844,14 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       // for access to superinterfaces here.
       if (!_supportsTypeRelations(_reflector)) {
         throw NoSuchCapabilityError(
-            'Attempt to evaluate `isAssignableTo` for `$qualifiedName` '
-            'without `typeRelationsCapability`');
+          'Attempt to evaluate `isAssignableTo` for `$qualifiedName` '
+          'without `typeRelationsCapability`',
+        );
       }
       throw NoSuchCapabilityError(
-          'Attempt to evaluate `isAssignableTo` for `$qualifiedName` '
-          'without capability.');
+        'Attempt to evaluate `isAssignableTo` for `$qualifiedName` '
+        'without capability.',
+      );
     }
     return _isSubtypeOf(other) ||
         (other is ClassMirrorBase && other._isSubtypeOf(this));
@@ -785,12 +869,14 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       // for access to superinterfaces here.
       if (!_supportsTypeRelations(_reflector)) {
         throw NoSuchCapabilityError(
-            'Attempt to evaluate `isSubtypeOf` for `$qualifiedName` '
-            'without `typeRelationsCapability`');
+          'Attempt to evaluate `isSubtypeOf` for `$qualifiedName` '
+          'without `typeRelationsCapability`',
+        );
       }
       throw NoSuchCapabilityError(
-          'Attempt to evaluate `isSubtypeOf` for `$qualifiedName` '
-          'without capability.');
+        'Attempt to evaluate `isSubtypeOf` for `$qualifiedName` '
+        'without capability.',
+      );
     }
     return _isSubtypeOf(other);
   }
@@ -808,8 +894,10 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     // Recursively test hierarchy over `superclass`.
     if (superclass!._isSubtypeOf(other)) return true;
     // Recursively test hierarchy over remaining direct supertypes.
-    return superinterfaces.any((ClassMirror classMirror) =>
-        classMirror is ClassMirrorBase && classMirror._isSubtypeOf(other));
+    return superinterfaces.any(
+      (ClassMirror classMirror) =>
+          classMirror is ClassMirrorBase && classMirror._isSubtypeOf(other),
+    );
   }
 
   @override
@@ -824,12 +912,14 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       // for access to superinterfaces here.
       if (!_supportsTypeRelations(_reflector)) {
         throw NoSuchCapabilityError(
-            'Attempt to evaluate `isSubclassOf` for `$qualifiedName` '
-            'without `typeRelationsCapability`');
+          'Attempt to evaluate `isSubclassOf` for `$qualifiedName` '
+          'without `typeRelationsCapability`',
+        );
       }
       throw NoSuchCapabilityError(
-          'Attempt to evaluate `isSubclassOf` for $qualifiedName '
-          'without capability.');
+        'Attempt to evaluate `isSubclassOf` for $qualifiedName '
+        'without capability.',
+      );
     }
     return _isSubclassOf(other);
   }
@@ -852,12 +942,14 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     if (_ownerIndex == noCapabilityIndex) {
       if (!_supportsTypeRelations(_reflector)) {
         throw NoSuchCapabilityError(
-            'Attempt to get `owner` of `$qualifiedName` '
-            'without `typeRelationsCapability`');
+          'Attempt to get `owner` of `$qualifiedName` '
+          'without `typeRelationsCapability`',
+        );
       }
       throw NoSuchCapabilityError(
-          'Trying to get owner of class `$qualifiedName` '
-          'without `libraryCapability`');
+        'Trying to get owner of class `$qualifiedName` '
+        'without `libraryCapability`',
+      );
     }
     return _data.libraryMirrors![_ownerIndex];
   }
@@ -867,11 +959,14 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     if (_superclassIndex == noCapabilityIndex) {
       if (!_supportsTypeRelations(_reflector)) {
         throw NoSuchCapabilityError(
-            'Attempt to get `superclass` of `$qualifiedName` '
-            'without `typeRelationsCapability`');
+          'Attempt to get `superclass` of `$qualifiedName` '
+          'without `typeRelationsCapability`',
+        );
       }
-      throw NoSuchCapabilityError('Requesting mirror on un-marked class, '
-          '`superclass` of `$qualifiedName`');
+      throw NoSuchCapabilityError(
+        'Requesting mirror on un-marked class, '
+        '`superclass` of `$qualifiedName`',
+      );
     }
     if (_superclassIndex == null) return null; // Superclass of [Object].
     return _data.typeMirrors[_superclassIndex] as ClassMirrorBase?;
@@ -880,30 +975,32 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
 class NonGenericClassMirrorImpl extends ClassMirrorBase {
   NonGenericClassMirrorImpl(
-      super.simpleName,
-      super.qualifiedName,
-      super.descriptor,
-      super.classIndex,
-      super.reflector,
-      super.declarationIndices,
-      super.instanceMemberIndices,
-      super.staticMemberIndices,
-      super.superclassIndex,
-      super.getters,
-      super.setters,
-      super.constructors,
-      super.ownerIndex,
-      super.mixinIndex,
-      super.superinterfaceIndices,
-      super.metadata,
-      super.parameterListShapes);
+    super.simpleName,
+    super.qualifiedName,
+    super.descriptor,
+    super.classIndex,
+    super.reflector,
+    super.declarationIndices,
+    super.instanceMemberIndices,
+    super.staticMemberIndices,
+    super.superclassIndex,
+    super.getters,
+    super.setters,
+    super.constructors,
+    super.ownerIndex,
+    super.mixinIndex,
+    super.superinterfaceIndices,
+    super.metadata,
+    super.parameterListShapes,
+  );
 
   @override
   List<TypeMirror> get typeArguments {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `typeArguments` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to get `typeArguments` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return const <TypeMirror>[];
   }
@@ -913,8 +1010,9 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
     if (!_supportsTypeRelations(_reflector) ||
         !_supportsReflectedType(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `typeArguments` for `$qualifiedName` '
-          'without `typeRelationsCapability` or `reflectedTypeCapability`');
+        'Attempt to get `typeArguments` for `$qualifiedName` '
+        'without `typeRelationsCapability` or `reflectedTypeCapability`',
+      );
     }
     return const <Type>[];
   }
@@ -923,8 +1021,9 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
   List<TypeVariableMirror> get typeVariables {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to evaluate `typeVariables` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to evaluate `typeVariables` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return const <TypeVariableMirror>[];
   }
@@ -936,8 +1035,9 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
   TypeMirror get originalDeclaration {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `originalDeclaration` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to get `originalDeclaration` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return this;
   }
@@ -982,33 +1082,35 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
   final int _dynamicReflectedTypeIndex;
 
   GenericClassMirrorImpl(
-      super.simpleName,
-      super.qualifiedName,
-      super.descriptor,
-      super.classIndex,
-      super.reflector,
-      super.declarationIndices,
-      super.instanceMemberIndices,
-      super.staticMemberIndices,
-      int super.superclassIndex,
-      super.getters,
-      super.setters,
-      super.constructors,
-      super.ownerIndex,
-      super.mixinIndex,
-      super.superinterfaceIndices,
-      super.metadata,
-      super.parameterListShapes,
-      this._isGenericRuntimeTypeOf,
-      this._typeVariableIndices,
-      this._dynamicReflectedTypeIndex);
+    super.simpleName,
+    super.qualifiedName,
+    super.descriptor,
+    super.classIndex,
+    super.reflector,
+    super.declarationIndices,
+    super.instanceMemberIndices,
+    super.staticMemberIndices,
+    int super.superclassIndex,
+    super.getters,
+    super.setters,
+    super.constructors,
+    super.ownerIndex,
+    super.mixinIndex,
+    super.superinterfaceIndices,
+    super.metadata,
+    super.parameterListShapes,
+    this._isGenericRuntimeTypeOf,
+    this._typeVariableIndices,
+    this._dynamicReflectedTypeIndex,
+  );
 
   @override
   List<TypeMirror> get typeArguments {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `typeArguments` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to get `typeArguments` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     // This mirror represents the original declaration, so no actual type
     // arguments have been passed. By convention we represent this situation
@@ -1021,8 +1123,9 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
     if (!_supportsTypeRelations(_reflector) ||
         !_supportsReflectedType(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `reflectedTypeArguments` for `$qualifiedName` '
-          'without `typeRelationsCapability` or `reflectedTypeCapability`');
+        'Attempt to get `reflectedTypeArguments` for `$qualifiedName` '
+        'without `typeRelationsCapability` or `reflectedTypeCapability`',
+      );
     }
     // This mirror represents the original declaration, so no actual type
     // arguments have been passed. By convention we represent this situation
@@ -1040,11 +1143,13 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
     if (typeVariableIndices == null) {
       if (!_supportsTypeRelations(_reflector)) {
         throw NoSuchCapabilityError(
-            'Attempt to evaluate `typeVariables` for `$qualifiedName` '
-            'without `typeRelationsCapability`');
+          'Attempt to evaluate `typeVariables` for `$qualifiedName` '
+          'without `typeRelationsCapability`',
+        );
       }
       throw NoSuchCapabilityError(
-          'Requesting type variables of `$qualifiedName` without capability');
+        'Requesting type variables of `$qualifiedName` without capability',
+      );
     }
     var result = <TypeVariableMirror>[];
     for (int typeVariableIndex in typeVariableIndices) {
@@ -1062,8 +1167,9 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
   TypeMirror get originalDeclaration {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `originalDeclaration` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to get `originalDeclaration` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return this;
   }
@@ -1073,8 +1179,10 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
 
   @override
   Type get reflectedType {
-    throw UnsupportedError('Attempt to obtain `reflectedType` '
-        'from generic class `$qualifiedName`.');
+    throw UnsupportedError(
+      'Attempt to obtain `reflectedType` '
+      'from generic class `$qualifiedName`.',
+    );
   }
 
   @override
@@ -1085,12 +1193,14 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
     if (_dynamicReflectedTypeIndex == noCapabilityIndex) {
       if (!_supportsReflectedType(_reflector)) {
         throw NoSuchCapabilityError(
-            'Attempt to evaluate `dynamicReflectedType` for `$qualifiedName` '
-            'without `reflectedTypeCapability`');
+          'Attempt to evaluate `dynamicReflectedType` for `$qualifiedName` '
+          'without `reflectedTypeCapability`',
+        );
       }
       throw NoSuchCapabilityError(
-          'Attempt to get `dynamicReflectedType` for `$qualifiedName` '
-          'without capability');
+        'Attempt to get `dynamicReflectedType` for `$qualifiedName` '
+        'without capability',
+      );
     }
     return _data.types[_dynamicReflectedTypeIndex];
   }
@@ -1112,33 +1222,35 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
   final List<int>? _reflectedTypeArgumentIndices;
 
   InstantiatedGenericClassMirrorImpl(
-      super.simpleName,
-      super.qualifiedName,
-      super.descriptor,
-      super.classIndex,
-      super.reflector,
-      super.declarationIndices,
-      super.instanceMemberIndices,
-      super.staticMemberIndices,
-      super.superclassIndex,
-      super.getters,
-      super.setters,
-      super.constructors,
-      super.ownerIndex,
-      super.mixinIndex,
-      super.superinterfaceIndices,
-      super.metadata,
-      super.parameterListShapes,
-      this._originalDeclaration,
-      this._reflectedType,
-      this._reflectedTypeArgumentIndices);
+    super.simpleName,
+    super.qualifiedName,
+    super.descriptor,
+    super.classIndex,
+    super.reflector,
+    super.declarationIndices,
+    super.instanceMemberIndices,
+    super.staticMemberIndices,
+    super.superclassIndex,
+    super.getters,
+    super.setters,
+    super.constructors,
+    super.ownerIndex,
+    super.mixinIndex,
+    super.superinterfaceIndices,
+    super.metadata,
+    super.parameterListShapes,
+    this._originalDeclaration,
+    this._reflectedType,
+    this._reflectedTypeArgumentIndices,
+  );
 
   @override
   List<TypeMirror> get typeArguments {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `typeArguments` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to get `typeArguments` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return reflectedTypeArguments
         .map((Type type) => _reflector.reflectType(type))
@@ -1150,8 +1262,9 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
     if (!_supportsTypeRelations(_reflector) ||
         !_supportsReflectedType(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `reflectedTypeArguments` for `$qualifiedName` '
-          'without `typeRelationsCapability` or `reflectedTypeCapability`');
+        'Attempt to get `reflectedTypeArguments` for `$qualifiedName` '
+        'without `typeRelationsCapability` or `reflectedTypeCapability`',
+      );
     }
     List<int>? reflectedTypeArgumentIndices = _reflectedTypeArgumentIndices;
     if (reflectedTypeArgumentIndices == null) {
@@ -1173,8 +1286,9 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
   TypeMirror get originalDeclaration {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `originalDeclaration` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to get `originalDeclaration` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return _originalDeclaration;
   }
@@ -1188,8 +1302,10 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
     if (reflectedType != null) {
       return reflectedType;
     }
-    throw UnsupportedError('Cannot provide `reflectedType` of '
-        'instance of generic type `$simpleName`.');
+    throw UnsupportedError(
+      'Cannot provide `reflectedType` of '
+      'instance of generic type `$simpleName`.',
+    );
   }
 
   @override
@@ -1246,34 +1362,36 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
 }
 
 InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
-    GenericClassMirrorImpl genericClassMirror,
-    Type? reflectedType,
-    List<int>? reflectedTypeArguments,
-    [int? descriptor]) {
+  GenericClassMirrorImpl genericClassMirror,
+  Type? reflectedType,
+  List<int>? reflectedTypeArguments, [
+  int? descriptor,
+]) {
   // TODO(eernst) implement: Pass a representation of type arguments to this
   // method, and create an instantiated generic class which includes that
   // information.
   return InstantiatedGenericClassMirrorImpl(
-      genericClassMirror.simpleName,
-      genericClassMirror.qualifiedName,
-      descriptor ?? genericClassMirror._descriptor,
-      genericClassMirror._classIndex,
-      genericClassMirror._reflector,
-      genericClassMirror._declarationIndices,
-      genericClassMirror._instanceMemberIndices,
-      genericClassMirror._staticMemberIndices,
-      genericClassMirror._superclassIndex,
-      genericClassMirror._getters,
-      genericClassMirror._setters,
-      genericClassMirror._constructors,
-      genericClassMirror._ownerIndex,
-      genericClassMirror._mixinIndex,
-      genericClassMirror._superinterfaceIndices,
-      genericClassMirror._metadata,
-      genericClassMirror._parameterListShapes,
-      genericClassMirror,
-      reflectedType,
-      reflectedTypeArguments);
+    genericClassMirror.simpleName,
+    genericClassMirror.qualifiedName,
+    descriptor ?? genericClassMirror._descriptor,
+    genericClassMirror._classIndex,
+    genericClassMirror._reflector,
+    genericClassMirror._declarationIndices,
+    genericClassMirror._instanceMemberIndices,
+    genericClassMirror._staticMemberIndices,
+    genericClassMirror._superclassIndex,
+    genericClassMirror._getters,
+    genericClassMirror._setters,
+    genericClassMirror._constructors,
+    genericClassMirror._ownerIndex,
+    genericClassMirror._mixinIndex,
+    genericClassMirror._superinterfaceIndices,
+    genericClassMirror._metadata,
+    genericClassMirror._parameterListShapes,
+    genericClassMirror,
+    reflectedType,
+    reflectedTypeArguments,
+  );
 }
 
 class TypeVariableMirrorImpl extends _DataCaching
@@ -1304,8 +1422,14 @@ class TypeVariableMirrorImpl extends _DataCaching
   /// means no metadata, null means no capability.
   final List<Object>? _metadata;
 
-  TypeVariableMirrorImpl(this.simpleName, this.qualifiedName, this._reflector,
-      this._upperBoundIndex, this._ownerIndex, this._metadata);
+  TypeVariableMirrorImpl(
+    this.simpleName,
+    this.qualifiedName,
+    this._reflector,
+    this._upperBoundIndex,
+    this._ownerIndex,
+    this._metadata,
+  );
 
   @override
   bool get isStatic => false;
@@ -1315,8 +1439,10 @@ class TypeVariableMirrorImpl extends _DataCaching
     int? upperBoundIndex = _upperBoundIndex;
     if (upperBoundIndex == null) return DynamicMirrorImpl();
     if (upperBoundIndex == noCapabilityIndex) {
-      throw NoSuchCapabilityError('Attempt to get `upperBound` from type '
-          'variable mirror without capability.');
+      throw NoSuchCapabilityError(
+        'Attempt to get `upperBound` from type '
+        'variable mirror without capability.',
+      );
     }
     return _data.typeMirrors[upperBoundIndex];
   }
@@ -1325,8 +1451,9 @@ class TypeVariableMirrorImpl extends _DataCaching
   bool isAssignableTo(TypeMirror other) {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `isAssignableTo` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to get `isAssignableTo` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return upperBound.isSubtypeOf(other) || other.isSubtypeOf(this);
   }
@@ -1335,8 +1462,9 @@ class TypeVariableMirrorImpl extends _DataCaching
   bool isSubtypeOf(TypeMirror other) {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `isSubtypeOf` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to get `isSubtypeOf` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return upperBound.isSubtypeOf(other);
   }
@@ -1345,8 +1473,9 @@ class TypeVariableMirrorImpl extends _DataCaching
   TypeMirror get originalDeclaration {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `originalDeclaration` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to get `originalDeclaration` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return this;
   }
@@ -1358,8 +1487,9 @@ class TypeVariableMirrorImpl extends _DataCaching
   List<TypeMirror> get typeArguments {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `typeArguments` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to get `typeArguments` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return const <TypeMirror>[];
   }
@@ -1369,8 +1499,9 @@ class TypeVariableMirrorImpl extends _DataCaching
     if (!_supportsTypeRelations(_reflector) ||
         !_supportsReflectedType(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `reflectedTypeArguments` for `$qualifiedName` '
-          'without `typeRelationsCapability` or `reflectedTypeCapability`');
+        'Attempt to get `reflectedTypeArguments` for `$qualifiedName` '
+        'without `typeRelationsCapability` or `reflectedTypeCapability`',
+      );
     }
     return const <Type>[];
   }
@@ -1379,16 +1510,19 @@ class TypeVariableMirrorImpl extends _DataCaching
   List<TypeVariableMirror> get typeVariables {
     if (!_supportsTypeRelations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to evaluate `typeVariables` for `$qualifiedName` '
-          'without `typeRelationsCapability`');
+        'Attempt to evaluate `typeVariables` for `$qualifiedName` '
+        'without `typeRelationsCapability`',
+      );
     }
     return <TypeVariableMirror>[];
   }
 
   @override
   Type get reflectedType {
-    throw UnsupportedError('Attempt to get `reflectedType` from type '
-        'variable $simpleName');
+    throw UnsupportedError(
+      'Attempt to get `reflectedType` from type '
+      'variable $simpleName',
+    );
   }
 
   @override
@@ -1397,8 +1531,10 @@ class TypeVariableMirrorImpl extends _DataCaching
   @override
   List<Object> get metadata {
     if (_metadata == null) {
-      throw NoSuchCapabilityError('Attempt to get `metadata` from type '
-          'variable $simpleName without capability');
+      throw NoSuchCapabilityError(
+        'Attempt to get `metadata` from type '
+        'variable $simpleName without capability',
+      );
     }
     return <Object>[];
   }
@@ -1428,8 +1564,9 @@ class TypeVariableMirrorImpl extends _DataCaching
   DeclarationMirror get owner {
     if (_ownerIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError(
-          'Trying to get owner of type parameter `$qualifiedName` '
-          'without capability');
+        'Trying to get owner of type parameter `$qualifiedName` '
+        'without capability',
+      );
     }
     return _data.typeMirrors[_ownerIndex];
   }
@@ -1461,14 +1598,15 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
   final Map<String, int>? _parameterListShapes;
 
   LibraryMirrorImpl(
-      this.simpleName,
-      this.uri,
-      this._reflector,
-      this._declarationIndices,
-      this.getters,
-      this.setters,
-      this._metadata,
-      this._parameterListShapes);
+    this.simpleName,
+    this.uri,
+    this._reflector,
+    this._declarationIndices,
+    this.getters,
+    this.setters,
+    this._metadata,
+    this._parameterListShapes,
+  );
 
   Map<String, DeclarationMirror>? _declarations;
 
@@ -1486,7 +1624,8 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
         // that.
         if (declarationIndex == noCapabilityIndex) {
           throw NoSuchCapabilityError(
-              'Requesting declarations of `$qualifiedName` without capability');
+            'Requesting declarations of `$qualifiedName` without capability',
+          );
         }
         DeclarationMirror declarationMirror =
             _data.memberMirrors![declarationIndex];
@@ -1503,10 +1642,16 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
     return declarations;
   }
 
-  bool _checkParameterListShape(String memberName,
-      int numberOfPositionalArguments, Iterable<Symbol>? namedArgumentNames) {
-    bool checkUsingShape(List parameterListShape,
-        int numberOfPositionalArguments, Iterable<Symbol>? namedArgumentNames) {
+  bool _checkParameterListShape(
+    String memberName,
+    int numberOfPositionalArguments,
+    Iterable<Symbol>? namedArgumentNames,
+  ) {
+    bool checkUsingShape(
+      List parameterListShape,
+      int numberOfPositionalArguments,
+      Iterable<Symbol>? namedArgumentNames,
+    ) {
       assert(parameterListShape.length == 3);
       int numberOfPositionalParameters = parameterListShape[0];
       int numberOfOptionalPositionalParameters = parameterListShape[1];
@@ -1518,8 +1663,9 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
         return false;
       }
       if (namedArgumentNames == null) return true;
-      return namedArgumentNames
-          .every((Symbol name) => namesOfNamedParameters.contains(name));
+      return namedArgumentNames.every(
+        (Symbol name) => namesOfNamedParameters.contains(name),
+      );
     }
 
     Map<String, int>? parameterListShapes = _parameterListShapes;
@@ -1537,8 +1683,11 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
       // invocation received an argument list that it supports. It is a bug if
       // `shapeIndex` is out of range for `parameterListShapes`, but if that
       // happens the built-in range check will catch it.
-      return checkUsingShape(_data.parameterListShapes![shapeIndex],
-          numberOfPositionalArguments, namedArgumentNames);
+      return checkUsingShape(
+        _data.parameterListShapes![shapeIndex],
+        numberOfPositionalArguments,
+        namedArgumentNames,
+      );
     } else {
       // Without ready-to-use parameter list shape information we must compute
       // the shape from declaration mirrors.
@@ -1562,26 +1711,41 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
       var methodMirrorImpl = methodMirror as MethodMirrorImpl;
       // Let the [methodMirrorImpl] check it based on declaration mirrors.
       return methodMirrorImpl._isArgumentListShapeAppropriate(
-          numberOfPositionalArguments, namedArgumentNames);
+        numberOfPositionalArguments,
+        namedArgumentNames,
+      );
     }
   }
 
   @override
-  Object? invoke(String memberName, List positionalArguments,
-      [Map<Symbol, dynamic>? namedArguments]) {
+  Object? invoke(
+    String memberName,
+    List positionalArguments, [
+    Map<Symbol, dynamic>? namedArguments,
+  ]) {
     Never fail() {
       throw reflectableNoSuchMethodError(
-          null, memberName, positionalArguments, namedArguments);
+        null,
+        memberName,
+        positionalArguments,
+        namedArguments,
+      );
     }
 
     StaticGetter? getter = getters[memberName];
     if (getter == null) fail();
     if (!_checkParameterListShape(
-        memberName, positionalArguments.length, namedArguments?.keys)) {
+      memberName,
+      positionalArguments.length,
+      namedArguments?.keys,
+    )) {
       fail();
     }
     return Function.apply(
-        getter() as Function, positionalArguments, namedArguments);
+      getter() as Function,
+      positionalArguments,
+      namedArguments,
+    );
   }
 
   @override
@@ -1621,7 +1785,8 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
     List<Object>? metadata = _metadata;
     if (metadata == null) {
       throw NoSuchCapabilityError(
-          'Requesting metadata of library `$simpleName` without capability');
+        'Requesting metadata of library `$simpleName` without capability',
+      );
     }
     return metadata;
   }
@@ -1696,16 +1861,17 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   final List<Object>? _metadata;
 
   MethodMirrorImpl(
-      this._name,
-      this._descriptor,
-      this._ownerIndex,
-      this._returnTypeIndex,
-      this._reflectedReturnTypeIndex,
-      this._dynamicReflectedReturnTypeIndex,
-      this._reflectedTypeArgumentsOfReturnType,
-      this._parameterIndices,
-      this._reflector,
-      this._metadata);
+    this._name,
+    this._descriptor,
+    this._ownerIndex,
+    this._returnTypeIndex,
+    this._reflectedReturnTypeIndex,
+    this._dynamicReflectedReturnTypeIndex,
+    this._reflectedTypeArgumentsOfReturnType,
+    this._parameterIndices,
+    this._reflector,
+    this._metadata,
+  );
 
   int get kind => constants.kindFromEncoding(_descriptor);
 
@@ -1713,8 +1879,9 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   DeclarationMirror get owner {
     if (_ownerIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError(
-          'Trying to get owner of method `$qualifiedName` '
-          'without `LibraryCapability`');
+        'Trying to get owner of method `$qualifiedName` '
+        'without `LibraryCapability`',
+      );
     }
     return isTopLevel
         ? _data.libraryMirrors![_ownerIndex]
@@ -1792,7 +1959,8 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
     List<Object>? metadata = _metadata;
     if (metadata == null) {
       throw NoSuchCapabilityError(
-          'Requesting metadata of method `$simpleName` without capability');
+        'Requesting metadata of method `$simpleName` without capability',
+      );
     }
     return metadata;
   }
@@ -1801,7 +1969,8 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   List<ParameterMirror> get parameters {
     if (!_supportsDeclarations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `parameters` without `DeclarationsCapability`');
+        'Attempt to get `parameters` without `DeclarationsCapability`',
+      );
     }
     return _parameterIndices
         .map((int parameterIndex) => _data.parameterMirrors![parameterIndex])
@@ -1818,15 +1987,17 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
     if (_hasNeverReturnType) return VoidMirrorImpl();
     if (_returnTypeIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError(
-          'Requesting returnType of method `$simpleName` without capability');
+        'Requesting returnType of method `$simpleName` without capability',
+      );
     }
     if (_hasClassReturnType) {
       TypeMirror typeMirror = _data.typeMirrors[_returnTypeIndex];
       return _hasGenericReturnType
           ? _createInstantiatedGenericClass(
-              typeMirror as GenericClassMirrorImpl,
-              null,
-              _reflectedTypeArgumentsOfReturnType)
+            typeMirror as GenericClassMirrorImpl,
+            null,
+            _reflectedTypeArgumentsOfReturnType,
+          )
           : typeMirror;
     }
     throw unreachableError('Unexpected kind of returnType');
@@ -1845,8 +2016,10 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
     if (_hasDynamicReturnType) return dynamic;
     if (_hasNeverReturnType) return Never;
     if (_reflectedReturnTypeIndex == noCapabilityIndex) {
-      throw NoSuchCapabilityError('Requesting reflectedReturnType of method '
-          '`$simpleName` without capability');
+      throw NoSuchCapabilityError(
+        'Requesting reflectedReturnType of method '
+        '`$simpleName` without capability',
+      );
     }
     return _data.types[_reflectedReturnTypeIndex];
   }
@@ -1864,9 +2037,10 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   }
 
   @override
-  String get simpleName => isConstructor
-      ? (_name == '' ? owner.simpleName : '${owner.simpleName}.$_name')
-      : _name;
+  String get simpleName =>
+      isConstructor
+          ? (_name == '' ? owner.simpleName : '${owner.simpleName}.$_name')
+          : _name;
 
   @override
   String? get source => null;
@@ -1928,7 +2102,9 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   Set<Symbol>? _namesOfNamedParameters;
 
   bool _isArgumentListShapeAppropriate(
-      int numberOfPositionalArguments, Iterable<Symbol>? namedArgumentNames) {
+    int numberOfPositionalArguments,
+    Iterable<Symbol>? namedArgumentNames,
+  ) {
     if (numberOfPositionalArguments <
             numberOfPositionalParameters -
                 numberOfOptionalPositionalParameters ||
@@ -1936,8 +2112,9 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
       return false;
     }
     if (namedArgumentNames == null) return true;
-    return namedArgumentNames
-        .every((Symbol name) => namesOfNamedParameters.contains(name));
+    return namedArgumentNames.every(
+      (Symbol name) => namesOfNamedParameters.contains(name),
+    );
   }
 
   @override
@@ -1958,7 +2135,10 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
       _data.memberMirrors![_variableMirrorIndex] as VariableMirrorImpl;
 
   ImplicitAccessorMirrorImpl(
-      this._reflector, this._variableMirrorIndex, this._selfIndex);
+    this._reflector,
+    this._variableMirrorIndex,
+    this._selfIndex,
+  );
 
   int get kind => constants.kindFromEncoding(_variableMirror._descriptor);
 
@@ -2032,7 +2212,10 @@ abstract class ImplicitAccessorMirrorImpl extends _DataCaching
 
 class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
   ImplicitGetterMirrorImpl(
-      super.reflector, super.variableMirrorIndex, super.selfIndex);
+    super.reflector,
+    super.variableMirrorIndex,
+    super.selfIndex,
+  );
 
   @override
   bool get isGetter => true;
@@ -2044,7 +2227,8 @@ class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
   List<ParameterMirror> get parameters {
     if (!_supportsDeclarations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `parameters` without `DeclarationsCapability`');
+        'Attempt to get `parameters` without `DeclarationsCapability`',
+      );
     }
     return <ParameterMirror>[];
   }
@@ -2061,7 +2245,10 @@ class ImplicitGetterMirrorImpl extends ImplicitAccessorMirrorImpl {
 
 class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
   ImplicitSetterMirrorImpl(
-      super.reflector, super.variableMirrorIndex, super.selfIndex);
+    super.reflector,
+    super.variableMirrorIndex,
+    super.selfIndex,
+  );
 
   @override
   bool get isGetter => false;
@@ -2087,21 +2274,23 @@ class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
   List<ParameterMirror> get parameters {
     if (!_supportsDeclarations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `parameters` without `DeclarationsCapability`');
+        'Attempt to get `parameters` without `DeclarationsCapability`',
+      );
     }
     return <ParameterMirror>[
       ParameterMirrorImpl(
-          _variableMirror.simpleName,
-          _parameterDescriptor,
-          _selfIndex,
-          _variableMirror._reflector,
-          _variableMirror._classMirrorIndex,
-          _variableMirror._reflectedTypeIndex,
-          _variableMirror._dynamicReflectedTypeIndex,
-          _variableMirror._reflectedTypeArguments,
-          const <Object>[],
-          null,
-          null)
+        _variableMirror.simpleName,
+        _parameterDescriptor,
+        _selfIndex,
+        _variableMirror._reflector,
+        _variableMirror._classMirrorIndex,
+        _variableMirror._reflectedTypeIndex,
+        _variableMirror._dynamicReflectedTypeIndex,
+        _variableMirror._reflectedTypeArguments,
+        const <Object>[],
+        null,
+        null,
+      ),
     ];
   }
 
@@ -2131,15 +2320,16 @@ abstract class VariableMirrorBase extends _DataCaching
   final List<Object>? _metadata;
 
   VariableMirrorBase(
-      this._name,
-      this._descriptor,
-      this._ownerIndex,
-      this._reflector,
-      this._classMirrorIndex,
-      this._reflectedTypeIndex,
-      this._dynamicReflectedTypeIndex,
-      this._reflectedTypeArguments,
-      this._metadata);
+    this._name,
+    this._descriptor,
+    this._ownerIndex,
+    this._reflector,
+    this._classMirrorIndex,
+    this._reflectedTypeIndex,
+    this._dynamicReflectedTypeIndex,
+    this._reflectedTypeArguments,
+    this._metadata,
+  );
 
   int get kind => constants.kindFromEncoding(_descriptor);
 
@@ -2176,7 +2366,8 @@ abstract class VariableMirrorBase extends _DataCaching
     List<Object>? metadata = _metadata;
     if (metadata == null) {
       throw NoSuchCapabilityError(
-          'Requesting metadata of field `$simpleName` without capability');
+        'Requesting metadata of field `$simpleName` without capability',
+      );
     }
     return metadata;
   }
@@ -2195,10 +2386,12 @@ abstract class VariableMirrorBase extends _DataCaching
     if (_classMirrorIndex == noCapabilityIndex) {
       if (!_supportsType(_reflector)) {
         throw NoSuchCapabilityError(
-            'Attempt to get `type` without `TypeCapability`');
+          'Attempt to get `type` without `TypeCapability`',
+        );
       }
       throw NoSuchCapabilityError(
-          'Attempt to get class mirror for un-marked class (type of `$_name`)');
+        'Attempt to get class mirror for un-marked class (type of `$_name`)',
+      );
     }
     if (_isClassType) {
       TypeMirror typeMirror = _data.typeMirrors[_classMirrorIndex];
@@ -2206,10 +2399,11 @@ abstract class VariableMirrorBase extends _DataCaching
           typeMirror.isNonNullable != _isNonNullable) {
         if (_isGenericType) {
           return _createInstantiatedGenericClass(
-              typeMirror as GenericClassMirrorImpl,
-              hasReflectedType ? reflectedType : null,
-              _reflectedTypeArguments,
-              _descriptor);
+            typeMirror as GenericClassMirrorImpl,
+            hasReflectedType ? reflectedType : null,
+            _reflectedTypeArguments,
+            _descriptor,
+          );
         } else {
           var classMirror = typeMirror as NonGenericClassMirrorImpl;
           return NonGenericClassMirrorImpl(
@@ -2235,9 +2429,10 @@ abstract class VariableMirrorBase extends _DataCaching
       } else {
         return _isGenericType
             ? _createInstantiatedGenericClass(
-                typeMirror as GenericClassMirrorImpl,
-                hasReflectedType ? reflectedType : null,
-                _reflectedTypeArguments)
+              typeMirror as GenericClassMirrorImpl,
+              hasReflectedType ? reflectedType : null,
+              _reflectedTypeArguments,
+            )
             : typeMirror;
       }
     }
@@ -2259,10 +2454,12 @@ abstract class VariableMirrorBase extends _DataCaching
     if (_reflectedTypeIndex == noCapabilityIndex) {
       if (!_supportsReflectedType(_reflector)) {
         throw NoSuchCapabilityError(
-            'Attempt to get `reflectedType` without `reflectedTypeCapability`');
+          'Attempt to get `reflectedType` without `reflectedTypeCapability`',
+        );
       }
       throw UnsupportedError(
-          'Attempt to get reflectedType without capability (of `$_name`)');
+        'Attempt to get reflectedType without capability (of `$_name`)',
+      );
     }
     return _data.types[_reflectedTypeIndex];
   }
@@ -2292,8 +2489,9 @@ class VariableMirrorImpl extends VariableMirrorBase {
   DeclarationMirror get owner {
     if (_ownerIndex == noCapabilityIndex) {
       throw NoSuchCapabilityError(
-          'Trying to get owner of variable `$qualifiedName` '
-          'without capability');
+        'Trying to get owner of variable `$qualifiedName` '
+        'without capability',
+      );
     }
     return isTopLevel
         ? _data.libraryMirrors![_ownerIndex]
@@ -2307,15 +2505,16 @@ class VariableMirrorImpl extends VariableMirrorBase {
   bool get isConst => (_descriptor & constants.constAttribute != 0);
 
   VariableMirrorImpl(
-      super.name,
-      super.descriptor,
-      super.ownerIndex,
-      super.reflectable,
-      super.classMirrorIndex,
-      super.reflectedTypeIndex,
-      super.dynamicReflectedTypeIndex,
-      super.reflectedTypeArguments,
-      super.metadata);
+    super.name,
+    super.descriptor,
+    super.ownerIndex,
+    super.reflectable,
+    super.classMirrorIndex,
+    super.reflectedTypeIndex,
+    super.dynamicReflectedTypeIndex,
+    super.reflectedTypeArguments,
+    super.metadata,
+  );
 
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
@@ -2347,7 +2546,8 @@ class ParameterMirrorImpl extends VariableMirrorBase
   bool get hasDefaultValue {
     if (!_supportsDeclarations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `hasDefaultValue` without `DeclarationsCapability`');
+        'Attempt to get `hasDefaultValue` without `DeclarationsCapability`',
+      );
     }
     return (_descriptor & constants.hasDefaultValueAttribute != 0);
   }
@@ -2356,7 +2556,8 @@ class ParameterMirrorImpl extends VariableMirrorBase
   Object? get defaultValue {
     if (!_supportsDeclarations(_reflector)) {
       throw NoSuchCapabilityError(
-          'Attempt to get `defaultValue` without `DeclarationsCapability`');
+        'Attempt to get `defaultValue` without `DeclarationsCapability`',
+      );
     }
     return _defaultValue;
   }
@@ -2371,17 +2572,18 @@ class ParameterMirrorImpl extends VariableMirrorBase
   MethodMirror get owner => _data.memberMirrors![_ownerIndex] as MethodMirror;
 
   ParameterMirrorImpl(
-      super.name,
-      super.descriptor,
-      super.ownerIndex,
-      super.reflectable,
-      super.classMirrorIndex,
-      super.reflectedTypeIndex,
-      super.dynamicReflectedTypeIndex,
-      super.reflectedTypeArguments,
-      super.metadata,
-      this._defaultValue,
-      this._nameSymbol);
+    super.name,
+    super.descriptor,
+    super.ownerIndex,
+    super.reflectable,
+    super.classMirrorIndex,
+    super.reflectedTypeIndex,
+    super.dynamicReflectedTypeIndex,
+    super.reflectedTypeArguments,
+    super.metadata,
+    this._defaultValue,
+    this._nameSymbol,
+  );
 
   // Note that the corresponding implementation of [hashCode] is inherited from
   // [VariableMirrorBase].
@@ -2534,20 +2736,21 @@ abstract class ReflectableImpl extends ReflectableBase
     implements ReflectableInterface {
   /// Const constructor, to enable usage as metadata, allowing for varargs
   /// style invocation with up to ten arguments.
-  const ReflectableImpl(
-      [super.cap0,
-      super.cap1,
-      super.cap2,
-      super.cap3,
-      super.cap4,
-      super.cap5,
-      super.cap6,
-      super.cap7,
-      super.cap8,
-      super.cap9]);
+  const ReflectableImpl([
+    super.cap0,
+    super.cap1,
+    super.cap2,
+    super.cap3,
+    super.cap4,
+    super.cap5,
+    super.cap6,
+    super.cap7,
+    super.cap8,
+    super.cap9,
+  ]);
 
   const ReflectableImpl.fromList(List<ReflectCapability> super.capabilities)
-      : super.fromList();
+    : super.fromList();
 
   @override
   bool canReflect(Object reflectee) {
@@ -2560,8 +2763,9 @@ abstract class ReflectableImpl extends ReflectableBase
   }
 
   bool get _hasTypeCapability {
-    return capabilities
-        .any((ReflectCapability capability) => capability is TypeCapability);
+    return capabilities.any(
+      (ReflectCapability capability) => capability is TypeCapability,
+    );
   }
 
   @override
@@ -2574,7 +2778,8 @@ abstract class ReflectableImpl extends ReflectableBase
     TypeMirror? result = data[this]!.typeMirrorForType(type);
     if (result == null || !_hasTypeCapability) {
       throw NoSuchCapabilityError(
-          'Reflecting on type `$type` without capability');
+        'Reflecting on type `$type` without capability',
+      );
     }
     return result;
   }
@@ -2583,8 +2788,10 @@ abstract class ReflectableImpl extends ReflectableBase
   LibraryMirror findLibrary(String libraryName) {
     ReflectorData reflectorData = data[this]!;
     if (reflectorData.libraryMirrors == null) {
-      throw NoSuchCapabilityError('Using `findLibrary` without capability. '
-          'Try adding `libraryCapability`.');
+      throw NoSuchCapabilityError(
+        'Using `findLibrary` without capability. '
+        'Try adding `libraryCapability`.',
+      );
     }
     // The specification says that an exception shall be thrown if there
     // is anything other than one library with a matching name.
@@ -2610,8 +2817,10 @@ abstract class ReflectableImpl extends ReflectableBase
   Map<Uri, LibraryMirror> get libraries {
     ReflectorData reflectorData = data[this]!;
     if (reflectorData.libraryMirrors == null) {
-      throw NoSuchCapabilityError('Using `libraries` without capability. '
-          'Try adding `libraryCapability`.');
+      throw NoSuchCapabilityError(
+        'Using `libraries` without capability. '
+        'Try adding `libraryCapability`.',
+      );
     }
     var result = <Uri, LibraryMirror>{};
     for (LibraryMirror library in reflectorData.libraryMirrors!) {
@@ -2623,7 +2832,8 @@ abstract class ReflectableImpl extends ReflectableBase
   @override
   Iterable<ClassMirror> get annotatedClasses {
     return List<ClassMirror>.unmodifiable(
-        data[this]!.typeMirrors.whereType<ClassMirror>());
+      data[this]!.typeMirrors.whereType<ClassMirror>(),
+    );
   }
 }
 
@@ -2643,21 +2853,25 @@ bool _isSetterName(String name) => name.endsWith('=');
 String _getterNameToSetterName(String name) => '$name=';
 
 bool _supportsType(ReflectableImpl reflector) {
-  return reflector.capabilities
-      .any((ReflectCapability capability) => capability is TypeCapability);
+  return reflector.capabilities.any(
+    (ReflectCapability capability) => capability is TypeCapability,
+  );
 }
 
 bool _supportsTypeRelations(ReflectableImpl reflector) {
   return reflector.capabilities.any(
-      (ReflectCapability capability) => capability is TypeRelationsCapability);
+    (ReflectCapability capability) => capability is TypeRelationsCapability,
+  );
 }
 
 bool _supportsReflectedType(ReflectableImpl reflector) {
   return reflector.capabilities.any(
-      (ReflectCapability capability) => capability == reflectedTypeCapability);
+    (ReflectCapability capability) => capability == reflectedTypeCapability,
+  );
 }
 
 bool _supportsDeclarations(ReflectableImpl reflector) {
   return reflector.capabilities.any(
-      (ReflectCapability capability) => capability is DeclarationsCapability);
+    (ReflectCapability capability) => capability is DeclarationsCapability,
+  );
 }

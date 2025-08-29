@@ -51,20 +51,21 @@ class ReflectableBuilder implements Builder {
     List<LibraryElement> visibleLibraries = await resolver.libraries.toList();
     List<WarningKind> suppressedWarnings = _computeSuppressedWarnings();
     String generatedSource = await BuilderImplementation().buildMirrorLibrary(
-        resolver,
-        inputId,
-        outputId,
-        inputLibrary,
-        visibleLibraries,
-        true,
-        suppressedWarnings);
+      resolver,
+      inputId,
+      outputId,
+      inputLibrary,
+      visibleLibraries.cast(),
+      true,
+      suppressedWarnings,
+    );
     await buildStep.writeAsString(outputId, generatedSource);
   }
 
   @override
   Map<String, List<String>> get buildExtensions => const {
-        '.dart': ['.reflectable.dart']
-      };
+    '.dart': ['.reflectable.dart'],
+  };
 }
 
 ReflectableBuilder reflectableBuilder(BuilderOptions options) {
