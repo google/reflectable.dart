@@ -1,3 +1,8 @@
+## 4.0.15
+
+- Use language version 3.9. In particular, use the 3.9 style of
+  formatting.
+
 ## 4.0.14
 
 - Use language version 3.7.
