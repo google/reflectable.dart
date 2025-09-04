@@ -1,0 +1,12 @@
+include: package:lints/recommended.yaml
+analyzer:
+  errors:
+    deprecated_member_use: ignore
+linter:
+  rules:
+    await_only_futures: true
+    omit_local_variable_types: false
+    unnecessary_library_name: false
+    # Enable the following when a newer analyzer can be used:
+    # omit_obvious_local_variable_types: true
+    # specify_nonobvious_local_variable_types: true
