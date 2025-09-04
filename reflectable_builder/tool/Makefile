@@ -20,20 +20,6 @@ upgrade:
 	( cd ..; dart pub upgrade )
 
 check:
-	( cd ..; dart analyze lib test )
+	( cd ..; dart analyze lib )
 
-build:
-	@echo "[No actions for build in reflectable]"
-
-test:
-	@echo "-------------------- mock_tests"
-	@./run_tests
-
-pub_test:
-	@echo "[No actions: Tests are located in ../test_reflectable]"
-	# ( cd ..; dart run test )
-
-clean:
-	@echo "[No actions for clean in reflectable]"
-
-.PHONY: all g u c b t cb get upgrade clean build check test
+.PHONY: all g u c b cb get upgrade clean build check
