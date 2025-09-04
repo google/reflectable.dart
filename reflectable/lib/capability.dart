@@ -3,7 +3,7 @@
 // the LICENSE file.
 
 // NB! It is crucial that all changes made in this library are
-// performed in the corresponding manner in 
+// performed in the corresponding manner in
 // `package:reflectable_builder/src/element_capability.dart`,
 // and vice versa.
 
