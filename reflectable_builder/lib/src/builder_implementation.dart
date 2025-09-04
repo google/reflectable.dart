@@ -38,10 +38,11 @@ import 'package:dart_style/dart_style.dart';
 import 'package:pub_semver/pub_semver.dart' as semver;
 import 'package:path/path.dart' as path;
 import 'package:reflectable/src/encoding_constants.dart' as constants;
+import 'package:reflectable/src/incompleteness.dart';
+import 'package:reflectable/src/reflectable_class_constants.dart'
+    as reflectable_class_constants;
 import 'element_capability.dart' as ec;
 import 'fixed_point.dart';
-import 'incompleteness.dart';
-import 'reflectable_class_constants.dart' as reflectable_class_constants;
 import 'reflectable_errors.dart' as errors;
 
 // ignore_for_file: omit_local_variable_types
