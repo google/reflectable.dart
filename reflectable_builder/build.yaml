@@ -1,9 +1,3 @@
-targets:
-  $default:
-    builders:
-      reflectable_builder|reflectable:
-        enabled: true
-
 builders:
   reflectable:
     target: ":reflectable_builder"
