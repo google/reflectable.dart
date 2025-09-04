@@ -1,5 +1,5 @@
 builders:
-  reflectable_builder:
+  reflectable_builder|reflectable:
     target: ":reflectable"
     import: "package:reflectable_builder/reflectable_builder.dart"
     builder_factories: ["reflectableBuilder"]
