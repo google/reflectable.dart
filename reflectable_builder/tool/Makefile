@@ -7,7 +7,7 @@ OPTIONS=--checked --package-root=$(PACKAGE_ROOT)
 TEST_DIR=../test
 XFORM_DIR=../test/to_be_transformed
 
-all: get check pub_test
+all: get check
 
 g: get
 
@@ -16,8 +16,6 @@ u: upgrade
 c: check
 
 t: test
-
-pt: pub_test
 
 get:
 	( cd ..; dart pub get )
