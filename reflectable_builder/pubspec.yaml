@@ -13,8 +13,8 @@ dependencies:
   build_resolvers: ^2.4.0
   build_config: ^1.1.0
   build_runner: ^2.4.0
-  build_runner_core: ^7.2.0
-  dart_style: ^2.3.0
+  build_runner_core: ^8.0.0
+  dart_style: ^3.0.0
   glob: ^2.1.0
   logging: ^1.2.0
   package_config: ^2.1.0
