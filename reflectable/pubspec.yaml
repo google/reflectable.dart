@@ -1,13 +1,13 @@
 name: reflectable
-version: 4.0.14
+version: 4.0.15
 description: >
   Reflection support based on code generation, using 'capabilities' to
   specify which operations to support, on which objects.
 homepage: https://github.com/google/reflectable.dart
 environment:
-  sdk: '>=3.7.0 <4.0.0'
+  sdk: '>=3.9.0 <4.0.0'
 dependencies:
-  analyzer: ^7.0.0
+  analyzer: ^7.7.0
   build: ^2.4.0
   build_resolvers: ^2.4.0
   build_config: ^1.1.0

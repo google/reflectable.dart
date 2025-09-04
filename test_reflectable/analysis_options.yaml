@@ -3,3 +3,4 @@ linter:
   rules:
     await_only_futures: true
     unnecessary_library_name: false
+    strict_top_level_inference: false

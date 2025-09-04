@@ -136,11 +136,10 @@ class ReflectorData {
         // Note that [types] corresponds to the prefix of [typeMirrors] which
         // are class mirrors; [typeMirrors] continues with type variable
         // mirrors, and they are irrelevant here.
-        _typeToTypeMirrorCache =
-            typeToTypeMirrorCache = <Type, TypeMirror>{
-              for (var i = 0; i < supportedClassCount; ++i)
-                types[i]: typeMirrors[i],
-            };
+        _typeToTypeMirrorCache = typeToTypeMirrorCache = <Type, TypeMirror>{
+          for (var i = 0; i < supportedClassCount; ++i)
+            types[i]: typeMirrors[i],
+        };
       }
       typeToTypeMirrorCache[_typeOf<void>()] = VoidMirrorImpl();
       typeToTypeMirrorCache[dynamic] = DynamicMirrorImpl();
@@ -176,13 +175,15 @@ const String pleaseInitializeMessage =
 
 /// This mapping contains the mirror-data for each reflector.
 /// It will be initialized in the generated code.
-Map<Reflectable, ReflectorData> data =
-    throw StateError(pleaseInitializeMessage);
+Map<Reflectable, ReflectorData> data = throw StateError(
+  pleaseInitializeMessage,
+);
 
 /// This mapping translates symbols to strings for the covered members.
 /// It will be initialized in the generated code.
-Map<Symbol, String>? memberSymbolMap =
-    throw StateError(pleaseInitializeMessage);
+Map<Symbol, String>? memberSymbolMap = throw StateError(
+  pleaseInitializeMessage,
+);
 
 abstract class _DataCaching {
   // TODO(eernst) clarify: When we have some substantial pieces of code using
@@ -305,12 +306,11 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   @override
   dynamic delegate(Invocation invocation) {
     Never fail() {
-      StringInvocationKind kind =
-          invocation.isGetter
-              ? StringInvocationKind.getter
-              : (invocation.isSetter
-                  ? StringInvocationKind.setter
-                  : StringInvocationKind.method);
+      StringInvocationKind kind = invocation.isGetter
+          ? StringInvocationKind.getter
+          : (invocation.isSetter
+                ? StringInvocationKind.setter
+                : StringInvocationKind.method);
       // TODO(eernst) implement: Pass the de-minified `memberName` string, if
       // get support for translating arbitrary symbols to strings (the caller
       // could use `new Symbol(..)` so we cannot assume that this symbol is
@@ -373,8 +373,9 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
 
   @override
   Object? invokeSetter(String name, Object? value) {
-    String setterName =
-        _isSetterName(name) ? name : _getterNameToSetterName(name);
+    String setterName = _isSetterName(name)
+        ? name
+        : _getterNameToSetterName(name);
     Object? Function(Object?, Object?)? setter = _data.setters[setterName];
     if (setter != null) {
       return setter(reflectee, value);
@@ -525,8 +526,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
             _data.memberMirrors![declarationIndex];
         result[declarationMirror.simpleName] = declarationMirror;
       }
-      _declarations =
-          declarations = UnmodifiableMapView<String, DeclarationMirror>(result);
+      _declarations = declarations =
+          UnmodifiableMapView<String, DeclarationMirror>(result);
     }
     return declarations;
   }
@@ -550,8 +551,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
         result[declarationMirror.simpleName] =
             declarationMirror as MethodMirror;
       }
-      _instanceMembers =
-          instanceMembers = UnmodifiableMapView<String, MethodMirror>(result);
+      _instanceMembers = instanceMembers =
+          UnmodifiableMapView<String, MethodMirror>(result);
     }
     return instanceMembers;
   }
@@ -576,8 +577,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
         result[declarationMirror.simpleName] =
             declarationMirror as MethodMirror;
       }
-      staticMembers =
-          _staticMembers = UnmodifiableMapView<String, MethodMirror>(result);
+      staticMembers = _staticMembers =
+          UnmodifiableMapView<String, MethodMirror>(result);
     }
     return staticMembers;
   }
@@ -627,8 +628,8 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
       return namesOfNamedParameters == null
           ? false
           : namedArgumentNames.every(
-            (Symbol name) => namesOfNamedParameters.contains(name),
-          );
+              (Symbol name) => namesOfNamedParameters.contains(name),
+            );
     }
 
     Map<String, int>? parameterListShapes = _parameterListShapes;
@@ -775,8 +776,9 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
 
   @override
   Object? invokeSetter(String name, Object? value) {
-    String setterName =
-        _isSetterName(name) ? name : _getterNameToSetterName(name);
+    String setterName = _isSetterName(name)
+        ? name
+        : _getterNameToSetterName(name);
     StaticSetter? setter = _setters[setterName];
     if (setter == null) {
       throw reflectableNoSuchSetterError(reflectedType, setterName, [
@@ -814,8 +816,9 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
   @override
   List<Object> get metadata {
     if (_metadata == null) {
-      String description =
-          hasReflectedType ? reflectedType.toString() : qualifiedName;
+      String description = hasReflectedType
+          ? reflectedType.toString()
+          : qualifiedName;
       throw NoSuchCapabilityError(
         'Requesting metadata of "$description" without capability',
       );
@@ -1636,8 +1639,8 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
           result[typeMirror.simpleName] = typeMirror;
         }
       }
-      _declarations =
-          declarations = UnmodifiableMapView<String, DeclarationMirror>(result);
+      _declarations = declarations =
+          UnmodifiableMapView<String, DeclarationMirror>(result);
     }
     return declarations;
   }
@@ -1759,8 +1762,9 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
 
   @override
   Object? invokeSetter(String name, Object? value) {
-    String setterName =
-        _isSetterName(name) ? name : _getterNameToSetterName(name);
+    String setterName = _isSetterName(name)
+        ? name
+        : _getterNameToSetterName(name);
     StaticSetter? setter = setters[setterName];
     if (setter == null) {
       throw reflectableNoSuchSetterError(null, setterName, [value], {});
@@ -1994,10 +1998,10 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
       TypeMirror typeMirror = _data.typeMirrors[_returnTypeIndex];
       return _hasGenericReturnType
           ? _createInstantiatedGenericClass(
-            typeMirror as GenericClassMirrorImpl,
-            null,
-            _reflectedTypeArgumentsOfReturnType,
-          )
+              typeMirror as GenericClassMirrorImpl,
+              null,
+              _reflectedTypeArgumentsOfReturnType,
+            )
           : typeMirror;
     }
     throw unreachableError('Unexpected kind of returnType');
@@ -2037,10 +2041,9 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
   }
 
   @override
-  String get simpleName =>
-      isConstructor
-          ? (_name == '' ? owner.simpleName : '${owner.simpleName}.$_name')
-          : _name;
+  String get simpleName => isConstructor
+      ? (_name == '' ? owner.simpleName : '${owner.simpleName}.$_name')
+      : _name;
 
   @override
   String? get source => null;
@@ -2429,10 +2432,10 @@ abstract class VariableMirrorBase extends _DataCaching
       } else {
         return _isGenericType
             ? _createInstantiatedGenericClass(
-              typeMirror as GenericClassMirrorImpl,
-              hasReflectedType ? reflectedType : null,
-              _reflectedTypeArguments,
-            )
+                typeMirror as GenericClassMirrorImpl,
+                hasReflectedType ? reflectedType : null,
+                _reflectedTypeArguments,
+              )
             : typeMirror;
       }
     }
@@ -2471,8 +2474,8 @@ abstract class VariableMirrorBase extends _DataCaching
   @override
   Type get dynamicReflectedType =>
       _dynamicReflectedTypeIndex != noCapabilityIndex
-          ? _data.types[_dynamicReflectedTypeIndex]
-          : reflectedType;
+      ? _data.types[_dynamicReflectedTypeIndex]
+      : reflectedType;
 
   /// Override requested by linter.
   @override
