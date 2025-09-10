@@ -2,9 +2,10 @@
 
 - **Breaking change**: Split the code generator off of the package
   `reflectable`. This code generator must henceforth be obtained from
-  `reflectable_builder`.  The point is that this can be a
-  `dev_dependency`. It also breaks code that depends on the old
-  organization, hence the new major version number.
+  the package `reflectable_builder`.  The point is that this can be a
+  `dev_dependency`. This also implies that `build.yaml` must specify
+  the reflectable code generator as `reflectable_builder|reflectable:`
+  rather than just `reflectable:`.
 
 ## 4.0.15
 
