@@ -37,7 +37,7 @@ measure_output: build
 	@./measure_output --include-js --include-source-tree --include-unminified
 
 build:
-	( cd ..; dart run build_runner build )
+	( cd ..; REFLECTABLE_SUPPRESS_UNSUPPORTED_TYPE=1 dart run build_runner build )
 
 test:
 	( cd ..; dart test )
