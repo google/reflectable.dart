@@ -1,3 +1,11 @@
+## 5.0.0
+
+- **Breaking change**: Split the code generator off of the package
+  `reflectable`. This code generator must henceforth be obtained from
+  `reflectable_builder`.  The point is that this can be a
+  `dev_dependency`. It also breaks code that depends on the old
+  organization, hence the new major version number.
+
 ## 4.0.15
 
 - Use language version 3.9. In particular, use the 3.9 style of
