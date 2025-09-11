@@ -71,6 +71,8 @@ read
 echo ">>>>>> Check 'dart format .': no effect, 'dart analyze .': no issues"
 dart format .
 dart analyze .
+echo "Check that the pubspec.yaml files are nearly identical:"
+diff ../pubspec.yaml ../../reflectable_builder/pubspec.yaml
 echo ">>>>>> Ensure that github master is the version to publish"
 read
 

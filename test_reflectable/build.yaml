@@ -1,7 +1,7 @@
 targets:
   $default:
     builders:
-      reflectable:
+      reflectable_builder:
         generate_for:
           - test/**_test.dart
         options:
