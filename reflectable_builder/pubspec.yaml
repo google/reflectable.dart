@@ -20,7 +20,8 @@ dependencies:
   package_config: ^2.1.0
   path: ^1.9.0
   pub_semver: ^2.2.0
-  reflectable: ^5.0.0
+  reflectable:
+    path: ../reflectable
   source_span: ^1.10.0
 dev_dependencies:
   build_test: ^2.2.0
