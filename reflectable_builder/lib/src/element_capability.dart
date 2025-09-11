@@ -2,21 +2,22 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.src.element_capability;
+library reflectable_builder.src.element_capability;
 
 // This library provides a variant of the `ReflectCapability` class
-// hierarchy from `../capability.dart` which is suitable for holding
-// information about entities in a target program at analysis time,
-// rather than holding runtime entities. This is necessary because
-// the transformer needs to deal with analysis time descriptions of
-// objects and types that cannot exist in the transformer itself,
-// because the transformer does not contain or import the same
-// libraries as the target program does.
+// hierarchy from `package:reflectable/capability.dart` which is
+// suitable for holding information about entities in a target program
+// at analysis time, rather than holding runtime entities. This is
+// necessary because the code generator needs to deal with analysis
+// time descriptions of objects and types that cannot exist in the code
+// generator itself, because the code generator does not contain or
+// import the same libraries as the target program.
 //
 // For documentation of each of these classes and const values, please
-// search the declaration with the same name in `../capability.dart`.
+// search the declaration with the same name in the library
+// `package:reflectable/capability.dart`.
 //
-// NB! It is crucial that all changes in '../capabilities.dart' are
+// NB! It is crucial that all changes in said `capabilities.dart` are
 // performed in the corresponding manner here, and vice versa.
 
 import 'package:analyzer/dart/element/element.dart';
