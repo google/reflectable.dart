@@ -4571,8 +4571,10 @@ class BuilderImplementation {
 
     switch (dartTypeElement.name) {
       case 'NameCapability':
+        // ignore: deprecated_member_use_from_same_package
         return ec.nameCapability;
       case 'ClassifyCapability':
+        // ignore: deprecated_member_use_from_same_package
         return ec.classifyCapability;
       case 'MetadataCapability':
         return ec.metadataCapability;
