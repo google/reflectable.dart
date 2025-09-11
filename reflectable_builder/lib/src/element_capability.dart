@@ -83,25 +83,25 @@ class NewInstanceMetaCapability extends MetadataQuantifiedCapability
 }
 
 /// To be eliminated when `NameCapability` in 'capability.dart' is eliminated.
-@deprecated
+@Deprecated("Obsolete capability")
 class NameCapability implements TypeCapability {
   const NameCapability();
 }
 
 /// To be eliminated when `nameCapability` in 'capability.dart' is eliminated.
-@deprecated
+@Deprecated("Obsolete capability")
 const nameCapability = NameCapability();
 
 /// To be eliminated when `ClassifyCapability` in 'capability.dart' is
 /// eliminated.
-@deprecated
+@Deprecated("Obsolete capability")
 class ClassifyCapability implements TypeCapability {
   const ClassifyCapability();
 }
 
 /// To be eliminated when `classifyCapability` in 'capability.dart' is
 /// eliminated.
-@deprecated
+@Deprecated("Obsolete capability")
 const classifyCapability = ClassifyCapability();
 
 class MetadataCapability implements TypeCapability {
