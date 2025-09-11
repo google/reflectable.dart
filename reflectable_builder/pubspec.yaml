@@ -13,8 +13,7 @@ dependencies:
   dart_style: ^3.0.0
   pub_semver: ^2.2.0
   path: ^1.9.0
-  reflectable:
-    path: ../reflectable  
+  reflectable: ^5.0.0
 dev_dependencies:
   build_config: ^1.1.0
   build_resolvers: ^2.4.0
