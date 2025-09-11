@@ -11,8 +11,7 @@ environment:
 dependencies:
   build_runner: any
   glob: any
-  reflectable:
-    path: ../reflectable
+  reflectable: any
 dev_dependencies:
   analyzer: any
   build_test: any
@@ -20,3 +19,6 @@ dev_dependencies:
   reflectable_builder:
     path: ../reflectable_builder
   test: ^1.25.0
+dependency_overrides:
+  reflectable:
+    path: ../reflectable
