@@ -44,7 +44,7 @@ void main() {
     var f3Parameters = f3.parameters;
     var f4 = cm.declarations['f4'] as MethodMirror;
     var f4Parameters = f4.parameters;
-    var constructor = cm.declarations['A'] as MethodMirror;
+    var constructor = cm.declarations['A.new'] as MethodMirror;
     var constructorParameters = constructor.parameters;
 
     expect(f1Parameters, []);
@@ -136,7 +136,7 @@ void main() {
     expect(constructorParameters[0].owner, constructor);
     expect(constructorParameters[0].simpleName, 'x');
     expect(constructorParameters[0].qualifiedName,
-        'test_reflectable.test.parameter_mirrors_test.A..x');
+        'test_reflectable.test.parameter_mirrors_test.A.new.x');
     expect(constructorParameters[0].metadata, []);
   });
 }

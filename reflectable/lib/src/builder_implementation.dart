@@ -27,12 +27,9 @@ import 'package:analyzer/src/dart/constant/compute.dart';
 import 'package:analyzer/src/dart/constant/evaluation.dart';
 import 'package:analyzer/src/dart/constant/utilities.dart';
 import 'package:analyzer/src/dart/constant/value.dart';
-import 'package:analyzer/src/dart/element/display_string_builder.dart';
 import 'package:analyzer/src/dart/element/element.dart';
-import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
 import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/summary/package_bundle_reader.dart';
-import 'package:analyzer/src/summary2/reference.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:pub_semver/pub_semver.dart' as semver;
@@ -147,13 +144,11 @@ class _ReflectionWorld {
         }
       }
 
-      for (LibraryFragment unit in library.units) {
-        for (ClassFragment interfaceElement in unit.classes) {
-          addInterfaceElement(interfaceElement.interfaces.first.element);
-        }
-        for (EnumFragment interfaceElement in unit.enums) {
-          addInterfaceElement(interfaceElement.interfaces.first.element);
-        }
+      for (ClassElement interfaceElement in library.classes) {
+        addInterfaceElement(interfaceElement);
+      }
+      for (EnumElement interfaceElement in library.enums) {
+        addInterfaceElement(interfaceElement);
       }
     }
     return _subtypesCache =
@@ -746,7 +741,7 @@ class _ReflectorDomain {
     int optionalPositionalCount = type.optionalParameterTypes.length;
 
     List<String> parameterNames = type.formalParameters
-        .map((FormalParameterElement parameter) => parameter.name ?? "")
+        .map((FormalParameterElement parameter) => "${parameter.name}")
         .toList();
 
     List<String> namedParameterNames = type.namedParameterTypes.keys.toList();
@@ -850,7 +845,7 @@ class _ReflectorDomain {
     _ImportCollector importCollector,
   ) async {
     String prefix = importCollector._getPrefix(_reflector.library);
-    if (_isPrivateName(_reflector.name ?? "")) {
+    if (_isPrivateName("${_reflector.name}")) {
       await _severe(
         'Cannot access private name `${_reflector.name}`',
         _reflector,
@@ -984,17 +979,28 @@ class _ReflectorDomain {
         if (instanceMember is PropertyAccessorElement) {
           // A getter or a setter, synthetic or declared.
           if (instanceMember is GetterElement) {
-            instanceGetterNames.add(instanceMember.name ?? "");
+            instanceGetterNames.add("${instanceMember.name}");
           } else {
-            instanceSetterNames.add(instanceMember.name ?? "");
+            instanceSetterNames.add("${instanceMember.name}=");
           }
         } else if (instanceMember is MethodElement) {
-          instanceGetterNames.add(instanceMember.name ?? "");
+          instanceGetterNames.add("${instanceMember.name}");
         } else {
           // `instanceMember` is a ConstructorElement.
           // Even though a generative constructor has a false
           // `isStatic`, we do not wish to include them among
           // instanceGetterNames, so we do nothing here.
+        }
+      }
+
+      for (PropertyAccessorElement accessor in classDomain._accessors) {
+        if (accessor is GetterElement &&
+            !instanceGetterNames.contains(accessor.name)) {
+          instanceGetterNames.add("${accessor.name}");
+        }
+        if (accessor is SetterElement &&
+            !instanceGetterNames.contains("${accessor.name}=")) {
+          instanceSetterNames.add("${accessor.name}=");
         }
       }
     }
@@ -1060,7 +1066,11 @@ class _ReflectorDomain {
     // Record the names of covered members, if requested.
     if (_capabilities._impliesMemberSymbols) {
       for (ExecutableElement executableElement in members.items) {
-        _world.memberNames.add(executableElement.name ?? "");
+        _world.memberNames.add(
+          executableElement is SetterElement
+              ? "${executableElement.name}="
+              : "${executableElement.name}",
+        );
       }
     }
 
@@ -1073,7 +1083,7 @@ class _ReflectorDomain {
         for (FormalParameterElement parameter in element.formalParameters) {
           if (!parameter.isNamed) count++;
           if (parameter.isOptionalPositional) optionalCount++;
-          if (parameter.isNamed) names.add(parameter.name ?? "");
+          if (parameter.isNamed) names.add("${parameter.name}");
         }
         var shape = ParameterListShape(count, optionalCount, names);
         parameterListShapes.add(shape);
@@ -1413,8 +1423,10 @@ class _ReflectorDomain {
     int descriptor,
   ) async {
     if (element.enclosingElement is InterfaceElement) {
-      return (await classes).indexOf(element.enclosingElement!);
-    } else if (element.enclosingElement is CompilationUnit) {
+      return element.enclosingElement != null
+          ? (await classes).indexOf(element.enclosingElement as Object)
+          : null;
+    } else if (element.enclosingElement?.firstFragment is LibraryFragment) {
       return _libraries.indexOf(element.library);
     }
     await _severe('Unexpected kind of request for owner');
@@ -1587,7 +1599,11 @@ class _ReflectorDomain {
                     !enclosingElement.isAbstract) &&
                 enclosingElement is! EnumElement)) {
           String code = await _constructorCode(constructor, importCollector);
-          mapEntries.add("r'${constructor.name}': $code");
+          String constructorName = "${constructor.name}";
+          if (constructorName == "new") {
+            constructorName = "";
+          }
+          mapEntries.add("r'$constructorName': $code");
         }
       }
       constructorsCode = _formatAsMap(mapEntries);
@@ -1603,7 +1619,7 @@ class _ReflectorDomain {
             await _staticGettingClosure(
               importCollector,
               interfaceElement,
-              method.name!,
+              "${method.name}",
             ),
           );
         }
@@ -1614,7 +1630,7 @@ class _ReflectorDomain {
             await _staticGettingClosure(
               importCollector,
               interfaceElement,
-              accessor.name!,
+              "${accessor.name}",
             ),
           );
         }
@@ -1627,7 +1643,7 @@ class _ReflectorDomain {
             await _staticSettingClosure(
               importCollector,
               interfaceElement,
-              accessor.name!,
+              "${accessor.name}=",
             ),
           );
         }
@@ -1695,7 +1711,14 @@ class _ReflectorDomain {
           ParameterListShape shape = parameterListShapeOf[element]!;
           // index != null: every shape must be in `..Shapes`.
           int index = parameterListShapes.indexOf(shape)!;
-          return "r'${element.name}': $index";
+          String name = "${element.name}";
+          if (element is SetterElement) {
+            name += "=";
+          }
+          if (element.name == "-") {
+            name = "unary-";
+          }
+          return "r'$name': $index";
         }),
       );
     }
@@ -1884,7 +1907,12 @@ class _ReflectorDomain {
               _generatedLibraryId,
             )
           : null;
-      return "r.MethodMirrorImpl(r'${element.name}', $descriptor, "
+
+      String name = element is SetterElement
+          ? "${element.name}="
+          : "${element.name}";
+
+      return "r.MethodMirrorImpl(r'$name', $descriptor, "
           '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, '
           '$dynamicReflectedReturnTypeIndex, '
           '$reflectedTypeArgumentsOfReturnType, $parameterIndicesCode, '
@@ -2237,7 +2265,7 @@ class _ReflectorDomain {
           } else {
             // Requested: the spelled-out generic function type; continue.
             typeVariablesInScope.addAll(
-              dartType.typeParameters.map((element) => element.name!),
+              dartType.typeParameters.map((element) => "${element.name}"),
             );
           }
         }
@@ -2477,7 +2505,11 @@ class _ReflectorDomain {
     var gettersCodeList = <String>[];
     for (ExecutableElement getter in _gettersOfLibrary(libraryDomain)) {
       gettersCodeList.add(
-        await _topLevelGettingClosure(importCollector, library, getter.name!),
+        await _topLevelGettingClosure(
+          importCollector,
+          library,
+          "${getter.name}",
+        ),
       );
     }
     String gettersCode = _formatAsMap(gettersCodeList);
@@ -2485,7 +2517,11 @@ class _ReflectorDomain {
     var settersCodeList = <String>[];
     for (PropertyAccessorElement setter in _settersOfLibrary(libraryDomain)) {
       settersCodeList.add(
-        await _topLevelSettingClosure(importCollector, library, setter.name!),
+        await _topLevelSettingClosure(
+          importCollector,
+          library,
+          "${setter.name}=",
+        ),
       );
     }
     String settersCode = _formatAsMap(settersCodeList);
@@ -2960,6 +2996,10 @@ final RegExp _identifierRegExp = RegExp(r'^[A-Za-z$_][A-Za-z$_0-9]*$');
 
 // Auxiliary function used by `_generateCode`.
 String _gettingClosure(String getterName) {
+  if (getterName == "-") {
+    getterName = "unary-";
+  }
+
   String closure;
   if (_identifierRegExp.hasMatch(getterName)) {
     // Starts with letter, not an operator.
@@ -2991,7 +3031,7 @@ Future<String> _staticGettingClosure(
   InterfaceElement interfaceElement,
   String getterName,
 ) async {
-  String className = interfaceElement.name!;
+  String className = "${interfaceElement.name}";
   String prefix = importCollector._getPrefix(interfaceElement.library);
   // Operators cannot be static.
   if (_isPrivateName(getterName)) {
@@ -3012,7 +3052,7 @@ Future<String> _staticSettingClosure(
   assert(setterName.substring(setterName.length - 1) == '=');
   // The [setterName] includes the '=', remove it.
   String name = setterName.substring(0, setterName.length - 1);
-  String className = interfaceElement.name!;
+  String className = "${interfaceElement.name}";
   String prefix = importCollector._getPrefix(interfaceElement.library);
   if (_isPrivateName(setterName)) {
     await _severe('Cannot access private name $setterName', interfaceElement);
@@ -3069,7 +3109,7 @@ class _LibraryDomain {
   /// Methods which are declared by [_libraryElement] and included for
   /// reflection support, according to the reflector described by
   /// [_reflectorDomain]; obtained by filtering `_libraryElement.functions`.
-  final Iterable<ExecutableElement> _declaredFunctions;
+  final Iterable<TopLevelFunctionElement> _declaredFunctions;
 
   /// Formal parameters declared by one of the [_declaredFunctions].
   final Iterable<FormalParameterElement> _declaredParameters;
@@ -3194,7 +3234,7 @@ class _ClassDomain {
       return name.toString();
     } else {
       // This is a regular class, i.e., we can use its declared name.
-      return interfaceElement.name!;
+      return "${interfaceElement.name}";
     }
   }
 
@@ -3235,9 +3275,12 @@ class _ClassDomain {
               member.correspondingGetter;
           getterMetadata = correspondingGetter?.metadata.annotations;
         }
+        if (member is SetterElement) {
+          name += "=";
+        }
         if (_reflectorDomain._capabilities.supportsInstanceInvoke(
           member.library.typeSystem,
-          member.name!,
+          name,
           metadata,
           getterMetadata,
         )) {
@@ -3251,7 +3294,7 @@ class _ClassDomain {
 
       void addIfCapableConcreteInstance(ExecutableElement member) {
         if (!member.isAbstract && !member.isStatic) {
-          addIfCapable(member.name!, member);
+          addIfCapable("${member.name}", member);
         }
       }
 
@@ -3307,7 +3350,7 @@ class _ClassDomain {
           !method.isPrivate &&
           _reflectorDomain._capabilities.supportsStaticInvoke(
             method.library.typeSystem,
-            method.name!,
+            "${method.name}",
             method.metadata.annotations,
             null,
           )) {
@@ -3332,7 +3375,7 @@ class _ClassDomain {
       }
       if (_reflectorDomain._capabilities.supportsStaticInvoke(
         accessor.library.typeSystem,
-        accessor.name!,
+        "${accessor.name}",
         metadata,
         getterMetadata,
       )) {
@@ -3830,9 +3873,8 @@ class BuilderImplementation {
           _equalsClassReflectable(type)) {
         return type;
       }
-
-      // No need to check `unit.enums`: [Reflectable] is not an enum.
     }
+    // No need to check `unit.enums`: [Reflectable] is not an enum.
     // Class [Reflectable] was not found in the target program.
     return null;
   }
@@ -3988,17 +4030,17 @@ class BuilderImplementation {
     InterfaceElement typeTypeClass = typeType.element;
 
     ConstructorElement? globalQuantifyCapabilityConstructor = capabilityLibrary
-        .getClass('GlobalQuantifyCapability')!
-        .getNamedConstructor('');
+        .getClass('GlobalQuantifyCapability')
+        ?.getNamedConstructor('new');
     ConstructorElement? globalQuantifyMetaCapabilityConstructor =
         capabilityLibrary
-            .getClass('GlobalQuantifyMetaCapability')!
-            .getNamedConstructor('');
+            .getClass('GlobalQuantifyMetaCapability')
+            ?.getNamedConstructor('new');
 
     for (LibraryElement library in _libraries) {
       List<LibraryImport> imports = library.fragments
-          .map((l) => l.libraryImports)
-          .expand((i) => i)
+          .map((x) => x.libraryImports)
+          .expand((x) => x)
           .toList();
       for (var importElement in imports) {
         if (importElement.importedLibrary?.id != reflectableLibrary.id) {
@@ -4006,7 +4048,7 @@ class BuilderImplementation {
         }
         for (ElementAnnotation metadatum
             in importElement.metadata.annotations) {
-          Element? metadatumElement = metadatum.element;
+          Element? metadatumElement = metadatum.element?.baseElement;
           if (metadatumElement == globalQuantifyCapabilityConstructor) {
             DartObject? value = _getEvaluatedMetadatum(metadatum);
             if (value != null) {
@@ -4064,7 +4106,7 @@ class BuilderImplementation {
                 continue;
               } else if (metadataTypeType is InterfaceType &&
                   metadataTypeType.element != typeTypeClass) {
-                String typeName = metadataTypeType.element.name!;
+                String typeName = "${metadataTypeType.element.name}";
                 var message = 'The metadata must be a Type. Found $typeName.';
                 await _warn(WarningKind.badMetadata, message, metadatumElement);
                 continue;
@@ -4385,7 +4427,7 @@ class BuilderImplementation {
     // reflector.
     for (LibraryElement library in _libraries) {
       for (InterfaceElement reflector in await getReflectors(
-        library.name!,
+        library.name,
         library.metadata.annotations,
       )) {
         assert(await _isImportableLibrary(library, dataId, _resolver));
@@ -4413,11 +4455,7 @@ class BuilderImplementation {
         }
         // An enum is never a reflector class, hence no `_isReflectorClass`.
       }
-      for (ExecutableElement function in [
-        ...library.getters,
-        ...library.setters,
-        ...library.topLevelFunctions,
-      ]) {
+      for (TopLevelFunctionElement function in library.topLevelFunctions) {
         for (InterfaceElement reflector in await getReflectors(
           _qualifiedFunctionName(function),
           function.metadata.annotations,
@@ -4903,7 +4941,7 @@ void initializeReflectable() {
     _libraries = visibleLibraries;
 
     for (LibraryElement library in _libraries) {
-      _librariesByName[library.name!] = library;
+      _librariesByName["${library.name}"] = library;
     }
     LibraryElement? reflectableLibrary =
         _librariesByName['reflectable.reflectable'];
@@ -5179,6 +5217,7 @@ int _declarationDescriptor(ExecutableElement element) {
     result |= constants.method;
     handleReturnType(element);
   } else {
+    assert(element is TopLevelFunctionElement);
     result |= constants.function;
     handleReturnType(element);
   }
@@ -5194,7 +5233,7 @@ int _declarationDescriptor(ExecutableElement element) {
 
 Future<String> _nameOfConstructor(ConstructorElement element) async {
   String name = element.name == ''
-      ? element.enclosingElement.name!
+      ? "${element.enclosingElement.name}"
       : '${element.enclosingElement.name}.${element.name}';
   if (_isPrivateName(name)) {
     await _severe('Cannot access private name $name', element);
@@ -5371,7 +5410,7 @@ Future<String> _extractConstantCode(
       }
     } else if (expression is Identifier) {
       if (Identifier.isPrivateName(expression.name)) {
-        Element? staticElement = expression.element!.library;
+        Element? staticElement = expression.element;
         if (staticElement is PropertyAccessorElement) {
           VariableElement? variable = staticElement.variable;
           AstNode? variableDeclaration = await _getDeclarationAst(
@@ -5390,7 +5429,7 @@ Future<String> _extractConstantCode(
           return '';
         }
       } else {
-        Element? element = expression.element!.library;
+        Element? element = expression.element;
         if (element == null) {
           // TODO(eernst): This can occur; but how could `expression` be
           // unresolved? Issue 173.
@@ -5530,7 +5569,7 @@ const Set<String> sdkLibraryNames = <String>{
 CompilationUnit? _definingCompilationUnit(
   ResolvedLibraryResult resolvedLibrary,
 ) {
-  LibraryElement definingUnit = resolvedLibrary.element;
+  LibraryElement definingUnit = resolvedLibrary.element.library;
   List<ResolvedUnitResult> units = resolvedLibrary.units;
   for (var unit in units) {
     if (unit.libraryElement == definingUnit) {
@@ -5741,7 +5780,7 @@ Iterable<TopLevelVariableElement> _extractDeclaredVariables(
     // TODO(eernst) clarify: Do we want to subsume variables under invoke?
     if (capabilities.supportsTopLevelInvoke(
       variable.library.typeSystem,
-      variable.name!,
+      "${variable.name}",
       variable.metadata.annotations,
       null,
     )) {
@@ -5753,20 +5792,16 @@ Iterable<TopLevelVariableElement> _extractDeclaredVariables(
 /// Returns the top level functions declared in the given [libraryElement],
 /// filtering them such that the returned ones are those that are supported
 /// by [capabilities].
-Iterable<ExecutableElement> _extractDeclaredFunctions(
+Iterable<TopLevelFunctionElement> _extractDeclaredFunctions(
   Resolver resolver,
   LibraryElement libraryElement,
   _Capabilities capabilities,
 ) sync* {
-  for (ExecutableElement function in [
-    ...libraryElement.getters,
-    ...libraryElement.setters,
-    ...libraryElement.topLevelFunctions,
-  ]) {
+  for (TopLevelFunctionElement function in libraryElement.topLevelFunctions) {
     if (function.isPrivate) continue;
     if (capabilities.supportsTopLevelInvoke(
       function.library.typeSystem,
-      function.name!,
+      "${function.name}",
       function.metadata.annotations,
       null,
     )) {
@@ -5779,11 +5814,11 @@ Iterable<ExecutableElement> _extractDeclaredFunctions(
 /// as the setters from the given [accessors].
 Iterable<FormalParameterElement> _extractDeclaredFunctionParameters(
   Resolver resolver,
-  Iterable<ExecutableElement> declaredFunctions,
+  Iterable<TopLevelFunctionElement> declaredFunctions,
   Iterable<ExecutableElement> accessors,
 ) {
   var result = <FormalParameterElement>[];
-  for (ExecutableElement declaredFunction in declaredFunctions) {
+  for (TopLevelFunctionElement declaredFunction in declaredFunctions) {
     result.addAll(declaredFunction.formalParameters);
   }
   for (ExecutableElement accessor in accessors) {
@@ -5817,7 +5852,7 @@ Iterable<FieldElement> _extractDeclaredFields(
     return !field.isSynthetic &&
         capabilityChecker(
           interfaceElement.library.typeSystem,
-          field.name!,
+          "${field.name}",
           field.metadata.annotations,
           null,
         );
@@ -5838,7 +5873,7 @@ Iterable<MethodElement> _extractDeclaredMethods(
         : capabilities.supportsInstanceInvoke;
     return capabilityChecker(
       method.library.typeSystem,
-      method.name!,
+      "${method.name}",
       method.metadata.annotations,
       null,
     );
@@ -5895,9 +5930,14 @@ Iterable<PropertyAccessorElement> _extractLibraryAccessors(
         getterMetadata = correspondingGetter?.metadata.annotations;
       }
     }
+
+    String accessorName = accessor is SetterElement
+        ? "${accessor.name}="
+        : "${accessor.name}";
+
     if (capabilities.supportsTopLevelInvoke(
       accessor.library.typeSystem,
-      accessor.name!,
+      accessorName,
       metadata,
       getterMetadata,
     )) {
@@ -5941,9 +5981,14 @@ Iterable<PropertyAccessorElement> _extractAccessors(
           accessor.correspondingGetter;
       getterMetadata = correspondingGetter?.metadata.annotations;
     }
+
+    String accessorName = accessor is SetterElement
+        ? "${accessor.name}="
+        : "${accessor.name}";
+
     return capabilityChecker(
       accessor.library.typeSystem,
-      accessor.name!,
+      accessorName,
       metadata,
       getterMetadata,
     );
@@ -5960,9 +6005,13 @@ Iterable<ConstructorElement> _extractDeclaredConstructors(
 ) {
   return interfaceElement.constructors.where((ConstructorElement constructor) {
     if (constructor.isPrivate) return false;
+    String name = "${constructor.name}";
+    if (name == "new") {
+      name = "";
+    }
     return capabilities.supportsNewInstance(
       constructor.library.typeSystem,
-      constructor.name!,
+      name,
       constructor.metadata.annotations,
       libraryElement,
       resolver,
@@ -5980,7 +6029,7 @@ _LibraryDomain _createLibraryDomain(
         library,
         domain._capabilities,
       ).toList();
-  Iterable<ExecutableElement> declaredFunctionsOfLibrary =
+  Iterable<TopLevelFunctionElement> declaredFunctionsOfLibrary =
       _extractDeclaredFunctions(
         domain._resolver,
         library,
@@ -6147,8 +6196,8 @@ Future<Uri> _getImportUri(
   Resolver resolver,
   AssetId from,
 ) async {
-  // Source source = (await resolver.compilationUnitFor(from, allowSyntaxErrors: true)).;
-  Uri uri = lib.uri;
+  Source source = lib.firstFragment.source;
+  Uri uri = source.uri;
   if (uri.scheme == 'asset') {
     // This can occur if the library is not accessed via a package uri
     // but instead is given as a path (outside a package, e.g., in `example`
@@ -6215,13 +6264,11 @@ class MixinApplication implements ClassElementImpl {
   @override
   String get displayName => name;
 
-  InterfaceElementImpl get element3 => this;
-
   @override
   List<InterfaceTypeImpl> get interfaces => const <InterfaceTypeImpl>[];
 
   @override
-  MetadataImpl get metadata => MetadataImpl([]);
+  MetadataImpl get metadata => MetadataImpl(const []);
 
   @override
   bool get isSynthetic => declaredName == null;
@@ -6231,7 +6278,7 @@ class MixinApplication implements ClassElementImpl {
     required List<DartType> typeArguments,
     required NullabilitySuffix nullabilitySuffix,
   }) => InterfaceTypeImpl(
-    element: element3,
+    element: this,
     typeArguments: typeArguments.cast(),
     nullabilitySuffix: nullabilitySuffix,
   );
@@ -6259,6 +6306,9 @@ class MixinApplication implements ClassElementImpl {
 
   @override
   AnalysisSession? get session => mixin.session;
+
+  @override
+  Source get source => mixin.library.firstFragment.source;
 
   @override
   int get nameOffset => -1;
@@ -6315,346 +6365,6 @@ class MixinApplication implements ClassElementImpl {
   }
 }
 
-/// Partially migrating [MixinApplication] to the [Element2] model.
-///
-/// This class is only needed because one location in `MixinApplication`
-/// needs to return an `Element2`, so we create an instance of this class
-/// and use that to wrap the `MixinApplication`. Members have been implemented
-/// based on what is needed. This class will probably go away when the
-/// package is migrated to use the new element model consistently.
-// class MixinApplication2 implements InterfaceElementImpl {
-//   final MixinApplication delegatee;
-
-//   MixinApplication2(this.delegatee);
-
-//   @override
-//   bool get isSimplyBounded => true;
-
-//   @override
-//   set isSimplyBounded(bool value) => throw UnimplementedError();
-
-//   @override
-//   T? accept2<T>(ElementVisitor2<T> visitor) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   List<InterfaceType> get allSupertypes => delegatee.interfaces;
-
-//   @override
-//   void appendTo(ElementDisplayStringBuilder builder) {}
-
-//   @override
-//   InstanceElement2 get baseElement => this;
-
-//   @override
-//   List<Element2> get children2 => throw UnimplementedError();
-
-//   @override
-//   List<ConstructorElementImpl2> get constructors2 => throw UnimplementedError();
-
-//   @override
-//   String get displayName => delegatee.displayName;
-
-//   @override
-//   String displayString2({
-//     bool multiline = false,
-//     bool preferTypeAlias = false,
-//   }) => delegatee.getDisplayString(multiline: multiline);
-
-//   @override
-//   String? get documentationComment => delegatee.documentationComment;
-
-//   MixinApplication get element => delegatee;
-
-//   @override
-//   LibraryElement2 get enclosingElement2 => throw UnimplementedError();
-
-//   @override
-//   List<FieldElementImpl2> get fields2 => throw UnimplementedError();
-
-//   @override
-//   InterfaceElementImpl get firstFragment => delegatee;
-
-//   @override
-//   List<InterfaceElementImpl> get fragments => [];
-
-//   @override
-//   String getExtendedDisplayName2({String? shortName}) =>
-//       delegatee.getExtendedDisplayName(shortName);
-
-//   @override
-//   FieldElementImpl2? getField2(String name) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   GetterElementImpl? getGetter2(String name) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   ExecutableElement2? getInheritedConcreteMember(Name name) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   ExecutableElement2? getInheritedMember(Name name) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   ExecutableElement2? getInterfaceMember(Name name) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   MethodElementImpl2? getMethod2(String name) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   ConstructorElementImpl2? getNamedConstructor2(String name) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   List<ExecutableElement2>? getOverridden(Name name) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   SetterElementImpl? getSetter2(String name) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   List<GetterElementImpl> get getters2 => throw UnimplementedError();
-
-//   @override
-//   bool hasModifier(Modifier modifier) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   int get id => throw UnimplementedError();
-
-//   @override
-//   String get identifier => throw UnimplementedError();
-
-//   @override
-//   InheritanceManager3 get inheritanceManager => throw UnimplementedError();
-
-//   @override
-//   Map<Name, ExecutableElement2> get inheritedConcreteMembers =>
-//       throw UnimplementedError();
-
-//   @override
-//   Map<Name, ExecutableElement2> get inheritedMembers =>
-//       throw UnimplementedError();
-
-//   @override
-//   InterfaceTypeImpl instantiate({
-//     required List<DartType> typeArguments,
-//     required NullabilitySuffix nullabilitySuffix,
-//   }) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   InterfaceTypeImpl instantiateImpl({
-//     required List<TypeImpl> typeArguments,
-//     required NullabilitySuffix nullabilitySuffix,
-//   }) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   Map<Name, ExecutableElement2> get interfaceMembers =>
-//       throw UnimplementedError();
-
-//   @override
-//   List<InterfaceTypeImpl> get interfaces => throw UnimplementedError();
-
-//   @override
-//   bool isAccessibleIn2(LibraryElement2 library) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   bool get isPrivate => throw UnimplementedError();
-
-//   @override
-//   bool get isPublic => throw UnimplementedError();
-
-//   @override
-//   bool get isSynthetic => throw UnimplementedError();
-
-//   @override
-//   ElementKind get kind => throw UnimplementedError();
-
-//   @override
-//   LibraryElementImpl get library2 => throw UnimplementedError();
-
-//   @override
-//   MethodElement2? lookUpConcreteMethod(
-//     String methodName,
-//     LibraryElement2 library,
-//   ) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   GetterElement? lookUpGetter2({
-//     required String name,
-//     required LibraryElement2 library,
-//   }) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   PropertyAccessorElement2? lookUpInheritedConcreteGetter(
-//     String getterName,
-//     LibraryElement2 library,
-//   ) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   MethodElement2? lookUpInheritedConcreteMethod(
-//     String methodName,
-//     LibraryElement2 library,
-//   ) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   PropertyAccessorElement2? lookUpInheritedConcreteSetter(
-//     String setterName,
-//     LibraryElement2 library,
-//   ) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   MethodElement2? lookUpInheritedMethod(
-//     String methodName,
-//     LibraryElement2 library,
-//   ) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   MethodElement2? lookUpInheritedMethod2({
-//     required String methodName,
-//     required LibraryElement2 library,
-//   }) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   MethodElement2? lookUpMethod2({
-//     required String name,
-//     required LibraryElement2 library,
-//   }) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   SetterElement? lookUpSetter2({
-//     required String name,
-//     required LibraryElement2 library,
-//   }) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   String? get lookupName => throw UnimplementedError();
-
-//   @override
-//   GetterElement2OrMember? lookupStaticGetter(
-//     String name,
-//     LibraryElement2 library,
-//   ) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   MethodElement2OrMember? lookupStaticMethod(
-//     String name,
-//     LibraryElement2 library,
-//   ) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   SetterElement2OrMember? lookupStaticSetter(
-//     String name,
-//     LibraryElement2 library,
-//   ) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   MetadataImpl get metadata2 => throw UnimplementedError();
-
-//   @override
-//   List<MethodElementImpl2> get methods2 => throw UnimplementedError();
-
-//   @override
-//   List<InterfaceTypeImpl> get mixins => throw UnimplementedError();
-
-//   @override
-//   String? get name3 => delegatee.name!;
-
-//   @override
-//   Element2 get nonSynthetic2 => throw UnimplementedError();
-
-//   @override
-//   Reference? get reference => throw UnimplementedError();
-
-//   @override
-//   void resetCachedAllSupertypes() {}
-
-//   @override
-//   AnalysisSession? get session => throw UnimplementedError();
-
-//   @override
-//   void setModifier(Modifier modifier, bool value) {}
-
-//   @override
-//   List<SetterElementImpl> get setters2 => throw UnimplementedError();
-
-//   @override
-//   semver.Version? get sinceSdkVersion => throw UnimplementedError();
-
-//   @override
-//   InterfaceTypeImpl? get supertype => throw UnimplementedError();
-
-//   @override
-//   Element2? thisOrAncestorMatching2(bool Function(Element2 p1) predicate) {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   E? thisOrAncestorOfType2<E extends Element2>() {
-//     throw UnimplementedError();
-//   }
-
-//   @override
-//   InterfaceTypeImpl get thisType => throw UnimplementedError();
-
-//   @override
-//   List<TypeParameterElementImpl> get typeParameters2 =>
-//       throw UnimplementedError();
-
-//   @override
-//   ConstructorElementImpl? get unnamedConstructor2 => throw UnimplementedError();
-
-//   @override
-//   void visitChildren2<T>(ElementVisitor2<T> visitor) {}
-// }
-
 bool _isSetterName(String name) => name.endsWith('=');
 String _setterNameToGetterName(String name) {
   assert(_isSetterName(name));
@@ -6667,7 +6377,7 @@ String _qualifiedName(Element? element) {
   return '${elementLibrary.name}.${element.name}';
 }
 
-String _qualifiedFunctionName(ExecutableElement functionElement) {
+String _qualifiedFunctionName(TopLevelFunctionElement functionElement) {
   return '${functionElement.library.name}.${functionElement.name}';
 }
 
@@ -6700,8 +6410,9 @@ Future<DartObject?> _evaluateConstant(
     return null;
   }
 
-  Source source = currentUnit.declaredFragment!.source;
-  var libraryElement = currentUnit.declaredFragment!.libraryFragment!.element;
+  LibraryFragment unitElement = currentUnit.declaredFragment!;
+  Source source = unitElement.source;
+  var libraryElement = unitElement.element as LibraryElementImpl;
 
   var errorListener = RecorderingErrorListener();
   var errorReporter = ErrorReporter(errorListener, source);
@@ -6769,7 +6480,7 @@ Iterable<DartObject> _getEvaluatedMetadata(
 /// `getResolvedLibraryByElement`, such that subsequent use will throw.
 /// Issue 173.
 bool _isPlatformLibrary(LibraryElement? libraryElement) =>
-    libraryElement?.uri.scheme == 'dart';
+    libraryElement?.firstFragment.source.uri.scheme == 'dart';
 
 /// Adds a severe error to the log, using the source code location of `target`
 /// to identify the relevant location where the error occurs.
@@ -6806,19 +6517,10 @@ Future<String> _formatDiagnosticMessage(
   Element? target,
   Resolver resolver,
 ) async {
-  AssetId? id = target != null
-      ? await resolver.assetIdForElement(target)
-      : null;
-  CompilationUnit? unit = id != null
-      ? await resolver.compilationUnitFor(id)
-      : null;
-  Source? source = unit?.declaredFragment?.source;
+  Source? source = target?.library?.firstFragment.source;
   if (source == null) return message;
   var locationString = '';
-  AstNode? node = target != null
-      ? await resolver.astNodeFor(target.firstFragment)
-      : null;
-  int? nameOffset = node?.offset;
+  int? nameOffset = target?.firstFragment.nameOffset;
   // TODO(eernst): 'dart:*' is not considered valid. To survive, we return
   // a message with no location info when `element` is from 'dart:*'. Issue 173.
   LibraryElement? targetLibrary = target?.library;
