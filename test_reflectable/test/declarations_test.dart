@@ -12,8 +12,11 @@ import 'declarations_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(instanceInvokeCapability, newInstanceCapability,
-            declarationsCapability);
+    : super(
+        instanceInvokeCapability,
+        newInstanceCapability,
+        declarationsCapability,
+      );
 }
 
 // TODO(sigurdm) implement: Adapt this test when we support fields.
@@ -64,15 +67,21 @@ void main() {
       'getter2',
       'setter1=',
       '+',
-      'A',
+      'A.new',
       'A.redirecting',
       'A.factory',
       'A.redirectingFactory',
       'A.c',
     });
 
-    expect(declarationsB.values.map((x) => x.simpleName),
-        {'bar', 'getter1', 'getter2', 'setter2=', 'B.c', 'B'});
+    expect(declarationsB.values.map((x) => x.simpleName), {
+      'bar',
+      'getter1',
+      'getter2',
+      'setter2=',
+      'B.c',
+      'B.new',
+    });
   });
 
   test('MethodMirror properties', () {
@@ -124,7 +133,7 @@ void main() {
     expect(operatorPlus.isAbstract, isFalse);
     expect(operatorPlus.isConstructor, isFalse);
     expect(operatorPlus.isOperator, isTrue);
-    var constructorA = declarationsA['A'] as MethodMirror;
+    var constructorA = declarationsA['A.new'] as MethodMirror;
     expect(constructorA.isRegularMethod, isFalse);
     expect(constructorA.isStatic, isFalse);
     expect(constructorA.isGetter, isFalse);
