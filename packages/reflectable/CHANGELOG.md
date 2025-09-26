@@ -4,7 +4,7 @@
   `reflectable`. This code generator must henceforth be obtained from
   the package `reflectable_builder`.  The point is that this can be a
   `dev_dependency`. This also implies that `build.yaml` must specify
-  the reflectable code generator as `reflectable_builder|reflectable:`
+  the reflectable code generator as `reflectable_builder:`
   rather than just `reflectable:`.
 
 ## 4.0.15
