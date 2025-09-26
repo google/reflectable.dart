@@ -17,6 +17,5 @@ dev_dependencies:
   analyzer: any
   build_test: any
   lints: any
-  reflectable: any
   reflectable_builder: any
   test: ^1.25.0
