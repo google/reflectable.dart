@@ -1,0 +1,9 @@
+name: _
+publish_to: none
+environment:
+  sdk: ^3.9.0
+workspace:
+  - packages/reflectable
+  - packages/reflectable_builder
+  - packages/test_reflectable
+
