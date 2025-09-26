@@ -17,9 +17,6 @@ dev_dependencies:
   analyzer: any
   build_test: any
   lints: any
-  reflectable_builder:
-    path: ../reflectable_builder
+  reflectable: any
+  reflectable_builder: any
   test: ^1.25.0
-dependency_overrides:
-  reflectable:
-    path: ../reflectable
