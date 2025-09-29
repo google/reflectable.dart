@@ -1,0 +1,85 @@
+#!/bin/bash --norc
+
+# Copyright (c) 2025, the Dart Team. All rights reserved. Use of this
+# source code is governed by a BSD-style license that can be found in
+# the LICENSE file.
+
+warning_at_entry () {
+  echo 'NB: This script shows the steps to take in order to publish a new'
+  echo 'version of reflectable_builder, and assigns values to some variables;'
+  echo 'the steps must then be taken manually.'
+}
+
+usage () {
+  echo "Usage:"
+  echo "  $0 [--help|-h] [<new-version>]"
+  echo "where <new-version> = <major-number>.<minor-number>.<patch-number>"
+}
+
+ensure_int () {
+  if [[ $1 = 0 ]]; then return; fi
+  if [[ $1 =~ ^[1-9][0-9]*$ ]]; then return; fi
+  usage
+  echo
+  echo "Received '$1', expected an integer"
+  exit -1
+}
+
+edit_version () {
+  TMPFILE=`tempfile`
+  mv $1 $TMPFILE
+  sed -e "s/^version: .*$/version: $2/" <$TMPFILE >$1
+}
+
+while [[ $1 =~ ^- ]]; do
+  case $1 in
+    (--help|-h) usage; exit 0;;
+    (*) usage; exit -1;;
+  esac
+done
+
+if [ "$#" -ne "1" ]; then
+  usage
+  exit -1
+fi
+
+if [[ ! `pwd` =~ /tool$ ]]; then
+  echo "This script must be executed from the 'tool' subdirectory of"
+  echo "the root directory of the package reflectable_builder."
+  exit -1
+fi
+
+MAJOR="${1%%.*}"
+MINOR="${1#*.}"; MINOR="${MINOR%.*}"
+PATCH="${1##*.}"
+
+ensure_int $MAJOR
+ensure_int $MINOR
+ensure_int $PATCH
+
+warning_at_entry
+
+VERSION="$MAJOR.$MINOR.$PATCH"
+TAG_VALUE="v$VERSION"
+COMMIT_MESSAGE="'Bumping version to $VERSION'"
+TAG_MESSAGE="'Released as version $VERSION'"
+
+echo "Using tag value '$TAG_VALUE'."
+echo -n "Check entry in CHANGELOG.md and version in pubspec.yaml: $VERSION"
+read
+
+echo ">>>>>> Check 'dart format .': no effect, 'dart analyze .': no issues"
+dart format .
+dart analyze .
+echo ">>>>>> Ensure that github master is the version to publish"
+read
+
+echo ">>>>>> Then publish as follows:"
+echo git co master
+echo git fetch origin
+echo git pull
+echo pushd ..
+echo dart pub publish
+echo git tag -a -m"$TAG_MESSAGE" "$TAG_VALUE"
+echo git push origin refs/tags/${TAG_VALUE}:refs/tags/$TAG_VALUE
+echo popd
