@@ -1,7 +1,7 @@
 builders:
-  reflectable:
-    target: ":reflectable"
-    import: "package:reflectable/reflectable_builder.dart"
+  reflectable_builder:
+    target: ":reflectable_builder"
+    import: "package:reflectable_builder/reflectable_builder.dart"
     builder_factories: ["reflectableBuilder"]
     build_extensions: {".dart": [".reflectable.dart"]}
     auto_apply: root_package

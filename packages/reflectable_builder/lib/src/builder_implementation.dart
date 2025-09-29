@@ -2,7 +2,7 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.src.builder_implementation;
+library reflectable_builder.src.builder_implementation;
 
 // ignore_for_file:implementation_imports
 
@@ -37,11 +37,12 @@ import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:pub_semver/pub_semver.dart' as semver;
 import 'package:path/path.dart' as path;
+import 'package:reflectable/src/encoding_constants.dart' as constants;
+import 'package:reflectable/src/incompleteness.dart';
+import 'package:reflectable/src/reflectable_class_constants.dart'
+    as reflectable_class_constants;
 import 'element_capability.dart' as ec;
-import 'encoding_constants.dart' as constants;
 import 'fixed_point.dart';
-import 'incompleteness.dart';
-import 'reflectable_class_constants.dart' as reflectable_class_constants;
 import 'reflectable_errors.dart' as errors;
 
 // ignore_for_file: omit_local_variable_types
@@ -4570,8 +4571,10 @@ class BuilderImplementation {
 
     switch (dartTypeElement.name) {
       case 'NameCapability':
+        // ignore: deprecated_member_use_from_same_package
         return ec.nameCapability;
       case 'ClassifyCapability':
+        // ignore: deprecated_member_use_from_same_package
         return ec.classifyCapability;
       case 'MetadataCapability':
         return ec.metadataCapability;

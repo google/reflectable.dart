@@ -2,21 +2,22 @@
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 
-library reflectable.src.element_capability;
+library reflectable_builder.src.element_capability;
 
 // This library provides a variant of the `ReflectCapability` class
-// hierarchy from `../capability.dart` which is suitable for holding
-// information about entities in a target program at analysis time,
-// rather than holding runtime entities. This is necessary because
-// the transformer needs to deal with analysis time descriptions of
-// objects and types that cannot exist in the transformer itself,
-// because the transformer does not contain or import the same
-// libraries as the target program does.
+// hierarchy from `package:reflectable/capability.dart` which is
+// suitable for holding information about entities in a target program
+// at analysis time, rather than holding runtime entities. This is
+// necessary because the code generator needs to deal with analysis
+// time descriptions of objects and types that cannot exist in the code
+// generator itself, because the code generator does not contain or
+// import the same libraries as the target program.
 //
 // For documentation of each of these classes and const values, please
-// search the declaration with the same name in `../capability.dart`.
+// search the declaration with the same name in the library
+// `package:reflectable/capability.dart`.
 //
-// NB! It is crucial that all changes in '../capabilities.dart' are
+// NB! It is crucial that all changes in said `capabilities.dart` are
 // performed in the corresponding manner here, and vice versa.
 
 import 'package:analyzer/dart/element/element.dart';
@@ -82,31 +83,25 @@ class NewInstanceMetaCapability extends MetadataQuantifiedCapability
 }
 
 /// To be eliminated when `NameCapability` in 'capability.dart' is eliminated.
-/// We do not mark it as deprecated at this time because it will be needed in
-/// order to handle usages of the deprecated `NameCapability` class or
-/// `nameCapability` value in client code.
+@Deprecated("Obsolete capability")
 class NameCapability implements TypeCapability {
   const NameCapability();
 }
 
 /// To be eliminated when `nameCapability` in 'capability.dart' is eliminated.
-/// We do not mark it as deprecated at this time because it will be needed in
-/// order to handle usages of the deprecated `NameCapability` class or
-/// `nameCapability` value in client code.
+@Deprecated("Obsolete capability")
 const nameCapability = NameCapability();
 
 /// To be eliminated when `ClassifyCapability` in 'capability.dart' is
-/// eliminated. We do not mark it as deprecated at this time because it will be
-/// needed in order to handle usages of the deprecated `ClassifyCapability`
-/// class or `classifyCapability` value in client code.
+/// eliminated.
+@Deprecated("Obsolete capability")
 class ClassifyCapability implements TypeCapability {
   const ClassifyCapability();
 }
 
 /// To be eliminated when `classifyCapability` in 'capability.dart' is
-/// eliminated. We do not mark it as deprecated at this time because it will be
-/// needed in order to handle usages of the deprecated `ClassifyCapability`
-/// class or `classifyCapability` value in client code.
+/// eliminated.
+@Deprecated("Obsolete capability")
 const classifyCapability = ClassifyCapability();
 
 class MetadataCapability implements TypeCapability {
@@ -174,8 +169,6 @@ class InvokingMetaCapability extends MetadataQuantifiedCapability
 class TypingCapability
     implements
         TypeCapability, // Redundant, just included for readability.
-        NameCapability,
-        ClassifyCapability,
         MetadataCapability,
         TypeRelationsCapability,
         DeclarationsCapability,

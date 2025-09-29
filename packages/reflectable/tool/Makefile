@@ -2,9 +2,6 @@
 # source code is governed by a BSD-style license that can be found in
 # the LICENSE file.
 
-# TODO(eernst) implement: Rewrite this to a Dart script, make is not available
-# on all platforms.
-
 PACKAGE_ROOT=../packages
 OPTIONS=--checked --package-root=$(PACKAGE_ROOT)
 TEST_DIR=../test

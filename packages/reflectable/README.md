@@ -7,7 +7,9 @@
 
 This package provides support for reflection which may be tailored to cover
 certain reflective features and omit others, thus reducing the resource
-requirements at run time.
+requirements at run time. It is used together with the package
+`reflectable_builder`, which provides support for generation of code that
+relies on code in the libraries in this package.
 
 The core idea is that the desired level of support for reflection is
 specified explicitly and statically, and any usage of reflection at run
@@ -23,7 +25,8 @@ document][1]. On this page we just use a couple of simple special cases.
 
 [1]: https://github.com/google/reflectable.dart/blob/master/reflectable/doc/TheDesignOfReflectableCapabilities.md
 
-This package uses code generation to provide support for reflection at the
+This package uses code generation (performed by the package
+`reflectable_builder`) to provide support for reflection at the
 level which is specified using capabilities. The [`build` package][2] is
 used to manage the code generation, and a major part of this package is
 concerned with generating that code. It is specified which programs to
@@ -127,32 +130,36 @@ generated code may change because some direct or indirect dependency
 changes (say, your package indirectly imports package `path` and then
 `path` changes), and this could make some generated code invalid.
 
-It is also necessary to **initialize the reflection support** by calling
+It is necessary to **initialize the reflection support** by calling
 `initializeReflectable()`, as shown at the beginning of `main` in the
 example.
 
-You also need to add the following dependency to your 'pubspec.yaml':
+You need to add the following dependencies to your 'pubspec.yaml' (replacing
+`any` with a suitable version constraint):
+
 ```yaml
 dependencies:
   reflectable: any
+dev_dependencies:
+  reflectable_builder: any
 ```
 
-You may also wish to specify constraints on the version, depending on the
-approach to version management that your software otherwise employs.
+The way you specify constraints on the version depends on the approach to
+version management that your software otherwise employs.
 
 The root of your library may need to contain a file `build.yaml` which
 will specify how to run the code generation step. For an example of
 how to write this file, please consult [test_reflectable/build.yaml][8]
 and the general documentation about [package build][9].
 
-[8]: https://github.com/dart-lang/test_reflectable/blob/master/build.yaml
+[8]: https://github.com/google/reflectable.dart/blob/master/packages/test_reflectable/build.yaml
 [9]: https://github.com/dart-lang/build/tree/master/docs
 
 In order to generate code you will need to run the following command from the
 root directory of your package:
 
 ```console
-> pub run build_runner build DIR
+> dart run build_runner build DIR
 ```
 
 where `DIR` should be replaced by a relative path that specifies the directory
@@ -161,7 +168,7 @@ program(s) that you wish to generate code for. In the example where we have an
 entry point at `web/myProgram.dart` the command would be as follows:
 
 ```console
-> pub run build_runner build web
+> dart run build_runner build web
 ```
 
 You may appreciate the following shortcut command which will work when you wish
@@ -169,10 +176,10 @@ to generate code for entry points in the `test` subdirectory and also run the
 tests (given that the tests are written using package test):
 
 ```console
-> pub run build_runner test
+> dart run build_runner test
 ```
 
-This approach (using `pub run build_runner ...`) includes support for
+This approach (using `dart run build_runner ...`) includes support for
 incremental code generation, that is, it offers shorter execution times for the
 code generation step because strives to only generate code that relies on
 something that changed. This is the recommended approach.
@@ -183,7 +190,7 @@ the build process in more detail.
 
 To give a hint about a more low-level approach, you may choose to write a tiny
 Dart program which imports the actual builder, and run the build process from
-there, rather than using `pub run build_runner ...`. This will give you more
+there, rather than using `dart run build_runner ...`. This will give you more
 control, but also more ways to shoot yourself in the foot.
 
 Here's an example which shows how to get started. The code of such a
@@ -219,7 +226,7 @@ delete the whole directory `.dart_tool`.
 
 Again, the approach where you are using your own `builder.dart` to generate
 the code is more flexible, but the recommended standard approach is to use
-`pub run build_runner ...`.
+`dart run build_runner ...`.
 
 Note that it is necessary to perform the code generation step if you
 use reflectable directly *or indirectly* by depending on a package that
@@ -243,9 +250,9 @@ libraries it imports, which illustrates how reflectable can be used to
 dynamically make a choice among several kinds of reflection, and how to
 eliminate several kinds of static dependencies among libraries.
 
-[4]: https://github.com/dart-lang/test_reflectable/tree/master/test/serialize_test.dart
-[5]: https://github.com/dart-lang/test_reflectable/tree/master/lib/serialize.dart
-[6]: https://github.com/dart-lang/test_reflectable/tree/master/test/meta_reflectors_test.dart
+[4]: https://github.com/google/reflectable.dart/blob/master/packages/test_reflectable/test/serialize_test.dart
+[5]: https://github.com/google/reflectable.dart/blob/master/packages/test_reflectable/lib/serialize.dart
+[6]: https://github.com/google/reflectable.dart/blob/master/packages/test_reflectable/test/meta_reflectors_test.dart
 
 
 ## Known limitations
