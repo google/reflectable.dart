@@ -1,3 +1,8 @@
+## 5.0.1
+
+- Add an example that does not rely on code generation, basically just
+  a recommendation to look at `reflectable_builder` for a real example.
+
 ## 5.0.0
 
 - **Breaking change**: Split the code generator off of the package
