@@ -1,0 +1,14 @@
+name: example
+# This package is not intended to be published
+publish_to: none
+description: >
+  This package contains an example using package reflectable.
+environment:
+  sdk: ^3.9.0
+resolution: workspace
+dependencies:
+  build_runner: any
+  reflectable: any
+dev_dependencies:
+  lints: any
+  reflectable_builder: any

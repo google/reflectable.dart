@@ -6,4 +6,4 @@ workspace:
   - packages/reflectable
   - packages/reflectable_builder
   - packages/test_reflectable
-
+  - packages/reflectable/example
