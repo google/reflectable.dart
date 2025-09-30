@@ -15,8 +15,11 @@ import 'multi_field_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(reflectedTypeCapability, invokingCapability,
-            declarationsCapability);
+    : super(
+        reflectedTypeCapability,
+        invokingCapability,
+        declarationsCapability,
+      );
 }
 
 const reflector = Reflector();
@@ -29,8 +32,11 @@ const c = C();
 
 class MetaReflector extends Reflectable {
   const MetaReflector()
-      : super(reflectedTypeCapability, const InvokingMetaCapability(C),
-            declarationsCapability);
+    : super(
+        reflectedTypeCapability,
+        const InvokingMetaCapability(C),
+        declarationsCapability,
+      );
 }
 
 const metaReflector = MetaReflector();
@@ -51,8 +57,9 @@ class B {
   static late int notK, notL;
 }
 
-final Matcher throwsReflectableNoMethod =
-    throwsA(TypeMatcher<ReflectableNoSuchMethodError>());
+final Matcher throwsReflectableNoMethod = throwsA(
+  TypeMatcher<ReflectableNoSuchMethodError>(),
+);
 
 void main() {
   initializeReflectable();
@@ -74,9 +81,13 @@ void main() {
     expect(bClassMirror.invokeGetter('k'), 294);
     expect(bClassMirror.invokeGetter('l'), 343);
     expect(
-        () => bInstanceMirror.invokeGetter('notI'), throwsReflectableNoMethod);
+      () => bInstanceMirror.invokeGetter('notI'),
+      throwsReflectableNoMethod,
+    );
     expect(
-        () => bInstanceMirror.invokeGetter('notJ'), throwsReflectableNoMethod);
+      () => bInstanceMirror.invokeGetter('notJ'),
+      throwsReflectableNoMethod,
+    );
     expect(() => bClassMirror.invokeGetter('notK'), throwsReflectableNoMethod);
     expect(() => bClassMirror.invokeGetter('notL'), throwsReflectableNoMethod);
   });
@@ -97,20 +108,28 @@ void main() {
     // Four visible declarations, one implicit default constructor.
     expect(declarations.length, 5);
     var iDeclaration = declarations['i'];
-    expect(iDeclaration is VariableMirror && iDeclaration.reflectedType == int,
-        true);
+    expect(
+      iDeclaration is VariableMirror && iDeclaration.reflectedType == int,
+      true,
+    );
     expect(iDeclaration is VariableMirror && iDeclaration.isStatic, false);
     var jDeclaration = declarations['j'];
-    expect(jDeclaration is VariableMirror && jDeclaration.reflectedType == int,
-        true);
+    expect(
+      jDeclaration is VariableMirror && jDeclaration.reflectedType == int,
+      true,
+    );
     expect(jDeclaration is VariableMirror && jDeclaration.isStatic, false);
     var kDeclaration = declarations['k'];
     expect(kDeclaration is VariableMirror && kDeclaration.isStatic, true);
-    expect(kDeclaration is VariableMirror && kDeclaration.reflectedType == int,
-        true);
+    expect(
+      kDeclaration is VariableMirror && kDeclaration.reflectedType == int,
+      true,
+    );
     var lDeclaration = declarations['l'];
     expect(lDeclaration is VariableMirror && lDeclaration.isStatic, true);
-    expect(lDeclaration is VariableMirror && lDeclaration.reflectedType == int,
-        true);
+    expect(
+      lDeclaration is VariableMirror && lDeclaration.reflectedType == int,
+      true,
+    );
   });
 }

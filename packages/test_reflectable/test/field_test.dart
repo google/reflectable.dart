@@ -13,12 +13,13 @@ import 'field_test.reflectable.dart';
 
 class FieldReflector extends Reflectable {
   const FieldReflector()
-      : super(
-            typeAnnotationQuantifyCapability,
-            invokingCapability,
-            declarationsCapability,
-            typeRelationsCapability,
-            metadataCapability);
+    : super(
+        typeAnnotationQuantifyCapability,
+        invokingCapability,
+        declarationsCapability,
+        typeRelationsCapability,
+        metadataCapability,
+      );
 }
 
 const fieldReflector = FieldReflector();
@@ -110,7 +111,9 @@ void main() {
 
   test('no field capability', () {
     var classMirror = noFieldReflector.reflectType(A) as ClassMirror;
-    expect(() => classMirror.declarations,
-        throwsA(const TypeMatcher<NoSuchCapabilityError>()));
+    expect(
+      () => classMirror.declarations,
+      throwsA(const TypeMatcher<NoSuchCapabilityError>()),
+    );
   });
 }

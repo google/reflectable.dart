@@ -66,8 +66,9 @@ class Foo3 extends Foo3Base {
   var z;
 }
 
-final Matcher throwsReflectableNoMethod =
-    throwsA(const TypeMatcher<ReflectableNoSuchMethodError>());
+final Matcher throwsReflectableNoMethod = throwsA(
+  const TypeMatcher<ReflectableNoSuchMethodError>(),
+);
 
 void main() {
   initializeReflectable();
@@ -97,8 +98,10 @@ void main() {
     expect(fooMirror.invokeGetter('b'), 12);
 
     expect(myReflectable2.reflect(Foo2()).invoke('x', []), 42);
-    expect(() => myReflectable2.reflect(Foo2()).invoke('y', [3]),
-        throwsReflectableNoMethod);
+    expect(
+      () => myReflectable2.reflect(Foo2()).invoke('y', [3]),
+      throwsReflectableNoMethod,
+    );
   });
 
   test('InstanceInvokeMetaCapability(Bar)', () {
@@ -113,8 +116,10 @@ void main() {
     expect(fooMirror.invokeSetter('c', 13), 13);
     expect(fooMirror.invokeGetter('c'), 13);
 
-    expect(() => myReflectable3.reflect(Foo3()).invoke('x', []),
-        throwsReflectableNoMethod);
+    expect(
+      () => myReflectable3.reflect(Foo3()).invoke('x', []),
+      throwsReflectableNoMethod,
+    );
     expect(myReflectable3.reflect(Foo3()).invoke('y', [3]), 'Hello 3');
   });
 }

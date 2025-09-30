@@ -18,7 +18,7 @@ import 'new_instance_native_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(newInstanceCapability, declarationsCapability, libraryCapability);
+    : super(newInstanceCapability, declarationsCapability, libraryCapability);
 }
 
 const Reflector reflector = Reflector();

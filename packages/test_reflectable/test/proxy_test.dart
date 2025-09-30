@@ -15,7 +15,7 @@ import 'proxy_test.reflectable.dart';
 
 class ProxyReflectable extends Reflectable {
   const ProxyReflectable()
-      : super(instanceInvokeCapability, declarationsCapability);
+    : super(instanceInvokeCapability, declarationsCapability);
 }
 
 const proxyReflectable = ProxyReflectable();
@@ -36,8 +36,11 @@ class Proxy implements A {
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
-    return Function.apply(methodMap[invocation.memberName]!(forwardee),
-        invocation.positionalArguments, invocation.namedArguments);
+    return Function.apply(
+      methodMap[invocation.memberName]!(forwardee),
+      invocation.positionalArguments,
+      invocation.namedArguments,
+    );
   }
 }
 
@@ -50,12 +53,12 @@ Map<Symbol, Function> createMethodMap(Type T) {
     var declaration = declarations[name];
     if (declaration is MethodMirror) {
       methodMapForT.putIfAbsent(
-          Symbol(name),
-          () => (forwardee) {
-                InstanceMirror instanceMirror =
-                    proxyReflectable.reflect(forwardee);
-                return instanceMirror.invokeGetter(name);
-              });
+        Symbol(name),
+        () => (forwardee) {
+          InstanceMirror instanceMirror = proxyReflectable.reflect(forwardee);
+          return instanceMirror.invokeGetter(name);
+        },
+      );
     }
   }
   return methodMapForT;

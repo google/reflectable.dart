@@ -11,7 +11,9 @@
 library test_reflectable.test.meta_reflector_test;
 
 @GlobalQuantifyCapability(
-    r'^reflectable.reflectable.Reflectable$', MetaReflector())
+  r'^reflectable.reflectable.Reflectable$',
+  MetaReflector(),
+)
 import 'package:reflectable/reflectable.dart';
 import 'package:test/test.dart';
 import 'meta_reflector_test.reflectable.dart';
@@ -25,7 +27,7 @@ abstract class AllReflectorsCapable implements Reflectable {
 
 class MetaReflector extends Reflectable {
   const MetaReflector()
-      : super(subtypeQuantifyCapability, newInstanceCapability);
+    : super(subtypeQuantifyCapability, newInstanceCapability);
   Set<Reflectable> get allReflectors {
     var result = <Reflectable>{};
     for (var classMirror in annotatedClasses) {
@@ -43,8 +45,12 @@ Set<String> setOf(String s) => {s};
 
 class Reflector extends Reflectable implements AllReflectorsCapable {
   const Reflector()
-      : super(invokingCapability, declarationsCapability,
-            typeRelationsCapability, libraryCapability);
+    : super(
+        invokingCapability,
+        declarationsCapability,
+        typeRelationsCapability,
+        libraryCapability,
+      );
 
   @override
   Reflectable get self => const Reflector();
@@ -55,8 +61,12 @@ class Reflector extends Reflectable implements AllReflectorsCapable {
 
 class Reflector2 extends Reflectable implements AllReflectorsCapable {
   const Reflector2()
-      : super(invokingCapability, metadataCapability, typeRelationsCapability,
-            libraryCapability);
+    : super(
+        invokingCapability,
+        metadataCapability,
+        typeRelationsCapability,
+        libraryCapability,
+      );
 
   @override
   Reflectable get self => const Reflector2();
@@ -68,8 +78,12 @@ class Reflector2 extends Reflectable implements AllReflectorsCapable {
 class ReflectorUpwardsClosed extends Reflectable
     implements AllReflectorsCapable {
   const ReflectorUpwardsClosed()
-      : super(superclassQuantifyCapability, invokingCapability,
-            declarationsCapability, typeRelationsCapability);
+    : super(
+        superclassQuantifyCapability,
+        invokingCapability,
+        declarationsCapability,
+        typeRelationsCapability,
+      );
 
   @override
   Reflectable get self => const ReflectorUpwardsClosed();
@@ -81,8 +95,12 @@ class ReflectorUpwardsClosed extends Reflectable
 class ReflectorUpwardsClosedToA extends Reflectable
     implements AllReflectorsCapable {
   const ReflectorUpwardsClosedToA()
-      : super(const SuperclassQuantifyCapability(A), invokingCapability,
-            declarationsCapability, typeRelationsCapability);
+    : super(
+        const SuperclassQuantifyCapability(A),
+        invokingCapability,
+        declarationsCapability,
+        typeRelationsCapability,
+      );
 
   @override
   Reflectable get self => const ReflectorUpwardsClosedToA();
@@ -94,11 +112,12 @@ class ReflectorUpwardsClosedToA extends Reflectable
 class ReflectorUpwardsClosedUntilA extends Reflectable
     implements AllReflectorsCapable {
   const ReflectorUpwardsClosedUntilA()
-      : super(
-            const SuperclassQuantifyCapability(A, excludeUpperBound: true),
-            invokingCapability,
-            declarationsCapability,
-            typeRelationsCapability);
+    : super(
+        const SuperclassQuantifyCapability(A, excludeUpperBound: true),
+        invokingCapability,
+        declarationsCapability,
+        typeRelationsCapability,
+      );
 
   @override
   Reflectable get self => const ReflectorUpwardsClosedUntilA();
@@ -182,13 +201,16 @@ void testReflector(Reflectable reflector, String desc) {
     expect(bMirror.superclass!.declarations['staticBar'], null);
     expect(bMirror.superclass!.hasReflectedType, true);
     expect(bMirror.superclass!.reflectedType, const TypeMatcher<Type>());
-    expect(bMirror.superclass!.superclass!.reflectedType,
-        const TypeMatcher<Type>());
+    expect(
+      bMirror.superclass!.superclass!.reflectedType,
+      const TypeMatcher<Type>(),
+    );
   });
 }
 
-Matcher throwsANoSuchCapabilityException =
-    throwsA(const TypeMatcher<NoSuchCapabilityError>());
+Matcher throwsANoSuchCapabilityException = throwsA(
+  const TypeMatcher<NoSuchCapabilityError>(),
+);
 
 void main() {
   initializeReflectable();
@@ -204,27 +226,37 @@ void main() {
       const ReflectorUpwardsClosedUntilA(),
     });
     expect(
-        allReflectors.where((Reflectable reflector) =>
+      allReflectors.where(
+        (Reflectable reflector) =>
             reflector is AllReflectorsCapable &&
-            reflector.scopes.contains('polymer')),
-        {const Reflector(), const ReflectorUpwardsClosed()});
+            reflector.scopes.contains('polymer'),
+      ),
+      {const Reflector(), const ReflectorUpwardsClosed()},
+    );
     expect(
-        allReflectors.where((Reflectable reflector) =>
+      allReflectors.where(
+        (Reflectable reflector) =>
             reflector is AllReflectorsCapable &&
-            reflector.scopes.contains('observe')),
-        {const Reflector2(), const ReflectorUpwardsClosed()});
+            reflector.scopes.contains('observe'),
+      ),
+      {const Reflector2(), const ReflectorUpwardsClosed()},
+    );
   });
 
   allReflectors
-      .where((Reflectable reflector) =>
-          reflector is AllReflectorsCapable &&
-          reflector.scopes.contains('polymer'))
+      .where(
+        (Reflectable reflector) =>
+            reflector is AllReflectorsCapable &&
+            reflector.scopes.contains('polymer'),
+      )
       .forEach(
-          (Reflectable reflector) => testReflector(reflector, '$reflector'));
+        (Reflectable reflector) => testReflector(reflector, '$reflector'),
+      );
 
   test('MetaReflector, select by name', () {
-    var reflector2 = allReflectors
-        .firstWhere((Reflectable reflector) => '$reflector'.contains('2'));
+    var reflector2 = allReflectors.firstWhere(
+      (Reflectable reflector) => '$reflector'.contains('2'),
+    );
     var bMirror = reflector2.reflectType(B) as ClassMirror;
     var cMirror = reflector2.reflectType(C) as ClassMirror;
     var dMirror = reflector2.reflectType(D) as ClassMirror;
@@ -244,20 +276,26 @@ void main() {
     // mixin.
     expect(bMirror.superclass!.metadata, isEmpty);
     expect(
-        () => bMirror.superclass!.superclass, throwsANoSuchCapabilityException);
+      () => bMirror.superclass!.superclass,
+      throwsANoSuchCapabilityException,
+    );
     expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
     expect(cMirror.superclass!.mixin, m3Mirror);
     expect(cMirror.superclass!.superclass!.superclass, bMirror);
     expect(
-        () => dMirror.superclass!.superclass, throwsANoSuchCapabilityException);
+      () => dMirror.superclass!.superclass,
+      throwsANoSuchCapabilityException,
+    );
   });
 
   test('MetaReflector, select by capability', () {
     var reflector = allReflectors.firstWhere((Reflectable reflector) {
-      return (reflector.capabilities.any((ReflectCapability capability) =>
-          capability is SuperclassQuantifyCapability &&
-          capability.upperBound == A &&
-          !capability.excludeUpperBound));
+      return (reflector.capabilities.any(
+        (ReflectCapability capability) =>
+            capability is SuperclassQuantifyCapability &&
+            capability.upperBound == A &&
+            !capability.excludeUpperBound,
+      ));
     });
     var aMirror = reflector.reflectType(A) as ClassMirror;
     var bMirror = reflector.reflectType(B) as ClassMirror;

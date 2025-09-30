@@ -11,8 +11,11 @@ import 'package:reflectable/reflectable.dart';
 
 class Serializable extends Reflectable {
   const Serializable()
-      : super(instanceInvokeCapability, const NewInstanceCapability(r'^$'),
-            declarationsCapability);
+    : super(
+        instanceInvokeCapability,
+        const NewInstanceCapability(r'^$'),
+        declarationsCapability,
+      );
 }
 
 /// Serializes instances of classes marked with a `Serializable`

@@ -8,16 +8,20 @@
 library test_reflectable.test.subtype_test;
 
 @GlobalQuantifyCapability(
-    r'^test_reflectable\.test\.subtype_test\..*', Reflector())
+  r'^test_reflectable\.test\.subtype_test\..*',
+  Reflector(),
+)
 @GlobalQuantifyCapability(
-    r'^test_reflectable\.test\.subtype_test\..*', InsufficientReflector())
+  r'^test_reflectable\.test\.subtype_test\..*',
+  InsufficientReflector(),
+)
 import 'package:reflectable/reflectable.dart';
 import 'package:test/test.dart';
 import 'subtype_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(superclassQuantifyCapability, typeRelationsCapability);
+    : super(superclassQuantifyCapability, typeRelationsCapability);
 }
 
 class InsufficientReflector extends Reflectable {
@@ -44,8 +48,9 @@ class G extends D with M1, M2 {}
 
 class H = D with M1, M2;
 
-Matcher throwsNoCapability =
-    throwsA(const TypeMatcher<NoSuchCapabilityError>());
+Matcher throwsNoCapability = throwsA(
+  const TypeMatcher<NoSuchCapabilityError>(),
+);
 
 void main() {
   initializeReflectable();
@@ -112,10 +117,11 @@ void main() {
 
   test('isSubtypeOf, without capability', () {
     expect(
-        () => insufficientReflector
-            .reflectType(B)
-            .isSubtypeOf(insufficientReflector.reflectType(A)),
-        throwsNoCapability);
+      () => insufficientReflector
+          .reflectType(B)
+          .isSubtypeOf(insufficientReflector.reflectType(A)),
+      throwsNoCapability,
+    );
   });
 
   test('isAssignableTo', () {
@@ -166,9 +172,10 @@ void main() {
 
   test('isAssignableTo, without capability', () {
     expect(
-        () => insufficientReflector
-            .reflectType(B)
-            .isAssignableTo(insufficientReflector.reflectType(A)),
-        throwsNoCapability);
+      () => insufficientReflector
+          .reflectType(B)
+          .isAssignableTo(insufficientReflector.reflectType(A)),
+      throwsNoCapability,
+    );
   });
 }

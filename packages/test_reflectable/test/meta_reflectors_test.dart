@@ -28,7 +28,7 @@ import 'meta_reflectors_user.dart';
 
 const Map<String, Iterable<Reflectable>> scopeMap = {
   'polymer': <Reflectable>[Reflector(), ReflectorUpwardsClosed()],
-  'observe': <Reflectable>[Reflector2(), ReflectorUpwardsClosed()]
+  'observe': <Reflectable>[Reflector2(), ReflectorUpwardsClosed()],
 };
 
 @ScopeMetaReflector()

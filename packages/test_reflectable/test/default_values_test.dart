@@ -29,21 +29,21 @@ class A {
   static const localConstant = 10;
   static const localConstantImportedValue =
       2 * (localConstant + prefix.globalConstant.length);
-  A.optional(
-      [int x = prefix.A.localConstant + 31,
-      bool y = identical(globalConstant, globalConstant),
-      z = prefix.globalConstant + prefix.globalConstant,
-      w = const [
-        String,
-        null,
-        myReflectable,
-        B(named: 24),
-        <int, Type>{1: A}
-      ]])
-      : f = x,
-        g = y,
-        h = z,
-        i = w;
+  A.optional([
+    int x = prefix.A.localConstant + 31,
+    bool y = identical(globalConstant, globalConstant),
+    z = prefix.globalConstant + prefix.globalConstant,
+    w = const [
+      String,
+      null,
+      myReflectable,
+      B(named: 24),
+      <int, Type>{1: A},
+    ],
+  ]) : f = x,
+       g = y,
+       h = z,
+       i = w;
   int f = 0;
   bool g;
   String h;
@@ -69,7 +69,7 @@ void main() {
       null,
       myReflectable,
       const B(named: 24),
-      const {1: A}
+      const {1: A},
     ]);
   });
 }

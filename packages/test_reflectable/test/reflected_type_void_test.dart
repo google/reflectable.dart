@@ -15,8 +15,11 @@ import 'reflected_type_void_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(reflectedTypeCapability, invokingCapability,
-            declarationsCapability);
+    : super(
+        reflectedTypeCapability,
+        invokingCapability,
+        declarationsCapability,
+      );
 }
 
 const reflector = Reflector();
@@ -37,8 +40,10 @@ void main() {
     expect(mMirror.parameters[0].hasReflectedType, true);
     expect(mMirror.parameters[0].reflectedType, const TypeValue<void>().type);
     expect(mMirror.parameters[1].hasReflectedType, true);
-    expect(mMirror.parameters[1].reflectedType,
-        const TypeValue<List<void>>().type);
+    expect(
+      mMirror.parameters[1].reflectedType,
+      const TypeValue<List<void>>().type,
+    );
     expect(mMirror.hasReflectedReturnType, true);
     expect(mMirror.reflectedReturnType, const TypeValue<void>().type);
   });

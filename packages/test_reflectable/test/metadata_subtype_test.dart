@@ -15,8 +15,11 @@ import 'metadata_subtype_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable()
-      : super(const InstanceInvokeMetaCapability(D),
-            const StaticInvokeMetaCapability(D), declarationsCapability);
+    : super(
+        const InstanceInvokeMetaCapability(D),
+        const StaticInvokeMetaCapability(D),
+        declarationsCapability,
+      );
 }
 
 const myReflectable = MyReflectable();
@@ -44,7 +47,10 @@ class C {
   int bar() => 24.0.floor();
 
   // Does not have the required metadata.
-  int baz() => int.parse('2' '4');
+  int baz() => int.parse(
+    '2'
+    '4',
+  );
 
   // Annotated by metadata instance of subclass.
   @E()
@@ -55,11 +61,16 @@ class C {
   static int staticBar() => 24.0.ceil();
 
   // Does not have the required metadata.
-  static int staticBaz() => int.parse(' 2' '4 '.substring(1, 2));
+  static int staticBaz() => int.parse(
+    ' 2'
+            '4 '
+        .substring(1, 2),
+  );
 }
 
-final Matcher throwsReflectableNoMethod =
-    throwsA(const TypeMatcher<ReflectableNoSuchMethodError>());
+final Matcher throwsReflectableNoMethod = throwsA(
+  const TypeMatcher<ReflectableNoSuchMethodError>(),
+);
 
 void main() {
   initializeReflectable();
@@ -82,6 +93,8 @@ void main() {
     expect(classMirror.invoke('staticFoo', []), 24);
     expect(classMirror.invoke('staticBar', []), 24);
     expect(
-        () => classMirror.invoke('staticBaz', []), throwsReflectableNoMethod);
+      () => classMirror.invoke('staticBaz', []),
+      throwsReflectableNoMethod,
+    );
   });
 }

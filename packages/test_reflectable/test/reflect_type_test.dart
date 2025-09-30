@@ -16,7 +16,7 @@ const reflector = Reflector();
 
 class BroadReflector extends Reflectable {
   const BroadReflector()
-      : super.fromList(const <ReflectCapability>[typingCapability]);
+    : super.fromList(const <ReflectCapability>[typingCapability]);
 }
 
 const broadReflector = BroadReflector();
@@ -27,8 +27,9 @@ class A {}
 
 class B {}
 
-final Matcher throwsNoCapability =
-    throwsA(TypeMatcher<NoSuchCapabilityError>());
+final Matcher throwsNoCapability = throwsA(
+  TypeMatcher<NoSuchCapabilityError>(),
+);
 
 void performTests(String message, reflector) {
   test('$message: reflectType', () {
@@ -51,13 +52,17 @@ void main() {
   performTests('With typingCapability', broadReflector);
   test('Seeing that typing is broader than type', () {
     expect(
-        () => reflector.findLibrary('test_reflectable.test.reflect_type_test'),
-        throwsNoCapability);
-    var libraryMirror =
-        broadReflector.findLibrary('test_reflectable.test.reflect_type_test');
+      () => reflector.findLibrary('test_reflectable.test.reflect_type_test'),
+      throwsNoCapability,
+    );
+    var libraryMirror = broadReflector.findLibrary(
+      'test_reflectable.test.reflect_type_test',
+    );
     expect(libraryMirror, isNotNull);
     var uriString = libraryMirror.uri.toString();
-    expect(uriString == 'asset:test_reflectable/test/reflect_type_test.dart',
-        isTrue);
+    expect(
+      uriString == 'asset:test_reflectable/test/reflect_type_test.dart',
+      isTrue,
+    );
   });
 }

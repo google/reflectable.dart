@@ -14,14 +14,15 @@ import 'generic_instantiation_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(
-            newInstanceCapability,
-            declarationsCapability,
-            invokingCapability,
-            typeCapability,
-            typeRelationsCapability,
-            libraryCapability,
-            metadataCapability);
+    : super(
+        newInstanceCapability,
+        declarationsCapability,
+        invokingCapability,
+        typeCapability,
+        typeRelationsCapability,
+        libraryCapability,
+        metadataCapability,
+      );
 }
 
 const reflector = Reflector();

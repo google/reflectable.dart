@@ -10,7 +10,9 @@ library test_reflectable.test.reflectors_test;
 @GlobalQuantifyCapability(r'.(A|B)$', Reflector3())
 @GlobalQuantifyMetaCapability(P, Reflector4())
 @GlobalQuantifyCapability(
-    r'^reflectable.reflectable.Reflectable$', AllReflectorsMetaReflector())
+  r'^reflectable.reflectable.Reflectable$',
+  AllReflectorsMetaReflector(),
+)
 import 'package:reflectable/reflectable.dart';
 import 'package:test/test.dart';
 import 'reflectors_test.reflectable.dart';
@@ -20,7 +22,7 @@ import 'reflectors_test.reflectable.dart';
 /// Used to get access to all reflectors.
 class AllReflectorsMetaReflector extends Reflectable {
   const AllReflectorsMetaReflector()
-      : super(subtypeQuantifyCapability, newInstanceCapability);
+    : super(subtypeQuantifyCapability, newInstanceCapability);
 
   Set<Reflectable> get reflectors {
     var result = <Reflectable>{};
@@ -36,12 +38,12 @@ class AllReflectorsMetaReflector extends Reflectable {
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(invokingCapability, declarationsCapability, libraryCapability);
+    : super(invokingCapability, declarationsCapability, libraryCapability);
 }
 
 class Reflector2 extends Reflectable {
   const Reflector2()
-      : super(invokingCapability, metadataCapability, libraryCapability);
+    : super(invokingCapability, metadataCapability, libraryCapability);
 }
 
 class Reflector3 extends Reflectable {
@@ -54,20 +56,30 @@ class Reflector4 extends Reflectable {
 
 class ReflectorUpwardsClosed extends Reflectable {
   const ReflectorUpwardsClosed()
-      : super(superclassQuantifyCapability, invokingCapability,
-            declarationsCapability, typeRelationsCapability);
+    : super(
+        superclassQuantifyCapability,
+        invokingCapability,
+        declarationsCapability,
+        typeRelationsCapability,
+      );
 }
 
 class ReflectorUpwardsClosedToA extends Reflectable {
   const ReflectorUpwardsClosedToA()
-      : super(const SuperclassQuantifyCapability(A), invokingCapability,
-            declarationsCapability);
+    : super(
+        const SuperclassQuantifyCapability(A),
+        invokingCapability,
+        declarationsCapability,
+      );
 }
 
 class ReflectorUpwardsClosedUntilA extends Reflectable {
   const ReflectorUpwardsClosedUntilA()
-      : super(const SuperclassQuantifyCapability(A, excludeUpperBound: true),
-            invokingCapability, declarationsCapability);
+    : super(
+        const SuperclassQuantifyCapability(A, excludeUpperBound: true),
+        invokingCapability,
+        declarationsCapability,
+      );
 }
 
 @Reflector()
@@ -119,8 +131,8 @@ class D = A with M1;
 void main() {
   initializeReflectable();
 
-  List<Reflectable> reflectors =
-      const AllReflectorsMetaReflector().reflectors.toList();
+  List<Reflectable> reflectors = const AllReflectorsMetaReflector().reflectors
+      .toList();
 
   test('Mixin, superclasses not included', () {
     expect(reflectors, const {

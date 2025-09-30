@@ -13,19 +13,23 @@ import 'type_variable_test.reflectable.dart';
 
 class NoTypeVariablesReflector extends Reflectable {
   const NoTypeVariablesReflector()
-      : super(libraryCapability, typeRelationsCapability);
+    : super(libraryCapability, typeRelationsCapability);
 }
 
 class NoBoundsReflector extends Reflectable {
   const NoBoundsReflector()
-      : super(
-            declarationsCapability, typeRelationsCapability, libraryCapability);
+    : super(declarationsCapability, typeRelationsCapability, libraryCapability);
 }
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(typeAnnotationQuantifyCapability, declarationsCapability,
-            libraryCapability, typeRelationsCapability, metadataCapability);
+    : super(
+        typeAnnotationQuantifyCapability,
+        declarationsCapability,
+        libraryCapability,
+        typeRelationsCapability,
+        metadataCapability,
+      );
 }
 
 const Reflectable noTypeVariablesReflector = NoTypeVariablesReflector();
@@ -55,7 +59,9 @@ void runTestNoBounds(String message, ClassMirror classMirror) {
     var xMirror = classMirror.typeVariables[0];
     expect(xMirror.simpleName, 'X');
     expect(
-        xMirror.qualifiedName, 'test_reflectable.test.type_variable_test.B.X');
+      xMirror.qualifiedName,
+      'test_reflectable.test.type_variable_test.B.X',
+    );
     expect(xMirror.owner, classMirror.originalDeclaration);
     expect(xMirror.isPrivate, false);
     expect(xMirror.isTopLevel, false);
@@ -66,7 +72,9 @@ void runTestNoBounds(String message, ClassMirror classMirror) {
     var yMirror = classMirror.typeVariables[1];
     expect(yMirror.simpleName, 'Y');
     expect(
-        yMirror.qualifiedName, 'test_reflectable.test.type_variable_test.B.Y');
+      yMirror.qualifiedName,
+      'test_reflectable.test.type_variable_test.B.Y',
+    );
     expect(yMirror.owner, classMirror.originalDeclaration);
     expect(yMirror.isPrivate, false);
     expect(yMirror.isTopLevel, false);
@@ -76,8 +84,13 @@ void runTestNoBounds(String message, ClassMirror classMirror) {
   });
 }
 
-void runTest(String message, ClassMirror bMirror, ClassMirror cMirror,
-    ClassMirror dMirror, ClassMirror eMirror) {
+void runTest(
+  String message,
+  ClassMirror bMirror,
+  ClassMirror cMirror,
+  ClassMirror dMirror,
+  ClassMirror eMirror,
+) {
   // Things not already tested in `runTestNoBounds`: Upper bounds and metadata.
   test('Type variables, $message', () {
     expect(bMirror.typeVariables.length, 2);
@@ -93,8 +106,10 @@ void runTest(String message, ClassMirror bMirror, ClassMirror cMirror,
     expect(bParameter0Mirror.upperBound.reflectedType, Object);
     expect(bParameter1Mirror.upperBound.reflectedType, A);
     expect(cParameterMirror.upperBound.reflectedType, A);
-    expect(dParameterMirror.upperBound.originalDeclaration,
-        cMirror.originalDeclaration);
+    expect(
+      dParameterMirror.upperBound.originalDeclaration,
+      cMirror.originalDeclaration,
+    );
 
     expect(bParameter0Mirror.metadata, <Object>[]);
     expect(bParameter1Mirror.metadata, <Object>[]);
@@ -103,8 +118,9 @@ void runTest(String message, ClassMirror bMirror, ClassMirror cMirror,
   });
 }
 
-Matcher throwsANoSuchCapabilityException =
-    throwsA(const TypeMatcher<NoSuchCapabilityError>());
+Matcher throwsANoSuchCapabilityException = throwsA(
+  const TypeMatcher<NoSuchCapabilityError>(),
+);
 
 void main() {
   initializeReflectable();
@@ -116,26 +132,34 @@ void main() {
     expect(() => classMirror.typeVariables, throwsANoSuchCapabilityException);
   });
 
-  var noBoundsLibraryMirror =
-      noBoundsReflector.findLibrary('test_reflectable.test.type_variable_test');
+  var noBoundsLibraryMirror = noBoundsReflector.findLibrary(
+    'test_reflectable.test.type_variable_test',
+  );
   runTestNoBounds(
-      'generic class', noBoundsLibraryMirror.declarations['B'] as ClassMirror);
+    'generic class',
+    noBoundsLibraryMirror.declarations['B'] as ClassMirror,
+  );
   runTestNoBounds(
-      'instantiated generic class', noBoundsReflector.reflect(b).type);
+    'instantiated generic class',
+    noBoundsReflector.reflect(b).type,
+  );
 
-  var libraryMirror =
-      reflector.findLibrary('test_reflectable.test.type_variable_test');
+  var libraryMirror = reflector.findLibrary(
+    'test_reflectable.test.type_variable_test',
+  );
   runTest(
-      'static',
-      libraryMirror.declarations['B'] as ClassMirror,
-      libraryMirror.declarations['C'] as ClassMirror,
-      libraryMirror.declarations['D'] as ClassMirror,
-      libraryMirror.declarations['E'] as ClassMirror);
+    'static',
+    libraryMirror.declarations['B'] as ClassMirror,
+    libraryMirror.declarations['C'] as ClassMirror,
+    libraryMirror.declarations['D'] as ClassMirror,
+    libraryMirror.declarations['E'] as ClassMirror,
+  );
 
   runTest(
-      'dynamic',
-      reflector.reflect(B<int, A>()).type,
-      reflector.reflect(C<A>()).type,
-      reflector.reflect(D<E>()).type,
-      reflector.reflect(E()).type);
+    'dynamic',
+    reflector.reflect(B<int, A>()).type,
+    reflector.reflect(C<A>()).type,
+    reflector.reflect(D<E>()).type,
+    reflector.reflect(E()).type,
+  );
 }

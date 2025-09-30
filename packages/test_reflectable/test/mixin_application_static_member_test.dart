@@ -12,8 +12,12 @@ import 'mixin_application_static_member_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(invokingCapability, declarationsCapability, libraryCapability,
-            typeRelationsCapability);
+    : super(
+        invokingCapability,
+        declarationsCapability,
+        libraryCapability,
+        typeRelationsCapability,
+      );
 }
 
 @Reflector()
@@ -29,8 +33,9 @@ class A {
 @Reflector()
 class B extends A with M {}
 
-Matcher throwsReflectableNoMethod =
-    throwsA(const TypeMatcher<ReflectableNoSuchMethodError>());
+Matcher throwsReflectableNoMethod = throwsA(
+  const TypeMatcher<ReflectableNoSuchMethodError>(),
+);
 
 void main() {
   initializeReflectable();
@@ -40,7 +45,9 @@ void main() {
     expect(typeMirror is ClassMirror, true);
     var classMirror = typeMirror as ClassMirror;
     expect(
-        () => classMirror.invoke('staticFoo', [10]), throwsReflectableNoMethod);
+      () => classMirror.invoke('staticFoo', [10]),
+      throwsReflectableNoMethod,
+    );
   });
   test('Mixin-application static member', () {
     TypeMirror typeMirror = const Reflector().reflectType(B);

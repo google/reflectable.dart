@@ -30,24 +30,26 @@ import 'parameter_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(
-            typeAnnotationQuantifyCapability,
-            invokingCapability,
-            declarationsCapability,
-            reflectedTypeCapability,
-            typeRelationsCapability);
+    : super(
+        typeAnnotationQuantifyCapability,
+        invokingCapability,
+        declarationsCapability,
+        reflectedTypeCapability,
+        typeRelationsCapability,
+      );
 }
 
 const reflector = Reflector();
 
 class DeepReflector extends Reflectable {
   const DeepReflector()
-      : super(
-            typeAnnotationDeepQuantifyCapability,
-            invokingCapability,
-            declarationsCapability,
-            reflectedTypeCapability,
-            typeRelationsCapability);
+    : super(
+        typeAnnotationDeepQuantifyCapability,
+        invokingCapability,
+        declarationsCapability,
+        reflectedTypeCapability,
+        typeRelationsCapability,
+      );
 }
 
 const deepReflector = DeepReflector();
@@ -71,9 +73,12 @@ class MyClass {
 
   static int? noArguments() => null;
   static int oneArgument(String x) => 0;
-  static int? optionalArguments(MyClass x, double y,
-          [Reflector? z, dynamic w = 42]) =>
-      null;
+  static int? optionalArguments(
+    MyClass x,
+    double y, [
+    Reflector? z,
+    dynamic w = 42,
+  ]) => null;
 
   // ignore: prefer_adjacent_string_concatenation
   static int namedArguments(String x, List y, {String z = '4' + '2'}) => 0;
@@ -175,14 +180,16 @@ void performTests(String message, Reflectable reflector) {
     expect(opBracketEqualsParameter1.type.reflectedType, dynamic);
   });
 
-  test('$message reflector: parameter list properties, getters and setters',
-      () {
-    expect(getsetMirror.parameters.length, 0);
-    expect(getsetEqualsMirror.parameters.length, 1);
-    ParameterMirror getsetEqualsParameter0 = getsetEqualsMirror.parameters[0];
-    expect(getsetEqualsParameter0.isOptional, false);
-    expect(getsetEqualsParameter0.type.reflectedType, String);
-  });
+  test(
+    '$message reflector: parameter list properties, getters and setters',
+    () {
+      expect(getsetMirror.parameters.length, 0);
+      expect(getsetEqualsMirror.parameters.length, 1);
+      ParameterMirror getsetEqualsParameter0 = getsetEqualsMirror.parameters[0];
+      expect(getsetEqualsParameter0.isOptional, false);
+      expect(getsetEqualsParameter0.type.reflectedType, String);
+    },
+  );
 
   test('$message reflector: parameter list properties, static methods', () {
     expect(noArgumentsMirror.parameters.length, 0);
@@ -234,17 +241,19 @@ void performTests(String message, Reflectable reflector) {
     expect(namedArgumentsParameter2.defaultValue, '42');
   });
 
-  test('$message reflector: parameter list properties, getters and setters',
-      () {
-    expect(staticGetsetMirror.parameters.length, 0);
-    expect(staticGetsetEqualsMirror.parameters.length, 1);
-    ParameterMirror staticGetsetEqualsParameter0 =
-        staticGetsetEqualsMirror.parameters[0];
-    TypeMirror staticGetsetEqualsType0 = staticGetsetEqualsParameter0.type;
-    expect(staticGetsetEqualsParameter0.isOptional, false);
-    expect(staticGetsetEqualsType0.isOriginalDeclaration, false);
-    expect(staticGetsetEqualsType0.originalDeclaration.simpleName, 'List');
-  });
+  test(
+    '$message reflector: parameter list properties, getters and setters',
+    () {
+      expect(staticGetsetMirror.parameters.length, 0);
+      expect(staticGetsetEqualsMirror.parameters.length, 1);
+      ParameterMirror staticGetsetEqualsParameter0 =
+          staticGetsetEqualsMirror.parameters[0];
+      TypeMirror staticGetsetEqualsType0 = staticGetsetEqualsParameter0.type;
+      expect(staticGetsetEqualsParameter0.isOptional, false);
+      expect(staticGetsetEqualsType0.isOriginalDeclaration, false);
+      expect(staticGetsetEqualsType0.originalDeclaration.simpleName, 'List');
+    },
+  );
 
   test('$message reflector: method return types', () {
     expect(arg0Mirror.returnType.reflectedType, int);

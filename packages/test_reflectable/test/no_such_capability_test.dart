@@ -12,8 +12,10 @@ import 'no_such_capability_test.reflectable.dart';
 
 class MyReflectable extends r.Reflectable {
   const MyReflectable()
-      : super(const r.StaticInvokeCapability('nonExisting'),
-            const r.InstanceInvokeCapability('nonExisting'));
+    : super(
+        const r.StaticInvokeCapability('nonExisting'),
+        const r.InstanceInvokeCapability('nonExisting'),
+      );
 }
 
 const myReflectable = MyReflectable();
@@ -21,27 +23,36 @@ const myReflectable = MyReflectable();
 @myReflectable
 class A {}
 
-Matcher throwsReflectableNoMethod =
-    throwsA(const TypeMatcher<r.ReflectableNoSuchMethodError>());
+Matcher throwsReflectableNoMethod = throwsA(
+  const TypeMatcher<r.ReflectableNoSuchMethodError>(),
+);
 
 void main() {
   initializeReflectable();
 
   test('reflect', () {
     r.InstanceMirror instanceMirror = myReflectable.reflect(A());
-    expect(() => instanceMirror.invoke('foo', []),
-        throwsA(const TypeMatcher<r.ReflectableNoSuchMethodError>()));
+    expect(
+      () => instanceMirror.invoke('foo', []),
+      throwsA(const TypeMatcher<r.ReflectableNoSuchMethodError>()),
+    );
     r.ClassMirror classMirror = myReflectable.reflectType(A) as r.ClassMirror;
-    expect(() => classMirror.invoke('foo', []),
-        throwsA(const TypeMatcher<r.ReflectableNoSuchMethodError>()));
+    expect(
+      () => classMirror.invoke('foo', []),
+      throwsA(const TypeMatcher<r.ReflectableNoSuchMethodError>()),
+    );
     // When we have the capability we get the NoSuchMethodError, not
     // NoSuchCapabilityError.
-    expect(() => instanceMirror.invoke('nonExisting', []),
-        throwsReflectableNoMethod);
+    expect(
+      () => instanceMirror.invoke('nonExisting', []),
+      throwsReflectableNoMethod,
+    );
 
     // When we have the capability we get the NoSuchMethodError, not
     // NoSuchCapabilityError.
     expect(
-        () => classMirror.invoke('nonExisting', []), throwsReflectableNoMethod);
+      () => classMirror.invoke('nonExisting', []),
+      throwsReflectableNoMethod,
+    );
   });
 }

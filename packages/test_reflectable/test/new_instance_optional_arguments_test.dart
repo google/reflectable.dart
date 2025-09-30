@@ -24,27 +24,13 @@ const Reflector reflector = Reflector();
 class A {
   Object? req1, opt1, opt2;
   A.a0([opt1]) : opt1 = opt1;
-  A.b0([opt1, opt2])
-      : opt1 = opt1,
-        opt2 = opt2;
+  A.b0([opt1, opt2]) : opt1 = opt1, opt2 = opt2;
   A.c0([opt1 = 499]) : opt1 = opt1;
-  A.d0([opt1 = 499, opt2 = 42])
-      : opt1 = opt1,
-        opt2 = opt2;
-  A.a1(req1, [opt1])
-      : req1 = req1,
-        opt1 = opt1;
-  A.b1(req1, [opt1, opt2])
-      : req1 = req1,
-        opt1 = opt1,
-        opt2 = opt2;
-  A.c1(req1, [opt1 = 499])
-      : req1 = req1,
-        opt1 = opt1;
-  A.d1(req1, [opt1 = 499, opt2 = 42])
-      : req1 = req1,
-        opt1 = opt1,
-        opt2 = opt2;
+  A.d0([opt1 = 499, opt2 = 42]) : opt1 = opt1, opt2 = opt2;
+  A.a1(req1, [opt1]) : req1 = req1, opt1 = opt1;
+  A.b1(req1, [opt1, opt2]) : req1 = req1, opt1 = opt1, opt2 = opt2;
+  A.c1(req1, [opt1 = 499]) : req1 = req1, opt1 = opt1;
+  A.d1(req1, [opt1 = 499, opt2 = 42]) : req1 = req1, opt1 = opt1, opt2 = opt2;
 }
 
 @reflector

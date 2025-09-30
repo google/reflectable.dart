@@ -41,14 +41,16 @@ void main() {
 
   test('Annotated classes', () {
     expect(
-        const MyReflectable()
-            .annotatedClasses
-            .map((ClassMirror classMirror) => classMirror.simpleName),
-        {'A', 'B', 'G'});
+      const MyReflectable().annotatedClasses.map(
+        (ClassMirror classMirror) => classMirror.simpleName,
+      ),
+      {'A', 'B', 'G'},
+    );
     expect(
-        const MyReflectable2()
-            .annotatedClasses
-            .map((ClassMirror classMirror) => classMirror.simpleName),
-        {'E', 'F', 'G'});
+      const MyReflectable2().annotatedClasses.map(
+        (ClassMirror classMirror) => classMirror.simpleName,
+      ),
+      {'E', 'F', 'G'},
+    );
   });
 }

@@ -46,13 +46,16 @@ void testReflector(Reflectable reflector, String desc) {
     expect(bMirror.superclass!.declarations['staticBar'], null);
     expect(bMirror.superclass!.hasReflectedType, true);
     expect(bMirror.superclass!.reflectedType, const TypeMatcher<Type>());
-    expect(bMirror.superclass!.superclass!.reflectedType,
-        const TypeMatcher<Type>());
+    expect(
+      bMirror.superclass!.superclass!.reflectedType,
+      const TypeMatcher<Type>(),
+    );
   });
 }
 
-Matcher throwsANoSuchCapabilityException =
-    throwsA(const TypeMatcher<NoSuchCapabilityError>());
+Matcher throwsANoSuchCapabilityException = throwsA(
+  const TypeMatcher<NoSuchCapabilityError>(),
+);
 
 Iterable<String> getNames(Iterable<Reflectable> reflectables) {
   return reflectables.map((Reflectable reflector) {
@@ -62,8 +65,8 @@ Iterable<String> getNames(Iterable<Reflectable> reflectables) {
 }
 
 void runTests() {
-  List<Reflectable> reflectors =
-      const AllReflectorsMetaReflector().reflectors.toList();
+  List<Reflectable> reflectors = const AllReflectorsMetaReflector().reflectors
+      .toList();
 
   test('MetaReflector, set of reflectors', () {
     expect(getNames(reflectors).toSet(), {
@@ -75,18 +78,26 @@ void runTests() {
       'ScopeMetaReflector',
       'AllReflectorsMetaReflector',
     });
-    expect(getNames(const ScopeMetaReflector().reflectablesOfScope('polymer')),
-        {'Reflector', 'ReflectorUpwardsClosed'});
-    expect(getNames(const ScopeMetaReflector().reflectablesOfScope('observe')),
-        {'Reflector2', 'ReflectorUpwardsClosed'});
+    expect(
+      getNames(const ScopeMetaReflector().reflectablesOfScope('polymer')),
+      {'Reflector', 'ReflectorUpwardsClosed'},
+    );
+    expect(
+      getNames(const ScopeMetaReflector().reflectablesOfScope('observe')),
+      {'Reflector2', 'ReflectorUpwardsClosed'},
+    );
   });
 
-  const ScopeMetaReflector().reflectablesOfScope('polymer').forEach(
-      (Reflectable reflector) => testReflector(reflector, '$reflector'));
+  const ScopeMetaReflector()
+      .reflectablesOfScope('polymer')
+      .forEach(
+        (Reflectable reflector) => testReflector(reflector, '$reflector'),
+      );
 
   test('MetaReflector, select by name', () {
-    var reflector2 = reflectors
-        .firstWhere((Reflectable reflector) => '$reflector'.contains('2'));
+    var reflector2 = reflectors.firstWhere(
+      (Reflectable reflector) => '$reflector'.contains('2'),
+    );
     var bMirror = reflector2.reflectType(B) as ClassMirror;
     var cMirror = reflector2.reflectType(C) as ClassMirror;
     var dMirror = reflector2.reflectType(D) as ClassMirror;
@@ -106,20 +117,26 @@ void runTests() {
     // mixin.
     expect(bMirror.superclass!.metadata, isEmpty);
     expect(
-        () => bMirror.superclass!.superclass, throwsANoSuchCapabilityException);
+      () => bMirror.superclass!.superclass,
+      throwsANoSuchCapabilityException,
+    );
     expect(cMirror.superclass!.superclass!.mixin, m2Mirror);
     expect(cMirror.superclass!.mixin, m3Mirror);
     expect(cMirror.superclass!.superclass!.superclass, bMirror);
     expect(
-        () => dMirror.superclass!.superclass, throwsANoSuchCapabilityException);
+      () => dMirror.superclass!.superclass,
+      throwsANoSuchCapabilityException,
+    );
   });
 
   test('MetaReflector, select by capability', () {
     var reflector = reflectors.firstWhere((Reflectable reflector) {
-      return (reflector.capabilities.any((ReflectCapability capability) =>
-          capability is SuperclassQuantifyCapability &&
-          capability.upperBound == A &&
-          !capability.excludeUpperBound));
+      return (reflector.capabilities.any(
+        (ReflectCapability capability) =>
+            capability is SuperclassQuantifyCapability &&
+            capability.upperBound == A &&
+            !capability.excludeUpperBound,
+      ));
     });
     var aMirror = reflector.reflectType(A) as ClassMirror;
     var bMirror = reflector.reflectType(B) as ClassMirror;

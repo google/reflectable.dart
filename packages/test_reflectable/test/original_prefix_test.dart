@@ -14,7 +14,7 @@ import 'original_prefix_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable()
-      : super(newInstanceCapability, instanceInvokeCapability);
+    : super(newInstanceCapability, instanceInvokeCapability);
 }
 
 const myReflectable = MyReflectable();
@@ -26,7 +26,7 @@ const int _defaultY = defaultX;
 class C {
   final String s;
   C([int x = defaultX, int y = _defaultY])
-      : s = '${x.toString().length + 2}${y ~/ 15}';
+    : s = '${x.toString().length + 2}${y ~/ 15}';
 }
 
 void main() {
