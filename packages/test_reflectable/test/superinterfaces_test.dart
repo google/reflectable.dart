@@ -10,8 +10,12 @@ import 'superinterfaces_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(invokingCapability, declarationsCapability,
-            typeRelationsCapability, libraryCapability);
+    : super(
+        invokingCapability,
+        declarationsCapability,
+        typeRelationsCapability,
+        libraryCapability,
+      );
 }
 
 @Reflector()

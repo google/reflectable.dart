@@ -18,8 +18,11 @@ import 'generic_mixin_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(typeRelationsCapability, instanceInvokeCapability,
-            reflectedTypeCapability);
+    : super(
+        typeRelationsCapability,
+        instanceInvokeCapability,
+        reflectedTypeCapability,
+      );
 }
 
 const reflector = Reflector();

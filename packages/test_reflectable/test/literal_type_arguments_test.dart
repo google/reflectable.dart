@@ -15,8 +15,11 @@ import 'literal_type_arguments_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(metadataCapability, instanceInvokeCapability,
-            declarationsCapability);
+    : super(
+        metadataCapability,
+        instanceInvokeCapability,
+        declarationsCapability,
+      );
 }
 
 const reflector = Reflector();

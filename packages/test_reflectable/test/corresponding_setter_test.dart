@@ -18,50 +18,68 @@ const String methodRegExp = r'f.*r$';
 
 class InvokingMetaReflector extends Reflectable {
   const InvokingMetaReflector()
-      : super(correspondingSetterQuantifyCapability,
-            const InvokingMetaCapability(P));
+    : super(
+        correspondingSetterQuantifyCapability,
+        const InvokingMetaCapability(P),
+      );
 }
 
 class InstanceInvokeMetaReflector extends Reflectable {
   const InstanceInvokeMetaReflector()
-      : super(correspondingSetterQuantifyCapability,
-            const InstanceInvokeMetaCapability(P));
+    : super(
+        correspondingSetterQuantifyCapability,
+        const InstanceInvokeMetaCapability(P),
+      );
 }
 
 class StaticInvokeMetaReflector extends Reflectable {
   const StaticInvokeMetaReflector()
-      : super(correspondingSetterQuantifyCapability,
-            const StaticInvokeMetaCapability(P));
+    : super(
+        correspondingSetterQuantifyCapability,
+        const StaticInvokeMetaCapability(P),
+      );
 }
 
 class TopLevelInvokeMetaReflector extends Reflectable {
   const TopLevelInvokeMetaReflector()
-      : super(correspondingSetterQuantifyCapability,
-            const TopLevelInvokeMetaCapability(P), libraryCapability);
+    : super(
+        correspondingSetterQuantifyCapability,
+        const TopLevelInvokeMetaCapability(P),
+        libraryCapability,
+      );
 }
 
 class InvokingFrReflector extends Reflectable {
   const InvokingFrReflector()
-      : super(correspondingSetterQuantifyCapability,
-            const InvokingCapability(methodRegExp));
+    : super(
+        correspondingSetterQuantifyCapability,
+        const InvokingCapability(methodRegExp),
+      );
 }
 
 class InstanceInvokeFrReflector extends Reflectable {
   const InstanceInvokeFrReflector()
-      : super(correspondingSetterQuantifyCapability,
-            const InstanceInvokeCapability(methodRegExp));
+    : super(
+        correspondingSetterQuantifyCapability,
+        const InstanceInvokeCapability(methodRegExp),
+      );
 }
 
 class StaticInvokeFrReflector extends Reflectable {
   const StaticInvokeFrReflector()
-      : super(correspondingSetterQuantifyCapability,
-            const StaticInvokeCapability(methodRegExp));
+    : super(
+        correspondingSetterQuantifyCapability,
+        const StaticInvokeCapability(methodRegExp),
+      );
 }
 
 class TopLevelInvokeFrReflector extends Reflectable {
   const TopLevelInvokeFrReflector()
-      : super(correspondingSetterQuantifyCapability,
-            const TopLevelInvokeCapability(methodRegExp), libraryCapability);
+    : super(
+        correspondingSetterQuantifyCapability,
+        const TopLevelInvokeCapability(methodRegExp),
+        libraryCapability,
+      );
 }
 
 const invokingMetaReflector = InvokingMetaReflector();
@@ -81,7 +99,7 @@ final Map<Type, String> description = <Type, String>{
   InvokingFrReflector: 'InvokingFr',
   InstanceInvokeFrReflector: 'InstanceInvokeFr',
   StaticInvokeFrReflector: 'StaticInvokeFr',
-  TopLevelInvokeFrReflector: 'TopLevelInvokeFr'
+  TopLevelInvokeFrReflector: 'TopLevelInvokeFr',
 };
 
 class P {
@@ -140,8 +158,9 @@ set fooBar(int newValue) {
   fooBarVariable = newValue;
 }
 
-Matcher throwsReflectableNoMethod =
-    throwsA(TypeMatcher<ReflectableNoSuchMethodError>());
+Matcher throwsReflectableNoMethod = throwsA(
+  TypeMatcher<ReflectableNoSuchMethodError>(),
+);
 
 void testInstance(Reflectable mirrorSystem, A reflectee, {bool broad = false}) {
   test('Instance invocation: ${description[mirrorSystem.runtimeType]}', () {
@@ -170,9 +189,13 @@ void testInstance(Reflectable mirrorSystem, A reflectee, {bool broad = false}) {
   });
 }
 
-void testStatic(Reflectable mirrorSystem, Type reflectee,
-    void Function() classResetter, int Function() classGetter,
-    {bool broad = false}) {
+void testStatic(
+  Reflectable mirrorSystem,
+  Type reflectee,
+  void Function() classResetter,
+  int Function() classGetter, {
+  bool broad = false,
+}) {
   test('Static invocation: ${description[mirrorSystem.runtimeType]}', () {
     classResetter();
     ClassMirror classMirror =
@@ -202,8 +225,9 @@ void testStatic(Reflectable mirrorSystem, Type reflectee,
 
 void testTopLevel(Reflectable mirrorSystem) {
   test('Top level invocation: ${description[mirrorSystem.runtimeType]}', () {
-    var libraryMirror = mirrorSystem
-        .findLibrary('test_reflectable.test.corresponding_setter_test');
+    var libraryMirror = mirrorSystem.findLibrary(
+      'test_reflectable.test.corresponding_setter_test',
+    );
     expect(libraryMirror.invokeGetter('fooBar'), 14);
     int oldValue = fooBarVariable;
     libraryMirror.invokeSetter('fooBar=', oldValue + 1);

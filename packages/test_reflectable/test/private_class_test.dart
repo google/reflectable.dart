@@ -18,12 +18,13 @@ import 'private_class_test.reflectable.dart';
 
 class PrivacyReflectable extends Reflectable {
   const PrivacyReflectable()
-      : super(
-            subtypeQuantifyCapability,
-            reflectedTypeCapability,
-            instanceInvokeCapability,
-            declarationsCapability,
-            libraryCapability);
+    : super(
+        subtypeQuantifyCapability,
+        reflectedTypeCapability,
+        instanceInvokeCapability,
+        declarationsCapability,
+        libraryCapability,
+      );
 }
 
 const privacyReflectable = PrivacyReflectable();
@@ -36,8 +37,11 @@ final Set<String> libraryClassNames = {
   'PublicSubclass2',
 };
 
-void testPrivacyViolation(PublicClass object, String description,
-    {bool doReflect = true}) {
+void testPrivacyViolation(
+  PublicClass object,
+  String description, {
+  bool doReflect = true,
+}) {
   test('Privacy, $description', () {
     var canReflect = privacyReflectable.canReflect(object);
     expect(canReflect, doReflect);
@@ -56,15 +60,18 @@ void testPrivacyViolation(PublicClass object, String description,
         expect(method.reflectedReturnType, int);
         expect(method.parameters.length, 0);
         expect(
-            <String>[
-              'publicMethod',
-              'supposedlyPrivate',
-              'supposedlyPrivateToo'
-            ].contains(method.simpleName),
-            true);
+          <String>[
+            'publicMethod',
+            'supposedlyPrivate',
+            'supposedlyPrivateToo',
+          ].contains(method.simpleName),
+          true,
+        );
         if (method.simpleName != 'publicMethod') {
-          expect(instanceMirror.invoke(declaration.simpleName, []),
-              -object.publicMethod());
+          expect(
+            instanceMirror.invoke(declaration.simpleName, []),
+            -object.publicMethod(),
+          );
         }
       }
     }
@@ -78,7 +85,8 @@ void main() {
     // Check that we can browse libraries.
     Map<Uri, LibraryMirror> libraries = privacyReflectable.libraries;
     Uri libraryUri = libraries.keys.firstWhere(
-        (Uri uri) => uri.toString().contains('private_class_library'));
+      (Uri uri) => uri.toString().contains('private_class_library'),
+    );
     LibraryMirror library = libraries[libraryUri]!;
     expect(library.declarations.keys, libraryClassNames);
   });

@@ -14,8 +14,13 @@ import 'library_declarations_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(instanceInvokeCapability, topLevelInvokeCapability,
-            declarationsCapability, reflectedTypeCapability, libraryCapability);
+    : super(
+        instanceInvokeCapability,
+        topLevelInvokeCapability,
+        declarationsCapability,
+        reflectedTypeCapability,
+        libraryCapability,
+      );
 }
 
 const reflector = Reflector();
@@ -38,8 +43,9 @@ typedef H = String Function<X>(X);
 void main() {
   initializeReflectable();
 
-  var libraryMirror =
-      reflector.findLibrary('test_reflectable.test.library_declarations_test');
+  var libraryMirror = reflector.findLibrary(
+    'test_reflectable.test.library_declarations_test',
+  );
   var declarations = libraryMirror.declarations;
 
   // Commented out below: Cf. reflectable issue #165.

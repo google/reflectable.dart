@@ -1,3 +1,7 @@
+## 1.0.1
+
+- Small fixes, including correction of a link in README.md.
+
 ## 1.0.0
 
 - This package contains the code generator for the package `reflectable`.

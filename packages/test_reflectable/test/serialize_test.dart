@@ -97,14 +97,14 @@ void main() {
                   'type': 'test_reflectable.test.serialize_test.A',
                   'fields': {
                     'a': {'type': 'num', 'val': 4},
-                    'b': {'type': 'num', 'val': 5}
-                  }
-                }
-              ]
-            }
-          }
-        }
-      }
+                    'b': {'type': 'num', 'val': 5},
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
     });
     // Assert that deserializing the output gives a result that is equal to the
     // original input.
@@ -122,10 +122,10 @@ void main() {
           'fields': {
             'a': {'type': 'num', 'val': 1},
             'b': {'type': 'num', 'val': 2},
-            'c': {'type': 'num', 'val': 3}
-          }
-        }
-      }
+            'c': {'type': 'num', 'val': 3},
+          },
+        },
+      },
     });
     expect(serializer.deserialize(output), input);
   });

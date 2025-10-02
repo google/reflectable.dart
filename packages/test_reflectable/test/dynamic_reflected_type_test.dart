@@ -28,7 +28,10 @@ class B<E> {}
 Matcher throwsUnsupported = throwsA(const TypeMatcher<UnsupportedError>());
 
 void testDynamicReflectedType(
-    String message, ClassMirror classMirror, Type expectedType) {
+  String message,
+  ClassMirror classMirror,
+  Type expectedType,
+) {
   test('Dynamic reflected type, $message', () {
     if (classMirror.hasDynamicReflectedType) {
       expect(classMirror.dynamicReflectedType, expectedType);

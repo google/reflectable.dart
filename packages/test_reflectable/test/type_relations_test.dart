@@ -15,7 +15,7 @@ import 'type_relations_test.reflectable.dart';
 
 class MyReflectable extends Reflectable {
   const MyReflectable()
-      : super(superclassQuantifyCapability, typeRelationsCapability);
+    : super(superclassQuantifyCapability, typeRelationsCapability);
 }
 
 const myReflectable = MyReflectable();

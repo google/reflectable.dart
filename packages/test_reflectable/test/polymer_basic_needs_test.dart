@@ -24,7 +24,12 @@ class ThinDeclarationMirror {
   final bool isFinal;
   final bool isMethod;
   ThinDeclarationMirror(
-      this.name, this.isField, this.isProperty, this.isFinal, this.isMethod);
+    this.name,
+    this.isField,
+    this.isProperty,
+    this.isFinal,
+    this.isMethod,
+  );
 }
 
 bool _hasSetter(ClassMirror cls, MethodMirror getter) {
@@ -48,13 +53,18 @@ ThinDeclarationMirror makeThin(DeclarationMirror declaration) {
 
   bool isMethod() => !isField() && !isProperty();
 
-  return ThinDeclarationMirror(declaration.simpleName,
-      declaration is VariableMirror, isProperty(), isFinal(), isMethod());
+  return ThinDeclarationMirror(
+    declaration.simpleName,
+    declaration is VariableMirror,
+    isProperty(),
+    isFinal(),
+    isMethod(),
+  );
 }
 
 class MyReflectable extends Reflectable {
   const MyReflectable()
-      : super(instanceInvokeCapability, declarationsCapability);
+    : super(instanceInvokeCapability, declarationsCapability);
 }
 
 const myReflectable = MyReflectable();

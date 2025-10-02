@@ -15,8 +15,11 @@ import 'basic_test.reflectable.dart';
 
 class MyReflectable extends r.Reflectable {
   const MyReflectable()
-      : super(instanceInvokeCapability, newInstanceCapability,
-            declarationsCapability);
+    : super(
+        instanceInvokeCapability,
+        newInstanceCapability,
+        declarationsCapability,
+      );
 }
 
 @MyReflectable()
@@ -73,7 +76,9 @@ class C extends B {
 }
 
 List<X> filteredDeclarationsOf<X extends r.DeclarationMirror>(
-    r.ClassMirror cm, predicate) {
+  r.ClassMirror cm,
+  predicate,
+) {
   var result = <X>[];
   cm.declarations.forEach((k, v) {
     if (predicate(v)) {
@@ -108,7 +113,9 @@ List<r.MethodMirror> settersOf(r.ClassMirror cm) {
 
 List<r.MethodMirror> methodsOf(r.ClassMirror cm) {
   return filteredDeclarationsOf(
-      cm, (v) => v is r.MethodMirror && v.isRegularMethod);
+    cm,
+    (v) => v is r.MethodMirror && v.isRegularMethod,
+  );
 }
 
 Matcher throwsReflectableNoSuchMethod = throwsA(isReflectableNoSuchMethodError);
@@ -207,11 +214,17 @@ void main() {
     expect(settersOf(aClass).map((x) => x.simpleName), ['accessor=']);
     expect(settersOf(bClass).map((x) => x.simpleName), {'accessor='});
     expect(settersOf(cClass).map((x) => x.simpleName), {'accessor=', 'foo='});
-    expect(methodsOf(aClass).map((x) => x.simpleName),
-        {'instanceMethod', 'aMethod'});
-    expect(methodsOf(bClass).map((x) => x.simpleName),
-        {'instanceMethod', 'bMethod'});
-    expect(methodsOf(cClass).map((x) => x.simpleName),
-        {'instanceMethod', 'cMethod'});
+    expect(methodsOf(aClass).map((x) => x.simpleName), {
+      'instanceMethod',
+      'aMethod',
+    });
+    expect(methodsOf(bClass).map((x) => x.simpleName), {
+      'instanceMethod',
+      'bMethod',
+    });
+    expect(methodsOf(cClass).map((x) => x.simpleName), {
+      'instanceMethod',
+      'cMethod',
+    });
   });
 }

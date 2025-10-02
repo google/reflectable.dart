@@ -1,5 +1,5 @@
 name: reflectable_builder
-version: 1.0.0
+version: 1.0.1
 description: >
   Reflection support based on code generation, using 'capabilities' to
   specify which operations to support, on which objects. This is the
@@ -27,3 +27,7 @@ dev_dependencies:
   package_config: ^2.1.0
   source_span: ^1.10.0
   test: ^1.25.0
+platforms:
+  windows:
+  linux:
+  macos:

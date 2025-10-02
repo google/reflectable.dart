@@ -15,7 +15,7 @@ import 'implicit_getter_setter_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(declarationsCapability, const InvokingCapability('f'));
+    : super(declarationsCapability, const InvokingCapability('f'));
 }
 
 const reflector = Reflector();
@@ -38,8 +38,10 @@ void main() {
   test('implicit getter properties', () {
     var f1GetterMirror = classMirror.instanceMembers['f1'] as MethodMirror;
     expect(f1GetterMirror.simpleName, 'f1');
-    expect(f1GetterMirror.qualifiedName,
-        'test_reflectable.test.implicit_getter_setter_test.A.f1');
+    expect(
+      f1GetterMirror.qualifiedName,
+      'test_reflectable.test.implicit_getter_setter_test.A.f1',
+    );
     expect(f1GetterMirror.isPrivate, isFalse);
     expect(f1GetterMirror.isTopLevel, isFalse);
     expect(f1GetterMirror.returnType.reflectedType, A);
@@ -61,8 +63,10 @@ void main() {
 
     var f2getterMirror = classMirror.instanceMembers['f2'] as MethodMirror;
     expect(f2getterMirror.simpleName, 'f2');
-    expect(f2getterMirror.qualifiedName,
-        'test_reflectable.test.implicit_getter_setter_test.A.f2');
+    expect(
+      f2getterMirror.qualifiedName,
+      'test_reflectable.test.implicit_getter_setter_test.A.f2',
+    );
     expect(f2getterMirror.isPrivate, isFalse);
     expect(f2getterMirror.isTopLevel, isFalse);
     expect(f2getterMirror.returnType.reflectedType, A);
@@ -84,8 +88,10 @@ void main() {
 
     var f3GetterMirror = classMirror.staticMembers['f3'] as MethodMirror;
     expect(f3GetterMirror.simpleName, 'f3');
-    expect(f3GetterMirror.qualifiedName,
-        'test_reflectable.test.implicit_getter_setter_test.A.f3');
+    expect(
+      f3GetterMirror.qualifiedName,
+      'test_reflectable.test.implicit_getter_setter_test.A.f3',
+    );
     expect(f3GetterMirror.isPrivate, isFalse);
     expect(f3GetterMirror.isTopLevel, isFalse);
     expect(f3GetterMirror.returnType.reflectedType, A);
@@ -107,8 +113,10 @@ void main() {
 
     var f4GetterMirror = classMirror.staticMembers['f4'] as MethodMirror;
     expect(f4GetterMirror.simpleName, 'f4');
-    expect(f4GetterMirror.qualifiedName,
-        'test_reflectable.test.implicit_getter_setter_test.A.f4');
+    expect(
+      f4GetterMirror.qualifiedName,
+      'test_reflectable.test.implicit_getter_setter_test.A.f4',
+    );
     expect(f4GetterMirror.isPrivate, isFalse);
     expect(f4GetterMirror.isTopLevel, isFalse);
     expect(f4GetterMirror.returnType.reflectedType, A);
@@ -130,8 +138,10 @@ void main() {
 
     var f5GetterMirror = classMirror.staticMembers['f5'] as MethodMirror;
     expect(f5GetterMirror.simpleName, 'f5');
-    expect(f5GetterMirror.qualifiedName,
-        'test_reflectable.test.implicit_getter_setter_test.A.f5');
+    expect(
+      f5GetterMirror.qualifiedName,
+      'test_reflectable.test.implicit_getter_setter_test.A.f5',
+    );
     expect(f5GetterMirror.isPrivate, isFalse);
     expect(f5GetterMirror.isTopLevel, isFalse);
     expect(f5GetterMirror.returnType.reflectedType, dynamic);
@@ -155,8 +165,10 @@ void main() {
   test('implicit setter properties', () {
     var f1SetterMirror = classMirror.instanceMembers['f1='] as MethodMirror;
     expect(f1SetterMirror.simpleName, 'f1=');
-    expect(f1SetterMirror.qualifiedName,
-        'test_reflectable.test.implicit_getter_setter_test.A.f1=');
+    expect(
+      f1SetterMirror.qualifiedName,
+      'test_reflectable.test.implicit_getter_setter_test.A.f1=',
+    );
     expect(f1SetterMirror.isPrivate, isFalse);
     expect(f1SetterMirror.isTopLevel, isFalse);
     expect(f1SetterMirror.returnType.reflectedType, A);
@@ -183,8 +195,10 @@ void main() {
 
     var f3SetterMirror = classMirror.staticMembers['f3='] as MethodMirror;
     expect(f3SetterMirror.simpleName, 'f3=');
-    expect(f3SetterMirror.qualifiedName,
-        'test_reflectable.test.implicit_getter_setter_test.A.f3=');
+    expect(
+      f3SetterMirror.qualifiedName,
+      'test_reflectable.test.implicit_getter_setter_test.A.f3=',
+    );
     expect(f3SetterMirror.isPrivate, isFalse);
     expect(f3SetterMirror.isTopLevel, isFalse);
     expect(f3SetterMirror.returnType.reflectedType, A);

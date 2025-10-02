@@ -16,11 +16,11 @@ import 'nullability_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(
-          instanceInvokeCapability,
-          declarationsCapability,
-          typeAnnotationQuantifyCapability,
-        );
+    : super(
+        instanceInvokeCapability,
+        declarationsCapability,
+        typeAnnotationQuantifyCapability,
+      );
 }
 
 const reflector = Reflector();

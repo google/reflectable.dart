@@ -22,12 +22,10 @@ const String globalConstant = '20';
 @myReflectable
 class A {
   static const localConstant = 10;
-  A.optional([int x = localConstant, String y = globalConstant])
-      : f = x,
-        g = y;
+  A.optional([int x = localConstant, String y = globalConstant]) : f = x, g = y;
   A.namedOptional({int x = localConstant, String y = globalConstant})
-      : f = x,
-        g = y;
+    : f = x,
+      g = y;
   A.initializingFormal([this.f = localConstant, this.g = globalConstant]);
   A.namedInitializingFormal({this.f = localConstant, this.g = globalConstant});
   int f = 0;

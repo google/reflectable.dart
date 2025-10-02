@@ -13,8 +13,13 @@ import 'prefixed_reflector_test.reflectable.dart';
 
 class Reflector extends Reflectable {
   const Reflector()
-      : super(instanceInvokeCapability, topLevelInvokeCapability,
-            declarationsCapability, reflectedTypeCapability, libraryCapability);
+    : super(
+        instanceInvokeCapability,
+        topLevelInvokeCapability,
+        declarationsCapability,
+        reflectedTypeCapability,
+        libraryCapability,
+      );
 }
 
 class C {

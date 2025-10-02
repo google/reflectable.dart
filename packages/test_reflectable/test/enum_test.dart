@@ -13,15 +13,16 @@ import 'enum_test.reflectable.dart';
 /// This annotation specifies the object can be serialized
 class Serializable extends Reflectable {
   const Serializable()
-      : super(
-            typeAnnotationQuantifyCapability,
-            superclassQuantifyCapability,
-            invokingCapability,
-            declarationsCapability,
-            metadataCapability,
-            newInstanceCapability,
-            typeRelationsCapability,
-            typeCapability);
+    : super(
+        typeAnnotationQuantifyCapability,
+        superclassQuantifyCapability,
+        invokingCapability,
+        declarationsCapability,
+        metadataCapability,
+        newInstanceCapability,
+        typeRelationsCapability,
+        typeCapability,
+      );
 }
 
 const serializable = Serializable();
