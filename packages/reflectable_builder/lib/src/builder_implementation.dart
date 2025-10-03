@@ -860,6 +860,49 @@ class _ReflectorDomain {
     return 'const $prefix${_reflector.name}()';
   }
 
+  /// Returns code for generic type arguments to use in mirror declarations.
+  ///
+  /// Generates a string like `<PrefixClassName>` for generic type parameters
+  /// in mirror constructors. Returns empty string if the type cannot be
+  /// represented (e.g., private classes, mixin applications, or non-interface
+  /// types).
+  Future<String> _typeGenericCode(
+    _ImportCollector importCollector, {
+    DartType? type,
+    InterfaceElement? element,
+  }) async {
+    if (type == null && element == null) {
+      return '';
+    }
+
+    if (type != null && type is! InterfaceType) {
+      return '';
+    }
+
+    InterfaceElement classElement =
+        (type as InterfaceType?)?.element ?? element!;
+
+    // MixinApplications cannot be used as type arguments
+    if (classElement is MixinApplication) {
+      return '';
+    }
+
+    if (classElement.isPrivate) {
+      return '';
+    }
+
+    String prefix = importCollector._getPrefix(classElement.library);
+    if (_isPrivateName(classElement.name)) {
+      await _severe(
+        'Cannot access private name `${classElement.name}`',
+        classElement,
+      );
+      return '';
+    }
+
+    return '<$prefix${classElement.name}>';
+  }
+
   /// Generate the code which will create a `ReflectorData` instance
   /// containing the mirrors and other reflection data which is needed for
   /// `_reflector` to behave correctly.
@@ -1706,7 +1749,7 @@ class _ReflectorDomain {
     }
 
     if (interfaceElement.typeParameters.isEmpty) {
-      return "r.NonGenericClassMirrorImpl(r'${classDomain._simpleName}', "
+      return "r.NonGenericClassMirrorImpl${await _typeGenericCode(importCollector, element: classDomain._interfaceElement)}(r'${classDomain._simpleName}', "
           "r'${_qualifiedName(interfaceElement)}', $descriptor, $classIndex, "
           '${await _constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
@@ -1792,7 +1835,7 @@ class _ReflectorDomain {
         typedefs,
       );
 
-      return "r.GenericClassMirrorImpl(r'${classDomain._simpleName}', "
+      return "r.GenericClassMirrorImpl${await _typeGenericCode(importCollector, element: classDomain._interfaceElement)}(r'${classDomain._simpleName}', "
           "r'${_qualifiedName(interfaceElement)}', $descriptor, $classIndex, "
           '${await _constConstructionCode(importCollector)}, '
           '$declarationsCode, $instanceMembersCode, $staticMembersCode, '
@@ -1889,7 +1932,7 @@ class _ReflectorDomain {
               _generatedLibraryId,
             )
           : null;
-      return "r.MethodMirrorImpl(r'${element.name}', $descriptor, "
+      return "r.MethodMirrorImpl${await _typeGenericCode(importCollector, type: element.returnType)}(r'${element.name}', $descriptor, "
           '$ownerIndex, $returnTypeIndex, $reflectedReturnTypeIndex, '
           '$dynamicReflectedReturnTypeIndex, '
           '$reflectedTypeArgumentsOfReturnType, $parameterIndicesCode, '
@@ -1950,7 +1993,7 @@ class _ReflectorDomain {
       // it is a `List<Object>`, which has no other natural encoding.
       metadataCode = null;
     }
-    return "r.VariableMirrorImpl(r'${element.name}', $descriptor, "
+    return "r.VariableMirrorImpl${await _typeGenericCode(importCollector, type: element.type)}(r'${element.name}', $descriptor, "
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
         '$dynamicReflectedTypeIndex, $reflectedTypeArguments, '
@@ -2011,7 +2054,7 @@ class _ReflectorDomain {
       // it is a `List<Object>`, which has no other natural encoding.
       metadataCode = null;
     }
-    return "r.VariableMirrorImpl(r'${element.name}', $descriptor, "
+    return "r.VariableMirrorImpl${await _typeGenericCode(importCollector, type: element.type)}(r'${element.name}', $descriptor, "
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, '
         '$dynamicReflectedTypeIndex, $reflectedTypeArguments, $metadataCode)';
@@ -2664,7 +2707,7 @@ class _ReflectorDomain {
         ? '#${element.name}'
         : 'null';
 
-    return "r.ParameterMirrorImpl(r'${element.name}', $descriptor, "
+    return "r.ParameterMirrorImpl${await _typeGenericCode(importCollector, type: element.type)}(r'${element.name}', $descriptor, "
         '$ownerIndex, ${await _constConstructionCode(importCollector)}, '
         '$classMirrorIndex, $reflectedTypeIndex, $dynamicReflectedTypeIndex, '
         '$reflectedTypeArguments, $metadataCode, $defaultValueCode, '

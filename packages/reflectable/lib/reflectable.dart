@@ -40,7 +40,7 @@ abstract class ReflectableInterface {
   ///
   /// Throws a [NoSuchCapabilityError] if the class of [o] has not been marked
   /// for reflection.
-  InstanceMirror reflect(Object o);
+  InstanceMirror reflect<T extends Object>(T o);
 
   /// Returns true if this reflector has capabilities for the given Type.
   bool canReflectType(Type type);

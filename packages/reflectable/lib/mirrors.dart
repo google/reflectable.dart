@@ -674,7 +674,7 @@ abstract class CombinatorMirror implements Mirror {
 
 /// A [TypeMirror] reflects a Dart language class, typedef,
 /// function type or type variable.
-abstract class TypeMirror implements DeclarationMirror {
+abstract class TypeMirror<T> implements DeclarationMirror {
   /// Returns true if this mirror reflects dynamic, a non-generic class or
   /// typedef, or an instantiated generic class or typedef with support in
   /// the execution mode. Otherwise, returns false.
@@ -817,10 +817,16 @@ abstract class TypeMirror implements DeclarationMirror {
   /// Returns true iff this type mirror represents a potentially non-nullable
   /// type.
   bool get isPotentiallyNonNullable;
+
+  /// Invokes the provided function with the reflected type as a type argument.
+  ///
+  /// Allows executing generic code with the actual runtime type represented
+  /// by this mirror.
+  R callWithReflectedType<R>(R Function<X>() f);
 }
 
 /// A [ClassMirror] reflects a Dart language class.
-abstract class ClassMirror implements TypeMirror, ObjectMirror {
+abstract class ClassMirror<T> implements TypeMirror<T>, ObjectMirror {
   /// A mirror on the superclass on the reflectee.
   ///
   /// If this type is [:Object:], the superclass will be null.
@@ -1077,7 +1083,7 @@ abstract class FunctionTypeMirror implements ClassMirror {
 }
 
 /// A [TypeVariableMirror] represents a type parameter of a generic type.
-abstract class TypeVariableMirror extends TypeMirror {
+abstract class TypeVariableMirror<T> extends TypeMirror<T> {
   /// A mirror on the type that is the upper bound of this type variable.
   ///
   /// Required capabilities: [upperBound] requires a [TypeCapability].
