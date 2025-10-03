@@ -148,14 +148,15 @@ class ReflectorData {
     return typeToTypeMirrorCache[type];
   }
 
-  ClassMirror? classMirrorForInstance(Object? instance) {
+  ClassMirror? classMirrorForInstance<T>(Object? instance) {
     TypeMirror? result = typeMirrorForType(instance.runtimeType);
+
     if (result is ClassMirror) return result;
     // Check if we have a generic class that matches.
     for (TypeMirror typeMirror in _typeToTypeMirrorCache!.values) {
       if (typeMirror is GenericClassMirrorImpl) {
         if (typeMirror._isGenericRuntimeTypeOf(instance)) {
-          return _createInstantiatedGenericClass(
+          return _createInstantiatedGenericClass<T>(
             typeMirror,
             instance.runtimeType,
             null,
@@ -205,7 +206,7 @@ abstract class _DataCaching {
   }
 }
 
-class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
+class _InstanceMirrorImpl<T> extends _DataCaching implements InstanceMirror {
   @override
   final ReflectableImpl _reflector;
 
@@ -213,7 +214,7 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
   final Object? reflectee;
 
   _InstanceMirrorImpl(this.reflectee, this._reflector) {
-    _type = _data.classMirrorForInstance(reflectee) as ClassMirrorBase?;
+    _type = _data.classMirrorForInstance<T>(reflectee) as ClassMirrorBase?;
     if (_type == null) {
       // If there is no `TypeCapability` and also no `InstanceInvokeCapability`
       // then can do almost nothing. Nevertheless, we can still offer a
@@ -390,7 +391,8 @@ class _InstanceMirrorImpl extends _DataCaching implements InstanceMirror {
 
 typedef MethodMirrorProvider = MethodMirror? Function(String methodName);
 
-abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
+abstract class ClassMirrorBase<T> extends _DataCaching
+    implements ClassMirror<T> {
   /// The reflector which represents the mirror system that this
   /// mirror belongs to.
   @override
@@ -974,9 +976,12 @@ abstract class ClassMirrorBase extends _DataCaching implements ClassMirror {
     if (_superclassIndex == null) return null; // Superclass of [Object].
     return _data.typeMirrors[_superclassIndex] as ClassMirrorBase?;
   }
+
+  @override
+  D callWithReflectedType<D>(D Function<X>() f) => f<T>();
 }
 
-class NonGenericClassMirrorImpl extends ClassMirrorBase {
+class NonGenericClassMirrorImpl<T> extends ClassMirrorBase<T> {
   NonGenericClassMirrorImpl(
     super.simpleName,
     super.qualifiedName,
@@ -1067,7 +1072,7 @@ class NonGenericClassMirrorImpl extends ClassMirrorBase {
 
 typedef InstanceChecker = bool Function(Object?);
 
-class GenericClassMirrorImpl extends ClassMirrorBase {
+class GenericClassMirrorImpl<T> extends ClassMirrorBase<T> {
   /// Used to enable instance checks. Let O be an instance and let C denote the
   /// generic class modeled by this mirror. The check is then such that the
   /// result is true iff there exists a list of type arguments X1..Xk such that
@@ -1216,7 +1221,7 @@ class GenericClassMirrorImpl extends ClassMirrorBase {
   String toString() => 'GenericClassMirrorImpl($qualifiedName)';
 }
 
-class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
+class InstantiatedGenericClassMirrorImpl<T> extends ClassMirrorBase<T> {
   final GenericClassMirrorImpl _originalDeclaration;
   final Type? _reflectedType;
 
@@ -1361,10 +1366,13 @@ class InstantiatedGenericClassMirrorImpl extends ClassMirrorBase {
   int get hashCode => originalDeclaration.hashCode ^ _reflectedType.hashCode;
 
   @override
+  D callWithReflectedType<D>(D Function<X>() f) => f<T>();
+
+  @override
   String toString() => 'InstantiatedGenericClassMirrorImpl($qualifiedName)';
 }
 
-InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
+InstantiatedGenericClassMirrorImpl<T> _createInstantiatedGenericClass<T>(
   GenericClassMirrorImpl genericClassMirror,
   Type? reflectedType,
   List<int>? reflectedTypeArguments, [
@@ -1373,7 +1381,7 @@ InstantiatedGenericClassMirrorImpl _createInstantiatedGenericClass(
   // TODO(eernst) implement: Pass a representation of type arguments to this
   // method, and create an instantiated generic class which includes that
   // information.
-  return InstantiatedGenericClassMirrorImpl(
+  return InstantiatedGenericClassMirrorImpl<T>(
     genericClassMirror.simpleName,
     genericClassMirror.qualifiedName,
     descriptor ?? genericClassMirror._descriptor,
@@ -1573,6 +1581,11 @@ class TypeVariableMirrorImpl extends _DataCaching
     }
     return _data.typeMirrors[_ownerIndex];
   }
+
+  @override
+  D callWithReflectedType<D>(D Function<X>() f) => throw UnsupportedError(
+    'Attempt to call `callWithReflectedType` on type variable $simpleName',
+  );
 }
 
 class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
@@ -1820,7 +1833,7 @@ class LibraryMirrorImpl extends _DataCaching implements LibraryMirror {
       throw unimplementedError('libraryDependencies');
 }
 
-class MethodMirrorImpl extends _DataCaching implements MethodMirror {
+class MethodMirrorImpl<T> extends _DataCaching implements MethodMirror {
   /// An encoding of the attributes and kind of this mirror.
   final int _descriptor;
 
@@ -1997,7 +2010,7 @@ class MethodMirrorImpl extends _DataCaching implements MethodMirror {
     if (_hasClassReturnType) {
       TypeMirror typeMirror = _data.typeMirrors[_returnTypeIndex];
       return _hasGenericReturnType
-          ? _createInstantiatedGenericClass(
+          ? _createInstantiatedGenericClass<T>(
               typeMirror as GenericClassMirrorImpl,
               null,
               _reflectedTypeArgumentsOfReturnType,
@@ -2307,7 +2320,7 @@ class ImplicitSetterMirrorImpl extends ImplicitAccessorMirrorImpl {
   String toString() => 'ImplicitSetterMirrorImpl($qualifiedName)';
 }
 
-abstract class VariableMirrorBase extends _DataCaching
+abstract class VariableMirrorBase<T> extends _DataCaching
     implements VariableMirror {
   final String _name;
   final int _descriptor;
@@ -2401,7 +2414,7 @@ abstract class VariableMirrorBase extends _DataCaching
       if (typeMirror.isNullable != _isNullable ||
           typeMirror.isNonNullable != _isNonNullable) {
         if (_isGenericType) {
-          return _createInstantiatedGenericClass(
+          return _createInstantiatedGenericClass<T>(
             typeMirror as GenericClassMirrorImpl,
             hasReflectedType ? reflectedType : null,
             _reflectedTypeArguments,
@@ -2409,7 +2422,7 @@ abstract class VariableMirrorBase extends _DataCaching
           );
         } else {
           var classMirror = typeMirror as NonGenericClassMirrorImpl;
-          return NonGenericClassMirrorImpl(
+          return NonGenericClassMirrorImpl<T>(
             classMirror.simpleName,
             classMirror.qualifiedName,
             _descriptor,
@@ -2431,7 +2444,7 @@ abstract class VariableMirrorBase extends _DataCaching
         }
       } else {
         return _isGenericType
-            ? _createInstantiatedGenericClass(
+            ? _createInstantiatedGenericClass<T>(
                 typeMirror as GenericClassMirrorImpl,
                 hasReflectedType ? reflectedType : null,
                 _reflectedTypeArguments,
@@ -2487,7 +2500,7 @@ abstract class VariableMirrorBase extends _DataCaching
   int get hashCode => simpleName.hashCode ^ owner.hashCode;
 }
 
-class VariableMirrorImpl extends VariableMirrorBase {
+class VariableMirrorImpl<T> extends VariableMirrorBase<T> {
   @override
   DeclarationMirror get owner {
     if (_ownerIndex == noCapabilityIndex) {
@@ -2532,7 +2545,7 @@ class VariableMirrorImpl extends VariableMirrorBase {
   int get hashCode;
 }
 
-class ParameterMirrorImpl extends VariableMirrorBase
+class ParameterMirrorImpl<T> extends VariableMirrorBase<T>
     implements ParameterMirror {
   final Object? _defaultValue;
 
@@ -2601,7 +2614,7 @@ class ParameterMirrorImpl extends VariableMirrorBase
   int get hashCode;
 }
 
-abstract class SpecialTypeMirrorImpl implements TypeMirror {
+abstract class SpecialTypeMirrorImpl<T> implements TypeMirror<T> {
   @override
   bool get isPrivate => false;
 
@@ -2637,11 +2650,14 @@ abstract class SpecialTypeMirrorImpl implements TypeMirror {
 
   @override
   List<Object> get metadata => <Object>[];
+
+  @override
+  D callWithReflectedType<D>(D Function<X>() f) => f<T>();
 }
 
 Type _typeOf<X>() => X;
 
-class DynamicMirrorImpl extends SpecialTypeMirrorImpl {
+class DynamicMirrorImpl extends SpecialTypeMirrorImpl<dynamic> {
   @override
   bool get isNullable => true;
 
@@ -2669,7 +2685,7 @@ class DynamicMirrorImpl extends SpecialTypeMirrorImpl {
   bool isAssignableTo(TypeMirror other) => true;
 }
 
-class VoidMirrorImpl extends SpecialTypeMirrorImpl {
+class VoidMirrorImpl extends SpecialTypeMirrorImpl<void> {
   @override
   bool get isNullable => true;
 
@@ -2702,7 +2718,7 @@ class VoidMirrorImpl extends SpecialTypeMirrorImpl {
       other is DynamicMirrorImpl || other is VoidMirrorImpl;
 }
 
-class NeverMirrorImpl extends SpecialTypeMirrorImpl {
+class NeverMirrorImpl extends SpecialTypeMirrorImpl<Never> {
   final bool hasQuestionMark;
 
   NeverMirrorImpl({this.hasQuestionMark = false});
@@ -2761,8 +2777,8 @@ abstract class ReflectableImpl extends ReflectableBase
   }
 
   @override
-  InstanceMirror reflect(Object reflectee) {
-    return _InstanceMirrorImpl(reflectee, this);
+  InstanceMirror reflect<T extends Object>(T reflectee) {
+    return _InstanceMirrorImpl<T>(reflectee, this);
   }
 
   bool get _hasTypeCapability {
