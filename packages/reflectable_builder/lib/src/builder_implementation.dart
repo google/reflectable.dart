@@ -997,18 +997,6 @@ class _ReflectorDomain {
           // instanceGetterNames, so we do nothing here.
         }
       }
-
-      for (PropertyAccessorElement accessor in classDomain._accessors) {
-        final accessorName = accessor.name.orUnknown;
-        if (accessor is GetterElement &&
-            !instanceGetterNames.contains(accessorName)) {
-          instanceGetterNames.add(accessorName);
-        }
-        if (accessor is SetterElement &&
-            !instanceGetterNames.contains("$accessorName=")) {
-          instanceSetterNames.add("$accessorName=");
-        }
-      }
     }
 
     // Add classes used as bounds for type variables, if needed.
