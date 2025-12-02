@@ -3380,10 +3380,8 @@ class _ClassDomain {
     }
 
     _interfaceElement.methods.forEach(possiblyAddMethod);
-    [
-      ..._interfaceElement.getters,
-      ..._interfaceElement.setters,
-    ].forEach(possiblyAddAccessor);
+    _interfaceElement.getters.forEach(possiblyAddAccessor);
+    _interfaceElement.setters.forEach(possiblyAddAccessor);
     return result;
   }
 
