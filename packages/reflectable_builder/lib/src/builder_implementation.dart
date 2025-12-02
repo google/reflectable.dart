@@ -1417,11 +1417,10 @@ class _ReflectorDomain {
     ExecutableElement element,
     int descriptor,
   ) async {
-    if (element.enclosingElement is InterfaceElement) {
-      return element.enclosingElement != null
-          ? (await classes).indexOf(element.enclosingElement as Object)
-          : null;
-    } else if (element.enclosingElement?.firstFragment is LibraryFragment) {
+    final enclosingElement = element.enclosingElement;
+    if (enclosingElement is InterfaceElement) {
+      return (await classes).indexOf(enclosingElement);
+    } else if (enclosingElement?.firstFragment is LibraryFragment) {
       return _libraries.indexOf(element.library);
     }
     await _severe('Unexpected kind of request for owner');
