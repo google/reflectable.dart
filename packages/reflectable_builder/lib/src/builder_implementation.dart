@@ -58,6 +58,10 @@ enum WarningKind {
   unusedReflector,
 }
 
+extension on String? {
+  String get orUnknown => this ?? 'unknownName';
+}
+
 class _ReflectionWorld {
   final Resolver resolver;
   final List<LibraryElementImpl> libraries;
@@ -743,7 +747,7 @@ class _ReflectorDomain {
     int optionalPositionalCount = type.optionalParameterTypes.length;
 
     List<String> parameterNames = type.formalParameters
-        .map((FormalParameterElement parameter) => "${parameter.name}")
+        .map((FormalParameterElement parameter) => parameter.name.orUnknown)
         .toList();
 
     List<String> namedParameterNames = type.namedParameterTypes.keys.toList();
@@ -847,13 +851,11 @@ class _ReflectorDomain {
     _ImportCollector importCollector,
   ) async {
     String prefix = importCollector._getPrefix(_reflector.library);
-    if (_isPrivateName("${_reflector.name}")) {
-      await _severe(
-        'Cannot access private name `${_reflector.name}`',
-        _reflector,
-      );
+    final reflectorName = _reflector.name.orUnknown;
+    if (_isPrivateName(reflectorName)) {
+      await _severe('Cannot access private name `$reflectorName`', _reflector);
     }
-    return 'const $prefix${_reflector.name}()';
+    return 'const $prefix$reflectorName()';
   }
 
   /// Generate the code which will create a `ReflectorData` instance
@@ -978,15 +980,16 @@ class _ReflectorDomain {
       // for fields, and the implicitly generated ones that correspond to
       // method tear-offs.
       for (ExecutableElement instanceMember in classDomain._instanceMembers) {
+        final instanceMemberName = instanceMember.name.orUnknown;
         if (instanceMember is PropertyAccessorElement) {
           // A getter or a setter, synthetic or declared.
           if (instanceMember is GetterElement) {
-            instanceGetterNames.add("${instanceMember.name}");
+            instanceGetterNames.add(instanceMemberName);
           } else {
-            instanceSetterNames.add("${instanceMember.name}=");
+            instanceSetterNames.add("$instanceMemberName=");
           }
         } else if (instanceMember is MethodElement) {
-          instanceGetterNames.add("${instanceMember.name}");
+          instanceGetterNames.add(instanceMemberName);
         } else {
           // `instanceMember` is a ConstructorElement.
           // Even though a generative constructor has a false
@@ -996,13 +999,14 @@ class _ReflectorDomain {
       }
 
       for (PropertyAccessorElement accessor in classDomain._accessors) {
+        final accessorName = accessor.name.orUnknown;
         if (accessor is GetterElement &&
-            !instanceGetterNames.contains(accessor.name)) {
-          instanceGetterNames.add("${accessor.name}");
+            !instanceGetterNames.contains(accessorName)) {
+          instanceGetterNames.add(accessorName);
         }
         if (accessor is SetterElement &&
-            !instanceGetterNames.contains("${accessor.name}=")) {
-          instanceSetterNames.add("${accessor.name}=");
+            !instanceGetterNames.contains("$accessorName=")) {
+          instanceSetterNames.add("$accessorName=");
         }
       }
     }
@@ -1068,10 +1072,11 @@ class _ReflectorDomain {
     // Record the names of covered members, if requested.
     if (_capabilities._impliesMemberSymbols) {
       for (ExecutableElement executableElement in members.items) {
+        final executableElementName = executableElement.name.orUnknown;
         _world.memberNames.add(
           executableElement is SetterElement
-              ? "${executableElement.name}="
-              : "${executableElement.name}",
+              ? "$executableElementName="
+              : executableElementName,
         );
       }
     }
@@ -1085,7 +1090,7 @@ class _ReflectorDomain {
         for (FormalParameterElement parameter in element.formalParameters) {
           if (!parameter.isNamed) count++;
           if (parameter.isOptionalPositional) optionalCount++;
-          if (parameter.isNamed) names.add("${parameter.name}");
+          if (parameter.isNamed) names.add(parameter.name.orUnknown);
         }
         var shape = ParameterListShape(count, optionalCount, names);
         parameterListShapes.add(shape);
@@ -1601,7 +1606,7 @@ class _ReflectorDomain {
                     !enclosingElement.isAbstract) &&
                 enclosingElement is! EnumElement)) {
           String code = await _constructorCode(constructor, importCollector);
-          String constructorName = "${constructor.name}";
+          String constructorName = constructor.name.orUnknown;
           if (constructorName == "new") {
             constructorName = "";
           }
@@ -1621,7 +1626,7 @@ class _ReflectorDomain {
             await _staticGettingClosure(
               importCollector,
               interfaceElement,
-              "${method.name}",
+              method.name.orUnknown,
             ),
           );
         }
@@ -1632,7 +1637,7 @@ class _ReflectorDomain {
             await _staticGettingClosure(
               importCollector,
               interfaceElement,
-              "${accessor.name}",
+              accessor.name.orUnknown,
             ),
           );
         }
@@ -1645,7 +1650,7 @@ class _ReflectorDomain {
             await _staticSettingClosure(
               importCollector,
               interfaceElement,
-              "${accessor.name}=",
+              "${accessor.name.orUnknown}=",
             ),
           );
         }
@@ -1713,7 +1718,7 @@ class _ReflectorDomain {
           ParameterListShape shape = parameterListShapeOf[element]!;
           // index != null: every shape must be in `..Shapes`.
           int index = parameterListShapes.indexOf(shape)!;
-          String name = "${element.name}";
+          String name = element.name.orUnknown;
           if (element is SetterElement) {
             name += "=";
           }
@@ -1911,8 +1916,8 @@ class _ReflectorDomain {
           : null;
 
       String name = element is SetterElement
-          ? "${element.name}="
-          : "${element.name}";
+          ? "${element.name.orUnknown}="
+          : element.name.orUnknown;
 
       if (name == "new") name = "";
 
@@ -2269,7 +2274,7 @@ class _ReflectorDomain {
           } else {
             // Requested: the spelled-out generic function type; continue.
             typeVariablesInScope.addAll(
-              dartType.typeParameters.map((element) => "${element.name}"),
+              dartType.typeParameters.map((element) => element.name.orUnknown),
             );
           }
         }
@@ -2512,7 +2517,7 @@ class _ReflectorDomain {
         await _topLevelGettingClosure(
           importCollector,
           library,
-          "${getter.name}",
+          getter.name.orUnknown,
         ),
       );
     }
@@ -2524,7 +2529,7 @@ class _ReflectorDomain {
         await _topLevelSettingClosure(
           importCollector,
           library,
-          "${setter.name}=",
+          "${setter.name.orUnknown}=",
         ),
       );
     }
@@ -3035,7 +3040,7 @@ Future<String> _staticGettingClosure(
   InterfaceElement interfaceElement,
   String getterName,
 ) async {
-  String className = "${interfaceElement.name}";
+  String className = interfaceElement.name.orUnknown;
   String prefix = importCollector._getPrefix(interfaceElement.library);
   // Operators cannot be static.
   if (_isPrivateName(getterName)) {
@@ -3056,7 +3061,7 @@ Future<String> _staticSettingClosure(
   assert(setterName.substring(setterName.length - 1) == '=');
   // The [setterName] includes the '=', remove it.
   String name = setterName.substring(0, setterName.length - 1);
-  String className = "${interfaceElement.name}";
+  String className = interfaceElement.name.orUnknown;
   String prefix = importCollector._getPrefix(interfaceElement.library);
   if (_isPrivateName(setterName)) {
     await _severe('Cannot access private name $setterName', interfaceElement);
@@ -3238,7 +3243,7 @@ class _ClassDomain {
       return name.toString();
     } else {
       // This is a regular class, i.e., we can use its declared name.
-      return "${interfaceElement.name}";
+      return interfaceElement.name.orUnknown;
     }
   }
 
@@ -3298,7 +3303,7 @@ class _ClassDomain {
 
       void addIfCapableConcreteInstance(ExecutableElement member) {
         if (!member.isAbstract && !member.isStatic) {
-          addIfCapable("${member.name}", member);
+          addIfCapable(member.name.orUnknown, member);
         }
       }
 
@@ -3354,7 +3359,7 @@ class _ClassDomain {
           !method.isPrivate &&
           _reflectorDomain._capabilities.supportsStaticInvoke(
             method.library.typeSystem,
-            "${method.name}",
+            method.name.orUnknown,
             method.metadata.annotations,
             null,
           )) {
@@ -3379,7 +3384,7 @@ class _ClassDomain {
       }
       if (_reflectorDomain._capabilities.supportsStaticInvoke(
         accessor.library.typeSystem,
-        "${accessor.name}",
+        accessor.name.orUnknown,
         metadata,
         getterMetadata,
       )) {
@@ -4110,7 +4115,7 @@ class BuilderImplementation {
                 continue;
               } else if (metadataTypeType is InterfaceType &&
                   metadataTypeType.element != typeTypeClass) {
-                String typeName = "${metadataTypeType.element.name}";
+                String typeName = metadataTypeType.element.name.orUnknown;
                 var message = 'The metadata must be a Type. Found $typeName.';
                 await _warn(WarningKind.badMetadata, message, metadatumElement);
                 continue;
@@ -4947,7 +4952,7 @@ void initializeReflectable() {
     _libraries = visibleLibraries;
 
     for (LibraryElement library in _libraries) {
-      _librariesByName["${library.name}"] = library;
+      _librariesByName[library.name.orUnknown] = library;
     }
     LibraryElement? reflectableLibrary =
         _librariesByName['reflectable.reflectable'];
@@ -5239,8 +5244,8 @@ int _declarationDescriptor(ExecutableElement element) {
 
 Future<String> _nameOfConstructor(ConstructorElement element) async {
   String name = element.name == '' || element.name == 'new'
-      ? "${element.enclosingElement.name}"
-      : '${element.enclosingElement.name}.${element.name}';
+      ? element.enclosingElement.name.orUnknown
+      : '${element.enclosingElement.name.orUnknown}.${element.name.orUnknown}';
   if (_isPrivateName(name)) {
     await _severe('Cannot access private name $name', element);
   }
@@ -5786,7 +5791,7 @@ Iterable<TopLevelVariableElement> _extractDeclaredVariables(
     // TODO(eernst) clarify: Do we want to subsume variables under invoke?
     if (capabilities.supportsTopLevelInvoke(
       variable.library.typeSystem,
-      "${variable.name}",
+      variable.name.orUnknown,
       variable.metadata.annotations,
       null,
     )) {
@@ -5807,7 +5812,7 @@ Iterable<TopLevelFunctionElement> _extractDeclaredFunctions(
     if (function.isPrivate) continue;
     if (capabilities.supportsTopLevelInvoke(
       function.library.typeSystem,
-      "${function.name}",
+      function.name.orUnknown,
       function.metadata.annotations,
       null,
     )) {
@@ -5858,7 +5863,7 @@ Iterable<FieldElement> _extractDeclaredFields(
     return !field.isSynthetic &&
         capabilityChecker(
           interfaceElement.library.typeSystem,
-          "${field.name}",
+          field.name.orUnknown,
           field.metadata.annotations,
           null,
         );
@@ -5879,7 +5884,7 @@ Iterable<MethodElement> _extractDeclaredMethods(
         : capabilities.supportsInstanceInvoke;
     return capabilityChecker(
       method.library.typeSystem,
-      "${method.name}",
+      method.name.orUnknown,
       method.metadata.annotations,
       null,
     );
@@ -5938,8 +5943,8 @@ Iterable<PropertyAccessorElement> _extractLibraryAccessors(
     }
 
     String accessorName = accessor is SetterElement
-        ? "${accessor.name}="
-        : "${accessor.name}";
+        ? "${accessor.name.orUnknown}="
+        : accessor.name.orUnknown;
 
     if (capabilities.supportsTopLevelInvoke(
       accessor.library.typeSystem,
@@ -5989,8 +5994,8 @@ Iterable<PropertyAccessorElement> _extractAccessors(
     }
 
     String accessorName = accessor is SetterElement
-        ? "${accessor.name}="
-        : "${accessor.name}";
+        ? "${accessor.name.orUnknown}="
+        : accessor.name.orUnknown;
 
     return capabilityChecker(
       accessor.library.typeSystem,
@@ -6011,7 +6016,7 @@ Iterable<ConstructorElement> _extractDeclaredConstructors(
 ) {
   return interfaceElement.constructors.where((ConstructorElement constructor) {
     if (constructor.isPrivate) return false;
-    String name = "${constructor.name}";
+    String name = constructor.name.orUnknown;
     if (name == "new") {
       name = "";
     }
