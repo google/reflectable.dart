@@ -22,7 +22,6 @@ import 'package:analyzer/error/error.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/source/source.dart';
-import 'package:analyzer/source/file_source.dart';
 import 'package:analyzer/src/dart/constant/compute.dart';
 import 'package:analyzer/src/dart/constant/evaluation.dart';
 import 'package:analyzer/src/dart/constant/utilities.dart';
@@ -30,7 +29,6 @@ import 'package:analyzer/src/dart/constant/value.dart';
 import 'package:analyzer/src/dart/element/element.dart';
 import 'package:analyzer/src/dart/analysis/session.dart';
 import 'package:analyzer/src/dart/element/type.dart';
-import 'package:analyzer/src/summary/package_bundle_reader.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:pub_semver/pub_semver.dart' as semver;
@@ -3210,7 +3208,7 @@ class _ClassDomain {
     if (interfaceElement is MixinApplication &&
         interfaceElement.isMixinApplication) {
       // This is the case `class B = A with M;`.
-      return interfaceElement.name!;
+      return interfaceElement.name;
     } else if (interfaceElement is MixinApplication) {
       // This is the case `class B extends A with M1, .. Mk {..}`
       // where `interfaceElement` denotes one of the mixin applications
@@ -4330,7 +4328,7 @@ class BuilderImplementation {
               MixinApplication? subClass = mixin == type.mixins.last
                   ? type
                   : null;
-              String? name = subClass == null ? null : type.name!;
+              String? name = subClass == null ? null : type.name;
               var mixinApplication = MixinApplication(
                 name,
                 superclass,
@@ -5448,7 +5446,7 @@ Future<String> _extractConstantCode(
             if (enclosingElement is InterfaceElement) {
               prefix += '${enclosingElement.name}.';
             }
-            String? elementName = element.name!;
+            String? elementName = element.name;
             if (elementName != null && _isPrivateName(elementName)) {
               await _severe(
                 'Cannot access private name $elementName, '
@@ -5688,7 +5686,7 @@ Future<String> _extractMetadataCode(
     if (annotationNodeArguments != null) {
       // A const constructor.
       String name = await _extractNameWithoutPrefix(
-        annotationNode.name!,
+        annotationNode.name,
         element,
       );
       var argumentList = <String>[];
@@ -5709,14 +5707,14 @@ Future<String> _extractMetadataCode(
       metadataParts.add('const $prefix$name($arguments)');
     } else {
       // A field reference.
-      if (_isPrivateName(annotationNode.name.name!)) {
+      if (_isPrivateName(annotationNode.name.name)) {
         await _severe(
           'Cannot access private name ${annotationNode.name}',
           element,
         );
       }
       String name = await _extractNameWithoutPrefix(
-        annotationNode.name!,
+        annotationNode.name,
         element,
       );
       if (_isPrivateName(name)) {
@@ -5749,14 +5747,14 @@ Future<String> _extractNameWithoutPrefix(
       name = identifier.identifier.token.lexeme;
     } else {
       // We must preserve the prefix which is a class name.
-      name = identifier.name!;
+      name = identifier.name;
     }
   } else {
     await _severe(
       'This kind of identifier is not yet supported: $identifier',
       errorTarget,
     );
-    name = identifier.name!;
+    name = identifier.name;
   }
   return name;
 }
