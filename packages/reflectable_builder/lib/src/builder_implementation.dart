@@ -3314,10 +3314,8 @@ class _ClassDomain {
       }
       interfaceElement.mixins.forEach(addTypeIfCapable);
       interfaceElement.methods.forEach(addIfCapableConcreteInstance);
-      [
-        ...interfaceElement.getters,
-        ...interfaceElement.setters,
-      ].forEach(addIfCapableConcreteInstance);
+      interfaceElement.getters.forEach(addIfCapableConcreteInstance);
+      interfaceElement.setters.forEach(addIfCapableConcreteInstance);
 
       return cacheResult(result);
     }
