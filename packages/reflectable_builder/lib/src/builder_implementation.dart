@@ -6251,9 +6251,6 @@ class MixinApplication implements ClassElementImpl {
   }
 
   @override
-  int get nameLength => name.length;
-
-  @override
   String get displayName => name;
 
   @override
@@ -6294,16 +6291,7 @@ class MixinApplication implements ClassElementImpl {
   }
 
   @override
-  Source get librarySource => library.source;
-
-  @override
   AnalysisSessionImpl get session => mixin.session as AnalysisSessionImpl;
-
-  @override
-  Source get source => mixin.library.firstFragment.source;
-
-  @override
-  int get nameOffset => -1;
 
   /// Returns true iff this class was declared using the syntax
   /// `class B = A with M;`, i.e., if it is an explicitly named mixin
@@ -6329,9 +6317,6 @@ class MixinApplication implements ClassElementImpl {
 
   @override
   ElementKind get kind => ElementKind.CLASS;
-
-  @override
-  bool get isAugmentation => false;
 
   @override
   bool operator ==(Object other) {
