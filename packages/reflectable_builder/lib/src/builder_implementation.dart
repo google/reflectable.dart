@@ -2586,7 +2586,10 @@ class _ReflectorDomain {
           ParameterListShape shape = parameterListShapeOf[element]!;
           // index != null: every shape is in `..Shapes`.
           int index = parameterListShapes.indexOf(shape)!;
-          return "r'${element.name}': $index";
+
+          String baseName = element.name.orUnknown;
+          String name = element is GetterElement ? baseName : "$baseName=";
+          return "r'$name': $index";
         }),
       );
     }
