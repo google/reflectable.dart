@@ -1,3 +1,8 @@
+## 5.1.0
+
+- Upgrade reflectable to use version ^8.0.0 of the analyzer and version
+  ^4.0.0 of build.
+
 ## 5.0.1
 
 - Add an example that does not rely on code generation, basically just
