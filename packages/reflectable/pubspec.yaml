@@ -1,5 +1,5 @@
 name: reflectable
-version: 5.0.1
+version: 5.1.0
 description: >
   Reflection support based on code generation, using 'capabilities' to
   specify which operations to support, on which objects. This is the

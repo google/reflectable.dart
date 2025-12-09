@@ -1,3 +1,8 @@
+## 1.1.0
+
+- Upgrade the reflectable code generator to use version ^8.0.0 of the
+  analyzer and version ^4.0.0 of build.
+
 ## 1.0.1
 
 - Small fixes, including correction of a link in README.md.
