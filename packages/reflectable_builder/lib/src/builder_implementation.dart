@@ -17,7 +17,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
-import 'package:analyzer/error/error.dart';
+import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:analyzer/source/source.dart';
@@ -6443,7 +6443,7 @@ Future<DartObject?> _evaluateConstant(
     bool hasErrors = false;
     final message = StringBuffer('Constant `$expression` has errors:\n');
     for (final diagnostic in errorListener.diagnostics) {
-      if (diagnostic.severity == DiagnosticSeverity.ERROR) {
+      if (diagnostic.severity == Severity.error) {
         hasErrors = true;
         message.writeln(diagnostic);
       }
