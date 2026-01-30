@@ -6445,7 +6445,7 @@ Future<DartObject?> _evaluateConstant(
     for (final diagnostic in errorListener.diagnostics) {
       if (diagnostic.severity == DiagnosticSeverity.ERROR) {
         hasErrors = true;
-        message.writeln(error);
+        message.writeln(diagnostic);
       }
     }
     if (hasErrors) {
