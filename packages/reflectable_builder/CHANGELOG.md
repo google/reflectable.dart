@@ -1,3 +1,7 @@
+## 1.2.0
+
+- Upgrade the code generator to use analyzer ^9.0.0.
+
 ## 1.1.0
 
 - Upgrade the reflectable code generator to use version ^8.0.0 of the

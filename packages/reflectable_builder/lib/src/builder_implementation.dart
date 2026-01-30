@@ -14,7 +14,6 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/type_system.dart';
@@ -2474,7 +2473,7 @@ class _ReflectorDomain {
   /// [importCollector] is used to find the library prefixes needed in order
   /// to obtain values from other libraries.
   String _dynamicTypeCodeOfClass(
-    TypeDefiningElement typeDefiningElement,
+    Element typeDefiningElement,
     _ImportCollector importCollector,
   ) {
     DartType? type = typeDefiningElement is InterfaceElement
@@ -6412,7 +6411,7 @@ Future<DartObject?> _evaluateConstant(
   Source source = unitElement.source;
   var libraryElement = unitElement.element as LibraryElementImpl;
 
-  var errorListener = RecorderingErrorListener();
+  var errorListener = RecordingDiagnosticListener();
   var errorReporter = ErrorReporter(errorListener, source);
   var declaredVariables = DeclaredVariables(); // No variables.
 
@@ -6440,12 +6439,18 @@ Future<DartObject?> _evaluateConstant(
   Constant constant = visitor.evaluateAndReportInvalidConstant(expression);
   DartObjectImpl? dartObject = constant is DartObjectImpl ? constant : null;
 
-  if (errorListener.errors.isNotEmpty) {
-    var message = StringBuffer('Constant `$expression` has errors:\n');
-    for (AnalysisError error in errorListener.errors) {
-      message.writeln(error);
+  if (errorListener.diagnostics.isNotEmpty) {
+    bool hasErrors = false;
+    final message = StringBuffer('Constant `$expression` has errors:\n');
+    for (final diagnostic in errorListener.diagnostics) {
+      if (diagnostic.severity == DiagnosticSeverity.ERROR) {
+        hasErrors = true;
+        message.writeln(error);
+      }
     }
-    _severe(message.toString());
+    if (hasErrors) {
+      _severe(message.toString());
+    }
   }
 
   return dartObject;
