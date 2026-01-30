@@ -1,6 +1,7 @@
 ## 1.2.0
 
-- Upgrade the code generator to use analyzer ^9.0.0.
+- Upgrade the code generator to use analyzer ^10.0.0 and lints 6.0.0.
+  Remove dependencies on discontinued packages.
 
 ## 1.1.0
 
