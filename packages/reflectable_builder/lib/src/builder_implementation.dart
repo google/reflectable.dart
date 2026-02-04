@@ -5593,7 +5593,7 @@ CompilationUnit? _definingCompilationUnit(
 
 // Helper for _extractMetadataCode.
 NodeList<Annotation>? _getLibraryMetadata(CompilationUnit? unit) {
-  if (unit != null) {
+  if (unit != null && unit.directives.isNotEmpty) {
     Directive directive = unit.directives[0];
     if (directive is LibraryDirective) {
       return directive.metadata;
