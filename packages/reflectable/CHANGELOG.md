@@ -1,3 +1,7 @@
+## 5.2.1
+
+- Fix bugs #354 and #325.
+
 ## 5.2.0
 
 - Upgrade reflectable to use analyzer ^10.0.0 and lints ^6.0.0.

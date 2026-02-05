@@ -1,3 +1,7 @@
+## 1.2.1
+
+- Fix bugs #354 and #325.
+
 ## 1.2.0
 
 - Upgrade the code generator to use analyzer ^10.0.0 and lints 6.0.0.
