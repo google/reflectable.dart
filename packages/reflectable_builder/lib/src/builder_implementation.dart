@@ -4905,7 +4905,7 @@ class BuilderImplementation {
       final import = imports[index];
       if (import.contains('dart:_')) {
         if (import.contains('dart:_http')) {
-          final rest = import.substring(20, import.length);
+          final rest = import.substring("import 'dart:_http' ".length, import.length);
           imports[index] = "import 'dart:io' $rest";
         } else {
           // TODO(eernst): Perhaps we can handle some of the remaining cases.
