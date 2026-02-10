@@ -5599,6 +5599,7 @@ const Set<String> sdkLibraryNames = <String>{
   'web_audio',
   'web_gl',
   'web_sql',
+  '_http', // Special case, redirected to 'dart:io'.
 };
 
 // Helper for _extractMetadataCode.
