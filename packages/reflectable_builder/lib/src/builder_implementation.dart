@@ -4904,8 +4904,7 @@ class BuilderImplementation {
     for (int index = 0; index < length; ++index) {
       final import = imports[index];
       if (import.contains('dart:_')) {
-        if (import.contains('"dart:_http"') ||
-            import.contains("'dart:_http'")) {
+        if (import.contains("'dart:_http'")) {
           final rest = import.substring(
             "import 'dart:_http' ".length,
             import.length,
