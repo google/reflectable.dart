@@ -5238,7 +5238,7 @@ int _declarationDescriptor(ExecutableElement element) {
 
   if (element is PropertyAccessorElement) {
     result |= element is GetterElement ? constants.getter : constants.setter;
-    if (!element.isOriginVariable) result |= constants.syntheticAttribute;
+    if (element.isOriginVariable) result |= constants.syntheticAttribute;
     handleReturnType(element);
   } else if (element is ConstructorElement) {
     if (element.isFactory) {
@@ -5565,6 +5565,8 @@ Future<String> _extractConstantCode(
         }
         return '$function<${typeArguments.join(', ')}>';
       }
+    } else if (expression is TypeLiteral) {
+      return await typeAnnotationHelper(expression.type);
     } else {
       assert(
         expression is IntegerLiteral ||
