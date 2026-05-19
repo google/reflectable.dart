@@ -1,3 +1,8 @@
+## 1.2.2
+
+- Upgrade the language version to 3.12. Migrate the code generator to
+  use analyzer version ^11.0.0.
+
 ## 1.2.1
 
 - Fix bugs #354 and #325.

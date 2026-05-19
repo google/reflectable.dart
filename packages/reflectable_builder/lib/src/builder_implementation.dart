@@ -965,7 +965,7 @@ class _ReflectorDomain {
       // Ensure that we include variables corresponding to the implicit
       // accessors that we have included into `members`.
       for (ExecutableElement element in members.items) {
-        if (element is PropertyAccessorElement && element.isSynthetic) {
+        if (element is PropertyAccessorElement && element.isOriginVariable) {
           PropertyInducingElement? variable = element.variable;
           if (variable is FieldElement) {
             fields.add(variable);
@@ -1843,7 +1843,7 @@ class _ReflectorDomain {
     Map<FunctionType, int> typedefs,
     bool reflectedTypeRequested,
   ) async {
-    if (element is PropertyAccessorElement && element.isSynthetic) {
+    if (element is PropertyAccessorElement && element.isOriginVariable) {
       // There is no type propagation, so we declare an `accessorElement`.
       PropertyAccessorElement accessorElement = element;
       PropertyInducingElement? variable = accessorElement.variable;
@@ -3277,13 +3277,13 @@ class _ClassDomain {
         // If [member] is a synthetic accessor created from a field, search for
         // the metadata on the original field.
         List<ElementAnnotation> metadata =
-            (member is PropertyAccessorElement && member.isSynthetic)
+            (member is PropertyAccessorElement && member.isOriginVariable)
             ? (member.variable.metadata.annotations)
             : member.metadata.annotations;
         List<ElementAnnotation>? getterMetadata;
         if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
             member is PropertyAccessorElement &&
-            !member.isSynthetic &&
+            !member.isOriginVariable &&
             member is SetterElement) {
           PropertyAccessorElement? correspondingGetter =
               member.correspondingGetter;
@@ -3374,13 +3374,13 @@ class _ClassDomain {
       if (!accessor.isStatic || accessor.isPrivate) return;
       // If [member] is a synthetic accessor created from a field, search for
       // the metadata on the original field.
-      List<ElementAnnotation> metadata = accessor.isSynthetic
+      List<ElementAnnotation> metadata = accessor.isOriginVariable
           ? (accessor.variable.metadata.annotations)
           : accessor.metadata.annotations;
       List<ElementAnnotation>? getterMetadata;
       if (_reflectorDomain._capabilities._impliesCorrespondingSetters &&
           accessor is SetterElement &&
-          !accessor.isSynthetic) {
+          !accessor.isOriginVariable) {
         PropertyAccessorElement? correspondingGetter =
             accessor.correspondingGetter;
         getterMetadata = correspondingGetter?.metadata.annotations;
@@ -5057,7 +5057,7 @@ void initializeReflectable() {
 }
 
 bool _accessorIsntImplicitGetterOrSetter(PropertyAccessorElement accessor) {
-  return !accessor.isSynthetic ||
+  return !accessor.isOriginVariable ||
       (accessor is! GetterElement && accessor is! SetterElement);
 }
 
@@ -5074,7 +5074,7 @@ bool _executableIsntImplicitGetterOrSetter(ExecutableElement executable) {
 int _classDescriptor(InterfaceElement element) {
   int result = constants.clazz;
   if (element.isPrivate) result |= constants.privateAttribute;
-  if (element.isSynthetic) result |= constants.syntheticAttribute;
+  // A class is never synthetic, no need to add `constants.syntheticAttribute`.
   if (element is MixinElement ||
       element is ClassElement && element.isAbstract) {
     result |= constants.abstractAttribute;
@@ -5100,7 +5100,7 @@ int _classDescriptor(InterfaceElement element) {
 int _topLevelVariableDescriptor(TopLevelVariableElement element) {
   int result = constants.field;
   if (element.isPrivate) result |= constants.privateAttribute;
-  if (element.isSynthetic) result |= constants.syntheticAttribute;
+  if (!element.isOriginDeclaration) result |= constants.syntheticAttribute;
   if (element.isConst) {
     result |= constants.constAttribute;
     // We will get `false` from `element.isFinal` in this case, but with
@@ -5137,7 +5137,7 @@ int _topLevelVariableDescriptor(TopLevelVariableElement element) {
 int _fieldDescriptor(FieldElement element) {
   int result = constants.field;
   if (element.isPrivate) result |= constants.privateAttribute;
-  if (element.isSynthetic) result |= constants.syntheticAttribute;
+  if (!element.isOriginDeclaration) result |= constants.syntheticAttribute;
   if (element.isConst) {
     result |= constants.constAttribute;
     // We will get `false` from `element.isFinal` in this case, but with
@@ -5176,7 +5176,7 @@ int _fieldDescriptor(FieldElement element) {
 int _parameterDescriptor(FormalParameterElement element) {
   int result = constants.parameter;
   if (element.isPrivate) result |= constants.privateAttribute;
-  if (element.isSynthetic) result |= constants.syntheticAttribute;
+  // A parameter is never synthetic, no need to add `constants.syntheticAttribute`.
   if (element.isConst) result |= constants.constAttribute;
   if (element.isFinal) result |= constants.finalAttribute;
   if (element.defaultValueCode != null) {
@@ -5238,6 +5238,7 @@ int _declarationDescriptor(ExecutableElement element) {
 
   if (element is PropertyAccessorElement) {
     result |= element is GetterElement ? constants.getter : constants.setter;
+    if (element.isOriginVariable) result |= constants.syntheticAttribute;
     handleReturnType(element);
   } else if (element is ConstructorElement) {
     if (element.isFactory) {
@@ -5249,17 +5250,19 @@ int _declarationDescriptor(ExecutableElement element) {
     if (element.redirectedConstructor != null) {
       result |= constants.redirectingConstructorAttribute;
     }
-  } else if (element is MethodElement) {
+    if (element.isOriginImplicitDefault) result |= constants.syntheticAttribute;
+} else if (element is MethodElement) {
     result |= constants.method;
     handleReturnType(element);
+    if (!element.isOriginDeclaration) result |= constants.syntheticAttribute;
   } else {
-    assert(element is TopLevelFunctionElement);
+    element as TopLevelFunctionElement;
     result |= constants.function;
     handleReturnType(element);
+    if (!element.isOriginDeclaration) result |= constants.syntheticAttribute;
   }
   if (element.isPrivate) result |= constants.privateAttribute;
   if (element.isStatic) result |= constants.staticAttribute;
-  if (element.isSynthetic) result |= constants.syntheticAttribute;
   if (element.isAbstract) result |= constants.abstractAttribute;
   if (element.enclosingElement is! InterfaceElement) {
     result |= constants.topLevelAttribute;
@@ -5562,6 +5565,8 @@ Future<String> _extractConstantCode(
         }
         return '$function<${typeArguments.join(', ')}>';
       }
+    } else if (expression is TypeLiteral) {
+      return await typeAnnotationHelper(expression.type);
     } else {
       assert(
         expression is IntegerLiteral ||
@@ -5671,11 +5676,9 @@ Future<String> _extractMetadataCode(
   _ImportCollector importCollector,
   AssetId dataId,
 ) async {
-  // Synthetic accessors do not have metadata. Only their associated fields.
-  if ((element is PropertyAccessorElement ||
-          element is ConstructorElement ||
-          element is MixinApplication) &&
-      element.isSynthetic) {
+  if ((element is PropertyAccessorElement && element.isOriginVariable) ||
+      (element is ConstructorElement && !element.isOriginDeclaration) ||
+      (element is MixinApplication && element.declaredName == null)) {
     return 'const []';
   }
 
@@ -5813,7 +5816,7 @@ Iterable<TopLevelVariableElement> _extractDeclaredVariables(
   _Capabilities capabilities,
 ) sync* {
   for (TopLevelVariableElement variable in libraryElement.topLevelVariables) {
-    if (variable.isPrivate || variable.isSynthetic) continue;
+    if (variable.isPrivate || !variable.isOriginDeclaration) continue;
     // TODO(eernst) clarify: Do we want to subsume variables under invoke?
     if (capabilities.supportsTopLevelInvoke(
       variable.library.typeSystem,
@@ -5886,7 +5889,7 @@ Iterable<FieldElement> _extractDeclaredFields(
     CapabilityChecker capabilityChecker = field.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
-    return !field.isSynthetic &&
+    return field.isOriginDeclaration &&
         capabilityChecker(
           interfaceElement.library.typeSystem,
           field.nameOrUnknown,
@@ -5954,14 +5957,13 @@ Iterable<PropertyAccessorElement> _extractLibraryAccessors(
     if (accessor.isPrivate) continue;
     List<ElementAnnotation> metadata;
     List<ElementAnnotation>? getterMetadata;
-    if (accessor.isSynthetic) {
+    if (accessor.isOriginVariable) {
       metadata = accessor.variable.metadata.annotations;
       getterMetadata = metadata;
     } else {
       metadata = accessor.metadata.annotations;
       if (capabilities._impliesCorrespondingSetters &&
-          accessor is SetterElement &&
-          !accessor.isSynthetic) {
+          accessor is SetterElement) {
         PropertyAccessorElement? correspondingGetter =
             accessor.correspondingGetter;
         getterMetadata = correspondingGetter?.metadata.annotations;
@@ -5989,8 +5991,7 @@ Iterable<PropertyAccessorElement> _extractLibraryAccessors(
 /// is the set of accessors that corresponds to the behavioral interface
 /// of the corresponding instances, as opposed to the source code oriented
 /// interface, e.g., `declarations`. But the latter can be computed from
-/// here, by filtering out the accessors whose `isSynthetic` is true
-/// and adding the fields.
+/// here, by filtering out the synthetic accessors and adding the fields.
 Iterable<PropertyAccessorElement> _extractAccessors(
   Resolver resolver,
   InterfaceElement interfaceElement,
@@ -6007,13 +6008,13 @@ Iterable<PropertyAccessorElement> _extractAccessors(
     CapabilityChecker capabilityChecker = accessor.isStatic
         ? capabilities.supportsStaticInvoke
         : capabilities.supportsInstanceInvoke;
-    List<ElementAnnotation> metadata = accessor.isSynthetic
+    List<ElementAnnotation> metadata = accessor.isOriginVariable
         ? (accessor.variable.metadata.annotations)
         : accessor.metadata.annotations;
     List<ElementAnnotation>? getterMetadata;
     if (capabilities._impliesCorrespondingSetters &&
         accessor is SetterElement &&
-        !accessor.isSynthetic) {
+        !accessor.isOriginVariable) {
       PropertyAccessorElement? correspondingGetter =
           accessor.correspondingGetter;
       getterMetadata = correspondingGetter?.metadata.annotations;
@@ -6303,9 +6304,6 @@ class MixinApplication implements ClassElementImpl {
 
   @override
   MetadataImpl get metadata => MetadataImpl(const []);
-
-  @override
-  bool get isSynthetic => declaredName == null;
 
   @override
   InterfaceTypeImpl instantiate({
