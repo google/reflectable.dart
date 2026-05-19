@@ -1,3 +1,7 @@
+## 1.2.2
+
+- Upgrade the language version to 3.12.
+
 ## 1.2.1
 
 - Fix bugs #354 and #325.
