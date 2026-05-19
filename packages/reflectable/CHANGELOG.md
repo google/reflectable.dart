@@ -1,3 +1,7 @@
+## 5.2.2
+
+- Update the language version to 3.12.
+
 ## 5.2.1
 
 - Fix bugs #354 and #325.
