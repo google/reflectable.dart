@@ -1,6 +1,6 @@
 ## 1.2.3
 
-- Migrate the code generator to use analyzer version ^12.0.0.
+- Migrate the code generator to use analyzer version ^13.0.0.
 
 ## 1.2.2
 
