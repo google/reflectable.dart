@@ -1,6 +1,6 @@
 ## 5.2.3
 
-- Update dependency to use analyzer ^12.0.0.
+- Update dependency to use analyzer ^13.0.0.
 
 ## 5.2.2
 
