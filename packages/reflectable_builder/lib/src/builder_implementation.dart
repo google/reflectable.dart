@@ -2731,15 +2731,15 @@ class _ReflectorDomain {
             as FormalParameter?;
     // The node can be null because the declaration is synthetic, e.g.,
     // the parameter of an induced setter; they have no default value.
-    if (parameterNode is DefaultFormalParameter &&
-        parameterNode.defaultValue != null) {
+    FormalParameterDefaultClause? defaultClause = parameterNode?.defaultClause;
+    if (defaultClause != null) {
       return await _extractConstantCode(
-        parameterNode.defaultValue!,
+        defaultClause.value,
         importCollector,
         _generatedLibraryId,
         _resolver,
       );
-    } else if (parameterElement is DefaultFormalParameter) {
+    } else {
       Expression? defaultValue = parameterElement.constantInitializer;
       if (defaultValue != null) {
         return await _extractConstantCode(
@@ -4819,9 +4819,10 @@ class BuilderImplementation {
       // Subcase: `super(..)` where 0..k arguments are accepted for some
       // k that we need not worry about here.
       var capabilities = <ec.ReflectCapability>[];
-      for (Expression argument in superInvocation.argumentList.arguments) {
+      for (Argument argument in superInvocation.argumentList.arguments) {
+        Expression expression = argument is NamedArgument ? argument.argumentExpression : argument as Expression;
         ec.ReflectCapability? currentCapability =
-            await capabilityOfCollectionElement(argument);
+            await capabilityOfCollectionElement(expression);
         if (currentCapability != null) capabilities.add(currentCapability);
       }
       return _Capabilities(capabilities);
@@ -4829,9 +4830,9 @@ class BuilderImplementation {
     assert(superInvocationConstructorName.name == 'fromList');
 
     // Subcase: `super.fromList(const <..>[..])`.
-    NodeList<Expression> arguments = superInvocation.argumentList.arguments;
+    NodeList<Argument> arguments = superInvocation.argumentList.arguments;
     assert(arguments.length == 1);
-    Expression listLiteral = arguments[0];
+    Expression listLiteral = arguments[0] as Expression;
     var capabilities = <ec.ReflectCapability>[];
     if (listLiteral is! ListLiteral) {
       await _severe(
@@ -5296,7 +5297,7 @@ String _formatAsMap(Iterable parts) => '{${parts.join(', ')}}';
 /// value when evaluated in the generated file as the given [expression]
 /// would evaluate to in [originatingLibrary].
 Future<String> _extractConstantCode(
-  Expression expression,
+  Argument expression,
   _ImportCollector importCollector,
   AssetId generatedLibraryId,
   Resolver resolver,
@@ -5317,7 +5318,7 @@ Future<String> _extractConstantCode(
     }
   }
 
-  Future<String> helper(Expression expression) async {
+  Future<String> helper(Argument expression) async {
     if (expression is ListLiteral) {
       var elements = <String>[];
       for (CollectionElement collectionElement in expression.elements) {
@@ -5427,7 +5428,7 @@ Future<String> _extractConstantCode(
         String prefix = importCollector._getPrefix(libraryOfConstructor);
         // TODO(sigurdm) implement: Named arguments.
         var argumentList = <String>[];
-        for (Expression argument in expression.argumentList.arguments) {
+        for (Argument argument in expression.argumentList.arguments) {
           argumentList.add(await helper(argument));
         }
         String arguments = argumentList.join(', ');
@@ -5531,19 +5532,19 @@ Future<String> _extractConstantCode(
       // We only handle 'identical(a, b)'.
       assert(expression.target == null);
       assert(expression.methodName.token.lexeme == 'identical');
-      NodeList<Expression> arguments = expression.argumentList.arguments;
+      NodeList<Argument> arguments = expression.argumentList.arguments;
       assert(arguments.length == 2);
       String a = await helper(arguments[0]);
       String b = await helper(arguments[1]);
       return 'identical($a, $b)';
-    } else if (expression is NamedExpression) {
+    } else if (expression is NamedArgument) {
       String value = await _extractConstantCode(
-        expression.expression,
+        expression.argumentExpression,
         importCollector,
         generatedLibraryId,
         resolver,
       );
-      return '${expression.name} $value';
+      return '${expression.name.lexeme}: $value';
     } else if (expression is FunctionReference) {
       String function = await _extractConstantCode(
         expression.function,
@@ -5738,7 +5739,7 @@ Future<String> _extractMetadataCode(
         element,
       );
       var argumentList = <String>[];
-      for (Expression argument in annotationNodeArguments.arguments) {
+      for (Argument argument in annotationNodeArguments.arguments) {
         argumentList.add(
           await _extractConstantCode(
             argument,
