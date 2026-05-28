@@ -1,16 +1,6 @@
 version: 2
 updates:
-  # Configuration for packages/reflectable
   - package-ecosystem: "pub"
-    directory: "/packages/reflectable"
+    directory: "/"
     schedule:
       interval: "weekly"
-
-  # Configuration for packages/reflectable_builder
-  - package-ecosystem: "pub"
-    directory: "/packages/reflectable_builder"
-    schedule:
-      interval: "weekly"
-
-  # No configuration for packages/test_reflectable:
-  # It is not published.
