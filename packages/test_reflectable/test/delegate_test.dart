@@ -42,17 +42,17 @@ class A {
   @D()
   int arg1(int x) => 101;
 
-  int arg2to4(A x, int y, [Reflector? z, w]) => 102;
+  int arg2to4(A x, int y, [Reflector? z, int? w]) => 102;
 
   @D()
-  int argNamed(int x, y, {num? z}) => 103;
+  int argNamed(int x, Object y, {num? z}) => 103;
 
   int operator +(int x) => 104;
 
   @D()
   int operator [](int x) => indexTarget;
 
-  void operator []=(int x, v) {
+  void operator []=(int x, int v) {
     indexTarget = v;
   }
 

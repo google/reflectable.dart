@@ -21,11 +21,11 @@ const myReflectable = MyReflectable();
 class A {
   int arg0() => 42;
   int arg1(int x) => x - 42;
-  int arg1to3(int x, int y, [int z = 0, w]) => x + y + z * 42;
+  int arg1to3(int x, int y, [int z = 0, String? w]) => x + y + z * 42;
   int argNamed(int x, int y, {int z = 42}) => x + y - z;
-  int operator +(x) => (42 + x).toInt();
-  int operator [](x) => 42 + (x as int);
-  void operator []=(x, v) {
+  int operator +(int x) => 42 + x;
+  int operator [](int x) => 42 + x;
+  void operator []=(int x, int v) {
     f = x + v;
   }
 
@@ -35,8 +35,9 @@ class A {
   int f = 0;
 
   static int noArguments() => 42;
-  static int oneArgument(x) => x - 42;
-  static int optionalArguments(x, y, [z = 0, w]) => x + y + z * 42;
+  static int oneArgument(int x) => x - 42;
+  static int optionalArguments(int x, int y, [int z = 0, String? w]) =>
+      x + y + z * 42;
   static int namedArguments(int x, int y, {int z = 42}) => x + y - z;
 }
 
