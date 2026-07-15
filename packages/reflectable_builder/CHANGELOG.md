@@ -1,3 +1,7 @@
+## 1.2.4
+
+- Update dependencies to use analyzer version ^14.0.0.
+
 ## 1.2.3
 
 - Migrate the code generator to use analyzer version ^13.0.0.
