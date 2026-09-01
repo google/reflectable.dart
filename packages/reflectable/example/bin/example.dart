@@ -33,7 +33,7 @@ class A {
 
   static int noArguments() => 42;
   static int oneArgument(int x) => x - 42;
-  static int optionalArguments(int x, int y, [int z = 0, int? w]) =>
+  static int optionalArguments(int x, int y, [int z = 0, String? w]) =>
       x + y + z * 42;
   static int namedArguments(int x, int y, {int z = 42}) => x + y - z;
 }

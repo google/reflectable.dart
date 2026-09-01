@@ -4820,7 +4820,9 @@ class BuilderImplementation {
       // k that we need not worry about here.
       var capabilities = <ec.ReflectCapability>[];
       for (Argument argument in superInvocation.argumentList.arguments) {
-        Expression expression = argument is NamedArgument ? argument.argumentExpression : argument as Expression;
+        Expression expression = argument is NamedArgument
+            ? argument.argumentExpression
+            : argument as Expression;
         ec.ReflectCapability? currentCapability =
             await capabilityOfCollectionElement(expression);
         if (currentCapability != null) capabilities.add(currentCapability);
@@ -5252,7 +5254,7 @@ int _declarationDescriptor(ExecutableElement element) {
       result |= constants.redirectingConstructorAttribute;
     }
     if (element.isOriginImplicitDefault) result |= constants.syntheticAttribute;
-} else if (element is MethodElement) {
+  } else if (element is MethodElement) {
     result |= constants.method;
     handleReturnType(element);
     if (!element.isOriginDeclaration) result |= constants.syntheticAttribute;
