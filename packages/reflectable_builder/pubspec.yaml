@@ -21,7 +21,7 @@ dev_dependencies:
   glob: ^2.1.0
   lints: ^6.0.0
   logging: ^1.2.0
-  package_config: ^2.1.0
+  package_config: ^3.0.0
   source_span: ^1.10.0
   test: ^1.25.0
 platforms:
