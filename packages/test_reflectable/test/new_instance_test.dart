@@ -37,8 +37,8 @@ class A {
   A.positional(int x) : f = x - 42;
 
   @C()
-  A.optional(int x, int y, [int z = 1, w])
-    : f = x + y + z * 42 + ((w ?? 10) as int);
+  A.optional(int x, int y, [int z = 1, int? w])
+    : f = x + y + z * 42 + (w ?? 10);
 
   @C()
   A.argNamed(int x, int y, {int z = 42, int? p}) : f = x + y - z - (p ?? 10);

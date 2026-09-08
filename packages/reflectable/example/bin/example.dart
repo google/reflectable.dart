@@ -18,7 +18,7 @@ const myReflectable = MyReflectable();
 class A {
   int arg0() => 42;
   int arg1(int x) => x - 42;
-  int arg1to3(int x, int y, [int z = 0, w]) => x + y + z * 42;
+  int arg1to3(int x, int y, [int z = 0, String? w]) => x + y + z * 42;
   int argNamed(int x, int y, {int z = 42}) => x + y - z;
   int operator +(int x) => 42 + x;
   int operator [](int x) => 42 + x;
